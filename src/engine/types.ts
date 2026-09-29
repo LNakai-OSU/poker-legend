@@ -10,17 +10,18 @@ export interface Card {
   suit: Suit
 }
 
-export enum HandCategory {
-  HighCard = 0,
-  Pair = 1,
-  TwoPair = 2,
-  ThreeOfAKind = 3,
-  Straight = 4,
-  Flush = 5,
-  FullHouse = 6,
-  FourOfAKind = 7,
-  StraightFlush = 8,
-}
+export const HandCategory = {
+  HighCard: 0,
+  Pair: 1,
+  TwoPair: 2,
+  ThreeOfAKind: 3,
+  Straight: 4,
+  Flush: 5,
+  FullHouse: 6,
+  FourOfAKind: 7,
+  StraightFlush: 8,
+} as const
+export type HandCategory = (typeof HandCategory)[keyof typeof HandCategory]
 
 export interface HandStrength {
   category: HandCategory

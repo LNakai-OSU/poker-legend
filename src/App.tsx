@@ -1,7 +1,7 @@
-import { GameCanvas } from './game/GameCanvas'
+import { GameApp } from './game/GameApp'
 
 function App() {
-  return <GameCanvas />
+  return <GameApp />
 }
 
 export default App

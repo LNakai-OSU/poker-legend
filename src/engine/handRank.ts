@@ -12,7 +12,7 @@ function countByRank(cards: Card[]): Map<number, number> {
 
 /** Returns the high card of the straight (5 for a wheel A-2-3-4-5), or null if not a straight. */
 function straightHigh(cards: Card[]): number | null {
-  const uniqueRanks = [...new Set(cards.map((c) => c.rank))].sort((a, b) => b - a)
+  const uniqueRanks: number[] = [...new Set(cards.map((c) => c.rank as number))].sort((a, b) => b - a)
   if (uniqueRanks.length < 5) return null
 
   // Wheel: A-2-3-4-5 (ace plays low)

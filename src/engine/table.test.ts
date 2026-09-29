@@ -14,7 +14,7 @@ function makePlayers(n: number, startingStack = 1000): PlayerConfig[] {
   }))
 }
 
-function totalChips(table: TexasHoldEmTable, players: PlayerConfig[]): number {
+function totalChips(table: TexasHoldEmTable): number {
   const state = table.getState()
   return state.players.reduce((sum, p) => sum + p.stack, 0)
 }
@@ -39,7 +39,7 @@ describe('TexasHoldEmTable heads-up hand', () => {
     table.submitAction(actingId, { type: 'fold' })
 
     const result = table.getLastHandResult()!
-    const totalAfter = totalChips(table, players)
+    const totalAfter = totalChips(table)
     expect(totalAfter).toBe(1000)
     expect(result.pots.reduce((s, p) => s + p.amount, 0)).toBe(15)
   })
@@ -71,14 +71,14 @@ describe('TexasHoldEmTable full freezeout simulation', () => {
           table.submitAction(actingId, action)
         }
 
-        const totalNow = totalChips(table, players)
+        const totalNow = totalChips(table)
         if (totalNow !== startingTotal) {
           throw new Error(`chip conservation violated after hand (seed ${seed}): ${totalNow} !== ${startingTotal}`)
         }
       }
 
       expect(table.getFreezeoutWinnerId()).not.toBeNull()
-      expect(totalChips(table, players)).toBe(startingTotal)
+      expect(totalChips(table)).toBe(startingTotal)
     }
   }, 30000)
 })

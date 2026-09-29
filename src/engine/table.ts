@@ -453,5 +453,8 @@ export class TexasHoldEmTable {
       bustedPlayerIds,
     }
     this.handInProgress = false
+    // Pots have already been paid into winners' stacks; clear contributions so
+    // getState().pot doesn't double-count them until the next hand starts.
+    for (const p of this.roster) p.handContribution = 0
   }
 }
