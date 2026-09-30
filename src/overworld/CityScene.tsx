@@ -25,7 +25,8 @@ export function CityScene({ state, onAction, onCaught }: CitySceneProps) {
     color: poi.color,
     art: poi.art ?? defaultArt(poi),
     lines: linesFor(state, poi),
-    onFinish: poi.action.kind === 'flavor' ? undefined : () => onAction(poi.action, poi),
+    onFinish:
+      poi.action.kind === 'flavor' || isSpent(state, poi) ? undefined : () => onAction(poi.action, poi),
   }))
 
   // Collectors start from the far corner so there's room to run for the exit.
@@ -77,7 +78,22 @@ function defaultArt(poi: PoiDef): NpcArt {
   return 'person'
 }
 
+/**
+ * A one-shot story beat that has already happened. The POI stays on the map and
+ * still talks to you, but it no longer opens anything — Marcus's freezeout is
+ * the start of the campaign, not a table you can sit at again for the payout.
+ */
+function isSpent(state: GameState, poi: PoiDef): boolean {
+  return poi.action.kind === 'pokerNight' && state.flags.wonPokerNight
+}
+
 function linesFor(state: GameState, poi: PoiDef): string[] {
+  if (isSpent(state, poi)) {
+    return [
+      `${poi.name}: Still talking about that night, man.`,
+      `${poi.name}: I'm out of the game for a while. Go win something real.`,
+    ]
+  }
   if (poi.action.kind !== 'mission') return poi.lines
 
   const mission = MISSIONS[poi.action.missionId]

@@ -6,7 +6,9 @@ import { defaultRng } from '../engine/rng'
 import type { PlayerConfig } from '../engine/types'
 import type { TableDef } from '../world/types'
 import { PokerTableView } from './PokerTableView'
+import { cardText } from './Card'
 import type { GameState } from './state'
+import { tableAccess } from './progression'
 import { playSound } from '../audio/audio'
 import { useAmbientMusic } from '../audio/SoundToggle'
 
@@ -189,6 +191,26 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
     rerender()
   }
 
+  // --- Showdown ------------------------------------------------------------
+  // The hand is over and this result belongs to the hand still on the table, so
+  // the revealed cards and the board are all still on screen. Nothing is allowed
+  // to be drawn over them: the player is here to read the showdown.
+  const showdown =
+    !publicState.handInProgress && lastResult && lastResult.handNumber === publicState.handNumber
+      ? lastResult
+      : null
+  const nameOf = (id: string) => players.find((p) => p.id === id)?.name ?? id
+  const wonByPlayer = (playerId: string) =>
+    (showdown?.pots ?? [])
+      .filter((pot) => pot.winnerIds.includes(playerId))
+      .reduce(
+        (sum, pot) => sum + pot.amountPerWinner + (pot.winnerIds[0] === playerId ? pot.remainder : 0),
+        0,
+      )
+  const uncontestedWinners = showdown && showdown.revealed.length === 0
+    ? [...new Set(showdown.pots.flatMap((pot) => pot.winnerIds))]
+    : []
+
   const leaveWith = (chips: number, finaleWon?: boolean) =>
     onLeave({
       chipsCashedOut: chips,
@@ -220,10 +242,17 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
   // --- Cash game: bust means rebuy or walk ----------------------------------
   if (youBusted) {
     const canRebuy = state.cash >= table.buyIn
+    // Buying back in is buying in again, so the bankroll lesson applies here too.
+    const rebuyWarning = tableAccess(state, table).bankrollWarning
     return (
       <Overlay>
         <h2>You&rsquo;re out of chips at this table.</h2>
         <p>Wallet: ${state.cash.toLocaleString()}</p>
+        {canRebuy && rebuyWarning && (
+          <p data-testid="rebuy-bankroll-warning" style={{ color: '#f2c14e', maxWidth: 420 }}>
+            Bankroll warning: {rebuyWarning}
+          </p>
+        )}
         <div style={{ display: 'flex', gap: 12 }}>
           {canRebuy && (
             <button
@@ -276,27 +305,84 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
         </div>
       )}
 
-      {!publicState.handInProgress && (
-        <Overlay>
-          <div style={{ display: 'flex', gap: 12 }}>
-            <button
-              style={buttonStyle}
-              onClick={() => {
-                rebuyOpponents()
-                engine.startNewHand()
-                playSound('deal')
-                rerender()
-              }}
-            >
-              Next hand
-            </button>
-            {!isFinale && (
-              <button style={buttonStyle} onClick={() => leaveWith(you.stack)}>
-                Leave table (cash out ${you.stack.toLocaleString()})
-              </button>
-            )}
+      {showdown && (
+        <div
+          data-testid="showdown-summary"
+          style={{
+            maxWidth: 680,
+            margin: '0 auto 12px',
+            padding: 'clamp(8px, 2.5vw, 14px)',
+            borderRadius: 10,
+            border: '1px solid rgba(242,193,78,0.45)',
+            background: '#141d2e',
+            fontSize: 'clamp(11px, 3vw, 13px)',
+            textAlign: 'center',
+            lineHeight: 1.6,
+          }}
+        >
+          <div style={{ color: '#f2c14e', letterSpacing: 2, marginBottom: 6 }}>SHOWDOWN</div>
+          <div style={{ color: '#9aa4b8', marginBottom: 6 }}>
+            Board: {showdown.board.map(cardText).join(' ') || '—'}
           </div>
-        </Overlay>
+          {showdown.revealed.length > 0
+            ? showdown.revealed.map((r) => {
+                const won = wonByPlayer(r.playerId)
+                return (
+                  <div
+                    key={r.playerId}
+                    data-testid={`showdown-${r.playerId}`}
+                    style={{ color: won > 0 ? '#7fe0a0' : '#c8c8d4' }}
+                  >
+                    <strong>{nameOf(r.playerId)}</strong> {r.holeCards.map(cardText).join(' ')} &middot;{' '}
+                    {HAND_CATEGORY_NAMES[bestHand([...r.holeCards, ...showdown.board]).category]}
+                    {won > 0 && <> &mdash; won {won.toLocaleString()}</>}
+                  </div>
+                )
+              })
+            : uncontestedWinners.map((id) => (
+                <div key={id} data-testid={`showdown-${id}`} style={{ color: '#7fe0a0' }}>
+                  <strong>{nameOf(id)}</strong> took {wonByPlayer(id).toLocaleString()} uncontested &mdash; everyone
+                  else folded, so no cards were shown.
+                </div>
+              ))}
+        </div>
+      )}
+
+      {/* A bar, not a sheet: it sits under the table rather than over it, so the
+          revealed hands and the winning pot stay readable while it is up. */}
+      {!publicState.handInProgress && (
+        <div
+          data-testid="hand-over-bar"
+          style={{
+            position: 'sticky',
+            bottom: 0,
+            display: 'flex',
+            justifyContent: 'center',
+            gap: 12,
+            flexWrap: 'wrap',
+            padding: '10px 12px calc(10px + env(safe-area-inset-bottom))',
+            borderRadius: 8,
+            background: '#0a1018',
+            border: '1px solid #2c3d5e',
+          }}
+        >
+          <button
+            style={buttonStyle}
+            onClick={() => {
+              rebuyOpponents()
+              engine.startNewHand()
+              playSound('deal')
+              rerender()
+            }}
+          >
+            Next hand
+          </button>
+          {!isFinale && (
+            <button style={buttonStyle} onClick={() => leaveWith(you.stack)}>
+              Leave table (cash out ${you.stack.toLocaleString()})
+            </button>
+          )}
+        </div>
       )}
 
       {publicState.handInProgress && canAct && (

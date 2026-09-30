@@ -145,8 +145,12 @@ export const TABLES: Record<string, TableDef> = {
   'lumina-finale': {
     id: 'lumina-finale',
     name: 'The Challenge — Heads Up',
-    smallBlind: 250,
-    bigBlind: 500,
+    // Deep-stacked on purpose: the buy-in is the biggest in the game, but at
+    // 250/500 that was only 240bb and the match was decided by the first
+    // all-in. At 50/100 the same money is 1,200bb, so there is room to be
+    // out-played over a session instead of out-flipped in one hand.
+    smallBlind: 50,
+    bigBlind: 100,
     buyIn: 120000,
     dressCode: 4,
     isFinale: true,

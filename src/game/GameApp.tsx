@@ -3,7 +3,7 @@ import { CityScene } from '../overworld/CityScene'
 import { PokerNightScene } from './PokerNightScene'
 import { BusTransition } from './BusTransition'
 import { TableScene, type SessionResult } from './TableScene'
-import { MentorScene, MenuScreen, ShopScene, SponsorScene, TravelScene } from './MenuScenes'
+import { buttonStyle as menuButtonStyle, MentorScene, MenuScreen, ShopScene, SponsorScene, TravelScene } from './MenuScenes'
 import { CaughtScene, EndingScene } from './EndScenes'
 import { CrapsScene, SlotsScene } from './CasinoGameScenes'
 import { PenthouseScene, VenueScene } from './VenueScenes'
@@ -35,6 +35,7 @@ type View =
   | { kind: 'bus' }
   | { kind: 'table'; tableId: string }
   | { kind: 'blocked'; title: string; message: string }
+  | { kind: 'bankrollWarning'; tableId: string; warning: string }
   | { kind: 'shop'; shopId: string }
   | { kind: 'mentor' }
   | { kind: 'sponsor'; sponsorId: string }
@@ -62,6 +63,9 @@ export function GameApp() {
   const handlePoi = (action: PoiAction) => {
     switch (action.kind) {
       case 'pokerNight':
+        // One-time story beat: the game that starts the campaign, not a table
+        // you can farm. Marcus stops dealing you in once you've taken his night.
+        if (state.flags.wonPokerNight) break
         setView({ kind: 'pokerNight' })
         break
       case 'travel':
@@ -120,7 +124,13 @@ export function GameApp() {
     }
   }
 
-  const handleSitDown = (tableId: string) => {
+  const buyInAndSit = (table: (typeof TABLES)[string]) => {
+    // The buy-in leaves your wallet and becomes chips in front of you.
+    setState((s) => ({ ...s, cash: s.cash - table.buyIn }))
+    setView({ kind: 'table', tableId: table.id })
+  }
+
+  const handleSitDown = (tableId: string, skipBankrollCheck = false) => {
     const table = TABLES[tableId]
     if (!table) return
     if (INVITE_ONLY_TABLES.has(tableId) && !state.unlockedTableIds.includes(tableId)) {
@@ -136,9 +146,13 @@ export function GameApp() {
       setView({ kind: 'blocked', title: table.name, message: access.reason ?? 'You cannot sit down here.' })
       return
     }
-    // The buy-in leaves your wallet and becomes chips in front of you.
-    setState((s) => ({ ...s, cash: s.cash - table.buyIn }))
-    setView({ kind: 'table', tableId })
+    // The bankroll lesson is what earns this: the player can still sit, but they
+    // are told what they are risking before the buy-in leaves their wallet.
+    if (access.bankrollWarning && !skipBankrollCheck) {
+      setView({ kind: 'bankrollWarning', tableId, warning: access.bankrollWarning })
+      return
+    }
+    buyInAndSit(table)
   }
 
   const handleLeaveTable = (table: (typeof TABLES)[string], result: SessionResult) => {
@@ -176,7 +190,9 @@ export function GameApp() {
       return (
         <PokerNightScene
           onWin={(winnings) => {
-            setState((s) => ({ ...s, cash: winnings, flags: { ...s.flags, wonPokerNight: true } }))
+            // Winnings are *added* to the roll. This used to assign it, so
+            // walking in with $250,000 and winning set the bankroll to ~$1,500.
+            setState((s) => ({ ...s, cash: s.cash + winnings, flags: { ...s.flags, wonPokerNight: true } }))
             setView({ kind: 'bus' })
           }}
         />
@@ -211,6 +227,28 @@ export function GameApp() {
           <p>{view.message}</p>
         </MenuScreen>
       )
+
+    case 'bankrollWarning': {
+      const table = TABLES[view.tableId]
+      return (
+        <MenuScreen title={table.name} onBack={backToCity} backLabel="Walk away">
+          <p data-testid="bankroll-warning" style={{ color: '#f2c14e' }}>
+            Bankroll warning: {view.warning}
+          </p>
+          <p>
+            Buy-in ${table.buyIn.toLocaleString()} &middot; your roll ${state.cash.toLocaleString()}. One bad session
+            here takes a real bite out of what you have left to play with.
+          </p>
+          <button
+            data-testid="sit-anyway"
+            style={menuButtonStyle}
+            onClick={() => handleSitDown(view.tableId, true)}
+          >
+            Sit down anyway
+          </button>
+        </MenuScreen>
+      )
+    }
 
     case 'shop':
       return (

@@ -21,6 +21,24 @@ export type SoundName =
 const MUTE_KEY = 'poker-legend-muted'
 const VOLUME_KEY = 'poker-legend-volume'
 
+/** The volume a profile with no stored preference plays at. */
+export const DEFAULT_VOLUME = 0.9
+
+/**
+ * Resolves a stored volume preference.
+ *
+ * An absent key is `null`, and `Number(null)` is `0` — which is a perfectly
+ * valid volume, so the old check accepted it and every brand-new player got
+ * silence while the UI cheerfully reported "Sound is on". Only a key that
+ * actually exists and parses to a number in [0,1] may override the default.
+ */
+export function resolveStoredVolume(raw: string | null, fallback = DEFAULT_VOLUME): number {
+  if (raw === null || raw.trim() === '') return fallback
+  const parsed = Number(raw)
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 1) return fallback
+  return parsed
+}
+
 class AudioEngine {
   private ctx: AudioContext | null = null
   private master: GainNode | null = null
@@ -29,16 +47,16 @@ class AudioEngine {
   private musicTimer: number | null = null
   private musicNodes: { drone: OscillatorNode; droneEnv: GainNode } | null = null
   private muted = false
-  private volume = 0.9
+  private volume = DEFAULT_VOLUME
   private listeners = new Set<(muted: boolean) => void>()
 
   constructor() {
     try {
       this.muted = localStorage.getItem(MUTE_KEY) === '1'
-      const stored = Number(localStorage.getItem(VOLUME_KEY))
-      if (Number.isFinite(stored) && stored >= 0 && stored <= 1) this.volume = stored
+      this.volume = resolveStoredVolume(localStorage.getItem(VOLUME_KEY), DEFAULT_VOLUME)
     } catch {
       this.muted = false
+      this.volume = DEFAULT_VOLUME
     }
   }
 

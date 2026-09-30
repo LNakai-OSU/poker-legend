@@ -9,6 +9,11 @@ const SUIT_COLOR: Record<CardData['suit'], string> = {
   hearts: '#e05a5a', diamonds: '#e05a5a', clubs: '#e8e8f0', spades: '#e8e8f0',
 }
 
+/** Compact text form of a card ("A♠"), for summaries where a chit is too big. */
+export function cardText(card: CardData): string {
+  return `${RANK_LABEL[card.rank] ?? card.rank}${SUIT_SYMBOL[card.suit]}`
+}
+
 const cardBaseStyle: CSSProperties = {
   // Shrinks on phone widths so a five-card board still fits without scrolling.
   width: 'clamp(26px, 8vw, 40px)',
