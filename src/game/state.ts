@@ -107,6 +107,25 @@ export function payDebt(state: GameState, debtId: string): GameState {
   }
 }
 
+/** Days of breathing room after a shakedown before the collectors resume the hunt. */
+export const CAUGHT_GRACE_DAYS = 3
+
+/**
+ * Collectors catch up with you. They take the bankroll you are carrying and the
+ * debt stays exactly where it was: wiping the slate used to make walking into
+ * them strictly better than paying, which is the opposite of the intended
+ * pressure. They do leave you alone for a few days afterwards, so being broke
+ * and hunted is a hole you can still dig out of rather than a dead end.
+ */
+export function caughtByCollectors(state: GameState): GameState {
+  return {
+    ...state,
+    cash: 0,
+    huntedInCityId: null,
+    huntGraceUntilDay: state.day + CAUGHT_GRACE_DAYS,
+  }
+}
+
 export function takeStake(
   state: GameState,
   sponsor: { id: string; name: string },

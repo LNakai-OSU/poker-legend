@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   advanceDay,
+  CAUGHT_GRACE_DAYS,
+  caughtByCollectors,
   daysUntilDue,
   initialState,
   overdueDebts,
@@ -80,6 +82,50 @@ describe('debt', () => {
     // the problem rather than solving it.
     state = advanceDay(state)
     expect(state.huntedInCityId).toBe('crescentHarbor')
+  })
+})
+
+describe('getting caught', () => {
+  function hunted() {
+    return advanceDay(staked({ cash: 500 }), 4)
+  }
+
+  it('takes the bankroll but leaves the debt standing', () => {
+    // Wiping the debt made deliberately walking into collectors strictly better
+    // than paying, which inverted the whole point of borrowing.
+    const before = hunted()
+    const after = caughtByCollectors(before)
+    expect(after.cash).toBe(0)
+    expect(after.debts).toEqual(before.debts)
+    expect(totalOwed(after)).toBe(totalOwed(before))
+  })
+
+  it('is never cheaper than paying what you owe', () => {
+    const rich = advanceDay(staked({ cash: 10000 }), 4)
+    const paid = payDebt(rich, rich.debts[0].id)
+    const caught = caughtByCollectors(rich)
+    // Paying leaves you with money and no debt; being caught leaves you with
+    // neither the money nor a clean slate.
+    expect(paid.cash - totalOwed(paid)).toBeGreaterThan(caught.cash - totalOwed(caught))
+  })
+
+  it('calls off the hunt and grants a few days of breathing room', () => {
+    const caught = caughtByCollectors(hunted())
+    expect(caught.huntedInCityId).toBeNull()
+
+    // Still overdue, but they leave you alone long enough to earn.
+    let state = caught
+    for (let day = 1; day < CAUGHT_GRACE_DAYS; day++) {
+      state = advanceDay(state)
+      expect(overdueDebts(state).length).toBe(1)
+      expect(state.huntedInCityId).toBeNull()
+    }
+  })
+
+  it('sends the collectors back once the grace period runs out', () => {
+    let state = caughtByCollectors(hunted())
+    state = advanceDay(state, CAUGHT_GRACE_DAYS + 1)
+    expect(state.huntedInCityId).toBe('riverbend')
   })
 })
 

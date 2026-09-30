@@ -258,6 +258,7 @@ export class TexasHoldEmTable {
       hole: p.holeCards,
       board: [...this.board],
       potSize,
+      currentBet: this.currentBet,
       toCall: this.currentBet - p.streetContribution,
       minRaiseTo: this.currentBet + this.lastRaiseSize,
       allInTo: p.streetContribution + p.stack,

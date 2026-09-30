@@ -155,6 +155,24 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
     publicState.handInProgress,
   ])
 
+  // --- Bet sizing -----------------------------------------------------------
+  // The AI bets a fraction of the pot, so the player needs the same vocabulary;
+  // min-raise-or-shove is not a real betting decision.
+  const allInTo = you.streetContribution + you.stack
+  const raisePresets = ([
+    { key: 'half', label: '½ pot', fraction: 0.5 },
+    { key: 'three-quarter', label: '¾ pot', fraction: 0.75 },
+    { key: 'pot', label: 'Pot', fraction: 1 },
+  ] as const)
+    .map(({ key, label, fraction }) => ({
+      key,
+      label,
+      // Clamped up to the legal minimum raise; anything at or beyond the whole
+      // stack is dropped, since "All in" already covers it.
+      to: Math.max(publicState.minRaiseTo, publicState.currentBet + Math.round((publicState.pot + toCall) * fraction)),
+    }))
+    .filter((preset, i, all) => preset.to < allInTo && all.findIndex((p) => p.to === preset.to) === i)
+
   const potOdds =
     state.lessonIds.includes('pot-odds') && toCall > 0
       ? { toCall, breakEven: toCall / (publicState.pot + toCall) }
@@ -294,10 +312,22 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
           )}
           {legalActions.some((a) => a.type === 'raise') && (
             <>
-              <button style={buttonStyle} onClick={() => raiseTo(publicState.minRaiseTo)}>
-                Raise to {publicState.minRaiseTo}
-              </button>
-              <button style={buttonStyle} onClick={() => raiseTo(you.streetContribution + you.stack)}>All in</button>
+              {publicState.minRaiseTo < allInTo && (
+                <button style={sizingButtonStyle} data-testid="raise-min" onClick={() => raiseTo(publicState.minRaiseTo)}>
+                  Min {publicState.minRaiseTo}
+                </button>
+              )}
+              {raisePresets.map((preset) => (
+                <button
+                  key={preset.key}
+                  style={sizingButtonStyle}
+                  data-testid={`raise-${preset.key}`}
+                  onClick={() => raiseTo(preset.to)}
+                >
+                  {preset.label} {preset.to}
+                </button>
+              ))}
+              <button style={sizingButtonStyle} data-testid="raise-all-in" onClick={() => raiseTo(allInTo)}>All in</button>
             </>
           )}
         </div>
@@ -321,4 +351,12 @@ function Overlay({ children }: { children: ReactNode }) {
 const buttonStyle = {
   background: '#3a9d5c', color: '#fff', border: 'none', borderRadius: 4,
   padding: '8px 16px', fontFamily: 'monospace', cursor: 'pointer', fontSize: 14,
+} as const
+
+/** Tighter, since up to five sizing buttons have to wrap sanely at 390px. */
+const sizingButtonStyle = {
+  ...buttonStyle,
+  background: '#2f7d4a',
+  padding: 'clamp(6px, 2vw, 8px) clamp(8px, 3vw, 14px)',
+  fontSize: 'clamp(12px, 3.4vw, 14px)',
 } as const

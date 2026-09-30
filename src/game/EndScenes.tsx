@@ -13,7 +13,7 @@ function FullScreen({ children, background = '#0a0a12' }: { children: React.Reac
   )
 }
 
-/** Caught by collectors — the run ends and rolls back to the last checkpoint. */
+/** Caught by collectors — they seize your bankroll; the debt itself still stands. */
 export function CaughtScene({ onRestart }: { onRestart: () => void }) {
   return (
     <FullScreen background="#160a0a">
@@ -22,8 +22,11 @@ export function CaughtScene({ onRestart }: { onRestart: () => void }) {
         Two of them, either side, walking you out through the service corridor. Nobody in the room
         looks up. They take what you have and explain, patiently, what happens if there is a next time.
       </p>
-      <p style={{ color: '#9a9ab0' }}>You wake up back where you last felt safe, with nothing.</p>
-      <button style={{ ...buttonStyle, marginTop: 12 }} onClick={onRestart}>Start again from your last checkpoint</button>
+      <p style={{ color: '#9a9ab0' }}>
+        You wake up back where you last felt safe, with nothing. What you owe has not moved a cent
+        &mdash; they will just be looking for you again in a few days.
+      </p>
+      <button style={{ ...buttonStyle, marginTop: 12 }} onClick={onRestart}>Pick yourself up</button>
     </FullScreen>
   )
 }

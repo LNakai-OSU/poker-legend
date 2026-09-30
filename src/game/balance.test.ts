@@ -42,6 +42,7 @@ function averageEquityWhenCommitting(
         board,
         potSize: 100,
         toCall: 50,
+        currentBet: 50,
         minRaiseTo: 100,
         allInTo: 1000,
         opponentsInHand: 1,

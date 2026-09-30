@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { generateTell } from './tells'
+import { generateTell, STRONG_TELL_KINDS, WEAK_TELL_KINDS } from './tells'
 import { mulberry32 } from './rng'
 import type { Card, SkillTier } from './types'
 
@@ -56,6 +56,53 @@ describe('generateTell', () => {
     const sharpTruthRate = sharp.saidStrong / sharp.fired
     expect(sharp.fired).toBeGreaterThan(0)
     expect(sharpTruthRate).toBeLessThan(noviceTruthRate)
+  }, 30000)
+
+  it('picks the cue from the set matching what the tell means', () => {
+    // This is what makes a read learnable at all: the visible cue has to carry
+    // the signal, not just the hidden meansStrongHand flag.
+    const rng = mulberry32(1234)
+    let checked = 0
+    for (const tier of ['novice', 'competent', 'elite'] as SkillTier[]) {
+      for (const hole of [POCKET_ACES, TRASH]) {
+        for (let i = 0; i < 120; i++) {
+          const tell = generateTell('opponent', hole, [], tier, rng)
+          if (!tell) continue
+          checked++
+          const expected = tell.meansStrongHand ? STRONG_TELL_KINDS : WEAK_TELL_KINDS
+          expect(expected, `${tell.kind} for meansStrongHand=${tell.meansStrongHand}`).toContain(tell.kind)
+        }
+      }
+    }
+    expect(checked).toBeGreaterThan(50)
+  }, 30000)
+
+  it('shows a strong-hand cue most of the time when a novice holds a monster', () => {
+    const rng = mulberry32(8)
+    let strongCue = 0
+    let fired = 0
+    for (let i = 0; i < 300; i++) {
+      const tell = generateTell('opponent', POCKET_ACES, [], 'novice', rng)
+      if (!tell) continue
+      fired++
+      if (STRONG_TELL_KINDS.includes(tell.kind)) strongCue++
+    }
+    expect(fired).toBeGreaterThan(0)
+    expect(strongCue / fired).toBeGreaterThan(0.85)
+  }, 30000)
+
+  it('shows a weak-hand cue most of the time when a novice holds trash', () => {
+    const rng = mulberry32(8)
+    let weakCue = 0
+    let fired = 0
+    for (let i = 0; i < 300; i++) {
+      const tell = generateTell('opponent', TRASH, [], 'novice', rng)
+      if (!tell) continue
+      fired++
+      if (WEAK_TELL_KINDS.includes(tell.kind)) weakCue++
+    }
+    expect(fired).toBeGreaterThan(0)
+    expect(weakCue / fired).toBeGreaterThan(0.85)
   }, 30000)
 
   it('returns a well-formed signal', () => {

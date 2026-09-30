@@ -9,6 +9,8 @@ export interface AiDecisionContext {
   board: Card[]
   potSize: number
   toCall: number
+  /** The highest street contribution anyone has made — what a call matches. */
+  currentBet: number
   minRaiseTo: number
   /** The 'to' value if this player commits their entire remaining stack. */
   allInTo: number
@@ -50,6 +52,32 @@ const BLUFF_CHANCE: Record<SkillTier, number> = {
   sharp: 0.1,
   elite: 0.12,
 }
+
+/**
+ * How much of the break-even price a tier actually demands before calling.
+ * 1.0 is textbook-correct (call exactly when equity beats pot odds); below 1.0
+ * is a calling station, since it accepts hands that are not getting the price.
+ * Weak players call much too wide, strong players hew close to correct.
+ */
+const CALL_SLACK: Record<SkillTier, number> = {
+  novice: 0.72,
+  amateur: 0.78,
+  competent: 0.85,
+  sharp: 0.93,
+  elite: 0.98,
+}
+
+/** A bluff is only ever considered when the price of the bluff-raise is this
+ * small relative to the pot — you cannot bluff-raise into a shove. */
+const BLUFF_MAX_PRICE_AS_POT_FRACTION = 0.34
+
+/** Raise sizing, as a fraction of the pot after the call: half-pot to pot. */
+const RAISE_POT_FRACTION_MIN = 0.5
+const RAISE_POT_FRACTION_SPAN = 0.5
+/** A single raise never commits more of the stack than this... */
+const MAX_RAISE_STACK_FRACTION = 0.7
+/** ...but once a raise is nearly everything, shove rather than leave a stub. */
+const SHOVE_SNAP_FRACTION = 0.85
 
 /**
  * Monte Carlo win-probability estimate: deals random cards for the
@@ -107,9 +135,19 @@ function clamp01(x: number): number {
 
 /** Whales misjudge their hand wildly, chase almost anything, and splash around. */
 const WHALE_EXTRA_NOISE = 0.25
-const WHALE_POT_ODDS_DISCOUNT = 0.55
+/** A whale calls well below the break-even price — that leak is the whole point. */
+const WHALE_CALL_SLACK = 0.55
 const WHALE_EXTRA_BLUFF_CHANCE = 0.12
 
+/**
+ * Decides one action.
+ *
+ * The rule that matters: whether to *continue* is settled by perceived equity
+ * against the pot odds and nothing else. Bluffing is a betting decision, so it
+ * can only ever turn a check into a bet or a cheap call into a raise — it can
+ * never rescue a hand that the price says to fold. (It used to, which let a
+ * 3-12% roll call off an entire stack with any two cards.)
+ */
 export function decideAiAction(ctx: AiDecisionContext, rng: Rng): Action {
   const isWhale = ctx.archetype === 'whale'
   const trueEquity = estimateEquity(
@@ -121,27 +159,44 @@ export function decideAiAction(ctx: AiDecisionContext, rng: Rng): Action {
   )
   const noise = EQUITY_NOISE[ctx.skillTier] + (isWhale ? WHALE_EXTRA_NOISE : 0)
   const perceivedEquity = clamp01(trueEquity + (rng() - 0.5) * 2 * noise)
+  const raiseThreshold = RAISE_THRESHOLD[ctx.skillTier]
 
-  const wantsToBluff = rng() < BLUFF_CHANCE[ctx.skillTier] + (isWhale ? WHALE_EXTRA_BLUFF_CHANCE : 0)
+  // Whales are looser than even the worst disciplined player, but the two
+  // leaks don't stack: take whichever slack is wider.
+  const callSlack = isWhale
+    ? Math.min(WHALE_CALL_SLACK, CALL_SLACK[ctx.skillTier])
+    : CALL_SLACK[ctx.skillTier]
+
+  const bluffRoll = rng() < BLUFF_CHANCE[ctx.skillTier] + (isWhale ? WHALE_EXTRA_BLUFF_CHANCE : 0)
+  // Bluffing is only on the table when it is cheap: facing nothing, or a small
+  // bet relative to the pot, and never when calling would already be all-in.
+  const priceIsSmall =
+    ctx.allInTo > ctx.currentBet &&
+    (ctx.toCall <= 0 || ctx.toCall <= ctx.potSize * BLUFF_MAX_PRICE_AS_POT_FRACTION)
+  const wantsToBluff = bluffRoll && priceIsSmall
+
+  /** Pot-fraction sizing, so a raise is proportionate to what is being fought over. */
   const raiseTo = () => {
-    const potSizedExtra = Math.round(ctx.potSize * (0.5 + rng() * 0.5))
-    const to = Math.max(ctx.minRaiseTo, ctx.minRaiseTo + potSizedExtra - ctx.toCall)
-    return Math.min(to, ctx.allInTo)
+    const potAfterCall = ctx.potSize + ctx.toCall
+    const betSize = Math.round(potAfterCall * (RAISE_POT_FRACTION_MIN + rng() * RAISE_POT_FRACTION_SPAN))
+    const cap = Math.max(ctx.minRaiseTo, Math.round(ctx.allInTo * MAX_RAISE_STACK_FRACTION))
+    let to = Math.min(ctx.currentBet + betSize, cap)
+    if (to >= ctx.allInTo * SHOVE_SNAP_FRACTION) to = ctx.allInTo
+    return Math.min(Math.max(to, ctx.minRaiseTo), ctx.allInTo)
   }
 
   if (ctx.toCall <= 0) {
-    if (perceivedEquity > RAISE_THRESHOLD[ctx.skillTier] || wantsToBluff) {
+    if (perceivedEquity > raiseThreshold || wantsToBluff) {
       return { type: 'raise', to: raiseTo() }
     }
     return { type: 'check' }
   }
 
-  // A whale calls well below the break-even price — that leak is the whole point.
-  const potOdds = (ctx.toCall / (ctx.potSize + ctx.toCall)) * (isWhale ? WHALE_POT_ODDS_DISCOUNT : 1)
-  if (perceivedEquity < potOdds && !wantsToBluff) {
+  const potOdds = ctx.toCall / (ctx.potSize + ctx.toCall)
+  if (perceivedEquity < potOdds * callSlack) {
     return { type: 'fold' }
   }
-  if (perceivedEquity > RAISE_THRESHOLD[ctx.skillTier] || wantsToBluff) {
+  if (perceivedEquity > raiseThreshold || wantsToBluff) {
     return { type: 'raise', to: raiseTo() }
   }
   return { type: 'call' }

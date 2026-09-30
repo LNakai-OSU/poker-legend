@@ -15,6 +15,7 @@ import { SoundToggle, useAudioUnlock } from '../audio/SoundToggle'
 import { playSound } from '../audio/audio'
 import {
   advanceDay,
+  caughtByCollectors,
   initialState,
   payDebt,
   takeStake,
@@ -161,9 +162,10 @@ export function GameApp() {
   }
 
   const handleCaught = () => {
-    // They take everything you're carrying and the slate is wiped; you keep
-    // what you've learned and what you own, and start rebuilding.
-    setState((s) => ({ ...s, cash: 0, debts: [], huntedInCityId: null }))
+    // They take everything you're carrying, but the debt still stands — getting
+    // caught must never be cheaper than paying. You keep what you've learned and
+    // what you own, and they give you a few days before they come looking again.
+    setState(caughtByCollectors)
     playSound('lose')
     setView({ kind: 'caught' })
   }

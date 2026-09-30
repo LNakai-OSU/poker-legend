@@ -57,9 +57,12 @@ function runGame(seed: number) {
 }
 
 describe('chip conservation with a check/call-only human mixed in', () => {
+  // Generous timeout: the AI now sizes bets as a fraction of the pot instead of
+  // shoving, so games grind on for many more hands (and many more Monte Carlo
+  // equity runs) before anyone busts.
   it('never loses or creates chips after any single action, across many seeds', () => {
     for (let seed = 0; seed < 15; seed++) {
       runGame(seed)
     }
-  }, 60000)
+  }, 180000)
 })

@@ -2,7 +2,15 @@ import { estimateEquity } from './ai'
 import type { Rng } from './rng'
 import type { Archetype, Card, SkillTier, TellSignal } from './types'
 
-const TELL_KINDS: TellSignal['kind'][] = ['arm-shift', 'lip-twitch', 'glance', 'stillness', 'chip-tap']
+/**
+ * The cue vocabulary is split, so the cue itself is the signal: a player who
+ * pays attention can learn that a chip-tap or a sudden freeze means strength,
+ * while fidgeting means weakness. Without this split `kind` was picked
+ * uniformly and reads were pure noise — nothing to learn, and the "Spotting
+ * Tells" lesson bought only a CSS opacity change.
+ */
+export const STRONG_TELL_KINDS: TellSignal['kind'][] = ['chip-tap', 'stillness']
+export const WEAK_TELL_KINDS: TellSignal['kind'][] = ['arm-shift', 'lip-twitch', 'glance']
 
 /** Chance a tell is noticeable at all this street, by opponent skill — this is
  * the main lever for "tells get subtler as players get better": a sharp or
@@ -54,7 +62,11 @@ export function generateTell(
   let meansStrongHand = equity > STRONG_HAND_EQUITY_THRESHOLD
   if (rng() < deception) meansStrongHand = !meansStrongHand
 
-  const kind = TELL_KINDS[Math.floor(rng() * TELL_KINDS.length)]
+  // Picked *after* the deception flip, so a false read shows the cue of the
+  // hand strength it is pretending to have — which is exactly what makes a
+  // better player unreliable to read rather than simply unreadable.
+  const kinds = meansStrongHand ? STRONG_TELL_KINDS : WEAK_TELL_KINDS
+  const kind = kinds[Math.floor(rng() * kinds.length)]
   const visibility = frequency * (0.6 + rng() * 0.4)
 
   return { playerId, visibility, meansStrongHand, kind }
