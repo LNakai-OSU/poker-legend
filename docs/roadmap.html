@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Poker Legend — Roadmap</title>
+<style>
+  @page { size: letter; margin: 18mm 16mm; }
+  :root {
+    --ink: #14141f;
+    --muted: #5a5a6e;
+    --line: #d8d8e0;
+    --green: #2e7d4f;
+    --amber: #b47a17;
+    --grey: #8a8a9a;
+    --accent: #3a9d5c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    font-size: 10.5pt;
+    line-height: 1.45;
+  }
+  h1 { font-size: 24pt; margin: 0 0 2px; letter-spacing: -0.5px; }
+  .subtitle { color: var(--muted); font-size: 10pt; margin: 0 0 18px; }
+  h2 {
+    font-size: 12.5pt; margin: 22px 0 8px; padding-bottom: 4px;
+    border-bottom: 1.5px solid var(--line); letter-spacing: -0.2px;
+  }
+  h2:first-of-type { margin-top: 18px; }
+  p { margin: 0 0 8px; }
+  .meta {
+    display: flex; gap: 22px; flex-wrap: wrap;
+    padding: 10px 12px; background: #f6f6f9; border-radius: 6px;
+    margin-bottom: 4px; font-size: 9.5pt;
+  }
+  .meta div { line-height: 1.35; }
+  .meta .label { color: var(--muted); font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.4px; }
+  .meta .value { font-weight: 600; }
+
+  .phase { display: flex; gap: 10px; margin-bottom: 11px; break-inside: avoid; }
+  .badge {
+    flex: none; width: 74px; text-align: center; font-size: 7.5pt; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.4px; padding: 3px 0; border-radius: 3px;
+    height: fit-content; margin-top: 1px;
+  }
+  .done { background: #e3f3e9; color: var(--green); border: 1px solid #b9e0c9; }
+  .partial { background: #fdf2dd; color: var(--amber); border: 1px solid #f0dcae; }
+  .todo { background: #f0f0f4; color: var(--grey); border: 1px solid #e0e0e8; }
+  .phase-body { flex: 1; }
+  .phase-title { font-weight: 650; margin-bottom: 1px; }
+  .phase-desc { color: var(--muted); font-size: 9.5pt; }
+
+  ul { margin: 4px 0 8px; padding-left: 17px; }
+  li { margin-bottom: 3px; }
+  .note {
+    background: #f6f6f9; border-left: 3px solid var(--accent);
+    padding: 8px 11px; font-size: 9.5pt; margin: 10px 0; border-radius: 0 4px 4px 0;
+  }
+  .note strong { display: block; margin-bottom: 2px; }
+  footer {
+    margin-top: 24px; padding-top: 8px; border-top: 1px solid var(--line);
+    color: var(--muted); font-size: 8.5pt;
+  }
+  .ladder { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 8px 0 10px; }
+  .stop {
+    border: 1px solid var(--line); border-radius: 4px; padding: 5px 9px;
+    font-size: 9pt; background: #fafafc; text-align: center;
+  }
+  .stop b { display: block; font-size: 9.5pt; }
+  .stop span { color: var(--muted); font-size: 8pt; }
+  .arrow { color: var(--grey); font-size: 11pt; }
+  .stop.built { background: #e3f3e9; border-color: #b9e0c9; }
+</style>
+</head>
+<body>
+
+<h1>Poker Legend</h1>
+<p class="subtitle">Build roadmap &middot; status as of 29 September 2026</p>
+
+<div class="meta">
+  <div><div class="label">Genre</div><div class="value">Story-driven poker RPG</div></div>
+  <div><div class="label">Platforms</div><div class="value">Browser + iPhone (Capacitor)</div></div>
+  <div><div class="label">Stack</div><div class="value">Vite &middot; React &middot; TS &middot; PixiJS</div></div>
+  <div><div class="label">Variant</div><div class="value">Texas Hold'em only</div></div>
+  <div><div class="label">Repo</div><div class="value">~/projects/poker-legend</div></div>
+</div>
+
+<h2>The concept</h2>
+<p>
+  LeafGreen-style top-down overworld exploration between story beats, dropping into a
+  fully-simulated, realistic-odds poker engine whenever the player sits down at a table.
+  The player rises from a broke twenty-something at a friend's home game to a poker legend
+  across an escalating ladder of casino cities — risking real debt along the way.
+</p>
+
+<h2>Location ladder</h2>
+<div class="ladder">
+  <div class="stop built"><b>Apartment</b><span>intro / poker night</span></div>
+  <span class="arrow">&rarr;</span>
+  <div class="stop built"><b>Rez Casino</b><span>low stakes</span></div>
+  <span class="arrow">&rarr;</span>
+  <div class="stop"><b>Regional cities</b><span>2&ndash;3 stops</span></div>
+  <span class="arrow">&rarr;</span>
+  <div class="stop"><b>Vegas-parallel</b><span>high stakes</span></div>
+  <span class="arrow">&rarr;</span>
+  <div class="stop"><b>Macau-parallel</b><span>endgame / penthouse</span></div>
+</div>
+
+<h2>MVP phases</h2>
+
+<div class="phase">
+  <div class="badge done">Done</div>
+  <div class="phase-body">
+    <div class="phase-title">1 &middot; Scaffold</div>
+    <div class="phase-desc">Vite + React + TypeScript project, PixiJS wired into a full-viewport canvas, living design docs (GDD + tech design) established as the source of truth.</div>
+  </div>
+</div>
+
+<div class="phase">
+  <div class="badge done">Done</div>
+  <div class="phase-body">
+    <div class="phase-title">2 &middot; Apartment scene</div>
+    <div class="phase-desc">Walkable room with grid-locked LeafGreen-style movement, tile collision, camera follow, and an NPC (Marcus) whose dialogue triggers the poker night. Later refactored into a reusable overworld component.</div>
+  </div>
+</div>
+
+<div class="phase">
+  <div class="badge done">Done</div>
+  <div class="phase-body">
+    <div class="phase-title">3 &middot; Poker engine core</div>
+    <div class="phase-desc">Real 52-card deck and shuffling, 5- and 7-card hand evaluation, multi-way side pots, and a full betting-round state machine (blinds, all-ins, street advancement, showdown). AI decisions use Monte Carlo equity estimation — the same technique real equity calculators use — with skill-tiered noise and aggression.</div>
+  </div>
+</div>
+
+<div class="phase">
+  <div class="badge done">Done</div>
+  <div class="phase-body">
+    <div class="phase-title">4 &middot; Poker night loop</div>
+    <div class="phase-desc">Playable three-handed freezeout against Marcus and Dana. Busting restarts the night from the top; winning all the chips ends the scene and banks the winnings.</div>
+  </div>
+</div>
+
+<div class="phase">
+  <div class="badge done">Done</div>
+  <div class="phase-body">
+    <div class="phase-title">5 &middot; Bus &rarr; local casino</div>
+    <div class="phase-desc">Bus transition carries winnings into a cash wallet. Casino lobby overworld with a Pit Boss (leads to the table) plus ambient slot machines and a craps table. The low-stakes table is a true cash game — fixed buy-in, AI auto-rebuy, human rebuy or leave-and-cash-out.</div>
+  </div>
+</div>
+
+<div class="phase">
+  <div class="badge partial">In progress</div>
+  <div class="phase-body">
+    <div class="phase-title">6 &middot; Tells &amp; table depth</div>
+    <div class="phase-desc">Opponents give off readable physical cues that correlate with hand strength. Frequency and reliability both scale down with opponent skill, so sharp players give away almost nothing and occasionally give false reads. Currently being built.</div>
+  </div>
+</div>
+
+<div class="phase">
+  <div class="badge partial">In progress</div>
+  <div class="phase-body">
+    <div class="phase-title">7 &middot; Economy &amp; persistence</div>
+    <div class="phase-desc">Cash tracking and buy-ins are in. Checkpoint saving (surviving a page reload, tied to location transitions per the design) is being added now. A first shop still to come.</div>
+  </div>
+</div>
+
+<h2>Beyond the MVP</h2>
+
+<div class="phase">
+  <div class="badge todo">Planned</div>
+  <div class="phase-body">
+    <div class="phase-title">8 &middot; Mid-tier cities</div>
+    <div class="phase-desc">Two to three regional casino cities with their own maps, restaurants, clubs, shops (clothes, vehicles) and small side missions — giving the stakes ramp room to breathe.</div>
+  </div>
+</div>
+
+<div class="phase">
+  <div class="badge todo">Planned</div>
+  <div class="phase-body">
+    <div class="phase-title">9 &middot; Sponsors, debt &amp; collectors</div>
+    <div class="phase-desc">NPCs who spot your skill and stake you into bigger private games. Losing staked money creates debt with a deadline; miss it and collectors hunt you — get caught before reaching a new location and you roll back to your last checkpoint.</div>
+  </div>
+</div>
+
+<div class="phase">
+  <div class="badge todo">Planned</div>
+  <div class="phase-body">
+    <div class="phase-title">10 &middot; Mentor &amp; whales</div>
+    <div class="phase-desc">A mentor NPC teaching real, established poker strategy, and the recurring whale archetype — big money, bad play, obvious tells, wide unpredictable ranges.</div>
+  </div>
+</div>
+
+<div class="phase">
+  <div class="badge todo">Planned</div>
+  <div class="phase-body">
+    <div class="phase-title">11 &middot; Vegas-parallel</div>
+    <div class="phase-desc">Second-to-final location. High buy-ins, genuinely strong AI, near-imperceptible tells, and the first serious heads-up opportunities.</div>
+  </div>
+</div>
+
+<div class="phase">
+  <div class="badge todo">Planned</div>
+  <div class="phase-body">
+    <div class="phase-title">12 &middot; Macau-parallel &amp; endgame</div>
+    <div class="phase-desc">Final location and the climactic heads-up match that decides whether you earn the penthouse ending — after which the game opens up into a free-play state.</div>
+  </div>
+</div>
+
+<h2>How this is being built</h2>
+<ul>
+  <li><strong>Engine before UI.</strong> The poker engine is plain TypeScript with no React or rendering dependencies, so its correctness can be tested headlessly and trusted before anything is built on top of it.</li>
+  <li><strong>Fuzz testing over spot checks.</strong> Full AI-vs-AI games run across many random seeds, asserting chip conservation after every single action — not just at hand boundaries.</li>
+  <li><strong>Real browser verification.</strong> Each UI phase is driven end-to-end with Playwright before being called done.</li>
+  <li><strong>Living docs.</strong> The design doc and tech design in the repo stay current, so each build request can reference them instead of restating context.</li>
+</ul>
+
+<div class="note">
+  <strong>Why the browser testing matters</strong>
+  Phase 4 shipped three real bugs that the unit suite could not see: a stale pot display, a
+  React StrictMode double-invoke that silently ate a blind round's worth of chips on the very
+  first hand, and an effect dependency that could stall the AI's turn entirely. All three only
+  surfaced when the actual app was driven in a real browser.
+</div>
+
+<h2>Open design questions</h2>
+<ul>
+  <li>Exact number of mid-tier cities — two or three (leaning three for a smoother stakes ramp).</li>
+  <li>How deep the non-poker casino games go; slots and craps are ambient flavor for now.</li>
+  <li>Audio direction — not yet specified.</li>
+  <li>Character customization depth: appearance only, or stat-like traits?</li>
+</ul>
+
+<footer>
+  Poker Legend &middot; roadmap generated 29 September 2026 &middot; phase status tracked in docs/TECHDESIGN.md
+</footer>
+
+</body>
+</html>

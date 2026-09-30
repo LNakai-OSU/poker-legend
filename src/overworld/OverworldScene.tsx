@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Application } from 'pixi.js'
 import { buildTileLayer, TILE_SIZE, type TileGrid } from './tileRenderer'
 import { GridPlayer, type Direction } from './GridPlayer'
@@ -23,9 +23,11 @@ interface OverworldSceneProps {
   playerStart: { col: number; row: number }
   interactables: Interactable[]
   background?: string
+  /** Optional persistent corner UI, e.g. a wallet readout. */
+  hud?: ReactNode
 }
 
-export function OverworldScene({ map, playerStart, interactables, background = '#101018' }: OverworldSceneProps) {
+export function OverworldScene({ map, playerStart, interactables, background = '#101018', hud }: OverworldSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [prompt, setPrompt] = useState<string | null>(null)
   const [talkingId, setTalkingId] = useState<string | null>(null)
@@ -116,6 +118,22 @@ export function OverworldScene({ map, playerStart, interactables, background = '
   return (
     <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>
       <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+      {hud && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 16,
+            left: 16,
+            color: '#e8e8f0',
+            fontFamily: 'monospace',
+            background: 'rgba(10,10,16,0.8)',
+            padding: '4px 10px',
+            borderRadius: 4,
+          }}
+        >
+          {hud}
+        </div>
+      )}
       {prompt && (
         <div
           style={{

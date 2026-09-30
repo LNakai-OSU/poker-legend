@@ -57,15 +57,20 @@ docs/
    objects (ambient, no mechanics yet — that's still a deliberate MVP
    simplification per the GDD). Winning poker night now seeds a `cash`
    wallet (held in `GameApp.tsx`) with the freezeout winnings.
-6. **Low-stakes table live** ~partial — the low-stakes table is a real cash
-   game (`src/game/CashGameScene.tsx`, distinct from poker night's freezeout):
-   fixed buy-in, AI auto-rebuy, human rebuy/leave-to-cash-out. AI skill tiers
-   already vary (novice/amateur) but the **tell system is still unbuilt** —
-   `TellSignal` in `engine/types.ts` remains unused. Do that next before
-   calling this phase done.
-7. **Economy pass** ~partial — cash tracking/buy-ins exist (wallet lives in
-   React state only, not persisted). Still missing: a shop, and any
-   checkpoint/save system (nothing survives a page reload yet).
+6. **Low-stakes table live** ✅ — the low-stakes table is a real cash game
+   (`src/game/CashGameScene.tsx`, distinct from poker night's freezeout):
+   fixed buy-in, AI auto-rebuy, human rebuy/leave-to-cash-out. The **tell
+   system** (`src/engine/tells.ts`) rolls a read per opponent per street:
+   frequency *and* truthfulness both scale down with skill tier, so a novice
+   leaks constantly and honestly while an elite rarely shows anything and
+   lies when they do. The UI (`src/game/tellFlavor.ts`) shows only the
+   observable cue, never its meaning — interpreting it is the mechanic.
+   Tell opacity tracks `visibility` so subtle reads are genuinely easy to miss.
+7. **Economy & persistence** ~partial — cash tracking, buy-ins, and
+   checkpoint saving are in (`src/game/save.ts`, `localStorage`). Only hub
+   scenes (apartment, casino lobby) are checkpoints; mid-hand table state is
+   deliberately not persisted, so reloading mid-game drops you to the last
+   hub and forfeits chips still on the table. **Still missing: a first shop.**
 
 Phases beyond this (mid-tier cities, sponsor/debt/collector system, mentor,
 whales, Vegas-parallel, Macau-parallel, endgame heads-up) are deliberately

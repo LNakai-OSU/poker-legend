@@ -16,11 +16,15 @@ const LOBBY_MAP: TileGrid = [
   [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
 ]
 
+const BUY_IN = 100
+
 interface CasinoLobbySceneProps {
+  cash: number
   onEnterLowStakesTable: () => void
 }
 
-export function CasinoLobbyScene({ onEnterLowStakesTable }: CasinoLobbySceneProps) {
+export function CasinoLobbyScene({ cash, onEnterLowStakesTable }: CasinoLobbySceneProps) {
+  const canAfford = cash >= BUY_IN
   const interactables: Interactable[] = [
     {
       id: 'slots',
@@ -50,11 +54,16 @@ export function CasinoLobbyScene({ onEnterLowStakesTable }: CasinoLobbySceneProp
       col: 9,
       row: 3,
       color: 0x6ea8fe,
-      lines: [
-        "Pit Boss: Low-stakes table's got an open seat. Dollar-two blinds.",
-        "Pit Boss: Buy-in's a hundred bucks. Sit down whenever you're ready.",
-      ],
-      onFinish: onEnterLowStakesTable,
+      lines: canAfford
+        ? [
+            "Pit Boss: Low-stakes table's got an open seat. Dollar-two blinds.",
+            `Pit Boss: Buy-in's ${BUY_IN} bucks. Sit down whenever you're ready.`,
+          ]
+        : [
+            "Pit Boss: Low-stakes table's got an open seat. Dollar-two blinds.",
+            `Pit Boss: Buy-in's ${BUY_IN} bucks, though. Come back when you've got it.`,
+          ],
+      onFinish: canAfford ? onEnterLowStakesTable : undefined,
     },
   ]
 
@@ -64,6 +73,7 @@ export function CasinoLobbyScene({ onEnterLowStakesTable }: CasinoLobbySceneProp
       playerStart={{ col: 9, row: 9 }}
       interactables={interactables}
       background="#161018"
+      hud={`Cash: $${cash}`}
     />
   )
 }

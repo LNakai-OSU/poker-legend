@@ -1,6 +1,7 @@
 import type { HandResult, PublicState } from '../engine/table'
 import type { Card as CardData, PlayerConfig } from '../engine/types'
 import { Card } from './Card'
+import { tellText } from './tellFlavor'
 
 interface PokerTableViewProps {
   state: PublicState
@@ -55,6 +56,20 @@ export function PokerTableView({ state, lastResult, players, yourHole }: PokerTa
             )}
             {p.folded && <div>Folded</div>}
             {p.allIn && <div>All in</div>}
+            {p.tell && !p.folded && (
+              <div
+                style={{
+                  marginTop: 6,
+                  fontSize: 11,
+                  fontStyle: 'italic',
+                  // A fainter cue is genuinely harder to notice, which is how
+                  // better opponents stay hard to read.
+                  color: `rgba(242, 193, 78, ${0.35 + p.tell.visibility * 0.65})`,
+                }}
+              >
+                {tellText(p.name, p.tell)}
+              </div>
+            )}
           </div>
         ))}
       </div>

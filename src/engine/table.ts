@@ -3,7 +3,8 @@ import { bestHand, compareHandStrength } from './handRank'
 import { calculatePots, type PotLayer } from './pots'
 import type { Rng } from './rng'
 import { defaultRng } from './rng'
-import type { Action, Card, PlayerConfig, Street } from './types'
+import type { Action, Card, PlayerConfig, Street, TellSignal } from './types'
+import { generateTell } from './tells'
 import type { AiDecisionContext } from './ai'
 
 interface PlayerRuntime extends PlayerConfig {
@@ -42,6 +43,8 @@ export interface PublicPlayerView {
   isActing: boolean
   isDealer: boolean
   isEliminated: boolean
+  /** A physical read currently showing on this opponent, if any. */
+  tell?: TellSignal
 }
 
 export interface PublicState {
@@ -77,6 +80,8 @@ export class TexasHoldEmTable {
   private handNumber = 0
   private lastResult: HandResult | null = null
   private handInProgress = false
+  /** Regenerated once per street so a read stays stable while the player studies it. */
+  private tellCache = new Map<string, TellSignal>()
 
   constructor(players: PlayerConfig[], options: TableOptions) {
     if (players.length < 2) throw new Error('need at least 2 players')
@@ -107,6 +112,15 @@ export class TexasHoldEmTable {
 
   getLastHandResult(): HandResult | null {
     return this.lastResult
+  }
+
+  private refreshTells(): void {
+    this.tellCache.clear()
+    for (const p of this.roster) {
+      if (p.isHuman || p.folded || p.stack <= 0 || p.holeCards.length === 0) continue
+      const tell = generateTell(p.id, p.holeCards, this.board, p.skillTier, this.rng)
+      if (tell) this.tellCache.set(p.id, tell)
+    }
   }
 
   /**
@@ -185,6 +199,8 @@ export class TexasHoldEmTable {
     this.currentBet = this.bigBlind
     this.lastRaiseSize = this.bigBlind
 
+    this.refreshTells()
+
     const firstToAct = order.length === 2 ? order[1] : this.nextToAct(bbIdx)
     this.actingIndex = firstToAct
     this.maybeAutoAdvance()
@@ -222,6 +238,7 @@ export class TexasHoldEmTable {
         isActing: idx === this.actingIndex,
         isDealer: idx === this.dealerSeatIndex,
         isEliminated: p.stack <= 0 && !this.handInProgress,
+        tell: this.tellCache.get(p.id),
       })),
     }
   }
@@ -379,6 +396,7 @@ export class TexasHoldEmTable {
       this.runOutBoardAndShowdown(inHand)
       return
     }
+    this.refreshTells()
     this.actingIndex = this.nextToAct(this.dealerSeatIndex)
     this.maybeAutoAdvance()
   }
@@ -469,5 +487,7 @@ export class TexasHoldEmTable {
     // Pots have already been paid into winners' stacks; clear contributions so
     // getState().pot doesn't double-count them until the next hand starts.
     for (const p of this.roster) p.handContribution = 0
+    // Cards are on their backs now — there's nothing left to read.
+    this.tellCache.clear()
   }
 }
