@@ -55,6 +55,9 @@ type View =
 export function GameApp() {
   const [state, setState] = useState<GameState>(() => loadGame() ?? initialState())
   const [view, setView] = useState<View>({ kind: 'city' })
+  // Where to stand when walking through a door, so you appear at the doorway
+  // rather than at the area's default spawn.
+  const [entryTile, setEntryTile] = useState<{ col: number; row: number } | null>(null)
   useAudioUnlock()
 
   // Hub locations are the checkpoints; table and menu state is never persisted.
@@ -424,7 +427,18 @@ export function GameApp() {
       return <FinaleLostScene state={state} onContinue={backToCity} />
 
       default:
-        return <CityScene state={state} onAction={handlePoi} onCaught={handleCaught} />
+        return (
+          <CityScene
+            state={state}
+            entryTile={entryTile}
+            onAction={handlePoi}
+            onEnterArea={(areaId, col, row) => {
+              setState((s) => ({ ...s, areaId }))
+              setEntryTile({ col, row })
+            }}
+            onCaught={handleCaught}
+          />
+        )
     }
   })()
 

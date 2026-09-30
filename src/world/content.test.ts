@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CITIES, CITY_ORDER, LESSONS, MISSIONS, SHOPS, SPONSORS, TABLES, VENUES, findItem } from './content'
+import { CITIES, CITY_ORDER, LESSONS, MISSIONS, SHOPS, SPONSORS, TABLES, VENUES, allAreas, allPois, findItem } from './content'
 import { isWalkable, parseMap } from '../overworld/tileRenderer'
 
 describe('parseMap', () => {
@@ -33,36 +33,34 @@ describe('parseMap', () => {
 
 describe('city content', () => {
   const cities = Object.values(CITIES)
+  const areas = cities.flatMap((city) => allAreas(city).map((a) => ({ city, area: a })))
 
   it('has rectangular maps', () => {
-    for (const city of cities) {
-      const widths = new Set(city.map.map((row) => row.length))
-      expect(widths.size, `${city.name} has ragged rows`).toBe(1)
+    for (const { city, area } of areas) {
+      const widths = new Set(area.map.map((row) => row.length))
+      expect(widths.size, `${city.name}/${area.name} has ragged rows`).toBe(1)
     }
   })
 
-  it('starts the player on a walkable tile', () => {
-    for (const city of cities) {
+  it('starts the player on a walkable tile in every area', () => {
+    for (const { city, area } of areas) {
       expect(
-        isWalkable(city.map, city.playerStart.col, city.playerStart.row),
-        `${city.name} starts the player inside something solid`,
+        isWalkable(area.map, area.playerStart.col, area.playerStart.row),
+        `${city.name}/${area.name} starts the player inside something solid`,
       ).toBe(true)
     }
   })
 
   it('keeps every point of interest reachable', () => {
-    // Interaction needs the player standing at Manhattan distance 1, so every
-    // POI must have at least one walkable neighbour or it can never be used.
-    for (const city of cities) {
-      for (const poi of city.pois) {
-        const neighbours = [
+    for (const { city, area } of areas) {
+      for (const poi of area.pois) {
+        const reachable = [
           [poi.col + 1, poi.row],
           [poi.col - 1, poi.row],
           [poi.col, poi.row + 1],
           [poi.col, poi.row - 1],
-        ]
-        const reachable = neighbours.some(([col, row]) => isWalkable(city.map, col, row))
-        expect(reachable, `${city.name}: ${poi.name} at (${poi.col},${poi.row}) is unreachable`).toBe(true)
+        ].some(([col, row]) => isWalkable(area.map, col, row))
+        expect(reachable, `${city.name}/${area.name}: ${poi.name} is unreachable`).toBe(true)
       }
     }
   })
@@ -70,32 +68,89 @@ describe('city content', () => {
   it('gives every point of interest an unambiguous approach tile', () => {
     // Interaction picks the first POI within one tile, so if every approach to
     // a POI is also next to a different one, the player can never reach it.
-    for (const city of cities) {
-      for (const poi of city.pois) {
+    for (const { city, area } of areas) {
+      for (const poi of area.pois) {
         const approaches = [
           [poi.col + 1, poi.row],
           [poi.col - 1, poi.row],
           [poi.col, poi.row + 1],
           [poi.col, poi.row - 1],
-        ].filter(([col, row]) => isWalkable(city.map, col, row))
+        ].filter(([col, row]) => isWalkable(area.map, col, row))
 
         const unambiguous = approaches.some(([col, row]) =>
-          city.pois.every(
+          area.pois.every(
             (other) =>
               other.id === poi.id || Math.abs(other.col - col) + Math.abs(other.row - row) !== 1,
           ),
         )
         expect(
           unambiguous,
-          `${city.name}: ${poi.name} has no approach tile that isn't also next to another POI`,
+          `${city.name}/${area.name}: ${poi.name} has no approach tile that isn't also next to another POI`,
         ).toBe(true)
+      }
+    }
+  })
+
+  it('puts every door on a tile the player can step onto', () => {
+    for (const { city, area } of areas) {
+      for (const exit of area.exits) {
+        expect(
+          isWalkable(area.map, exit.col, exit.row),
+          `${city.name}/${area.name}: door "${exit.label}" at (${exit.col},${exit.row}) is not steppable`,
+        ).toBe(true)
+      }
+    }
+  })
+
+  it('lands every door somewhere real', () => {
+    for (const { city, area } of areas) {
+      for (const exit of area.exits) {
+        const target = city.areas[exit.toAreaId]
+        expect(target, `${city.name}/${area.name}: door "${exit.label}" leads nowhere`).toBeDefined()
+        expect(
+          isWalkable(target.map, exit.toCol, exit.toRow),
+          `${city.name}: door "${exit.label}" drops you inside a wall of ${exit.toAreaId}`,
+        ).toBe(true)
+      }
+    }
+  })
+
+  it('never drops the player straight back onto another door', () => {
+    // Landing on a door tile would bounce you through it again immediately.
+    for (const { city, area } of areas) {
+      for (const exit of area.exits) {
+        const target = city.areas[exit.toAreaId]
+        const landsOnDoor = target.exits.some((e) => e.col === exit.toCol && e.row === exit.toRow)
+        expect(
+          landsOnDoor,
+          `${city.name}: door "${exit.label}" lands on another door in ${exit.toAreaId}`,
+        ).toBe(false)
+      }
+    }
+  })
+
+  it('can reach every area from the entry area', () => {
+    for (const city of cities) {
+      const seen = new Set([city.entryAreaId])
+      const queue = [city.entryAreaId]
+      while (queue.length > 0) {
+        const current = city.areas[queue.shift()!]
+        for (const exit of current.exits) {
+          if (!seen.has(exit.toAreaId)) {
+            seen.add(exit.toAreaId)
+            queue.push(exit.toAreaId)
+          }
+        }
+      }
+      for (const area of allAreas(city)) {
+        expect(seen.has(area.id), `${city.name}: ${area.name} is cut off from the entrance`).toBe(true)
       }
     }
   })
 
   it('only references content that exists', () => {
     for (const city of cities) {
-      for (const poi of city.pois) {
+      for (const poi of allPois(city)) {
         const action = poi.action
         if (action.kind === 'table') expect(TABLES[action.tableId], `${poi.name}`).toBeDefined()
         if (action.kind === 'shop') expect(SHOPS[action.shopId], `${poi.name}`).toBeDefined()
@@ -109,8 +164,18 @@ describe('city content', () => {
   it('gives every city a way out', () => {
     for (const city of cities) {
       if (city.id === 'apartment') continue
-      const hasTravel = city.pois.some((poi) => poi.action.kind === 'travel')
-      expect(hasTravel, `${city.name} has no travel point`).toBe(true)
+      expect(
+        allPois(city).some((poi) => poi.action.kind === 'travel'),
+        `${city.name} has no travel point`,
+      ).toBe(true)
+    }
+  })
+
+  it('puts people on the streets, not just shopfronts', () => {
+    for (const city of cities) {
+      const street = city.areas[city.entryAreaId]
+      const people = street.pois.filter((p) => (p.art ?? 'person') === 'person')
+      expect(people.length, `${city.name}: nobody is out on ${street.name}`).toBeGreaterThan(0)
     }
   })
 })
@@ -125,7 +190,7 @@ describe('progression curve', () => {
 
   it('raises the stakes at every stop on the ladder', () => {
     const buyInByCity = CITY_ORDER.map((cityId) => {
-      const tableIds = CITIES[cityId].pois
+      const tableIds = allPois(CITIES[cityId])
         .map((poi) => (poi.action.kind === 'table' ? poi.action.tableId : null))
         .filter((id): id is string => id !== null)
       return Math.min(...tableIds.map((id) => TABLES[id].buyIn))
@@ -138,7 +203,7 @@ describe('progression curve', () => {
   it('lets the player afford the cheapest local table once the city unlocks', () => {
     for (const cityId of CITY_ORDER) {
       const city = CITIES[cityId]
-      const tableIds = city.pois
+      const tableIds = allPois(city)
         .map((poi) => (poi.action.kind === 'table' ? poi.action.tableId : null))
         .filter((id): id is string => id !== null)
       const cheapest = Math.min(...tableIds.map((id) => TABLES[id].buyIn))
@@ -176,7 +241,7 @@ describe('venues', () => {
       Object.values(VENUES).map((v) => v.unlocksTableId).filter((id): id is string => !!id),
     )
     const privateTables = Object.values(CITIES)
-      .flatMap((c) => c.pois)
+      .flatMap((c) => allPois(c))
       .filter((p) => p.action.kind === 'table' && /private/.test(p.action.tableId))
       .map((p) => (p.action.kind === 'table' ? p.action.tableId : ''))
     for (const id of privateTables) {

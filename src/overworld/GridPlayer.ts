@@ -53,7 +53,11 @@ export class GridPlayer {
     this.sprite.texture = this.textures[this.facing][frame]
   }
 
-  tryMove(direction: Direction, grid: TileGrid) {
+  /**
+   * @param isOccupied extra blocking beyond the tile map — people and props
+   *        stand on walkable tiles, and you shouldn't be able to walk through them.
+   */
+  tryMove(direction: Direction, grid: TileGrid, isOccupied?: (col: number, row: number) => boolean) {
     this.facing = direction
     if (this.moving) return
     const [dc, dr] = DELTAS[direction]
@@ -61,6 +65,7 @@ export class GridPlayer {
     const nextRow = this.row + dr
     this.refreshFrame()
     if (!isWalkable(grid, nextCol, nextRow)) return
+    if (isOccupied?.(nextCol, nextRow)) return
     this.targetCol = nextCol
     this.targetRow = nextRow
     this.moving = true

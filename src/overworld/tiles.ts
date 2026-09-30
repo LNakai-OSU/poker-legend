@@ -14,8 +14,11 @@ export const FURNITURE = 2
 export const CARPET = 3
 export const WATER = 4
 export const ROAD = 5
+export const SIDEWALK = 6
+export const GRASS = 7
+export const DOOR = 8
 
-const WALKABLE = new Set([FLOOR, CARPET, ROAD])
+const WALKABLE = new Set([FLOOR, CARPET, ROAD, SIDEWALK, GRASS, DOOR])
 
 const TILE_CHARS: Record<string, number> = {
   '.': FLOOR,
@@ -24,6 +27,9 @@ const TILE_CHARS: Record<string, number> = {
   ',': CARPET,
   '~': WATER,
   '=': ROAD,
+  '-': SIDEWALK,
+  '"': GRASS,
+  D: DOOR,
 }
 
 /**

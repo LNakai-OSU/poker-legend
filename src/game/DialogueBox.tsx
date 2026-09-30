@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { playSound } from '../audio/audio'
 
 interface DialogueBoxProps {
@@ -10,6 +10,24 @@ interface DialogueBoxProps {
 export function DialogueBox({ speaker, lines, onFinish }: DialogueBoxProps) {
   const [index, setIndex] = useState(0)
   const isLast = index === lines.length - 1
+
+  const advance = () => {
+    playSound('dialogue')
+    if (isLast) onFinish()
+    else setIndex(index + 1)
+  }
+
+  // Space and Enter advance the conversation, as in any game with a text box.
+  // Space would otherwise scroll the page, so it's swallowed here.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== ' ' && e.key !== 'Spacebar' && e.key !== 'Enter') return
+      e.preventDefault()
+      advance()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [index, isLast])
 
   return (
     <div
@@ -31,11 +49,8 @@ export function DialogueBox({ speaker, lines, onFinish }: DialogueBoxProps) {
       <div style={{ color: '#f2c14e', fontWeight: 'bold', marginBottom: 6 }}>{speaker}</div>
       <div style={{ minHeight: 40 }}>{lines[index]}</div>
       <button
-        onClick={() => {
-        playSound('dialogue')
-        if (isLast) onFinish()
-        else setIndex(index + 1)
-      }}
+        data-testid="dialogue-advance"
+        onClick={advance}
         style={{
           marginTop: 12,
           background: '#3a9d5c',
@@ -47,7 +62,7 @@ export function DialogueBox({ speaker, lines, onFinish }: DialogueBoxProps) {
           cursor: 'pointer',
         }}
       >
-        {isLast ? "Let's go" : 'Continue'}
+        {isLast ? "Let's go" : 'Continue'} <span style={{ opacity: 0.7 }}>(space)</span>
       </button>
     </div>
   )

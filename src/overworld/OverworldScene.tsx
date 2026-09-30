@@ -17,6 +17,13 @@ const MOVE_KEYS: Record<string, Direction> = {
  * queueing up a long unwanted walk. */
 const MAX_BUFFERED_TAPS = 2
 
+/**
+ * Tiles are authored at 32px, which leaves the world as a small island in a
+ * large window. Scaling the whole world container keeps the art pixel-crisp
+ * (nearest-neighbour, integer factor) while filling the screen.
+ */
+const WORLD_ZOOM = 2
+
 export interface Interactable extends NpcConfig {
   lines: string[]
   /** Called after the player clicks through all dialogue lines. Omit for flavor-only objects. */
@@ -32,10 +39,19 @@ export interface ChaserConfig {
   stepMs?: number
 }
 
+export interface SceneExit {
+  col: number
+  row: number
+  label: string
+}
+
 interface OverworldSceneProps {
   map: TileGrid
   playerStart: { col: number; row: number }
   interactables: Interactable[]
+  /** Door tiles: stepping onto one leaves this area. */
+  exits?: SceneExit[]
+  onExit?: (exit: SceneExit) => void
   background?: string
   /** Optional persistent corner UI, e.g. a wallet readout. */
   hud?: ReactNode
@@ -52,6 +68,8 @@ export function OverworldScene({
   hud,
   chaser,
   onCaught,
+  exits = [],
+  onExit,
 }: OverworldSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
@@ -61,6 +79,8 @@ export function OverworldScene({
   // Callbacks are read from refs inside the Pixi ticker, which is created once.
   const onCaughtRef = useRef(onCaught)
   onCaughtRef.current = onCaught
+  const onExitRef = useRef(onExit)
+  onExitRef.current = onExit
   // Touch input drives the same paths as the keyboard rather than synthesising
   // key events, so the Pixi ticker reads it straight from these refs.
   const touchDirRef = useRef<Direction | null>(null)
@@ -114,6 +134,12 @@ export function OverworldScene({
       const world = buildTileLayer(map)
       const player = new GridPlayer(playerStart.col, playerStart.row)
       const npcs = interactables.map((cfg) => new Npc(cfg))
+      // The whole world is scaled up, which would blow the name plates up with
+      // it; counter-scale them so they stay a readable caption size.
+      for (const npc of npcs) {
+        npc.label.scale.set(1 / WORLD_ZOOM)
+        npc.label.position.set(TILE_SIZE / 2, -1)
+      }
       world.addChild(player.sprite, ...npcs.map((n) => n.sprite))
 
       let hunter: GridPlayer | null = null
@@ -133,13 +159,20 @@ export function OverworldScene({
       }
       instance.stage.addChild(world)
 
+      world.scale.set(WORLD_ZOOM)
       const centerCamera = () => {
         world.position.set(
-          instance.screen.width / 2 - player.pixelX - TILE_SIZE / 2,
-          instance.screen.height / 2 - player.pixelY - TILE_SIZE / 2,
+          instance.screen.width / 2 - (player.pixelX + TILE_SIZE / 2) * WORLD_ZOOM,
+          instance.screen.height / 2 - (player.pixelY + TILE_SIZE / 2) * WORLD_ZOOM,
         )
       }
       centerCamera()
+
+      // Everyone standing in the world occupies their tile. Walking through a
+      // person looks broken and makes the crowd feel like scenery.
+      const occupied = new Set(npcs.map((n) => `${n.config.col},${n.config.row}`))
+      const isOccupied = (col: number, row: number) =>
+        occupied.has(`${col},${row}`) || (hunter !== null && hunter.col === col && hunter.row === row)
 
       const findAdjacent = () => npcs.find((n) => player.isAdjacentTo(n.config.col, n.config.row))
 
@@ -161,6 +194,7 @@ export function OverworldScene({
 
       let sinceHunterStep = 0
       let caught = false
+      let leaving = false
       let elapsed = 0
       const stepMs = chaser?.stepMs ?? 430
       // People breathe; props don't. Each NPC bobs on its own phase so a row
@@ -182,20 +216,28 @@ export function OverworldScene({
           const touchDir = touchDirRef.current
           const heldKey = keysDown.values().next().value
           if (touchDir) {
-            player.tryMove(touchDir, map)
+            player.tryMove(touchDir, map, isOccupied)
             tapQueue.length = 0
           } else if (heldKey !== undefined) {
             // Still held: walk continuously, and drop the buffered tap that
             // started this hold so releasing doesn't add a phantom extra step.
-            player.tryMove(MOVE_KEYS[heldKey], map)
+            player.tryMove(MOVE_KEYS[heldKey], map, isOccupied)
             tapQueue.length = 0
           } else if (tapQueue.length > 0 && !player.moving) {
             // Released already. Serve the tap now, one step per press — and only
             // between tiles, so a tap during a step is honoured after it lands.
-            player.tryMove(tapQueue.shift()!, map)
+            player.tryMove(tapQueue.shift()!, map, isOccupied)
           }
         }
+        const wasMoving = player.moving
         player.update(ticker.deltaMS)
+        if (wasMoving && !player.moving && !leaving) {
+          const door = exits.find((e) => e.col === player.col && e.row === player.row)
+          if (door) {
+            leaving = true
+            onExitRef.current?.(door)
+          }
+        }
 
         if (hunter && !caught) {
           sinceHunterStep += ticker.deltaMS
@@ -216,7 +258,9 @@ export function OverworldScene({
         centerCamera()
 
         // Published for automated tests so they can verify each step landed
-        // rather than assuming a synthetic keypress was observed.
+        // rather than assuming a synthetic keypress was observed, and so the
+        // browser suite can find things by name instead of hard-coding tiles
+        // that move every time a map is edited.
         const wrapper = wrapperRef.current
         if (wrapper && wrapper.dataset.playerCol !== String(player.col)) {
           wrapper.dataset.playerCol = String(player.col)
@@ -245,7 +289,15 @@ export function OverworldScene({
   const talking = interactables.find((i) => i.id === talkingId) ?? null
 
   return (
-    <div ref={wrapperRef} data-testid="overworld" style={{ position: 'relative', width: '100vw', height: '100vh' }}>
+    <div
+      ref={wrapperRef}
+      data-testid="overworld"
+      data-pois={JSON.stringify(
+        interactables.map((i) => ({ id: i.id, name: i.name, col: i.col, row: i.row })),
+      )}
+      data-exits={JSON.stringify(exits)}
+      style={{ position: 'relative', width: '100vw', height: '100vh' }}
+    >
       <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
       {chaser && <div className="hunt-vignette" />}
       {hud && (

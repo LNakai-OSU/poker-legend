@@ -64,13 +64,21 @@ const posOf = (page) =>
     return el ? { col: Number(el.dataset.playerCol), row: Number(el.dataset.playerRow) } : null
   })
 
-/**
- * Walks to a tile, verifying each step, since synthetic keys can be dropped.
- * Throws on failure with where it actually stopped — a silent miss here used to
- * surface as a confusing assertion failure much further down.
- */
-async function moveTo(page, col, row) {
-  for (let i = 0; i < 120; i++) {
+const poisOf = (page) =>
+  page.evaluate(() => {
+    const el = document.querySelector('[data-testid="overworld"]')
+    return el ? JSON.parse(el.dataset.pois || '[]') : []
+  })
+
+const exitsOf = (page) =>
+  page.evaluate(() => {
+    const el = document.querySelector('[data-testid="overworld"]')
+    return el ? JSON.parse(el.dataset.exits || '[]') : []
+  })
+
+/** Walks to a tile, verifying each step, since synthetic keys can be dropped. */
+async function moveTo(page, col, row, budget = 60) {
+  for (let i = 0; i < budget; i++) {
     const at = await posOf(page)
     if (!at || Number.isNaN(at.col)) return false
     if (at.col === col && at.row === row) return true
@@ -88,8 +96,50 @@ async function moveTo(page, col, row) {
       if (after && `${after.col},${after.row}` !== before) break
     }
   }
+  return false
+}
+
+const promptOf = (page) =>
+  page.locator('text=/Press E to talk|Tap E to talk/').first().textContent().catch(() => null)
+
+/**
+ * Walks up to a named person or object. Looks the tile up from the scene rather
+ * than hard-coding it, so map edits don't silently break the suite.
+ */
+async function approach(page, name) {
+  const pois = await poisOf(page)
+  const poi = pois.find((p) => p.name === name)
+  if (!poi) throw new Error(`no "${name}" in this area (saw: ${pois.map((p) => p.name).join(', ')})`)
+
+  for (const [col, row] of [
+    [poi.col, poi.row + 1],
+    [poi.col - 1, poi.row],
+    [poi.col + 1, poi.row],
+    [poi.col, poi.row - 1],
+  ]) {
+    await moveTo(page, col, row, 40)
+    const prompt = await promptOf(page)
+    if (prompt && prompt.includes(name)) return true
+  }
   const at = await posOf(page)
-  throw new Error(`could not walk to (${col},${row}); stopped at (${at?.col},${at?.row})`)
+  throw new Error(`could not get next to "${name}"; stopped at (${at?.col},${at?.row})`)
+}
+
+/** Walks into a named doorway, which moves to another area. */
+async function enterDoor(page, label) {
+  const exits = await exitsOf(page)
+  const door = exits.find((e) => e.label === label)
+  if (!door) throw new Error(`no door "${label}" here (saw: ${exits.map((e) => e.label).join(', ')})`)
+  await moveTo(page, door.col, door.row, 60)
+  await page.waitForTimeout(500)
+}
+
+/** Walks up to a thing and talks to it. */
+async function talkTo(page, name) {
+  await approach(page, name)
+  await page.keyboard.press('e')
+  await page.waitForTimeout(250)
+  await talkThrough(page)
 }
 
 async function talkThrough(page) {
@@ -136,10 +186,8 @@ await test('can sit down, play, and leave a cash game', async () => {
   await page.goto(BASE)
   await page.waitForSelector('canvas')
   await page.waitForTimeout(400)
-  await moveTo(page, 10, 4)
-  await page.keyboard.press('e')
-  await page.waitForTimeout(250)
-  await talkThrough(page)
+  await enterDoor(page, 'Casino')
+  await talkTo(page, 'Pit Boss')
   assert(await page.locator('[data-testid="pot-value"]').isVisible(), 'never reached the table')
 
   let left = false
@@ -231,10 +279,8 @@ await test('the finale says up front that you are locked in', async () => {
   await page.goto(BASE)
   await page.waitForSelector('canvas')
   await page.waitForTimeout(400)
-  await moveTo(page, 11, 5)
-  await page.keyboard.press('e')
-  await page.waitForTimeout(250)
-  await talkThrough(page)
+  await enterDoor(page, 'Casino')
+  await talkTo(page, 'Nadia Okonkwo')
   const text = await page.locator('body').innerText()
   assert(/no cashing out and no standing up/.test(text), 'finale did not warn about being locked in')
   assert(/120,000/.test(text), 'finale did not state the buy-in')
@@ -248,11 +294,8 @@ await test('slots take a stake and settle on a result', async () => {
   await page.goto(BASE)
   await page.waitForSelector('canvas')
   await page.waitForTimeout(400)
-  await moveTo(page, 9, 3)
-  await moveTo(page, 3, 3) // below the slot bank; column 3 is blocked further down
-  await page.keyboard.press('e')
-  await page.waitForTimeout(250)
-  await talkThrough(page)
+  await enterDoor(page, 'Casino')
+  await talkTo(page, 'Slot Row')
   assert(await page.locator('[data-testid="slot-reels"]').isVisible(), 'slots did not open')
   await page.locator('button', { hasText: /^Spin/ }).click()
   await page.waitForTimeout(1200)
@@ -267,10 +310,8 @@ await test('craps resolves a pass line bet', async () => {
   await page.goto(BASE)
   await page.waitForSelector('canvas')
   await page.waitForTimeout(400)
-  await moveTo(page, 11, 4)
-  await page.keyboard.press('e')
-  await page.waitForTimeout(250)
-  await talkThrough(page)
+  await enterDoor(page, 'Casino')
+  await talkTo(page, 'Craps Table')
   assert(await page.locator('[data-testid="craps-dice"]').isVisible(), 'craps did not open')
   await page.locator('button', { hasText: /Bet .* and roll/ }).click()
   await page.waitForTimeout(500)
@@ -285,11 +326,8 @@ await test('a club turns you away until you have a reputation', async () => {
   await page.goto(BASE)
   await page.waitForSelector('canvas')
   await page.waitForTimeout(400)
-  await moveTo(page, 11, 7)
-  await moveTo(page, 5, 7) // beside the club door at (4,7)
-  await page.keyboard.press('e')
-  await page.waitForTimeout(250)
-  await talkThrough(page)
+  await enterDoor(page, 'The Harbour Room')
+  await talkTo(page, 'Host')
   const text = await page.locator('body').innerText()
   assert(/Nobody here knows you yet/.test(text), 'club did not gate on reputation')
   assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
@@ -307,11 +345,8 @@ await test('a club with reputation opens the private game', async () => {
   await page.goto(BASE)
   await page.waitForSelector('canvas')
   await page.waitForTimeout(400)
-  await moveTo(page, 11, 7)
-  await moveTo(page, 5, 7)
-  await page.keyboard.press('e')
-  await page.waitForTimeout(250)
-  await talkThrough(page)
+  await enterDoor(page, 'The Harbour Room')
+  await talkTo(page, 'Host')
   await page.locator('button', { hasText: /Pay the door/ }).click()
   await page.waitForTimeout(400)
   assert(await page.locator('[data-testid="club-invite"]').isVisible(), 'no invite after paying in')
@@ -343,10 +378,8 @@ await test('the penthouse stays shut until you win it', async () => {
   await page.goto(BASE)
   await page.waitForSelector('canvas')
   await page.waitForTimeout(400)
-  await moveTo(page, 5, 8)
-  await page.keyboard.press('e')
-  await page.waitForTimeout(250)
-  await talkThrough(page)
+  await enterDoor(page, 'Penthouse Lift')
+  await talkTo(page, 'Attendant')
   assert(/does not press the button/.test(await page.locator('body').innerText()), 'penthouse was not gated')
   await page.close()
 })
@@ -363,10 +396,8 @@ await test('the penthouse opens after beating the rival', async () => {
   await page.goto(BASE)
   await page.waitForSelector('canvas')
   await page.waitForTimeout(400)
-  await moveTo(page, 5, 8)
-  await page.keyboard.press('e')
-  await page.waitForTimeout(250)
-  await talkThrough(page)
+  await enterDoor(page, 'Penthouse Lift')
+  await talkTo(page, 'Attendant')
   assert(/Your Penthouse/.test(await page.locator('body').innerText()), 'penthouse did not open')
   await page.close()
 })

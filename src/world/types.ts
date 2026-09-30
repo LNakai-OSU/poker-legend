@@ -126,14 +126,39 @@ export interface VenueDef {
   inviteLines?: string[]
 }
 
-export interface CityDef {
-  id: CityId
+/** A door: step onto this tile and you come out somewhere else. */
+export interface ExitDef {
+  col: number
+  row: number
+  toAreaId: string
+  toCol: number
+  toRow: number
+  /** Shown as a signpost over the door. */
+  label: string
+}
+
+/**
+ * One walkable space — a street, a casino floor, a shop interior. Cities are
+ * made of several, joined by doors, so a town is somewhere you walk around
+ * rather than a single screen with everything standing in the open.
+ */
+export interface AreaDef {
+  id: string
   name: string
-  blurb: string
   map: TileGrid
   playerStart: { col: number; row: number }
   background: string
   pois: PoiDef[]
+  exits: ExitDef[]
+}
+
+export interface CityDef {
+  id: CityId
+  name: string
+  blurb: string
+  /** The street you arrive on. */
+  entryAreaId: string
+  areas: Record<string, AreaDef>
   /** Bankroll needed before you can travel here at all. */
   unlockCash: number
   travelCost: number

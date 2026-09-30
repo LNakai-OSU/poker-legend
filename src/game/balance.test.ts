@@ -4,7 +4,7 @@ import { createDeck, shuffleDeck } from '../engine/deck'
 import { mulberry32 } from '../engine/rng'
 import { TexasHoldEmTable } from '../engine/table'
 import type { Archetype, PlayerConfig, SkillTier } from '../engine/types'
-import { CITIES, CITY_ORDER, TABLES } from '../world/content'
+import { CITIES, CITY_ORDER, TABLES, allPois } from '../world/content'
 
 /**
  * Economy and difficulty sanity checks.
@@ -160,7 +160,7 @@ describe('difficulty curve', () => {
 
 describe('stakes ladder shape', () => {
   const cheapestBuyIn = (cityId: string) => {
-    const ids = CITIES[cityId].pois
+    const ids = allPois(CITIES[cityId])
       .map((poi) => (poi.action.kind === 'table' ? poi.action.tableId : null))
       .filter((id): id is string => id !== null)
     return Math.min(...ids.map((id) => TABLES[id].buyIn))

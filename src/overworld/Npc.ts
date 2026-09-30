@@ -16,6 +16,8 @@ export interface NpcConfig {
 export class Npc {
   config: NpcConfig
   sprite: Container
+  /** Kept separate so the scene can counter-scale it against the camera zoom. */
+  label: Text
 
   constructor(config: NpcConfig) {
     this.config = config
@@ -33,6 +35,7 @@ export class Npc {
     label.anchor.set(0.5, 1)
     label.position.set(TILE_SIZE / 2, -2)
 
+    this.label = label
     this.sprite = new Container()
     this.sprite.addChild(body, label)
     this.sprite.position.set(config.col * TILE_SIZE, config.row * TILE_SIZE)

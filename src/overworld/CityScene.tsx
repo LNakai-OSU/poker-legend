@@ -1,4 +1,4 @@
-import { OverworldScene, type ChaserConfig, type Interactable } from './OverworldScene'
+import { OverworldScene, type ChaserConfig, type Interactable, type SceneExit } from './OverworldScene'
 import { CITIES, MISSIONS } from '../world/content'
 import { missionStatus } from '../game/progression'
 import { daysUntilDue, totalOwed, type GameState } from '../game/state'
@@ -8,16 +8,21 @@ import { useAmbientMusic } from '../audio/SoundToggle'
 
 interface CitySceneProps {
   state: GameState
+  /** Where to stand on arrival, when coming through a door. */
+  entryTile?: { col: number; row: number } | null
   onAction: (action: PoiAction, poi: PoiDef) => void
+  onEnterArea: (areaId: string, col: number, row: number) => void
   onCaught: () => void
 }
 
-export function CityScene({ state, onAction, onCaught }: CitySceneProps) {
+export function CityScene({ state, entryTile, onAction, onEnterArea, onCaught }: CitySceneProps) {
   const city = CITIES[state.cityId]
+  const areaId = state.areaId && city.areas[state.areaId] ? state.areaId : city.entryAreaId
+  const area = city.areas[areaId]
   const hunted = state.huntedInCityId === state.cityId
   useAmbientMusic(hunted ? 'tense' : 'overworld')
 
-  const interactables: Interactable[] = city.pois.map((poi) => ({
+  const interactables: Interactable[] = area.pois.map((poi) => ({
     id: poi.id,
     name: poi.name,
     col: poi.col,
@@ -29,31 +34,43 @@ export function CityScene({ state, onAction, onCaught }: CitySceneProps) {
       poi.action.kind === 'flavor' || isSpent(state, poi) ? undefined : () => onAction(poi.action, poi),
   }))
 
-  // Collectors start from the far corner so there's room to run for the exit.
-  const chaser: ChaserConfig | undefined = hunted
-    ? {
-        name: 'Collector',
-        col: Math.max(1, city.playerStart.col > city.map[0].length / 2 ? 2 : city.map[0].length - 3),
-        row: Math.max(1, Math.min(city.map.length - 2, city.playerStart.row)),
-        stepMs: 430,
-      }
-    : undefined
+  const exits: SceneExit[] = area.exits.map((exit) => ({ col: exit.col, row: exit.row, label: exit.label }))
+
+  // Collectors work the streets. Ducking into a shop buys a moment, but the
+  // door puts you straight back out where they are.
+  const chaser: ChaserConfig | undefined =
+    hunted && areaId === city.entryAreaId
+      ? {
+          name: 'Collector',
+          col: Math.max(1, area.map[0].length - 3),
+          row: Math.max(1, Math.min(area.map.length - 2, area.playerStart.row)),
+          stepMs: 430,
+        }
+      : undefined
 
   const owed = totalOwed(state)
   const due = daysUntilDue(state)
 
   return (
     <OverworldScene
-      key={`${state.cityId}-${hunted}`}
-      map={city.map}
-      playerStart={city.playerStart}
+      key={`${state.cityId}-${areaId}-${hunted}`}
+      map={area.map}
+      playerStart={entryTile ?? area.playerStart}
       interactables={interactables}
-      background={city.background}
+      exits={exits}
+      onExit={(exit) => {
+        const target = area.exits.find((e) => e.col === exit.col && e.row === exit.row)
+        if (target) onEnterArea(target.toAreaId, target.toCol, target.toRow)
+      }}
+      background={area.background}
       chaser={chaser}
       onCaught={onCaught}
       hud={
         <>
-          <div>{city.name} &middot; Day {state.day}</div>
+          <div>{area.name}</div>
+          <div style={{ color: '#9a9ab0', fontSize: 12 }}>
+            {city.name} &middot; Day {state.day}
+          </div>
           <div>Cash: ${state.cash.toLocaleString()}</div>
           {owed > 0 && (
             <div style={{ color: due !== null && due < 0 ? '#e05a5a' : '#f2c14e' }}>
@@ -61,11 +78,7 @@ export function CityScene({ state, onAction, onCaught }: CitySceneProps) {
               {due !== null && (due < 0 ? ' — OVERDUE' : ` — due in ${due} day${due === 1 ? '' : 's'}`)}
             </div>
           )}
-          {hunted && (
-            <div style={{ color: '#e05a5a' }}>
-              They sent someone. Get out of town or pay up.
-            </div>
-          )}
+          {hunted && <div style={{ color: '#e05a5a' }}>They sent someone. Get out of town or pay up.</div>}
         </>
       }
     />
@@ -79,9 +92,8 @@ function defaultArt(poi: PoiDef): NpcArt {
 }
 
 /**
- * A one-shot story beat that has already happened. The POI stays on the map and
- * still talks to you, but it no longer opens anything — Marcus's freezeout is
- * the start of the campaign, not a table you can sit at again for the payout.
+ * Winning the home game is a one-time story beat that opens the campaign, not a
+ * table you can sit at again for the payout.
  */
 function isSpent(state: GameState, poi: PoiDef): boolean {
   return poi.action.kind === 'pokerNight' && state.flags.wonPokerNight

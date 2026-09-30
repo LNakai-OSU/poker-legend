@@ -23,6 +23,8 @@ export interface GameState {
   day: number
   cash: number
   cityId: CityId
+  /** Which space inside the city you're in — a street, a casino floor, a shop. */
+  areaId: string | null
   unlockedCityIds: CityId[]
   ownedItemIds: string[]
   completedMissionIds: string[]
@@ -58,6 +60,7 @@ export function initialState(): GameState {
     day: 1,
     cash: 0,
     cityId: 'apartment',
+    areaId: null,
     unlockedCityIds: ['apartment'],
     ownedItemIds: [],
     completedMissionIds: [],
@@ -178,7 +181,7 @@ export function travelTo(state: GameState, cityId: CityId): GameState {
   const unlocked = state.unlockedCityIds.includes(cityId)
     ? state.unlockedCityIds
     : [...state.unlockedCityIds, cityId]
-  const next = advanceDay({ ...state, cityId, unlockedCityIds: unlocked, huntedInCityId: null })
+  const next = advanceDay({ ...state, cityId, areaId: null, unlockedCityIds: unlocked, huntedInCityId: null })
   return { ...next, huntedInCityId: null, huntGraceUntilDay: next.day }
 }
 

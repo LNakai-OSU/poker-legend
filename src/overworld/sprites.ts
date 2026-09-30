@@ -1,5 +1,5 @@
 import { Texture } from 'pixi.js'
-import { CARPET, FLOOR, FURNITURE, ROAD, TILE_SIZE, WALL, WATER } from './tiles'
+import { CARPET, DOOR, FLOOR, FURNITURE, GRASS, ROAD, SIDEWALK, TILE_SIZE, WALL, WATER } from './tiles'
 
 /**
  * Sprites are authored on a 16x16 grid and blown up to the tile size with
@@ -92,6 +92,32 @@ const FURNITURE_TILE: Draw = (px) => {
   for (const y of [4, 9]) px(1, y, 14, 1, '#413224')
 }
 
+const SIDEWALK_TILE: Draw = (px) => {
+  px(0, 0, 16, 16, '#3c3c46')
+  px(0, 0, 16, 1, '#4a4a56')
+  // Paving slab seams.
+  px(0, 7, 16, 1, '#32323c')
+  px(7, 0, 1, 7, '#32323c')
+  px(3, 8, 1, 8, '#32323c')
+  px(12, 8, 1, 8, '#32323c')
+}
+
+const GRASS_TILE: Draw = (px) => {
+  px(0, 0, 16, 16, '#24402c')
+  for (const [x, y] of [[2, 3], [7, 2], [12, 5], [4, 9], [10, 11], [14, 8], [6, 13]]) {
+    px(x, y, 1, 2, '#2f5237')
+  }
+}
+
+const DOOR_TILE: Draw = (px) => {
+  px(0, 0, 16, 16, '#2a2028')
+  px(2, 1, 12, 15, '#6b4a2f')
+  px(3, 2, 10, 13, '#7d5836')
+  px(3, 2, 10, 1, '#8f6540')
+  px(11, 8, 2, 2, '#d9c46a') // handle
+  px(2, 0, 12, 1, '#4a3626')
+}
+
 let tileCache: Record<number, Texture> | null = null
 
 export function tileTextures(): Record<number, Texture> {
@@ -103,6 +129,9 @@ export function tileTextures(): Record<number, Texture> {
       [CARPET]: makeTexture(CARPET_TILE),
       [WATER]: makeTexture(WATER_TILE),
       [ROAD]: makeTexture(ROAD_TILE),
+      [SIDEWALK]: makeTexture(SIDEWALK_TILE),
+      [GRASS]: makeTexture(GRASS_TILE),
+      [DOOR]: makeTexture(DOOR_TILE),
     }
   }
   return tileCache
