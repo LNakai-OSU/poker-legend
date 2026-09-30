@@ -5,7 +5,8 @@ import { bestHand, HAND_CATEGORY_NAMES } from '../engine/handRank'
 import { defaultRng } from '../engine/rng'
 import type { PlayerConfig } from '../engine/types'
 import type { TableDef } from '../world/types'
-import { PokerTableView } from './PokerTableView'
+import { PokerTableView, type SeatSpeech } from './PokerTableView'
+import { personalityFor } from '../world/personalities'
 import type { GameState } from './state'
 import { tableAccess } from './progression'
 import { playSound } from '../audio/audio'
@@ -51,6 +52,9 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
     }),
   )
   const [tick, setTick] = useState(0)
+  const [speech, setSpeech] = useState<SeatSpeech | null>(null)
+  const [sliderTo, setSliderTo] = useState(0)
+  const speechTimer = useRef<number | null>(null)
   const rerender = () => setTick((t) => t + 1)
   const aiBusyRef = useRef(false)
   const dealtFirstHandRef = useRef(false)
@@ -61,6 +65,31 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
   const countedHandRef = useRef(0)
 
   useAmbientMusic('table')
+
+  /**
+   * Opponents talk, but not on every action — constant chatter reads as noise.
+   * Lines fire on a fraction of actions and always at a showdown.
+   */
+  const say = (
+    playerId: string,
+    kind: 'greeting' | 'raise' | 'call' | 'fold' | 'win' | 'lose',
+    always = false,
+  ) => {
+    if (!always && Math.random() > 0.45) return
+    const lines = personalityFor(playerId).lines[kind]
+    if (!lines || lines.length === 0) return
+    const text = lines[Math.floor(Math.random() * lines.length)]
+    setSpeech({ playerId, text })
+    if (speechTimer.current) window.clearTimeout(speechTimer.current)
+    speechTimer.current = window.setTimeout(() => setSpeech(null), 2600)
+  }
+
+  useEffect(
+    () => () => {
+      if (speechTimer.current) window.clearTimeout(speechTimer.current)
+    },
+    [],
+  )
 
   const engine = tableRef.current
   const publicState = engine.getState()
@@ -83,6 +112,15 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
       }
     }
     playSound(wonAnything ? 'win' : 'lose')
+    // Whoever the hand turned on gets the line, so a showdown lands as a moment
+    // between two people rather than a number changing.
+    const potWinners = lastResult.pots.filter((pot) => !pot.uncalled).flatMap((pot) => pot.winnerIds)
+    const opponentWinner = potWinners.find((id) => id !== 'you')
+    if (opponentWinner) say(opponentWinner, 'win', true)
+    else if (wonAnything) {
+      const beaten = table.opponents.find((o) => lastResult.revealed.some((r) => r.playerId === o.id))
+      if (beaten) say(beaten.id, 'lose', true)
+    }
   }
 
   const rebuyOpponents = () => {
@@ -118,6 +156,9 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
       if (ctx) {
         const action = decideAiAction(ctx, defaultRng)
         playSound(action.type === 'fold' ? 'fold' : action.type === 'check' ? 'check' : 'chip')
+        if (action.type === 'raise') say(actingPlayer.id, 'raise')
+        else if (action.type === 'call') say(actingPlayer.id, 'call')
+        else if (action.type === 'fold') say(actingPlayer.id, 'fold')
         engine.submitAction(actingPlayer.id, action)
       }
       aiBusyRef.current = false
@@ -127,6 +168,13 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
     // `tick` drives this rather than the shallow game fields, which can repeat
     // across genuinely different states and silently stall the AI's turn.
   }, [tick])
+
+  // Re-anchor the slider to a pot-sized raise whenever the price changes, so it
+  // always starts somewhere reasonable rather than at the last hand's number.
+  useEffect(() => {
+    const potAfterCall = publicState.pot + Math.max(0, publicState.currentBet - (you?.streetContribution ?? 0))
+    setSliderTo(Math.min(allInTo, Math.max(publicState.minRaiseTo, publicState.currentBet + potAfterCall)))
+  }, [publicState.minRaiseTo, publicState.handNumber, publicState.street])
 
   const yourHole = engine.getHoleCards('you')
   const legalActions = engine.getLegalActions('you')
@@ -273,7 +321,20 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
   })()
 
   return (
-    <div style={{ width: '100%', minHeight: '100vh', background: '#0d1420', color: '#e8e8f0', fontFamily: 'monospace', padding: 'clamp(10px, 3vw, 24px)', boxSizing: 'border-box', overflowX: 'hidden' }}>
+    <div style={{
+        width: '100%',
+        minHeight: '100vh',
+        background: 'radial-gradient(ellipse at 50% 30%, #16283a 0%, #0d1420 70%)',
+        color: '#e8e8f0',
+        fontFamily: 'monospace',
+        padding: 'clamp(10px, 3vw, 20px)',
+        boxSizing: 'border-box',
+        overflowX: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        gap: 10,
+      }}>
       <div style={{ textAlign: 'center', marginBottom: 12 }}>
         <div>{table.name} &middot; ${table.smallBlind}/${table.bigBlind}</div>
         <div>Wallet: ${state.cash.toLocaleString()}</div>
@@ -285,6 +346,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
         players={players}
         yourHole={yourHole}
         insights={insights}
+        speech={speech}
       />
 
       {(potOdds || handRead) && (
@@ -352,6 +414,36 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
           )}
           {legalActions.some((a) => a.type === 'call') && (
             <button style={buttonStyle} onClick={() => act('call')}>Call {toCall}</button>
+          )}
+          {legalActions.some((a) => a.type === 'raise') && publicState.minRaiseTo < allInTo && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                width: '100%',
+                maxWidth: 420,
+                justifyContent: 'center',
+              }}
+            >
+              <input
+                data-testid="raise-slider"
+                type="range"
+                aria-label="Raise amount"
+                min={publicState.minRaiseTo}
+                max={allInTo}
+                value={Math.min(Math.max(sliderTo, publicState.minRaiseTo), allInTo)}
+                onChange={(e) => setSliderTo(Number(e.target.value))}
+                style={{ flex: 1 }}
+              />
+              <button
+                style={buttonStyle}
+                data-testid="raise-slider-go"
+                onClick={() => raiseTo(Math.min(Math.max(sliderTo, publicState.minRaiseTo), allInTo))}
+              >
+                Raise to {Math.min(Math.max(sliderTo, publicState.minRaiseTo), allInTo).toLocaleString()}
+              </button>
+            </div>
           )}
           {legalActions.some((a) => a.type === 'raise') && (
             <>

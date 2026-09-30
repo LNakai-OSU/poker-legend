@@ -119,6 +119,46 @@ Textures are cached by palette/kind, so repeated NPCs cost nothing extra.
 sprites need `TILE_SIZE` and the renderer needs sprites — keeping constants in a
 third module breaks what would otherwise be an import cycle.
 
+## The world
+
+Cities are made of **areas** joined by **doors** (`src/world/cities.ts`). An
+area is one walkable space — a street, a casino floor, a shop. Buildings on a
+street are solid blocks with a door tile in the facade; stepping onto the door
+moves you to another area and places you at its far side. `GameState.areaId`
+tracks where you are, and travelling always drops you on the arrival street.
+
+Streets are built from a few shared templates (STREET, BOULEVARD, PROMENADE)
+and interiors from others (CASINO_FLOOR, SHOP_ROOM, DINING_ROOM), so the towns
+feel like one place rather than six unrelated sketches. Locals with a line or
+two stand on every street; the content tests enforce that.
+
+People and props occupy their tile, so you cannot walk through a crowd. The
+camera is zoomed 2x with NPC name plates counter-scaled, because at 1x the map
+sat as a small island in a large window.
+
+Door and area invariants are covered by tests: every door must be steppable,
+land somewhere walkable, never land on another door, and every area must be
+reachable from the city entrance. The first run of those caught a door that
+dropped the player outside the room it led to.
+
+## The table
+
+The poker screen is modelled on how an online table actually reads
+(`PokerTableView`): an oval felt, opponents around the rim, you at the rail.
+
+- **Avatars** (`src/game/avatars.ts`) are pixel portraits generated at runtime
+  from a look (skin, hair, style, shirt, accessory). Crucially the *expression*
+  is driven by the tell: a player going still closes their eyes, one glancing at
+  their chips looks sideways, a winner grins. The tell is a face, not a caption.
+- **Chip stacks** (`ChipStack`) show each player's bet as physical chips in
+  standard casino denominations, sitting in front of them on the felt.
+- **Personalities** (`src/world/personalities.ts`) give every named opponent a
+  look, a one-line style ("Has not folded since noon"), and their own dialogue
+  for raising, calling, folding, winning and losing. Lines fire on a fraction of
+  actions and always at a showdown, so the table talks without becoming noise.
+- **Bet sizing** offers min-raise, half/three-quarter/full pot, 1.5x and 2x pot,
+  all-in, plus a slider for anything in between.
+
 ## Mobile
 
 The iPhone target needs more than a responsive layout, since the overworld is

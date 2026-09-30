@@ -1,7 +1,11 @@
 import type { HandResult, PublicState } from '../engine/table'
 import { bestHand, HAND_CATEGORY_NAMES } from '../engine/handRank'
 import type { Card as CardData, PlayerConfig } from '../engine/types'
+import type { CSSProperties } from 'react'
 import { Card, cardText } from './Card'
+import { ChipStack } from './ChipStack'
+import { avatarDataUrl, expressionFor, type Expression } from './avatars'
+import { personalityFor } from '../world/personalities'
 import { tellText } from './tellFlavor'
 
 export interface TableInsights {
@@ -17,6 +21,13 @@ interface PokerTableViewProps {
   players: PlayerConfig[]
   yourHole: CardData[]
   insights?: TableInsights
+  /** A line of table talk currently on screen. */
+  speech?: SeatSpeech | null
+}
+
+export interface SeatSpeech {
+  playerId: string
+  text: string
 }
 
 /** Seat labels relative to the button, the way a real table is described. */
@@ -127,96 +138,230 @@ export function ShowdownSummary({ result, players }: { result: HandResult; playe
   )
 }
 
-export function PokerTableView({ state, lastResult, players, yourHole, insights }: PokerTableViewProps) {
+/**
+ * Where each seat sits around the felt, as a share of the table box. You are
+ * always at the rail; opponents are arranged across from you.
+ */
+function seatPositions(count: number): { left: string; top: string }[] {
+  const layouts: Record<number, { left: string; top: string }[]> = {
+    1: [{ left: '50%', top: '2%' }],
+    2: [
+      { left: '22%', top: '5%' },
+      { left: '78%', top: '5%' },
+    ],
+    3: [
+      { left: '16%', top: '18%' },
+      { left: '50%', top: '1%' },
+      { left: '84%', top: '18%' },
+    ],
+    4: [
+      { left: '14%', top: '26%' },
+      { left: '36%', top: '1%' },
+      { left: '64%', top: '1%' },
+      { left: '86%', top: '26%' },
+    ],
+  }
+  return layouts[count] ?? layouts[3]
+}
+
+function seatPlateStyle(isActing: boolean): CSSProperties {
+  return {
+    background: 'rgba(8, 14, 12, 0.78)',
+    border: isActing ? '2px solid #f2c14e' : '1px solid #2c3d35',
+    borderRadius: 8,
+    padding: '3px 6px',
+    minWidth: 'clamp(62px, 17vw, 92px)',
+    boxShadow: isActing ? '0 0 14px rgba(242,193,78,0.4)' : 'none',
+  }
+}
+
+export function PokerTableView({
+  state,
+  lastResult,
+  players,
+  yourHole,
+  insights,
+  speech,
+}: PokerTableViewProps) {
   const labels = insights?.showPositions ? positionLabels(state) : null
   const handOver = !state.handInProgress && lastResult?.handNumber === state.handNumber
-  const winnerIds = handOver ? potWinnerIds(lastResult) : new Set<string>()
+  const winners = handOver ? potWinnerIds(lastResult) : new Set<string>()
+
+  const you = state.players.find((p) => p.id === 'you')
+  const opponents = state.players.filter((p) => p.id !== 'you')
+  const positions = seatPositions(opponents.length)
 
   return (
-    <>
-      <div style={{ textAlign: 'center', marginBottom: 24 }}>
-        <div data-testid="pot-value" data-pot={state.pot} style={{ marginBottom: 8 }}>
-          Pot: <span key={state.pot} className="pot-bump">{state.pot}</span>
-        </div>
-        <div>
-          {state.board.map((c, i) => (
-            <Card key={`${state.handNumber}-${i}`} card={c} anim="deal" delayMs={i * 70} />
-          ))}
-          {Array.from({ length: 5 - state.board.length }).map((_, i) => <Card key={`hidden-${i}`} faceDown />)}
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'center', gap: 'clamp(6px, 2vw, 24px)', marginBottom: 20, flexWrap: 'wrap' }}>
-        {state.players.map((p) => (
+    <div style={{ width: '100%', maxWidth: 960, margin: '0 auto' }}>
+      <div
+        data-testid="felt"
+        style={{
+          position: 'relative',
+          margin: '0 auto',
+          width: '100%',
+          // Height is set directly rather than via an aspect ratio: coupling the
+          // two made a min-height force the felt wider than a phone screen, which
+          // pushed the right-hand seat off the display entirely.
+          height: 'clamp(300px, 46vh, 430px)',
+          borderRadius: '46% / 58%',
+          background: 'radial-gradient(ellipse at 50% 42%, #1f6b4a 0%, #15543b 55%, #0e3b2a 100%)',
+          border: '10px solid #4a3324',
+          boxShadow: 'inset 0 0 60px rgba(0,0,0,0.45), 0 10px 30px rgba(0,0,0,0.4)',
+        }}
+      >
+        {/* Pot and board, in the middle where the chips end up. */}
+        <div
+          style={{
+            position: 'absolute',
+            left: '50%',
+            top: '54%',
+            transform: 'translate(-50%, -50%)',
+            textAlign: 'center',
+            width: 'min(72%, 300px)',
+          }}
+        >
           <div
-            key={p.id}
-            className={winnerIds.has(p.id) ? 'seat-win' : undefined}
+            data-testid="pot-value"
+            data-pot={state.pot}
+            style={{ marginBottom: 6, fontSize: 'clamp(11px, 2.6vw, 14px)', color: '#cfe8d8' }}
+          >
+            Pot{' '}
+            <span key={state.pot} className="pot-bump" style={{ color: '#f2c14e', fontWeight: 'bold' }}>
+              {state.pot.toLocaleString()}
+            </span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
+            {state.board.map((c, i) => (
+              <Card key={`${state.handNumber}-${i}`} card={c} anim="deal" delayMs={i * 70} />
+            ))}
+            {Array.from({ length: 5 - state.board.length }).map((_, i) => (
+              <Card key={`hidden-${i}`} faceDown />
+            ))}
+          </div>
+        </div>
+
+        {opponents.map((p, i) => {
+          const pos = positions[i] ?? positions[0]
+          const revealed = handOver ? lastResult.revealed.find((r) => r.playerId === p.id) : undefined
+          const personality = personalityFor(p.id)
+          const expression: Expression = expressionFor({
+            tellKind: p.tell && !p.folded ? (p.tell.kind as Expression) : null,
+            isActing: p.isActing,
+            wonLast: handOver && winners.has(p.id),
+            lostLast: handOver && !winners.has(p.id) && !p.folded,
+          })
+
+          return (
+            <div
+              key={p.id}
+              data-testid={`seat-${p.id}`}
+              style={{
+                position: 'absolute',
+                left: pos.left,
+                top: pos.top,
+                transform: 'translate(-50%, 0)',
+                textAlign: 'center',
+                opacity: p.folded ? 0.45 : 1,
+                transition: 'opacity 200ms',
+              }}
+            >
+              {speech?.playerId === p.id && (
+                <div data-testid={`speech-${p.id}`} className="speech-bubble">
+                  {speech.text}
+                </div>
+              )}
+
+              <div className={winners.has(p.id) ? 'seat-win' : undefined} style={seatPlateStyle(p.isActing)}>
+                <img
+                  src={avatarDataUrl(personality.look, expression)}
+                  alt=""
+                  width={40}
+                  height={40}
+                  style={{ imageRendering: 'pixelated', display: 'block', margin: '0 auto' }}
+                />
+                <div style={{ fontSize: 11 }}>
+                  {p.name}
+                  {p.isDealer ? ' (D)' : ''}
+                  {labels?.get(p.id) && <span style={{ color: '#8ad4ff' }}> {labels.get(p.id)}</span>}
+                </div>
+                <div data-testid={`stack-${p.id}`} data-stack={p.stack} style={{ fontSize: 11, color: '#f2c14e' }}>
+                  {p.stack.toLocaleString()}
+                </div>
+                <div style={{ fontSize: 9, color: '#8f8fa6' }}>{personality.style}</div>
+                {p.allIn && <div style={{ fontSize: 9, color: '#e05a5a' }}>ALL IN</div>}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 2, marginTop: 2 }}>
+                {revealed
+                  ? revealed.holeCards.map((c, ci) => (
+                      <Card key={ci} card={c} anim="flip" delayMs={ci * 110} small />
+                    ))
+                  : p.folded
+                    ? null
+                    : (
+                        <>
+                          <Card faceDown small />
+                          <Card faceDown small />
+                        </>
+                      )}
+              </div>
+
+              {p.tell && !p.folded && (
+                <div
+                  data-testid={`tell-${p.id}`}
+                  className={`tell-${p.tell.kind}`}
+                  style={{
+                    fontSize: 10,
+                    fontStyle: 'italic',
+                    marginTop: 2,
+                    color: `rgba(242, 193, 78, ${
+                      insights?.sharpEyes
+                        ? Math.max(0.8, 0.4 + p.tell.visibility * 0.6)
+                        : 0.4 + p.tell.visibility * 0.6
+                    })`,
+                  }}
+                >
+                  {tellText(p.name, p.tell)}
+                </div>
+              )}
+
+              <ChipStack amount={p.streetContribution} testId={`bet-${p.id}`} />
+            </div>
+          )
+        })}
+
+        {you && (
+          <div
+            data-testid="seat-you"
             style={{
-              border: p.isActing ? '2px solid #f2c14e' : '1px solid #333',
-              borderRadius: 8,
-              padding: 'clamp(6px, 2vw, 12px)',
-              opacity: p.folded ? 0.4 : 1,
-              minWidth: 'clamp(104px, 28vw, 150px)',
-              fontSize: 'clamp(11px, 3vw, 14px)',
+              position: 'absolute',
+              left: '50%',
+              bottom: '1%',
+              transform: 'translate(-50%, 0)',
               textAlign: 'center',
             }}
           >
-            <div>
-              {p.name}{p.isDealer ? ' (D)' : ''}
-              {labels?.get(p.id) && (
-                <span style={{ color: '#8ad4ff', fontSize: 11 }}> {labels.get(p.id)}</span>
-              )}
+            <ChipStack amount={you.streetContribution} testId="bet-you" />
+            <div className={winners.has('you') ? 'seat-win' : undefined} style={seatPlateStyle(you.isActing)}>
+              <div style={{ fontSize: 11 }}>
+                You{you.isDealer ? ' (D)' : ''}
+                {labels?.get('you') && <span style={{ color: '#8ad4ff' }}> {labels.get('you')}</span>}
+              </div>
+              <div data-testid="stack-you" data-stack={you.stack} style={{ fontSize: 13, color: '#f2c14e' }}>
+                {you.stack.toLocaleString()}
+              </div>
+              {you.allIn && <div style={{ fontSize: 9, color: '#e05a5a' }}>ALL IN</div>}
             </div>
-            <div data-testid={`stack-${p.id}`} data-stack={p.stack}>Stack: {p.stack}</div>
-            <div>Bet: {p.streetContribution}</div>
-            {p.id === 'you' ? (
-              <div style={{ marginTop: 6 }}>
-                {yourHole.map((c, i) => (
-                  <Card key={`${state.handNumber}-${i}`} card={c} anim="deal" delayMs={i * 70} />
-                ))}
-              </div>
-            ) : (
-              <div style={{ marginTop: 6 }}>
-                {(() => {
-                  const revealedThisHand =
-                    !state.handInProgress && lastResult?.handNumber === state.handNumber
-                      ? lastResult.revealed.find((r) => r.playerId === p.id)
-                      : undefined
-                  return revealedThisHand
-                    ? revealedThisHand.holeCards.map((c, i) => (
-                        <Card key={i} card={c} anim="flip" delayMs={i * 110} />
-                      ))
-                    : <><Card faceDown /><Card faceDown /></>
-                })()}
-              </div>
-            )}
-            {p.folded && <div>Folded</div>}
-            {p.allIn && <div>All in</div>}
-            {p.tell && !p.folded && (
-              <div
-                data-testid={`tell-${p.id}`}
-                className={`tell-${p.tell.kind}`}
-                style={{
-                  marginTop: 6,
-                  fontSize: 11,
-                  fontStyle: 'italic',
-                  // A fainter cue is genuinely harder to notice, which is how
-                  // better opponents stay hard to read — until you learn to look.
-                  color: `rgba(242, 193, 78, ${
-                    insights?.sharpEyes
-                      ? Math.max(0.75, 0.35 + p.tell.visibility * 0.65)
-                      : 0.35 + p.tell.visibility * 0.65
-                  })`,
-                }}
-              >
-                {tellText(p.name, p.tell)}
-              </div>
-            )}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 3, marginTop: 3 }}>
+              {yourHole.map((c, i) => (
+                <Card key={`${state.handNumber}-${i}`} card={c} anim="deal" delayMs={i * 70} />
+              ))}
+            </div>
           </div>
-        ))}
+        )}
       </div>
 
-      {handOver && <ShowdownSummary result={lastResult} players={players} />}
-    </>
+      {handOver && lastResult && <ShowdownSummary result={lastResult} players={players} />}
+    </div>
   )
 }

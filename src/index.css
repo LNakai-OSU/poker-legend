@@ -119,3 +119,39 @@ button {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Table talk: a small bubble above a seat. */
+.speech-bubble {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 6px;
+  white-space: nowrap;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: #f4f4f8;
+  color: #16161e;
+  border-radius: 10px;
+  padding: 4px 9px;
+  font-size: 11px;
+  z-index: 3;
+  animation: fade-in 160ms ease-out both;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+.speech-bubble::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #f4f4f8;
+}
+
+/* Bets sliding into the middle when a street closes. */
+@keyframes chips-in {
+  to { transform: translateY(-40px) scale(0.7); opacity: 0; }
+}
+.chips-to-pot { animation: chips-in 420ms ease-in both; }
