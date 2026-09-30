@@ -41,12 +41,20 @@ export type Street = 'preflop' | 'flop' | 'turn' | 'river' | 'showdown'
 
 export type SkillTier = 'novice' | 'amateur' | 'competent' | 'sharp' | 'elite'
 
+/**
+ * 'whale' plays far too many hands and calls far too much for the stakes, and
+ * leaks obvious tells regardless of how high the stakes are — a big-money
+ * target of opportunity rather than a difficulty step.
+ */
+export type Archetype = 'regular' | 'whale'
+
 export interface PlayerConfig {
   id: string
   name: string
   isHuman: boolean
   skillTier: SkillTier
   startingStack: number
+  archetype?: Archetype
 }
 
 export interface TellSignal {

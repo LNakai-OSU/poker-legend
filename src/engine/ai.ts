@@ -2,7 +2,7 @@ import { createDeck } from './deck'
 import { bestHand, compareHandStrength } from './handRank'
 import type { Rng } from './rng'
 import { shuffleDeck } from './deck'
-import type { Action, Card, SkillTier, Street } from './types'
+import type { Action, Archetype, Card, SkillTier, Street } from './types'
 
 export interface AiDecisionContext {
   hole: Card[]
@@ -15,6 +15,7 @@ export interface AiDecisionContext {
   opponentsInHand: number
   skillTier: SkillTier
   street: Street
+  archetype?: Archetype
 }
 
 const EQUITY_ITERATIONS: Record<SkillTier, number> = {
@@ -104,7 +105,13 @@ function clamp01(x: number): number {
   return Math.max(0, Math.min(1, x))
 }
 
+/** Whales misjudge their hand wildly, chase almost anything, and splash around. */
+const WHALE_EXTRA_NOISE = 0.25
+const WHALE_POT_ODDS_DISCOUNT = 0.55
+const WHALE_EXTRA_BLUFF_CHANCE = 0.12
+
 export function decideAiAction(ctx: AiDecisionContext, rng: Rng): Action {
+  const isWhale = ctx.archetype === 'whale'
   const trueEquity = estimateEquity(
     ctx.hole,
     ctx.board,
@@ -112,10 +119,10 @@ export function decideAiAction(ctx: AiDecisionContext, rng: Rng): Action {
     rng,
     EQUITY_ITERATIONS[ctx.skillTier],
   )
-  const noise = EQUITY_NOISE[ctx.skillTier]
+  const noise = EQUITY_NOISE[ctx.skillTier] + (isWhale ? WHALE_EXTRA_NOISE : 0)
   const perceivedEquity = clamp01(trueEquity + (rng() - 0.5) * 2 * noise)
 
-  const wantsToBluff = rng() < BLUFF_CHANCE[ctx.skillTier]
+  const wantsToBluff = rng() < BLUFF_CHANCE[ctx.skillTier] + (isWhale ? WHALE_EXTRA_BLUFF_CHANCE : 0)
   const raiseTo = () => {
     const potSizedExtra = Math.round(ctx.potSize * (0.5 + rng() * 0.5))
     const to = Math.max(ctx.minRaiseTo, ctx.minRaiseTo + potSizedExtra - ctx.toCall)
@@ -129,7 +136,8 @@ export function decideAiAction(ctx: AiDecisionContext, rng: Rng): Action {
     return { type: 'check' }
   }
 
-  const potOdds = ctx.toCall / (ctx.potSize + ctx.toCall)
+  // A whale calls well below the break-even price — that leak is the whole point.
+  const potOdds = (ctx.toCall / (ctx.potSize + ctx.toCall)) * (isWhale ? WHALE_POT_ODDS_DISCOUNT : 1)
   if (perceivedEquity < potOdds && !wantsToBluff) {
     return { type: 'fold' }
   }

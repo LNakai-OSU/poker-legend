@@ -21,16 +21,17 @@ export class GridPlayer {
   moving = false
   facing: Direction = 'down'
   sprite: Graphics
-  private speedPxPerSec = 220
+  private speedPxPerSec: number
 
-  constructor(startCol: number, startRow: number) {
+  constructor(startCol: number, startRow: number, color = 0xf2c14e, speedPxPerSec = 220) {
     this.col = startCol
     this.row = startRow
     this.targetCol = startCol
     this.targetRow = startRow
     this.pixelX = startCol * TILE_SIZE
     this.pixelY = startRow * TILE_SIZE
-    this.sprite = new Graphics().rect(4, 4, TILE_SIZE - 8, TILE_SIZE - 8).fill({ color: 0xf2c14e })
+    this.speedPxPerSec = speedPxPerSec
+    this.sprite = new Graphics().rect(4, 4, TILE_SIZE - 8, TILE_SIZE - 8).fill({ color })
     this.sprite.position.set(this.pixelX, this.pixelY)
   }
 

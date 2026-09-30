@@ -118,7 +118,7 @@ export class TexasHoldEmTable {
     this.tellCache.clear()
     for (const p of this.roster) {
       if (p.isHuman || p.folded || p.stack <= 0 || p.holeCards.length === 0) continue
-      const tell = generateTell(p.id, p.holeCards, this.board, p.skillTier, this.rng)
+      const tell = generateTell(p.id, p.holeCards, this.board, p.skillTier, this.rng, p.archetype)
       if (tell) this.tellCache.set(p.id, tell)
     }
   }
@@ -263,6 +263,7 @@ export class TexasHoldEmTable {
       allInTo: p.streetContribution + p.stack,
       opponentsInHand,
       skillTier: p.skillTier,
+      archetype: p.archetype,
       street: this.street,
     }
   }

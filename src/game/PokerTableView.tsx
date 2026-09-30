@@ -3,14 +3,39 @@ import type { Card as CardData, PlayerConfig } from '../engine/types'
 import { Card } from './Card'
 import { tellText } from './tellFlavor'
 
+export interface TableInsights {
+  /** Unlocked by the mentor's position lesson. */
+  showPositions: boolean
+  /** Unlocked by the tells lesson — faint reads become legible instead of near-invisible. */
+  sharpEyes: boolean
+}
+
 interface PokerTableViewProps {
   state: PublicState
   lastResult: HandResult | null
   players: PlayerConfig[]
   yourHole: CardData[]
+  insights?: TableInsights
 }
 
-export function PokerTableView({ state, lastResult, players, yourHole }: PokerTableViewProps) {
+/** Seat labels relative to the button, the way a real table is described. */
+function positionLabels(state: PublicState): Map<string, string> {
+  const seated = state.players.filter((p) => !p.isEliminated)
+  const dealerIndex = seated.findIndex((p) => p.isDealer)
+  const labels = new Map<string, string>()
+  if (dealerIndex === -1) return labels
+
+  const order = seated.length === 2 ? ['BTN/SB', 'BB'] : ['BTN', 'SB', 'BB', 'UTG', 'MP', 'CO']
+  seated.forEach((_, offset) => {
+    const player = seated[(dealerIndex + offset) % seated.length]
+    labels.set(player.id, order[offset] ?? 'MP')
+  })
+  return labels
+}
+
+export function PokerTableView({ state, lastResult, players, yourHole, insights }: PokerTableViewProps) {
+  const labels = insights?.showPositions ? positionLabels(state) : null
+
   return (
     <>
       <div style={{ textAlign: 'center', marginBottom: 24 }}>
@@ -30,11 +55,16 @@ export function PokerTableView({ state, lastResult, players, yourHole }: PokerTa
               borderRadius: 8,
               padding: 12,
               opacity: p.folded ? 0.4 : 1,
-              minWidth: 140,
+              minWidth: 150,
               textAlign: 'center',
             }}
           >
-            <div>{p.name}{p.isDealer ? ' (D)' : ''}</div>
+            <div>
+              {p.name}{p.isDealer ? ' (D)' : ''}
+              {labels?.get(p.id) && (
+                <span style={{ color: '#8ad4ff', fontSize: 11 }}> {labels.get(p.id)}</span>
+              )}
+            </div>
             <div data-testid={`stack-${p.id}`} data-stack={p.stack}>Stack: {p.stack}</div>
             <div>Bet: {p.streetContribution}</div>
             {p.id === 'you' ? (
@@ -58,13 +88,18 @@ export function PokerTableView({ state, lastResult, players, yourHole }: PokerTa
             {p.allIn && <div>All in</div>}
             {p.tell && !p.folded && (
               <div
+                data-testid={`tell-${p.id}`}
                 style={{
                   marginTop: 6,
                   fontSize: 11,
                   fontStyle: 'italic',
                   // A fainter cue is genuinely harder to notice, which is how
-                  // better opponents stay hard to read.
-                  color: `rgba(242, 193, 78, ${0.35 + p.tell.visibility * 0.65})`,
+                  // better opponents stay hard to read — until you learn to look.
+                  color: `rgba(242, 193, 78, ${
+                    insights?.sharpEyes
+                      ? Math.max(0.75, 0.35 + p.tell.visibility * 0.65)
+                      : 0.35 + p.tell.visibility * 0.65
+                  })`,
                 }}
               >
                 {tellText(p.name, p.tell)}
