@@ -1,32 +1,58 @@
-# React + TypeScript + Vite
+# Poker Legend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+A story-driven poker RPG. You explore a top-down overworld between story beats,
+and drop into a fully simulated Texas Hold'em engine whenever you sit down at a
+table. You start broke at a friend's kitchen table and work up a ladder of
+casino cities, risking real debt on the way.
 
-Currently, two official plugins are available:
+**[Play it in your browser →](https://lnakai-osu.github.io/poker-legend/)**
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## What's in it
 
-## React Compiler
+- **A real poker engine.** Proper 52-card deck, correct hand evaluation,
+  multi-way side pots, and a full betting-round state machine. Opponents decide
+  using Monte Carlo equity estimation — the same technique real equity
+  calculators use — with accuracy that degrades by skill tier.
+- **Tells.** Opponents leak physical cues that correlate with their hand. Both
+  how often a tell fires and how often it lies scale with skill, so a novice
+  broadcasts honestly and an elite barely shows anything and misleads you when
+  they do. The UI only ever shows the cue, never its meaning.
+- **Six locations**, from a reservation casino at $1/$2 up to a $250/$500
+  nosebleed game and a heads-up match for a penthouse.
+- **Sponsors and collectors.** Take a stake, miss the deadline, and someone
+  comes looking for you across the city grid.
+- **A mentor** who teaches real, standard poker strategy — and each lesson
+  unlocks the analytical tool a real player would use: position labels, pot
+  odds and break-even equity, live hand reading, bankroll warnings.
+- **Slots and craps** with honest odds (~92% RTP and the textbook 1.41% pass
+  line house edge respectively), both verified by simulation in the test suite.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+No art or audio files ship: the pixel sprites and every sound are generated at
+runtime.
 
-## Expanding the Oxlint configuration
+## Running it
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev       # play at localhost:5173
+npm test          # engine, content and balance tests
+npm run test:ui   # browser suite (needs the dev server running)
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## iOS
+
+Capacitor wraps the same web build; the native project lives in `ios/`.
+
+```bash
+npm run ios:sync
+npm run ios:open
+```
+
+Note: the iOS app has never been compiled or run — that needs a machine with
+full Xcode. See `docs/TECHDESIGN.md`.
+
+## Docs
+
+- `docs/GDD.md` — design: narrative beats, systems, open questions
+- `docs/TECHDESIGN.md` — architecture, content model, testing approach
+- `docs/roadmap.pdf` — printable status roadmap

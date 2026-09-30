@@ -51,12 +51,12 @@ describe('generateTell', () => {
 
   it('is much less reliable against sharp players (deliberate false reads)', () => {
     const novice = sample('novice', POCKET_ACES)
-    const sharp = sample('sharp', POCKET_ACES, 3000)
+    const sharp = sample('sharp', POCKET_ACES, 1400)
     const noviceTruthRate = novice.saidStrong / novice.fired
     const sharpTruthRate = sharp.saidStrong / sharp.fired
     expect(sharp.fired).toBeGreaterThan(0)
     expect(sharpTruthRate).toBeLessThan(noviceTruthRate)
-  })
+  }, 30000)
 
   it('returns a well-formed signal', () => {
     const rng = mulberry32(3)

@@ -11,7 +11,8 @@
     "test": "vitest run",
     "ios:sync": "npm run build && cap sync ios",
     "ios:open": "cap open ios",
-    "test:ui": "node tests/ui.mjs"
+    "test:ui": "node tests/ui.mjs",
+    "build:pages": "GITHUB_PAGES=1 npm run build"
   },
   "dependencies": {
     "@capacitor/cli": "^8.5.2",
