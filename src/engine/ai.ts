@@ -85,6 +85,45 @@ const CALL_SLACK: Record<SkillTier, number> = {
   elite: 0.98,
 }
 
+/**
+ * Extra equity, on top of the break-even price, a tier demands per unit of
+ * bet-to-pot before it will call.
+ *
+ * Pot odds alone answer "how often do I have to win", never "how often am I
+ * actually being bluffed". A player who only checks the price calls every
+ * bluff-catcher, which means an opponent can bet the maximum with every strong
+ * hand and never be wrong: they are always paid in full and can never be folded
+ * out. The correction is a bluff-catch premium that grows with the size of the
+ * bet — a bigger bet is a stronger range, and it also needs to be bluffing more
+ * often to be worth calling — and that grows with skill, because reading that
+ * message is exactly what a better player does. Whales pay no premium at all.
+ */
+const BLUFF_CATCH_PREMIUM: Record<SkillTier, number> = {
+  novice: 0.02,
+  amateur: 0.06,
+  competent: 0.12,
+  sharp: 0.2,
+  elite: 0.27,
+}
+
+/** Past this bet-to-pot ratio the message is already "I have it"; it stops scaling. */
+const BLUFF_CATCH_MAX_BET_TO_POT = 2.5
+
+/**
+ * Bluff-catching is a mixed decision, not a threshold: how much credit you give
+ * *this* bet varies, so the same spot is sometimes a call and sometimes a fold.
+ * The premium is drawn uniformly over 0..2x its tier value, which turns the
+ * call/fold line into a frequency — the thing an opponent cannot simply pick a
+ * single bet size to beat.
+ */
+const BLUFF_CATCH_SPREAD = 2
+
+/**
+ * However big the bet, nobody folds a hand that beats essentially everything:
+ * the premium can never push the requirement past this, so the nuts always call.
+ */
+const MAX_CALL_REQUIREMENT = 0.72
+
 /** A bluff is only ever considered when the price of the bluff-raise is this
  * small relative to the pot — you cannot bluff-raise into a shove. */
 const BLUFF_MAX_PRICE_AS_POT_FRACTION = 0.34
@@ -252,15 +291,12 @@ const WHALE_EXTRA_NOISE = 0.25
 const WHALE_CALL_SLACK = 0.55
 const WHALE_EXTRA_BLUFF_CHANCE = 0.12
 
-/**
- * Decides one action.
- *
- * The rule that matters: whether to *continue* is settled by perceived equity
- * against the pot odds and nothing else. Bluffing is a betting decision, so it
- * can only ever turn a check into a bet or a cheap call into a raise — it can
- * never rescue a hand that the price says to fold. (It used to, which let a
- * 3-12% roll call off an entire stack with any two cards.)
- */
+/** How big the bet in front of us is relative to the pot it was fired into. */
+export function betToPotRatio(ctx: AiDecisionContext): number {
+  if (ctx.toCall <= 0) return 0
+  return ctx.toCall / Math.max(1, ctx.potSize - ctx.toCall)
+}
+
 /**
  * What the action in front of us says about the range we're up against.
  *
@@ -272,11 +308,39 @@ const WHALE_EXTRA_BLUFF_CHANCE = 0.12
  */
 export function inferredRangePercentile(ctx: AiDecisionContext, isWhale: boolean): number {
   if (isWhale || ctx.toCall <= 0) return 0
-  const potBeforeTheBet = Math.max(1, ctx.potSize - ctx.toCall)
-  const betToPot = ctx.toCall / potBeforeTheBet
-  return RANGE_READING[ctx.skillTier] * Math.min(1, betToPot / FULL_READ_BET_TO_POT)
+  return RANGE_READING[ctx.skillTier] * Math.min(1, betToPotRatio(ctx) / FULL_READ_BET_TO_POT)
 }
 
+/**
+ * The equity a player actually demands before calling: the break-even price,
+ * loosened by their calling discipline, then *tightened* by a bluff-catch
+ * premium proportional to how big the bet is. Returns a threshold in [0, 1].
+ */
+export function callRequirement(
+  ctx: AiDecisionContext,
+  callSlack: number,
+  isWhale: boolean,
+  rng: Rng,
+): number {
+  const potOdds = ctx.toCall / (ctx.potSize + ctx.toCall)
+  const priced = potOdds * callSlack
+  if (isWhale) return priced
+  const betPressure = Math.min(BLUFF_CATCH_MAX_BET_TO_POT, betToPotRatio(ctx))
+  const premium = BLUFF_CATCH_PREMIUM[ctx.skillTier] * betPressure * rng() * BLUFF_CATCH_SPREAD
+  // The cap only ever trims the premium: a price that is already above it (a
+  // huge overbet shove) still has to be beaten on its own terms.
+  return Math.max(priced, Math.min(MAX_CALL_REQUIREMENT, priced + premium))
+}
+
+/**
+ * Decides one action.
+ *
+ * Whether to *continue* is settled by perceived equity against what the price
+ * and the size of the bet together demand, and nothing else. Bluffing is a
+ * betting decision, so it can only ever turn a check into a bet or a cheap call
+ * into a raise — it can never rescue a hand that the price says to fold. (It
+ * used to, which let a 3-12% roll call off an entire stack with any two cards.)
+ */
 export function decideAiAction(ctx: AiDecisionContext, rng: Rng): Action {
   const isWhale = ctx.archetype === 'whale'
   const trueEquity = estimateEquity(
@@ -322,8 +386,7 @@ export function decideAiAction(ctx: AiDecisionContext, rng: Rng): Action {
     return { type: 'check' }
   }
 
-  const potOdds = ctx.toCall / (ctx.potSize + ctx.toCall)
-  if (perceivedEquity < potOdds * callSlack) {
+  if (perceivedEquity < callRequirement(ctx, callSlack, isWhale, rng)) {
     return { type: 'fold' }
   }
   if (perceivedEquity > raiseThreshold || wantsToBluff) {

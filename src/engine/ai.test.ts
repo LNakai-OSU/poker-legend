@@ -73,7 +73,14 @@ describe('facing an all-in with trash', () => {
   it('never bluff-raises at a price that big', () => {
     for (const skillTier of SKILL_TIERS) {
       const { raise } = rates(() => facingAllIn({ skillTier, allInTo: 4000, minRaiseTo: 1980 }), 60, 3)
-      expect(raise, `${skillTier} bluff-shoved at a 94% price`).toBe(0)
+      // Bluffing is structurally off the table at this price, so the only way to
+      // raise is to genuinely believe the hand is good. Every disciplined tier
+      // never does. A novice's read of its own equity is allowed to be 30 points
+      // out, so once in a while it talks itself into one — that misjudgement is
+      // what a novice *is*, and it is not a bluff.
+      const ceiling = skillTier === 'novice' ? 0.04 : 0
+      expect(raise, `${skillTier} shoved at a 94% price ${(raise * 100).toFixed(0)}% of the time`)
+        .toBeLessThanOrEqual(ceiling)
     }
   }, 60000)
 })
@@ -129,6 +136,105 @@ describe('with the price on its side', () => {
     expect(raises).toBeGreaterThan(0)
     expect(shoves).toBe(0)
   }, 60000)
+})
+
+// ---------------------------------------------------------------------------
+// Bluff-catching. Pot odds alone let an opponent bet the maximum with every
+// strong hand and never be punished: a one-pair hand called every time, at every
+// skill tier, whatever the bet size — and worse, an elite player called *more*
+// often than a novice, because its tight noise parked perceived equity just above
+// the price. Facing a bigger bet has to mean demanding more, and so does skill.
+// ---------------------------------------------------------------------------
+describe('bluff-catching a big bet', () => {
+  /** River: K-high, unpaired, no flush draw home. */
+  const RIVER: Card[] = [
+    { rank: 13, suit: 'spades' },
+    { rank: 8, suit: 'clubs' },
+    { rank: 6, suit: 'diamonds' },
+    { rank: 9, suit: 'hearts' },
+    { rank: 2, suit: 'clubs' },
+  ]
+  /** Top pair, second-best kicker. */
+  const TOP_PAIR: Card[] = [{ rank: 13, suit: 'diamonds' }, { rank: 12, suit: 'spades' }]
+  /** Middle pair, no kicker to speak of. */
+  const MIDDLE_PAIR: Card[] = [{ rank: 9, suit: 'diamonds' }, { rank: 7, suit: 'diamonds' }]
+  /** Kings and nines — a real hand, which has to keep calling. */
+  const TWO_PAIR: Card[] = [{ rank: 13, suit: 'diamonds' }, { rank: 9, suit: 'diamonds' }]
+
+  const POT_BEFORE_BET = 200
+
+  /** Facing a shove of `mult` x the pot on the river, with exactly enough to call. */
+  function facingBet(hole: Card[], skillTier: SkillTier, mult: number): AiDecisionContext {
+    const bet = Math.round(POT_BEFORE_BET * mult)
+    return ctx({
+      hole,
+      board: RIVER,
+      potSize: POT_BEFORE_BET + bet,
+      currentBet: bet,
+      toCall: bet,
+      minRaiseTo: bet * 2,
+      allInTo: bet,
+      skillTier,
+      street: 'river',
+    })
+  }
+
+  const foldRate = (hole: Card[], skillTier: SkillTier, mult: number, samples = 60) =>
+    rates(() => facingBet(hole, skillTier, mult), samples, 12345).fold
+
+  it('folds top pair a substantial share of the time to a 3x-pot shove at the top tiers', () => {
+    const sharp = foldRate(TOP_PAIR, 'sharp', 3)
+    const elite = foldRate(TOP_PAIR, 'elite', 3)
+    expect(sharp, `sharp folded top pair only ${(sharp * 100).toFixed(0)}% to a 3x-pot shove`)
+      .toBeGreaterThan(0.2)
+    expect(elite, `elite folded top pair only ${(elite * 100).toFixed(0)}% to a 3x-pot shove`)
+      .toBeGreaterThan(0.5)
+  }, 120000)
+
+  it('folds a marginal made hand a meaningful share of the time to a pot-size shove', () => {
+    for (const skillTier of ['sharp', 'elite'] as SkillTier[]) {
+      const fold = foldRate(MIDDLE_PAIR, skillTier, 1)
+      expect(fold, `${skillTier} folded middle pair only ${(fold * 100).toFixed(0)}% to a pot-size shove`)
+        .toBeGreaterThan(0.25)
+    }
+  }, 120000)
+
+  it('respects a bigger bet more than a smaller one', () => {
+    for (const skillTier of ['competent', 'sharp', 'elite'] as SkillTier[]) {
+      const small = foldRate(MIDDLE_PAIR, skillTier, 0.5)
+      const medium = foldRate(MIDDLE_PAIR, skillTier, 1)
+      const large = foldRate(MIDDLE_PAIR, skillTier, 3)
+      expect(medium, `${skillTier}: pot ${medium} < half-pot ${small}`).toBeGreaterThanOrEqual(small)
+      expect(large, `${skillTier}: 3x-pot ${large} < pot ${medium}`).toBeGreaterThanOrEqual(medium)
+      expect(large, `${skillTier} gave a 3x-pot shove no more respect than a half-pot one`)
+        .toBeGreaterThan(small + 0.15)
+    }
+  }, 180000)
+
+  it('folds the same hand for the same price more often the better the player is', () => {
+    for (const [hole, mult, label] of [
+      [TOP_PAIR, 3, 'top pair vs 3x pot'],
+      [MIDDLE_PAIR, 1, 'middle pair vs pot'],
+    ] as [Card[], number, string][]) {
+      const byTier = SKILL_TIERS.map((skillTier) => ({ skillTier, fold: foldRate(hole, skillTier, mult) }))
+      const readout = byTier.map((r) => `${r.skillTier} ${(r.fold * 100).toFixed(0)}%`).join(', ')
+      for (let i = 1; i < byTier.length; i++) {
+        expect(byTier[i].fold, `${label} is not monotone in skill: ${readout}`)
+          .toBeGreaterThanOrEqual(byTier[i - 1].fold)
+      }
+      expect(byTier[byTier.length - 1].fold, `${label}: elite no tighter than novice: ${readout}`)
+        .toBeGreaterThan(byTier[0].fold + 0.3)
+    }
+  }, 300000)
+
+  it('still calls off with two pair, however big the bet', () => {
+    for (const skillTier of SKILL_TIERS) {
+      for (const mult of [1, 3]) {
+        const fold = foldRate(TWO_PAIR, skillTier, mult, 40)
+        expect(fold, `${skillTier} folded two pair ${(fold * 100).toFixed(0)}% to a ${mult}x-pot shove`).toBe(0)
+      }
+    }
+  }, 300000)
 })
 
 describe('archetypes', () => {

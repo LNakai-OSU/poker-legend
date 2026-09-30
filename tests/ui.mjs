@@ -166,6 +166,83 @@ await test('can sit down, play, and leave a cash game', async () => {
   await page.close()
 })
 
+// Pressed keys used to be sampled once per Pixi frame, so a keydown+keyup that
+// both landed between two frames was thrown away: 20 taps moved the player zero
+// tiles. Taps are buffered now, and one press must be exactly one step.
+await test('a quick tap moves exactly one tile', async () => {
+  const page = await newPage(baseSave())
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(500)
+  const before = await posOf(page)
+  await page.keyboard.press('ArrowRight') // no hold at all
+  await page.waitForTimeout(500)
+  const after = await posOf(page)
+  assert(
+    after.col === before.col + 1 && after.row === before.row,
+    `one tap should be one step: (${before.col},${before.row}) -> (${after.col},${after.row})`,
+  )
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+})
+
+await test('a run of quick taps moves one tile each', async () => {
+  const page = await newPage(baseSave())
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(500)
+  const before = await posOf(page)
+  for (let i = 0; i < 4; i++) {
+    await page.keyboard.press('ArrowUp')
+    await page.waitForTimeout(220)
+  }
+  await page.waitForTimeout(400)
+  const after = await posOf(page)
+  assert(after.row === before.row - 4, `4 taps moved ${before.row - after.row} tiles, expected 4`)
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+})
+
+// Holding still has to walk, and a release must not leave a phantom extra step.
+await test('holding a key still walks continuously', async () => {
+  const page = await newPage(baseSave())
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(500)
+  const before = await posOf(page)
+  await page.keyboard.down('ArrowRight')
+  await page.waitForTimeout(700)
+  await page.keyboard.up('ArrowRight')
+  await page.waitForTimeout(400)
+  const after = await posOf(page)
+  assert(after.col - before.col >= 2, `holding moved only ${after.col - before.col} tiles`)
+  await page.close()
+})
+
+await test('the finale says up front that you are locked in', async () => {
+  const page = await newPage(
+    baseSave({
+      cityId: 'portoLumina',
+      cash: 200000,
+      unlockedCityIds: ['apartment', 'portoLumina'],
+      ownedItemIds: ['tuxedo'], // the room's dress code, or she never deals
+    }),
+  )
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(400)
+  await moveTo(page, 11, 5)
+  await page.keyboard.press('e')
+  await page.waitForTimeout(250)
+  await talkThrough(page)
+  const text = await page.locator('body').innerText()
+  assert(/no cashing out and no standing up/.test(text), 'finale did not warn about being locked in')
+  assert(/120,000/.test(text), 'finale did not state the buy-in')
+  // The buy-in must not move until it is accepted.
+  assert(/200,000/.test(text), 'the roll changed before the money was put up')
+  await page.close()
+})
+
 await test('slots take a stake and settle on a result', async () => {
   const page = await newPage(baseSave())
   await page.goto(BASE)

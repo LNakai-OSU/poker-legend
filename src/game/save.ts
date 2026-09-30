@@ -36,6 +36,7 @@ function reconcile(parsed: unknown): GameState | null {
     ...saved,
     cash: Math.max(0, saved.cash),
     day: typeof saved.day === 'number' && saved.day > 0 ? saved.day : base.day,
+    finaleRematchDay: typeof saved.finaleRematchDay === 'number' ? saved.finaleRematchDay : base.finaleRematchDay,
     unlockedCityIds: Array.isArray(saved.unlockedCityIds) ? saved.unlockedCityIds : base.unlockedCityIds,
     ownedItemIds: Array.isArray(saved.ownedItemIds) ? saved.ownedItemIds : base.ownedItemIds,
     completedMissionIds: Array.isArray(saved.completedMissionIds) ? saved.completedMissionIds : base.completedMissionIds,

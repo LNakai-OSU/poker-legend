@@ -1186,6 +1186,7 @@ export const CITIES: Record<string, CityDef> = {
         lines: [
           'Nadia: I know what you’ve been doing. Small rooms, then bigger ones.',
           'Nadia: One match. A hundred and twenty thousand each, winner takes it.',
+          'Nadia: Nobody stands up once we start. It ends when one of us has all of it.',
           'Nadia: The penthouse upstairs comes with it. I’ve lived there four years.',
         ],
         action: { kind: 'table', tableId: 'lumina-finale' },

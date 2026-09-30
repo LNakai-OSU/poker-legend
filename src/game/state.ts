@@ -35,6 +35,12 @@ export interface GameState {
   huntedInCityId: CityId | null
   /** Skipping town buys you until this day before they pick the trail back up. */
   huntGraceUntilDay: number
+  /**
+   * The day Nadia will sit down for the heads-up match again. Losing it sets
+   * this into the future: the match is one bet for the whole buy-in, and if
+   * losing could be retried immediately it would just be an expensive cash game.
+   */
+  finaleRematchDay: number
   flags: {
     wonPokerNight: boolean
     beatFinalRival: boolean
@@ -61,6 +67,7 @@ export function initialState(): GameState {
     debts: [],
     huntedInCityId: null,
     huntGraceUntilDay: 0,
+    finaleRematchDay: 0,
     flags: { wonPokerNight: false, beatFinalRival: false, hasPenthouse: false },
     stats: { handsWon: 0, biggestPot: 0, tablesPlayed: 0 },
   }
@@ -124,6 +131,24 @@ export function caughtByCollectors(state: GameState): GameState {
     huntedInCityId: null,
     huntGraceUntilDay: state.day + CAUGHT_GRACE_DAYS,
   }
+}
+
+/** How long Nadia makes you wait before she will put the match up again. */
+export const FINALE_REMATCH_DAYS = 7
+
+/**
+ * Losing the heads-up match. The buy-in is already gone — it left the wallet
+ * when you sat down and it is on her side of the table now — and this is the
+ * other half of the cost: she will not re-rack for you the same night, so the
+ * match is a commitment rather than a button you can keep pressing.
+ */
+export function lostFinalChallenge(state: GameState): GameState {
+  return { ...state, finaleRematchDay: state.day + FINALE_REMATCH_DAYS }
+}
+
+/** Days still to wait before a rematch, or 0 when she will play you now. */
+export function daysUntilRematch(state: GameState): number {
+  return Math.max(0, state.finaleRematchDay - state.day)
 }
 
 export function takeStake(

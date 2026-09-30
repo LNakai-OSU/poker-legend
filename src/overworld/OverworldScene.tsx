@@ -13,6 +13,10 @@ const MOVE_KEYS: Record<string, Direction> = {
   ArrowRight: 'right', d: 'right', D: 'right',
 }
 
+/** Taps held while the player is mid-step. Two keeps mashing responsive without
+ * queueing up a long unwanted walk. */
+const MAX_BUFFERED_TAPS = 2
+
 export interface Interactable extends NpcConfig {
   lines: string[]
   /** Called after the player clicks through all dialogue lines. Omit for flavor-only objects. */
@@ -74,9 +78,18 @@ export function OverworldScene({
     let app: Application | null = null
     let cancelled = false
     const keysDown = new Set<string>()
+    // Held keys are *sampled* once per frame, so a tap that goes down and back up
+    // between two frames is never seen at all — at 60fps that is any press under
+    // ~17ms, which is most deliberate single-square taps. Every fresh keydown is
+    // therefore queued here as well, and the queue is what a tap is served from.
+    const tapQueue: Direction[] = []
 
     const keydown = (e: KeyboardEvent) => {
-      if (e.key in MOVE_KEYS) keysDown.add(e.key)
+      const direction = MOVE_KEYS[e.key]
+      if (!direction) return
+      // Browsers auto-repeat a held key; only the first press is a new tap.
+      if (!keysDown.has(e.key) && tapQueue.length < MAX_BUFFERED_TAPS) tapQueue.push(direction)
+      keysDown.add(e.key)
     }
     const keyup = (e: KeyboardEvent) => keysDown.delete(e.key)
 
@@ -162,15 +175,24 @@ export function OverworldScene({
           idler.npc.sprite.y = idler.baseY + Math.sin(elapsed / 620 + idler.phase) * 1.4
         }
 
-        if (!talkingRef.current) {
+        if (talkingRef.current) {
+          // Taps aimed at the dialogue box must not become steps once it closes.
+          tapQueue.length = 0
+        } else {
           const touchDir = touchDirRef.current
+          const heldKey = keysDown.values().next().value
           if (touchDir) {
             player.tryMove(touchDir, map)
-          } else {
-            for (const key of keysDown) {
-              player.tryMove(MOVE_KEYS[key], map)
-              break
-            }
+            tapQueue.length = 0
+          } else if (heldKey !== undefined) {
+            // Still held: walk continuously, and drop the buffered tap that
+            // started this hold so releasing doesn't add a phantom extra step.
+            player.tryMove(MOVE_KEYS[heldKey], map)
+            tapQueue.length = 0
+          } else if (tapQueue.length > 0 && !player.moving) {
+            // Released already. Serve the tap now, one step per press — and only
+            // between tiles, so a tap during a step is honoured after it lands.
+            player.tryMove(tapQueue.shift()!, map)
           }
         }
         player.update(ticker.deltaMS)

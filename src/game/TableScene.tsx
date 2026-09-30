@@ -6,7 +6,6 @@ import { defaultRng } from '../engine/rng'
 import type { PlayerConfig } from '../engine/types'
 import type { TableDef } from '../world/types'
 import { PokerTableView } from './PokerTableView'
-import { cardText } from './Card'
 import type { GameState } from './state'
 import { tableAccess } from './progression'
 import { playSound } from '../audio/audio'
@@ -72,12 +71,13 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
   const opponentsBusted =
     !publicState.handInProgress && publicState.players.filter((p) => p.id !== 'you').every((p) => p.stack <= 0)
 
-  // Tally results once per completed hand.
+  // Tally results once per completed hand. Only pots actually won count: an
+  // uncalled bet coming back is not a hand won and not a pot size.
   if (lastResult && lastResult.handNumber !== countedHandRef.current && !publicState.handInProgress) {
     countedHandRef.current = lastResult.handNumber
-    const wonAnything = lastResult.pots.some((pot) => pot.winnerIds.includes('you'))
+    const wonAnything = lastResult.pots.some((pot) => !pot.uncalled && pot.winnerIds.includes('you'))
     for (const pot of lastResult.pots) {
-      if (pot.winnerIds.includes('you')) {
+      if (!pot.uncalled && pot.winnerIds.includes('you')) {
         handsWonRef.current += 1
         biggestPotRef.current = Math.max(biggestPotRef.current, pot.amount)
       }
@@ -158,22 +158,35 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
   ])
 
   // --- Bet sizing -----------------------------------------------------------
-  // The AI bets a fraction of the pot, so the player needs the same vocabulary;
-  // min-raise-or-shove is not a real betting decision.
+  // The AI bets a fraction of the pot, so the player needs the same vocabulary.
+  // Overbets are part of that vocabulary and not a luxury: capped at pot, a
+  // 1,200bb-deep table offers only a tiny raise or a whole-stack shove, which is
+  // exactly what leaves a maximum-sizing opponent unpunishable.
   const allInTo = you.streetContribution + you.stack
   const raisePresets = ([
     { key: 'half', label: '½ pot', fraction: 0.5 },
     { key: 'three-quarter', label: '¾ pot', fraction: 0.75 },
     { key: 'pot', label: 'Pot', fraction: 1 },
+    { key: 'pot-1-5', label: '1½× pot', fraction: 1.5 },
+    { key: 'pot-2', label: '2× pot', fraction: 2 },
   ] as const)
     .map(({ key, label, fraction }) => ({
       key,
       label,
-      // Clamped up to the legal minimum raise; anything at or beyond the whole
-      // stack is dropped, since "All in" already covers it.
-      to: Math.max(publicState.minRaiseTo, publicState.currentBet + Math.round((publicState.pot + toCall) * fraction)),
+      // Call first, then bet that fraction of the pot the call makes: the
+      // standard pot-fraction raise, expressed as a raise-to total.
+      to: publicState.currentBet + Math.round((publicState.pot + toCall) * fraction),
     }))
-    .filter((preset, i, all) => preset.to < allInTo && all.findIndex((p) => p.to === preset.to) === i)
+    // A sizing at or below the legal minimum raise is not that sizing, so it is
+    // dropped rather than silently clamped into a mislabelled button — "Min
+    // raise" already offers that number. Anything at or past the whole stack goes
+    // too, since "All in" covers it.
+    .filter(
+      (preset, i, all) =>
+        preset.to > publicState.minRaiseTo &&
+        preset.to < allInTo &&
+        all.findIndex((p) => p.to === preset.to) === i,
+    )
 
   const potOdds =
     state.lessonIds.includes('pot-odds') && toCall > 0
@@ -191,26 +204,6 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
     rerender()
   }
 
-  // --- Showdown ------------------------------------------------------------
-  // The hand is over and this result belongs to the hand still on the table, so
-  // the revealed cards and the board are all still on screen. Nothing is allowed
-  // to be drawn over them: the player is here to read the showdown.
-  const showdown =
-    !publicState.handInProgress && lastResult && lastResult.handNumber === publicState.handNumber
-      ? lastResult
-      : null
-  const nameOf = (id: string) => players.find((p) => p.id === id)?.name ?? id
-  const wonByPlayer = (playerId: string) =>
-    (showdown?.pots ?? [])
-      .filter((pot) => pot.winnerIds.includes(playerId))
-      .reduce(
-        (sum, pot) => sum + pot.amountPerWinner + (pot.winnerIds[0] === playerId ? pot.remainder : 0),
-        0,
-      )
-  const uncontestedWinners = showdown && showdown.revealed.length === 0
-    ? [...new Set(showdown.pots.flatMap((pot) => pot.winnerIds))]
-    : []
-
   const leaveWith = (chips: number, finaleWon?: boolean) =>
     onLeave({
       chipsCashedOut: chips,
@@ -219,60 +212,65 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
       finaleWon,
     })
 
-  // --- Finale outcomes: heads-up, winner takes everything on the table -------
-  if (isFinale && opponentsBusted) {
-    return (
-      <Overlay>
-        <h2>You take the last pot.</h2>
-        <p>Nadia pushes her chair back, looks at you for a long moment, and offers her hand.</p>
-        <button style={buttonStyle} onClick={() => leaveWith(you.stack, true)}>Take the room</button>
-      </Overlay>
-    )
-  }
-  if (isFinale && youBusted) {
-    return (
-      <Overlay>
-        <h2>She has them all.</h2>
-        <p>Nadia stacks your last chips without ceremony. The penthouse stays hers.</p>
-        <button style={buttonStyle} onClick={() => leaveWith(0, false)}>Leave the room</button>
-      </Overlay>
-    )
-  }
-
-  // --- Cash game: bust means rebuy or walk ----------------------------------
-  if (youBusted) {
-    const canRebuy = state.cash >= table.buyIn
-    // Buying back in is buying in again, so the bankroll lesson applies here too.
-    const rebuyWarning = tableAccess(state, table).bankrollWarning
-    return (
-      <Overlay>
-        <h2>You&rsquo;re out of chips at this table.</h2>
-        <p>Wallet: ${state.cash.toLocaleString()}</p>
-        {canRebuy && rebuyWarning && (
-          <p data-testid="rebuy-bankroll-warning" style={{ color: '#f2c14e', maxWidth: 420 }}>
-            Bankroll warning: {rebuyWarning}
+  // --- End-of-session panel -------------------------------------------------
+  // Winning, busting and the finale all used to replace the whole table with a
+  // full-screen overlay, which hid the one hand the player most wants to read:
+  // the showdown that just ended their session. These render as a panel *below*
+  // the table instead, so the board and every revealed hand stay on screen.
+  const canRebuy = state.cash >= table.buyIn
+  const rebuyWarning = tableAccess(state, table).bankrollWarning
+  const outcome: ReactNode = (() => {
+    if (isFinale && opponentsBusted) {
+      return (
+        <EndPanel testId="finale-won" title="You take the last pot.">
+          <p>Nadia pushes her chair back, looks at you for a long moment, and offers her hand.</p>
+          <button style={buttonStyle} onClick={() => leaveWith(you.stack, true)}>Take the room</button>
+        </EndPanel>
+      )
+    }
+    if (isFinale && youBusted) {
+      return (
+        <EndPanel testId="finale-lost" title="She has them all.">
+          <p>Nadia stacks your last chips without ceremony. The penthouse stays hers.</p>
+          <p style={{ color: '#f2c14e' }}>
+            The ${table.buyIn.toLocaleString()} you put up is hers. That was the bet.
           </p>
-        )}
-        <div style={{ display: 'flex', gap: 12 }}>
-          {canRebuy && (
-            <button
-              style={buttonStyle}
-              onClick={() => {
-                engine.rebuy('you', table.buyIn)
-                rebuyOpponents()
-                engine.startNewHand()
-                onRebuy(table.buyIn)
-                rerender()
-              }}
-            >
-              Rebuy (${table.buyIn.toLocaleString()})
-            </button>
+          <button style={buttonStyle} onClick={() => leaveWith(0, false)}>Leave the room</button>
+        </EndPanel>
+      )
+    }
+    if (youBusted) {
+      return (
+        <EndPanel testId="busted" title="You're out of chips at this table.">
+          <p>Wallet: ${state.cash.toLocaleString()}</p>
+          {/* Buying back in is buying in again, so the bankroll lesson applies here too. */}
+          {canRebuy && rebuyWarning && (
+            <p data-testid="rebuy-bankroll-warning" style={{ color: '#f2c14e', maxWidth: 420 }}>
+              Bankroll warning: {rebuyWarning}
+            </p>
           )}
-          <button style={buttonStyle} onClick={() => leaveWith(0)}>Leave table</button>
-        </div>
-      </Overlay>
-    )
-  }
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+            {canRebuy && (
+              <button
+                style={buttonStyle}
+                onClick={() => {
+                  engine.rebuy('you', table.buyIn)
+                  rebuyOpponents()
+                  engine.startNewHand()
+                  onRebuy(table.buyIn)
+                  rerender()
+                }}
+              >
+                Rebuy (${table.buyIn.toLocaleString()})
+              </button>
+            )}
+            <button style={buttonStyle} onClick={() => leaveWith(0)}>Leave table</button>
+          </div>
+        </EndPanel>
+      )
+    }
+    return null
+  })()
 
   return (
     <div style={{ width: '100%', minHeight: '100vh', background: '#0d1420', color: '#e8e8f0', fontFamily: 'monospace', padding: 'clamp(10px, 3vw, 24px)', boxSizing: 'border-box', overflowX: 'hidden' }}>
@@ -305,52 +303,11 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
         </div>
       )}
 
-      {showdown && (
-        <div
-          data-testid="showdown-summary"
-          style={{
-            maxWidth: 680,
-            margin: '0 auto 12px',
-            padding: 'clamp(8px, 2.5vw, 14px)',
-            borderRadius: 10,
-            border: '1px solid rgba(242,193,78,0.45)',
-            background: '#141d2e',
-            fontSize: 'clamp(11px, 3vw, 13px)',
-            textAlign: 'center',
-            lineHeight: 1.6,
-          }}
-        >
-          <div style={{ color: '#f2c14e', letterSpacing: 2, marginBottom: 6 }}>SHOWDOWN</div>
-          <div style={{ color: '#9aa4b8', marginBottom: 6 }}>
-            Board: {showdown.board.map(cardText).join(' ') || '—'}
-          </div>
-          {showdown.revealed.length > 0
-            ? showdown.revealed.map((r) => {
-                const won = wonByPlayer(r.playerId)
-                return (
-                  <div
-                    key={r.playerId}
-                    data-testid={`showdown-${r.playerId}`}
-                    style={{ color: won > 0 ? '#7fe0a0' : '#c8c8d4' }}
-                  >
-                    <strong>{nameOf(r.playerId)}</strong> {r.holeCards.map(cardText).join(' ')} &middot;{' '}
-                    {HAND_CATEGORY_NAMES[bestHand([...r.holeCards, ...showdown.board]).category]}
-                    {won > 0 && <> &mdash; won {won.toLocaleString()}</>}
-                  </div>
-                )
-              })
-            : uncontestedWinners.map((id) => (
-                <div key={id} data-testid={`showdown-${id}`} style={{ color: '#7fe0a0' }}>
-                  <strong>{nameOf(id)}</strong> took {wonByPlayer(id).toLocaleString()} uncontested &mdash; everyone
-                  else folded, so no cards were shown.
-                </div>
-              ))}
-        </div>
-      )}
+      {outcome}
 
       {/* A bar, not a sheet: it sits under the table rather than over it, so the
           revealed hands and the winning pot stay readable while it is up. */}
-      {!publicState.handInProgress && (
+      {!publicState.handInProgress && outcome === null && (
         <div
           data-testid="hand-over-bar"
           style={{
@@ -400,7 +357,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
             <>
               {publicState.minRaiseTo < allInTo && (
                 <button style={sizingButtonStyle} data-testid="raise-min" onClick={() => raiseTo(publicState.minRaiseTo)}>
-                  Min {publicState.minRaiseTo}
+                  <SizingLabel label="Min raise" to={publicState.minRaiseTo} />
                 </button>
               )}
               {raisePresets.map((preset) => (
@@ -410,10 +367,15 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
                   data-testid={`raise-${preset.key}`}
                   onClick={() => raiseTo(preset.to)}
                 >
-                  {preset.label} {preset.to}
+                  {/* The first line names the sizing, the second is the total it
+                      raises you to. Printing the total *as* the label read
+                      "Pot 300" when the pot was 150. */}
+                  <SizingLabel label={preset.label} to={preset.to} />
                 </button>
               ))}
-              <button style={sizingButtonStyle} data-testid="raise-all-in" onClick={() => raiseTo(allInTo)}>All in</button>
+              <button style={sizingButtonStyle} data-testid="raise-all-in" onClick={() => raiseTo(allInTo)}>
+                <SizingLabel label="All in" to={allInTo} />
+              </button>
             </>
           )}
         </div>
@@ -422,13 +384,40 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
   )
 }
 
-function Overlay({ children }: { children: ReactNode }) {
+/** Two lines: what the sizing is, and the total it raises you to. */
+function SizingLabel({ label, to }: { label: string; to: number }) {
   return (
-    <div style={{
-      position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center', gap: 8, padding: 24,
-      background: 'rgba(5,5,10,0.85)', color: '#e8e8f0', fontFamily: 'monospace', textAlign: 'center',
-    }}>
+    <span style={{ display: 'inline-flex', flexDirection: 'column', lineHeight: 1.25 }}>
+      <span>{label}</span>
+      <span style={{ fontSize: '0.85em', opacity: 0.75 }}>to {to.toLocaleString()}</span>
+    </span>
+  )
+}
+
+/**
+ * How a session ends. Deliberately a panel and not a full-screen overlay: the
+ * hand that ended it is still on the table above, and covering it up hid the one
+ * showdown the player most needs to see.
+ */
+function EndPanel({ testId, title, children }: { testId: string; title: string; children: ReactNode }) {
+  return (
+    <div
+      data-testid={testId}
+      style={{
+        maxWidth: 680,
+        margin: '0 auto 12px',
+        padding: 'clamp(12px, 3vw, 20px)',
+        borderRadius: 10,
+        border: '1px solid #4a4a66',
+        background: 'rgba(5,5,10,0.92)',
+        textAlign: 'center',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 8,
+      }}
+    >
+      <h2 style={{ margin: 0, fontSize: 'clamp(15px, 4vw, 20px)' }}>{title}</h2>
       {children}
     </div>
   )
@@ -439,7 +428,7 @@ const buttonStyle = {
   padding: '8px 16px', fontFamily: 'monospace', cursor: 'pointer', fontSize: 14,
 } as const
 
-/** Tighter, since up to five sizing buttons have to wrap sanely at 390px. */
+/** Tighter, since up to seven sizing buttons have to wrap sanely at 390px. */
 const sizingButtonStyle = {
   ...buttonStyle,
   background: '#2f7d4a',

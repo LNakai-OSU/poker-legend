@@ -1,5 +1,6 @@
-import type { GameState } from './state'
+import { daysUntilRematch, type GameState } from './state'
 import { buttonStyle } from './MenuScenes'
+import { TABLES } from '../world/content'
 
 function FullScreen({ children, background = '#0a0a12' }: { children: React.ReactNode; background?: string }) {
   return (
@@ -27,6 +28,35 @@ export function CaughtScene({ onRestart }: { onRestart: () => void }) {
         &mdash; they will just be looking for you again in a few days.
       </p>
       <button style={{ ...buttonStyle, marginTop: 12 }} onClick={onRestart}>Pick yourself up</button>
+    </FullScreen>
+  )
+}
+
+/**
+ * Lost the heads-up match. Losing used to hand you back to the overworld like
+ * any other session, with Nadia waiting to be challenged again — which made the
+ * climax an expensive cash game you could grind until it went your way. The
+ * buy-in is hers and the rematch is a week out.
+ */
+export function FinaleLostScene({ state, onContinue }: { state: GameState; onContinue: () => void }) {
+  const wait = daysUntilRematch(state)
+  return (
+    <FullScreen background="#160d12">
+      <h2>She played you off the table.</h2>
+      <p>
+        The dealer breaks down your stack into hers without being asked, and somebody is already
+        wiping the rail down. Nadia is talking to someone else by the time you stand up.
+      </p>
+      <p data-testid="finale-loss-cost" style={{ color: '#f2c14e' }}>
+        The ${TABLES['lumina-finale'].buyIn.toLocaleString()} you put up is gone &mdash; that was the bet.
+        You are carrying ${state.cash.toLocaleString()}.
+      </p>
+      <p style={{ color: '#9a9ab0' }}>
+        {wait > 0
+          ? `She will not rack it up again for ${wait} day${wait === 1 ? '' : 's'}. Build the roll back, and be better when she does.`
+          : 'Build the roll back, and be better when she sits down again.'}
+      </p>
+      <button style={{ ...buttonStyle, marginTop: 12 }} onClick={onContinue}>Walk out</button>
     </FullScreen>
   )
 }

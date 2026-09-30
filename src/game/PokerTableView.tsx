@@ -1,6 +1,7 @@
 import type { HandResult, PublicState } from '../engine/table'
+import { bestHand, HAND_CATEGORY_NAMES } from '../engine/handRank'
 import type { Card as CardData, PlayerConfig } from '../engine/types'
-import { Card } from './Card'
+import { Card, cardText } from './Card'
 import { tellText } from './tellFlavor'
 
 export interface TableInsights {
@@ -33,10 +34,103 @@ function positionLabels(state: PublicState): Map<string, string> {
   return labels
 }
 
+/**
+ * What a player actually took from a finished hand, split into the two things
+ * the old summary conflated: chips won from other players, and their own
+ * uncalled bet handed back. Only the first is winning a pot.
+ */
+export function handTakings(result: HandResult, playerId: string): { won: number; returned: number } {
+  let won = 0
+  let returned = 0
+  for (const pot of result.pots) {
+    if (!pot.winnerIds.includes(playerId)) continue
+    const share = pot.amountPerWinner + (pot.winnerIds[0] === playerId ? pot.remainder : 0)
+    if (pot.uncalled) returned += share
+    else won += share
+  }
+  return { won, returned }
+}
+
+/** Everyone who genuinely won chips from someone else this hand. */
+export function potWinnerIds(result: HandResult): Set<string> {
+  return new Set(result.pots.filter((pot) => !pot.uncalled).flatMap((pot) => pot.winnerIds))
+}
+
+/**
+ * The single authoritative read-out of a finished hand: the board, every hand
+ * that got turned over, and who won what. There used to be two of these on
+ * screen at once — a per-pot-layer list and a separate box — which disagreed
+ * with each other, so there is now exactly one and every scene shares it.
+ */
+export function ShowdownSummary({ result, players }: { result: HandResult; players: PlayerConfig[] }) {
+  const nameOf = (id: string) => players.find((p) => p.id === id)?.name ?? id
+  const winners = potWinnerIds(result)
+  const shown = [...result.revealed].sort(
+    (a, b) => Number(winners.has(b.playerId)) - Number(winners.has(a.playerId)),
+  )
+  // Nobody turned a hand over, so the pot was taken by everyone else folding.
+  const foldWinners = result.revealed.length === 0 ? [...winners] : []
+
+  const takingsText = (playerId: string) => {
+    const { won, returned } = handTakings(result, playerId)
+    const parts: string[] = []
+    if (won > 0) parts.push(`won ${won.toLocaleString()}`)
+    if (returned > 0) parts.push(`${returned.toLocaleString()} returned uncalled`)
+    return parts.join(' · ')
+  }
+
+  return (
+    <div
+      data-testid="showdown-summary"
+      style={{
+        maxWidth: 680,
+        margin: '0 auto 12px',
+        padding: 'clamp(8px, 2.5vw, 14px)',
+        borderRadius: 10,
+        border: '1px solid rgba(242,193,78,0.45)',
+        background: '#141d2e',
+        fontSize: 'clamp(11px, 3vw, 13px)',
+        textAlign: 'center',
+        lineHeight: 1.6,
+      }}
+    >
+      <div style={{ color: '#f2c14e', letterSpacing: 2, marginBottom: 6 }}>SHOWDOWN</div>
+      <div style={{ color: '#9aa4b8', marginBottom: 6 }}>
+        Board: {result.board.map(cardText).join(' ') || '—'}
+      </div>
+      {shown.map((r) => {
+        const summary = takingsText(r.playerId)
+        const isWinner = winners.has(r.playerId)
+        return (
+          <div
+            key={r.playerId}
+            data-testid={`showdown-${r.playerId}`}
+            style={{ color: isWinner ? '#7fe0a0' : '#c8c8d4' }}
+          >
+            <strong>{nameOf(r.playerId)}</strong> {r.holeCards.map(cardText).join(' ')} &middot;{' '}
+            {HAND_CATEGORY_NAMES[bestHand([...r.holeCards, ...result.board]).category]}
+            {summary ? <> &mdash; {summary}</> : <> &mdash; lost</>}
+          </div>
+        )
+      })}
+      {foldWinners.map((id) => {
+        const { won, returned } = handTakings(result, id)
+        return (
+          <div key={id} data-testid={`showdown-${id}`} style={{ color: '#7fe0a0' }}>
+            <strong>{nameOf(id)}</strong> took {won.toLocaleString()} uncontested &mdash; everyone else folded, so
+            no cards were shown.
+            {returned > 0 && <> {returned.toLocaleString()} of the last bet came back uncalled.</>}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export function PokerTableView({ state, lastResult, players, yourHole, insights }: PokerTableViewProps) {
   const labels = insights?.showPositions ? positionLabels(state) : null
   const handOver = !state.handInProgress && lastResult?.handNumber === state.handNumber
-  const winnerIds = handOver ? new Set(lastResult.pots.flatMap((pot) => pot.winnerIds)) : new Set<string>()
+  const winnerIds = handOver ? potWinnerIds(lastResult) : new Set<string>()
 
   return (
     <>
@@ -122,15 +216,7 @@ export function PokerTableView({ state, lastResult, players, yourHole, insights 
         ))}
       </div>
 
-      {!state.handInProgress && lastResult?.handNumber === state.handNumber && (
-        <div style={{ textAlign: 'center', marginBottom: 16 }}>
-          {lastResult.pots.map((pot, i) => (
-            <p key={i}>
-              {pot.winnerIds.map((id) => players.find((pl) => pl.id === id)?.name).join(', ')} won {pot.amount}
-            </p>
-          ))}
-        </div>
-      )}
+      {handOver && <ShowdownSummary result={lastResult} players={players} />}
     </>
   )
 }

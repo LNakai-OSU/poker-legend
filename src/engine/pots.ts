@@ -1,6 +1,13 @@
 export interface PotLayer {
   amount: number
   eligiblePlayerIds: string[]
+  /**
+   * True when only one player ever put chips into this layer, i.e. nobody
+   * matched it. The chips go back to whoever bet them, so this is *not* a pot
+   * won from anybody — reporting it as one makes the loser of a hand look like
+   * the winner of a large pot.
+   */
+  uncalled: boolean
 }
 
 /**
@@ -30,14 +37,16 @@ export function calculatePots(
       .map(([playerId]) => playerId)
       .filter((id) => !foldedPlayerIds.has(id))
 
+    const uncalled = contributors.length === 1
     if (eligiblePlayerIds.length > 0) {
-      pots.push({ amount, eligiblePlayerIds })
+      pots.push({ amount, eligiblePlayerIds, uncalled })
     } else if (pots.length > 0) {
       // Everyone eligible at this layer folded (can happen after a raise everyone folds to);
       // the chips still belong to the pot, fold them into the previous eligible layer.
       pots[pots.length - 1].amount += amount
+      pots[pots.length - 1].uncalled = pots[pots.length - 1].uncalled && uncalled
     } else {
-      pots.push({ amount, eligiblePlayerIds: contributors.map(([id]) => id) })
+      pots.push({ amount, eligiblePlayerIds: contributors.map(([id]) => id), uncalled })
     }
     prevLevel = level
   }

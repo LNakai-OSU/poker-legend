@@ -4,7 +4,7 @@ import { PokerNightScene } from './PokerNightScene'
 import { BusTransition } from './BusTransition'
 import { TableScene, type SessionResult } from './TableScene'
 import { buttonStyle as menuButtonStyle, MentorScene, MenuScreen, ShopScene, SponsorScene, TravelScene } from './MenuScenes'
-import { CaughtScene, EndingScene } from './EndScenes'
+import { CaughtScene, EndingScene, FinaleLostScene } from './EndScenes'
 import { CrapsScene, SlotsScene } from './CasinoGameScenes'
 import { PenthouseScene, VenueScene } from './VenueScenes'
 import { SettingsScene } from './SettingsScene'
@@ -16,7 +16,9 @@ import { playSound } from '../audio/audio'
 import {
   advanceDay,
   caughtByCollectors,
+  daysUntilRematch,
   initialState,
+  lostFinalChallenge,
   payDebt,
   takeStake,
   travelTo,
@@ -36,6 +38,7 @@ type View =
   | { kind: 'table'; tableId: string }
   | { kind: 'blocked'; title: string; message: string }
   | { kind: 'bankrollWarning'; tableId: string; warning: string }
+  | { kind: 'finaleCommit'; tableId: string }
   | { kind: 'shop'; shopId: string }
   | { kind: 'mentor' }
   | { kind: 'sponsor'; sponsorId: string }
@@ -47,6 +50,7 @@ type View =
   | { kind: 'settings' }
   | { kind: 'caught' }
   | { kind: 'ending' }
+  | { kind: 'finaleLost' }
 
 export function GameApp() {
   const [state, setState] = useState<GameState>(() => loadGame() ?? initialState())
@@ -146,10 +150,28 @@ export function GameApp() {
       setView({ kind: 'blocked', title: table.name, message: access.reason ?? 'You cannot sit down here.' })
       return
     }
+    // Losing the heads-up match means she will not rack it up again for a while;
+    // without this the climax is a button you can keep pressing until it pays.
+    if (table.isFinale && daysUntilRematch(state) > 0) {
+      setView({
+        kind: 'blocked',
+        title: table.name,
+        message:
+          `Nadia took your ${table.buyIn.toLocaleString()} and is not putting the match up again tonight. ` +
+          `Come back in ${daysUntilRematch(state)} day${daysUntilRematch(state) === 1 ? '' : 's'}.`,
+      })
+      return
+    }
     // The bankroll lesson is what earns this: the player can still sit, but they
     // are told what they are risking before the buy-in leaves their wallet.
     if (access.bankrollWarning && !skipBankrollCheck) {
       setView({ kind: 'bankrollWarning', tableId, warning: access.bankrollWarning })
+      return
+    }
+    // The finale has no Leave button on purpose, and one side loses everything
+    // they put up. Both of those have to be said before the money moves.
+    if (table.isFinale) {
+      setView({ kind: 'finaleCommit', tableId })
       return
     }
     buyInAndSit(table)
@@ -169,9 +191,12 @@ export function GameApp() {
       if (result.finaleWon) {
         return { ...next, flags: { ...next.flags, beatFinalRival: true, hasPenthouse: true } }
       }
+      // Losing the match is its own outcome, not a cash-game session that
+      // happened to go badly: the buy-in stays with her and so does the table.
+      if (table.isFinale) return lostFinalChallenge(next)
       return next
     })
-    if (table.isFinale && result.finaleWon) setView({ kind: 'ending' })
+    if (table.isFinale) setView({ kind: result.finaleWon ? 'ending' : 'finaleLost' })
     else backToCity()
   }
 
@@ -245,6 +270,36 @@ export function GameApp() {
             onClick={() => handleSitDown(view.tableId, true)}
           >
             Sit down anyway
+          </button>
+        </MenuScreen>
+      )
+    }
+
+    case 'finaleCommit': {
+      const table = TABLES[view.tableId]
+      return (
+        <MenuScreen title={table.name} onBack={backToCity} backLabel="Not tonight">
+          <p data-testid="finale-commitment" style={{ color: '#f2c14e' }}>
+            One match, ${table.buyIn.toLocaleString()} each, winner takes every chip on the table.
+          </p>
+          <p>
+            You are locked in for the whole match. There is no cashing out and no standing up
+            &mdash; it is over when one of you has all the chips.
+          </p>
+          <p>
+            If that is her, the ${table.buyIn.toLocaleString()} is hers, and she will not put the
+            match up again for another week.
+          </p>
+          <p style={{ color: '#9a9ab0' }}>
+            Your roll ${state.cash.toLocaleString()} &rarr; ${(state.cash - table.buyIn).toLocaleString()} once
+            the money is up.
+          </p>
+          <button
+            data-testid="finale-accept"
+            style={menuButtonStyle}
+            onClick={() => buyInAndSit(table)}
+          >
+            Put up the ${table.buyIn.toLocaleString()}
           </button>
         </MenuScreen>
       )
@@ -365,15 +420,24 @@ export function GameApp() {
     case 'ending':
       return <EndingScene state={state} onContinue={backToCity} />
 
+    case 'finaleLost':
+      return <FinaleLostScene state={state} onContinue={backToCity} />
+
       default:
         return <CityScene state={state} onAction={handlePoi} onCaught={handleCaught} />
     }
   })()
 
+  // Leaving the finale mid-match has to be impossible, and stepping into the
+  // settings screen unmounts the table — which would have been a way to abandon
+  // a losing match, dodge the loss and sit straight back down. The sound toggle
+  // stays; the one door that leads off the table is shut.
+  const lockedInAtTable = view.kind === 'table' && TABLES[view.tableId]?.isFinale === true
+
   return (
     <>
       <SoundToggle />
-      {view.kind !== 'settings' && (
+      {view.kind !== 'settings' && !lockedInAtTable && (
         <button
           data-testid="settings-button"
           aria-label="Settings"

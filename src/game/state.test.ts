@@ -4,7 +4,10 @@ import {
   CAUGHT_GRACE_DAYS,
   caughtByCollectors,
   daysUntilDue,
+  daysUntilRematch,
+  FINALE_REMATCH_DAYS,
   initialState,
+  lostFinalChallenge,
   overdueDebts,
   payDebt,
   takeStake,
@@ -188,5 +191,21 @@ describe('missions', () => {
 
     const done = { ...won, completedMissionIds: ['riverbend-marker'] }
     expect(missionStatus(done, 'riverbend-marker')).toBe('done')
+  })
+})
+
+describe('the heads-up finale', () => {
+  // Losing used to be free: you walked back out to the overworld and Nadia was
+  // ready to go again, so the climax was an expensive cash game you could grind.
+  it('costs the buy-in and puts the rematch days away', () => {
+    const before = { ...initialState(), day: 10, cash: 200000 }
+    expect(daysUntilRematch(before)).toBe(0)
+
+    // Sitting down is what moves the money, exactly as any other buy-in does.
+    const seated = { ...before, cash: before.cash - TABLES['lumina-finale'].buyIn }
+    const lost = lostFinalChallenge(seated)
+    expect(lost.cash).toBe(80000)
+    expect(daysUntilRematch(lost)).toBe(FINALE_REMATCH_DAYS)
+    expect(daysUntilRematch(advanceDay(lost, FINALE_REMATCH_DAYS))).toBe(0)
   })
 })
