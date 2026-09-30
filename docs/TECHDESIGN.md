@@ -51,14 +51,21 @@ docs/
    a stale-pot display bug, a React StrictMode double-deal bug that silently
    ate a blind round's chips, and an effect dependency bug that could stall
    the AI's turn. See `chipleak.test.ts` for the regression coverage.
-5. **Bus → local casino overworld** — casino lobby map, low-stakes table
-   entrance; slots/craps as static flavor only. *(not started)*
-6. **Low-stakes table live** — real AI opponents at an appropriate skill
-   tier, first version of the tell system. *(not started — tells' data model
-   already exists in `engine/types.ts` as `TellSignal`, unused so far)*
-7. **Economy pass** — cash tracking, buy-ins, a first shop, checkpoint/save
-   formalized (likely `localStorage` for the browser build initially).
-   *(not started)*
+5. **Bus → local casino overworld** ✅ — bus transition screen, casino lobby
+   map (`src/overworld/CasinoLobbyScene.tsx`) with a Pit Boss NPC leading to
+   the low-stakes table, plus flavor-only slot machine and craps table
+   objects (ambient, no mechanics yet — that's still a deliberate MVP
+   simplification per the GDD). Winning poker night now seeds a `cash`
+   wallet (held in `GameApp.tsx`) with the freezeout winnings.
+6. **Low-stakes table live** ~partial — the low-stakes table is a real cash
+   game (`src/game/CashGameScene.tsx`, distinct from poker night's freezeout):
+   fixed buy-in, AI auto-rebuy, human rebuy/leave-to-cash-out. AI skill tiers
+   already vary (novice/amateur) but the **tell system is still unbuilt** —
+   `TellSignal` in `engine/types.ts` remains unused. Do that next before
+   calling this phase done.
+7. **Economy pass** ~partial — cash tracking/buy-ins exist (wallet lives in
+   React state only, not persisted). Still missing: a shop, and any
+   checkpoint/save system (nothing survives a page reload yet).
 
 Phases beyond this (mid-tier cities, sponsor/debt/collector system, mentor,
 whales, Vegas-parallel, Macau-parallel, endgame heads-up) are deliberately
