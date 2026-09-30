@@ -77,7 +77,7 @@
 <body>
 
 <h1>Poker Legend</h1>
-<p class="subtitle">Build roadmap &middot; status as of 29 September 2026</p>
+<p class="subtitle">Build roadmap &middot; all phases complete &middot; 29 September 2026</p>
 
 <div class="meta">
   <div><div class="label">Genre</div><div class="value">Story-driven poker RPG</div></div>
@@ -101,11 +101,11 @@
   <span class="arrow">&rarr;</span>
   <div class="stop built"><b>Rez Casino</b><span>low stakes</span></div>
   <span class="arrow">&rarr;</span>
-  <div class="stop"><b>Regional cities</b><span>2&ndash;3 stops</span></div>
+  <div class="stop built"><b>Regional cities</b><span>3 stops</span></div>
   <span class="arrow">&rarr;</span>
-  <div class="stop"><b>Vegas-parallel</b><span>high stakes</span></div>
+  <div class="stop built"><b>Neon Mesa</b><span>high stakes</span></div>
   <span class="arrow">&rarr;</span>
-  <div class="stop"><b>Macau-parallel</b><span>endgame / penthouse</span></div>
+  <div class="stop built"><b>Porto Lumina</b><span>endgame / penthouse</span></div>
 </div>
 
 <h2>MVP phases</h2>
@@ -151,33 +151,33 @@
 </div>
 
 <div class="phase">
-  <div class="badge partial">In progress</div>
+  <div class="badge done">Done</div>
   <div class="phase-body">
     <div class="phase-title">6 &middot; Tells &amp; table depth</div>
-    <div class="phase-desc">Opponents give off readable physical cues that correlate with hand strength. Frequency and reliability both scale down with opponent skill, so sharp players give away almost nothing and occasionally give false reads. Currently being built.</div>
+    <div class="phase-desc">Opponents give off readable physical cues that correlate with hand strength. Frequency and reliability both scale down with opponent skill, so sharp players give away almost nothing and occasionally give false reads. The UI shows only the observable cue, never its meaning — reading it is the mechanic.</div>
   </div>
 </div>
 
 <div class="phase">
-  <div class="badge partial">In progress</div>
+  <div class="badge done">Done</div>
   <div class="phase-body">
     <div class="phase-title">7 &middot; Economy &amp; persistence</div>
-    <div class="phase-desc">Cash tracking and buy-ins are in. Checkpoint saving (surviving a page reload, tied to location transitions per the design) is being added now. A first shop still to come.</div>
+    <div class="phase-desc">Cash, buy-ins, shops and checkpoint saving. Clothes gate the high rooms and vehicles discount travel, so shops matter beyond flavour.</div>
   </div>
 </div>
 
 <h2>Beyond the MVP</h2>
 
 <div class="phase">
-  <div class="badge todo">Planned</div>
+  <div class="badge done">Done</div>
   <div class="phase-body">
     <div class="phase-title">8 &middot; Mid-tier cities</div>
-    <div class="phase-desc">Two to three regional casino cities with their own maps, restaurants, clubs, shops (clothes, vehicles) and small side missions — giving the stakes ramp room to breathe.</div>
+    <div class="phase-desc">Riverbend Landing, Crescent Harbor and Palm Cay — each with its own map, tables, shops, NPCs and side missions, stepping the stakes from $2/$5 up to $10/$25.</div>
   </div>
 </div>
 
 <div class="phase">
-  <div class="badge todo">Planned</div>
+  <div class="badge done">Done</div>
   <div class="phase-body">
     <div class="phase-title">9 &middot; Sponsors, debt &amp; collectors</div>
     <div class="phase-desc">NPCs who spot your skill and stake you into bigger private games. Losing staked money creates debt with a deadline; miss it and collectors hunt you — get caught before reaching a new location and you roll back to your last checkpoint.</div>
@@ -185,7 +185,7 @@
 </div>
 
 <div class="phase">
-  <div class="badge todo">Planned</div>
+  <div class="badge done">Done</div>
   <div class="phase-body">
     <div class="phase-title">10 &middot; Mentor &amp; whales</div>
     <div class="phase-desc">A mentor NPC teaching real, established poker strategy, and the recurring whale archetype — big money, bad play, obvious tells, wide unpredictable ranges.</div>
@@ -193,18 +193,18 @@
 </div>
 
 <div class="phase">
-  <div class="badge todo">Planned</div>
+  <div class="badge done">Done</div>
   <div class="phase-body">
     <div class="phase-title">11 &middot; Vegas-parallel</div>
-    <div class="phase-desc">Second-to-final location. High buy-ins, genuinely strong AI, near-imperceptible tells, and the first serious heads-up opportunities.</div>
+    <div class="phase-desc">Neon Mesa: a $25/$50 main game plus a dress-code-gated $100/$200 high roller room, against sharp and elite opposition whose tells are close to invisible.</div>
   </div>
 </div>
 
 <div class="phase">
-  <div class="badge todo">Planned</div>
+  <div class="badge done">Done</div>
   <div class="phase-body">
     <div class="phase-title">12 &middot; Macau-parallel &amp; endgame</div>
-    <div class="phase-desc">Final location and the climactic heads-up match that decides whether you earn the penthouse ending — after which the game opens up into a free-play state.</div>
+    <div class="phase-desc">Porto Lumina: a $200/$400 nosebleed game and the $250,000 heads-up match against Nadia Okonkwo. Winning takes the penthouse and opens free play.</div>
   </div>
 </div>
 
@@ -224,16 +224,17 @@
   surfaced when the actual app was driven in a real browser.
 </div>
 
-<h2>Open design questions</h2>
+<h2>Still open</h2>
 <ul>
-  <li>Exact number of mid-tier cities — two or three (leaning three for a smoother stakes ramp).</li>
-  <li>How deep the non-poker casino games go; slots and craps are ambient flavor for now.</li>
+  <li>How deep the non-poker casino games go; slots and craps remain ambient flavour.</li>
   <li>Audio direction — not yet specified.</li>
   <li>Character customization depth: appearance only, or stat-like traits?</li>
+  <li>Art pass: everything is still placeholder colour blocks rather than pixel art.</li>
+  <li>Capacitor wrap for the iPhone build has not been wired up yet.</li>
 </ul>
 
 <footer>
-  Poker Legend &middot; roadmap generated 29 September 2026 &middot; phase status tracked in docs/TECHDESIGN.md
+  Poker Legend &middot; all 12 phases complete &middot; phase status tracked in docs/TECHDESIGN.md
 </footer>
 
 </body>

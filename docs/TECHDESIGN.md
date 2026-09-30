@@ -7,7 +7,8 @@ Living doc, paired with `GDD.md`. Update as architecture decisions are made.
 - **Vite + React + TypeScript** for app shell, UI (menus, HUD, dialogue,
   shop screens).
 - **PixiJS 8** for the overworld tile renderer. Runs inside a full-viewport
-  `<canvas>` mounted from a scene component (e.g. `src/overworld/ApartmentScene.tsx`).
+  `<canvas>` mounted by `src/overworld/OverworldScene.tsx`, which every city
+  is rendered through.
   The poker table view turned out cleaner as plain React/CSS (cards, buttons,
   chip counts) rather than Pixi — no art assets to justify a canvas there yet,
   and it's easier to keep accessible/testable.
@@ -26,8 +27,10 @@ src/
   engine/       poker engine: deck, shuffle, hand evaluation, betting rounds,
                 pot/side-pot math, AI decision logic — no rendering/React code
   overworld/    Pixi-based tile maps, grid movement, NPCs, scene components
-  game/         top-level shell: scene switcher, poker night UI, shared
-                UI pieces (Card, DialogueBox)
+  game/         scene switcher, game state, progression rules, table and
+                menu UI, save system
+  world/        content data: cities, tables, shops, sponsors, missions,
+                lessons (types.ts + content.ts)
   App.tsx       root component
 docs/
   GDD.md        design doc (source of narrative/system truth)
@@ -51,43 +54,50 @@ docs/
    a stale-pot display bug, a React StrictMode double-deal bug that silently
    ate a blind round's chips, and an effect dependency bug that could stall
    the AI's turn. See `chipleak.test.ts` for the regression coverage.
-5. **Bus → local casino overworld** ✅ — bus transition screen, casino lobby
-   map (`src/overworld/CasinoLobbyScene.tsx`) with a Pit Boss NPC leading to
-   the low-stakes table, plus flavor-only slot machine and craps table
-   objects (ambient, no mechanics yet — that's still a deliberate MVP
-   simplification per the GDD). Winning poker night now seeds a `cash`
-   wallet (held in `GameApp.tsx`) with the freezeout winnings.
-6. **Low-stakes table live** ✅ — the low-stakes table is a real cash game
-   (`src/game/CashGameScene.tsx`, distinct from poker night's freezeout):
-   fixed buy-in, AI auto-rebuy, human rebuy/leave-to-cash-out. The **tell
-   system** (`src/engine/tells.ts`) rolls a read per opponent per street:
-   frequency *and* truthfulness both scale down with skill tier, so a novice
-   leaks constantly and honestly while an elite rarely shows anything and
-   lies when they do. The UI (`src/game/tellFlavor.ts`) shows only the
-   observable cue, never its meaning — interpreting it is the mechanic.
-   Tell opacity tracks `visibility` so subtle reads are genuinely easy to miss.
-7. **Economy & persistence** ~partial — cash tracking, buy-ins, and
-   checkpoint saving are in (`src/game/save.ts`, `localStorage`). Only hub
-   scenes (apartment, casino lobby) are checkpoints; mid-hand table state is
-   deliberately not persisted, so reloading mid-game drops you to the last
-   hub and forfeits chips still on the table. **Still missing: a first shop.**
+5. **Bus → local casino overworld** ✅ — bus transition, then the
+   Silver Creek casino as the first data-driven city.
+6. **Tells & table depth** ✅ — `src/engine/tells.ts` rolls a read per
+   opponent per street. Frequency *and* truthfulness both scale down with
+   skill tier, so a novice leaks constantly and honestly while an elite
+   rarely shows anything and lies when they do; whales leak honestly at any
+   stake. The UI shows only the observable cue, never its meaning.
+7. **Economy & persistence** ✅ — cash, buy-ins, shops, and checkpoint
+   saving of the whole `GameState` (`src/game/save.ts`). Only hub scenes are
+   checkpoints, so reloading mid-hand drops you to the last hub and forfeits
+   chips on the table.
 
-Phases beyond this (mid-tier cities, sponsor/debt/collector system, mentor,
-whales, Vegas-parallel, Macau-parallel, endgame heads-up) are deliberately
-not broken down yet — do that once the MVP loop is playable and reviewed.
+## Phases 8-12 (complete)
 
-## Testing notes
+8. **Mid-tier cities** ✅ — Riverbend Landing, Crescent Harbor and Palm Cay,
+   each with tables, shops, NPCs and missions.
+9. **Sponsors, debt & collectors** ✅ — sponsors stake you against a
+   deadline; days burn when you play a session or travel. Past due, a
+   collector hunts you across the grid with greedy pursuit
+   (`OverworldScene`'s chaser). Caught means losing everything you carry.
+   Leaving town buys one day of grace, so fleeing delays rather than solves.
+10. **Mentor & whales** ✅ — Hal teaches real, standard strategy and each
+    lesson unlocks the corresponding tool: position labels, pot odds and
+    break-even equity, live hand reading, bankroll warnings, sharper tell
+    perception. Whales are an engine archetype: wild equity misjudgement,
+    calling far below the break-even price, honest tells at any stake.
+11. **Neon Mesa (Vegas-parallel)** ✅ — $25/$50 main game plus a
+    dress-code-gated $100/$200 high roller room.
+12. **Porto Lumina (Macau-parallel) & endgame** ✅ — $200/$400 nosebleed
+    game and the $250k heads-up match against Nadia Okonkwo. Winning takes
+    the penthouse and opens free play.
 
-- Engine correctness is covered by vitest (`npm test`): hand ranking, pot
-  splitting, and full simulated freezeout games checking chip conservation
-  after every single action, not just at hand boundaries — that granularity
-  is what caught the StrictMode/effect bugs above.
-- There's no React component test setup yet (no React Testing Library). The
-  three UI-wiring bugs above were only caught by actually driving the app in
-  a real browser with Playwright, not by the unit suite. Worth considering
-  adding component tests or keeping a Playwright smoke pass in the loop for
-  future scene work, since effect-timing bugs like these don't show up in
-  headless engine tests.
+## Content model
+
+Locations are data, not code. `src/world/content.ts` holds every city, table,
+shop, sponsor, mission and lesson; `CityScene` renders any city and
+`TableScene` runs any stake. Maps are ASCII sketches parsed by `parseMap`.
+Adding a location should mean adding data, not components.
+
+Content-integrity tests (`src/world/content.test.ts`) guard the things that
+would otherwise break silently: every POI must have a walkable neighbour or it
+can never be interacted with, every referenced id must resolve, the bankroll
+and buy-in ladders must both increase, and the shops must be able to satisfy
+every dress code in the game.
 
 ## Conventions
 
