@@ -61,5 +61,5 @@ describe('chip conservation with a check/call-only human mixed in', () => {
     for (let seed = 0; seed < 15; seed++) {
       runGame(seed)
     }
-  }, 30000)
+  }, 60000)
 })

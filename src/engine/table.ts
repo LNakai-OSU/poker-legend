@@ -109,6 +109,19 @@ export class TexasHoldEmTable {
     return this.lastResult
   }
 
+  /**
+   * Cash-game rebuy: tops up a busted player's stack between hands (a real
+   * player buying back in, or the same NPC sitting back down). Only valid
+   * between hands and only for a player currently at 0 chips.
+   */
+  rebuy(playerId: string, amount: number): void {
+    if (this.handInProgress) throw new Error('cannot rebuy while a hand is in progress')
+    const p = this.roster.find((pl) => pl.id === playerId)
+    if (!p) throw new Error(`unknown player ${playerId}`)
+    if (p.stack > 0) throw new Error(`${playerId} does not need a rebuy`)
+    p.stack = amount
+  }
+
   private seatsInHandOrder(): number[] {
     const n = this.roster.length
     const order: number[] = []

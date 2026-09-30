@@ -5,45 +5,58 @@ import { defaultRng } from '../engine/rng'
 import type { PlayerConfig } from '../engine/types'
 import { PokerTableView } from './PokerTableView'
 
-const PLAYERS: PlayerConfig[] = [
-  { id: 'you', name: 'You', isHuman: true, skillTier: 'amateur', startingStack: 500 },
-  { id: 'marcus', name: 'Marcus', isHuman: false, skillTier: 'novice', startingStack: 500 },
-  { id: 'dana', name: 'Dana', isHuman: false, skillTier: 'novice', startingStack: 500 },
+const BUY_IN = 100
+const BLINDS = { smallBlind: 1, bigBlind: 2 }
+
+const OPPONENTS: PlayerConfig[] = [
+  { id: 'ray', name: 'Ray', isHuman: false, skillTier: 'novice', startingStack: BUY_IN },
+  { id: 'sully', name: 'Sully', isHuman: false, skillTier: 'amateur', startingStack: BUY_IN },
 ]
 
+function makePlayers(): PlayerConfig[] {
+  return [
+    { id: 'you', name: 'You', isHuman: true, skillTier: 'amateur', startingStack: BUY_IN },
+    ...OPPONENTS,
+  ]
+}
+
 function createTable() {
-  return new TexasHoldEmTable(PLAYERS, { smallBlind: 5, bigBlind: 10, rng: defaultRng })
+  return new TexasHoldEmTable(makePlayers(), { ...BLINDS, rng: defaultRng })
 }
 
-interface PokerNightSceneProps {
-  onWin: (winnings: number) => void
+interface CashGameSceneProps {
+  wallet: number
+  /** Deducts a buy-in from the wallet without leaving the table. */
+  onRebuy: () => void
+  /** Leaves the table, cashing out the given chip amount into the wallet. */
+  onLeaveTable: (chipsCashedOut: number) => void
 }
 
-export function PokerNightScene({ onWin }: PokerNightSceneProps) {
+export function CashGameScene({ wallet, onRebuy, onLeaveTable }: CashGameSceneProps) {
   const tableRef = useRef(createTable())
   const [tick, setTick] = useState(0)
   const rerender = () => setTick((t) => t + 1)
   const aiBusyRef = useRef(false)
+  const dealtFirstHandRef = useRef(false)
+  const walletRef = useRef(wallet)
+  walletRef.current = wallet
 
   const table = tableRef.current
   const state = table.getState()
   const lastResult = table.getLastHandResult()
   const you = state.players.find((p) => p.id === 'you')!
-  // The freezeout rule is "you win all the chips or you lose" — if you bust,
-  // that's an immediate loss even if the two AI opponents still have chips
-  // between them and could otherwise keep playing each other forever.
   const youBusted = !state.handInProgress && you.stack <= 0
-  const gameOver = table.isGameOver() || youBusted
-  const winnerId = table.isGameOver() ? table.getFreezeoutWinnerId() : null
-  const dealtFirstHandRef = useRef(false)
+
+  const rebuyAiOpponents = () => {
+    for (const opp of OPPONENTS) {
+      const current = table.getState().players.find((p) => p.id === opp.id)
+      if (current && current.stack <= 0) table.rebuy(opp.id, BUY_IN)
+    }
+  }
 
   useEffect(() => {
-    // Guard against React StrictMode's dev-mode double-invoke: without this,
-    // startNewHand() would run twice back to back, silently eating one
-    // blind round's worth of chips (contributions get reset by the second
-    // call without refunding the stacks the first call already deducted).
     if (dealtFirstHandRef.current) return
-    if (!state.handInProgress && !gameOver && table.getLastHandResult() === null) {
+    if (!state.handInProgress && table.getLastHandResult() === null) {
       dealtFirstHandRef.current = true
       table.startNewHand()
       rerender()
@@ -52,7 +65,7 @@ export function PokerNightScene({ onWin }: PokerNightSceneProps) {
 
   useEffect(() => {
     if (!state.handInProgress || !state.actingPlayerId || aiBusyRef.current) return
-    const actingPlayer = PLAYERS.find((p) => p.id === state.actingPlayerId)
+    const actingPlayer = makePlayers().find((p) => p.id === state.actingPlayerId)
     if (!actingPlayer || actingPlayer.isHuman) return
 
     aiBusyRef.current = true
@@ -66,10 +79,6 @@ export function PokerNightScene({ onWin }: PokerNightSceneProps) {
       rerender()
     }, 550)
     return () => clearTimeout(timer)
-    // `tick` (not the shallow game fields) drives re-evaluation: actingPlayerId/pot
-    // can coincidentally repeat across genuinely different states (e.g. two hands
-    // where the same player faces the same pot size), which would make React skip
-    // re-running this effect and silently stall the AI turn.
   }, [tick])
 
   const yourHole = table.getHoleCards('you')
@@ -85,45 +94,55 @@ export function PokerNightScene({ onWin }: PokerNightSceneProps) {
     rerender()
   }
 
-  if (gameOver) {
-    const youWon = winnerId === 'you'
+  if (youBusted) {
+    const canRebuy = walletRef.current >= BUY_IN
     return (
       <Overlay>
-        <h2>{youWon ? 'You cleaned out the table.' : "You're out of chips."}</h2>
-        <p>{youWon ? 'Everyone else is tapped out — the game is yours.' : 'Poker night restarts from the top.'}</p>
-        <button
-          style={buttonStyle}
-          onClick={() => {
-            if (youWon) {
-              onWin(you.stack)
-            } else {
-              tableRef.current = createTable()
-              tableRef.current.startNewHand()
-              rerender()
-            }
-          }}
-        >
-          {youWon ? 'Head out' : 'Try again'}
-        </button>
+        <h2>You're out of chips at this table.</h2>
+        <p>Wallet: ${walletRef.current}</p>
+        <div style={{ display: 'flex', gap: 12 }}>
+          {canRebuy && (
+            <button
+              style={buttonStyle}
+              onClick={() => {
+                table.rebuy('you', BUY_IN)
+                rebuyAiOpponents()
+                table.startNewHand()
+                onRebuy()
+                rerender()
+              }}
+            >
+              Rebuy (${BUY_IN})
+            </button>
+          )}
+          <button style={buttonStyle} onClick={() => onLeaveTable(0)}>Leave table</button>
+        </div>
       </Overlay>
     )
   }
 
   return (
-    <div style={{ width: '100vw', height: '100vh', background: '#0d1b12', color: '#e8e8f0', fontFamily: 'monospace', padding: 24, boxSizing: 'border-box' }}>
-      <PokerTableView state={state} lastResult={lastResult} players={PLAYERS} yourHole={yourHole} />
+    <div style={{ width: '100vw', height: '100vh', background: '#0d1420', color: '#e8e8f0', fontFamily: 'monospace', padding: 24, boxSizing: 'border-box' }}>
+      <div style={{ textAlign: 'center', marginBottom: 12 }}>Wallet: ${walletRef.current}</div>
+      <PokerTableView state={state} lastResult={lastResult} players={makePlayers()} yourHole={yourHole} />
 
       {!state.handInProgress && (
         <Overlay>
-          <button
-            style={buttonStyle}
-            onClick={() => {
-              table.startNewHand()
-              rerender()
-            }}
-          >
-            Next hand
-          </button>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <button
+              style={buttonStyle}
+              onClick={() => {
+                rebuyAiOpponents()
+                table.startNewHand()
+                rerender()
+              }}
+            >
+              Next hand
+            </button>
+            <button style={buttonStyle} onClick={() => onLeaveTable(you.stack)}>
+              Leave table (cash out ${you.stack})
+            </button>
+          </div>
         </Overlay>
       )}
 
@@ -166,3 +185,5 @@ const buttonStyle = {
   background: '#3a9d5c', color: '#fff', border: 'none', borderRadius: 4,
   padding: '8px 16px', fontFamily: 'monospace', cursor: 'pointer', fontSize: 14,
 } as const
+
+export { BUY_IN }

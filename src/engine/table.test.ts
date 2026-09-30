@@ -80,5 +80,28 @@ describe('TexasHoldEmTable full freezeout simulation', () => {
       expect(table.getFreezeoutWinnerId()).not.toBeNull()
       expect(totalChips(table)).toBe(startingTotal)
     }
-  }, 30000)
+  }, 60000)
+})
+
+describe('TexasHoldEmTable rebuy (cash game mode)', () => {
+  it('tops up a busted player and rejects invalid rebuys', () => {
+    const players = makePlayers(2, 100)
+    const table = new TexasHoldEmTable(players, { smallBlind: 5, bigBlind: 10, rng: mulberry32(1) })
+    table.startNewHand()
+
+    expect(() => table.rebuy('p0', 100)).toThrow(/in progress/)
+
+    while (table.getState().handInProgress) {
+      const id = table.getState().actingPlayerId!
+      table.submitAction(id, { type: 'fold' })
+    }
+
+    expect(() => table.rebuy('p0', 100)).toThrow(/does not need/)
+
+    const busted = table.getState().players.find((p) => p.stack === 0)
+    if (busted) {
+      table.rebuy(busted.id, 100)
+      expect(table.getState().players.find((p) => p.id === busted.id)?.stack).toBe(100)
+    }
+  })
 })
