@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "ios:sync": "npm run build && cap sync ios",
-    "ios:open": "cap open ios"
+    "ios:open": "cap open ios",
+    "test:ui": "node tests/ui.mjs"
   },
   "dependencies": {
     "@capacitor/cli": "^8.5.2",

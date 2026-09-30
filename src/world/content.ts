@@ -1,5 +1,5 @@
 import { parseMap } from '../overworld/tileRenderer'
-import type { CityDef, LessonDef, MissionDef, ShopDef, SponsorDef, TableDef } from './types'
+import type { CityDef, LessonDef, MissionDef, ShopDef, SponsorDef, TableDef, VenueDef } from './types'
 
 // ---------------------------------------------------------------------------
 // Tables — the stakes ladder. Skill tiers climb with the blinds, and a whale
@@ -91,10 +91,10 @@ export const TABLES: Record<string, TableDef> = {
   },
   'lumina-nosebleed': {
     id: 'lumina-nosebleed',
-    name: 'Nosebleed 200/400',
-    smallBlind: 200,
-    bigBlind: 400,
-    buyIn: 100000,
+    name: 'Nosebleed 100/200',
+    smallBlind: 100,
+    bigBlind: 200,
+    buyIn: 30000,
     dressCode: 3,
     opponents: [
       { id: 'xue', name: 'Xue', skillTier: 'elite' },
@@ -102,12 +102,52 @@ export const TABLES: Record<string, TableDef> = {
       { id: 'kingsley', name: 'Kingsley', skillTier: 'competent', archetype: 'whale', stackMultiplier: 2 },
     ],
   },
+  'crescent-headsup': {
+    id: 'crescent-headsup',
+    name: 'Heads Up 5/10',
+    smallBlind: 5,
+    bigBlind: 10,
+    buyIn: 1000,
+    opponents: [{ id: 'vance-hu', name: 'Vance', skillTier: 'competent' }],
+  },
+  'crescent-private': {
+    id: 'crescent-private',
+    name: 'The Back Room',
+    smallBlind: 10,
+    bigBlind: 20,
+    buyIn: 2000,
+    opponents: [
+      { id: 'delphine', name: 'Delphine', skillTier: 'sharp' },
+      { id: 'otto', name: 'Otto', skillTier: 'amateur', archetype: 'whale', stackMultiplier: 3 },
+    ],
+  },
+  'mesa-headsup': {
+    id: 'mesa-headsup',
+    name: 'Heads Up 50/100',
+    smallBlind: 50,
+    bigBlind: 100,
+    buyIn: 20000,
+    dressCode: 2,
+    opponents: [{ id: 'lorna-hu', name: 'Lorna', skillTier: 'sharp' }],
+  },
+  'mesa-private': {
+    id: 'mesa-private',
+    name: 'The Invitational',
+    smallBlind: 200,
+    bigBlind: 400,
+    buyIn: 60000,
+    dressCode: 3,
+    opponents: [
+      { id: 'august', name: 'August', skillTier: 'elite' },
+      { id: 'rhodes', name: 'Rhodes', skillTier: 'competent', archetype: 'whale', stackMultiplier: 4 },
+    ],
+  },
   'lumina-finale': {
     id: 'lumina-finale',
     name: 'The Challenge — Heads Up',
-    smallBlind: 500,
-    bigBlind: 1000,
-    buyIn: 250000,
+    smallBlind: 250,
+    bigBlind: 500,
+    buyIn: 120000,
     dressCode: 4,
     isFinale: true,
     opponents: [{ id: 'nadia', name: 'Nadia Okonkwo', skillTier: 'elite' }],
@@ -242,6 +282,83 @@ export const SHOPS: Record<string, ShopDef> = {
 }
 
 // ---------------------------------------------------------------------------
+// Venues — restaurants trade cash for a read on the room, clubs are where
+// invitations to private games actually come from.
+// ---------------------------------------------------------------------------
+
+export const VENUES: Record<string, VenueDef> = {
+  'riverbend-diner': {
+    id: 'riverbend-diner',
+    name: 'The Landing Diner',
+    kind: 'restaurant',
+    price: 12,
+    blurb: 'Vinyl booths, bottomless coffee, and every regular from the boat.',
+    lines: [
+      'The coffee is bad in a way that feels deliberate.',
+      'Two dealers in the next booth are complaining about Tiny, who apparently buys in every single day and never leaves.',
+    ],
+  },
+  'crescent-supper': {
+    id: 'crescent-supper',
+    name: 'Bellweather Supper Club',
+    kind: 'restaurant',
+    price: 120,
+    blurb: 'White tablecloths, and half the card room eats here.',
+    lines: [
+      'You eat properly for the first time in a while.',
+      'Someone at the bar explains, loudly, that they only lose because they run bad. Nobody corrects them.',
+    ],
+  },
+  'crescent-club': {
+    id: 'crescent-club',
+    name: 'The Harbour Room',
+    kind: 'club',
+    price: 200,
+    reputationNeeded: 25,
+    unlocksTableId: 'crescent-private',
+    blurb: 'Low light, low ceilings, and a back room nobody mentions.',
+    lines: [
+      'The room is full of people who know each other.',
+      'You get a couple of polite nods and nothing else. Come back when your name means something.',
+    ],
+    inviteLines: [
+      'Delphine: You\u2019re the one who has been running over the five-ten game.',
+      'Delphine: There\u2019s a game in the back on Thursdays. Two thousand to sit, and Otto never folds.',
+      'Delphine: Consider yourself invited.',
+    ],
+  },
+  'palmcay-grill': {
+    id: 'palmcay-grill',
+    name: 'Shoreline Grill',
+    kind: 'restaurant',
+    price: 260,
+    blurb: 'Open to the water, and priced accordingly.',
+    lines: [
+      'You eat something caught this morning and watch the ferry come in.',
+      'A waiter mentions Bernard has been at the tourist table since Tuesday.',
+    ],
+  },
+  'mesa-club': {
+    id: 'mesa-club',
+    name: 'Ultraviolet',
+    kind: 'club',
+    price: 2000,
+    reputationNeeded: 90,
+    unlocksTableId: 'mesa-private',
+    blurb: 'A rooftop full of people being seen.',
+    lines: [
+      'You buy a drink you do not want and stand where you can watch the room.',
+      'Nobody here needs another player they have never heard of.',
+    ],
+    inviteLines: [
+      'August: People keep saying your name, which is unusual for someone nobody knows.',
+      'August: We run something private. Sixty to sit. Rhodes will be there, and Rhodes is a philanthropist.',
+      'August: Do not embarrass me.',
+    ],
+  },
+}
+
+// ---------------------------------------------------------------------------
 // Sponsors — money now, a deadline, and people who come looking.
 // ---------------------------------------------------------------------------
 
@@ -336,6 +453,19 @@ export const MISSIONS: Record<string, MissionDef> = {
     goal: { kind: 'biggestPot', value: 1500 },
     rewardCash: 2500,
     doneText: ['Rosa: I heard about that pot before you sat down. 2,500, as promised.'],
+  },
+  'crescent-courier': {
+    id: 'crescent-courier',
+    title: 'Something For The Door',
+    brief: [
+      'Tailor: A customer left a jacket and never came back for it.',
+      'Tailor: Play enough real hands that I believe you\u2019ll wear it properly, and it\u2019s yours.',
+    ],
+    goalText: 'Win 20 hands total',
+    goal: { kind: 'handsWonTotal', value: 20 },
+    rewardCash: 0,
+    rewardItemId: 'tailored-suit',
+    doneText: ['Tailor: Take it. It was cut for someone your size and he is not coming back.'],
   },
   'mesa-read': {
     id: 'mesa-read',
@@ -555,6 +685,16 @@ export const CITIES: Record<string, CityDef> = {
         ],
         action: { kind: 'pokerNight' },
       },
+      {
+        id: 'apartment-door',
+        name: 'Front Door',
+        col: 2,
+        row: 1,
+        color: 0x8ad4ff,
+        art: 'sign',
+        lines: ['Your coat is by the door. The city is out there somewhere.'],
+        action: { kind: 'travel' },
+      },
     ],
   },
 
@@ -575,11 +715,8 @@ export const CITIES: Record<string, CityDef> = {
         col: 3,
         row: 2,
         color: COLORS.flavor,
-        lines: [
-          'The machines blink and chime for no one in particular.',
-          'Not tonight — you didn’t come here to feed a machine.',
-        ],
-        action: { kind: 'flavor' },
+        lines: ['Three reels, one lever, and terrible odds. Everyone knows it and plays anyway.'],
+        action: { kind: 'slots' },
       },
       {
         id: 'pitboss',
@@ -600,8 +737,8 @@ export const CITIES: Record<string, CityDef> = {
         col: 12,
         row: 4,
         color: COLORS.flavor,
-        lines: ['A small crowd groans as the shooter sevens out.', 'Maybe another time.'],
-        action: { kind: 'flavor' },
+        lines: ['Shooter\u2019s coming out. The pass line is the only bet worth making here.'],
+        action: { kind: 'craps' },
       },
       {
         id: 'giftshop',
@@ -671,6 +808,16 @@ export const CITIES: Record<string, CityDef> = {
         action: { kind: 'shop', shopId: 'riverbend-outfitters' },
       },
       {
+        id: 'riverbend-diner',
+        name: 'The Landing Diner',
+        col: 3,
+        row: 5,
+        color: 0xd08770,
+        art: 'counter',
+        lines: ['A diner that has been open longer than the boat has been moored.'],
+        action: { kind: 'venue', venueId: 'riverbend-diner' },
+      },
+      {
         id: 'riverbend-travel',
         name: 'Dock',
         col: 10,
@@ -725,8 +872,10 @@ export const CITIES: Record<string, CityDef> = {
       {
         id: 'doorman',
         name: 'Doorman',
-        col: 5,
-        row: 6,
+        // Kept clear of the club door at (4,7): overlapping interaction ranges
+        // meant walking up to one of them could select the other.
+        col: 9,
+        row: 7,
         color: COLORS.person,
         lines: MISSIONS['crescent-suit'].brief,
         action: { kind: 'mission', missionId: 'crescent-suit' },
@@ -748,6 +897,52 @@ export const CITIES: Record<string, CityDef> = {
         color: COLORS.shop,
         lines: ['Salesman: Nothing here is new. Everything here runs.'],
         action: { kind: 'shop', shopId: 'crescent-auto' },
+      },
+      {
+        id: 'crescent-tailor',
+        name: 'Tailor',
+        col: 8,
+        row: 1,
+        color: 0x6ea8fe,
+        lines: MISSIONS['crescent-courier'].brief,
+        action: { kind: 'mission', missionId: 'crescent-courier' },
+      },
+      {
+        id: 'crescent-supper',
+        name: 'Bellweather Supper Club',
+        col: 3,
+        row: 9,
+        color: 0xd08770,
+        art: 'counter',
+        lines: ['A supper club that half the card room treats as an office.'],
+        action: { kind: 'venue', venueId: 'crescent-supper' },
+      },
+      {
+        id: 'crescent-club',
+        name: 'The Harbour Room',
+        col: 4,
+        row: 7,
+        color: 0xc084fc,
+        lines: ['Someone on the door sizes you up as you approach.'],
+        action: { kind: 'venue', venueId: 'crescent-club' },
+      },
+      {
+        id: 'crescent-headsup',
+        name: 'Heads-Up Table',
+        col: 16,
+        row: 6,
+        color: 0x3a9d5c,
+        lines: ['Dealer: One-on-one, five-ten. Vance has been waiting for someone to sit.'],
+        action: { kind: 'table', tableId: 'crescent-headsup' },
+      },
+      {
+        id: 'crescent-private',
+        name: 'Back Room',
+        col: 13,
+        row: 9,
+        color: 0xf2c14e,
+        lines: ['An unmarked door. It is not for everyone.'],
+        action: { kind: 'table', tableId: 'crescent-private' },
       },
       {
         id: 'crescent-travel',
@@ -818,6 +1013,16 @@ export const CITIES: Record<string, CityDef> = {
         color: COLORS.person,
         lines: MISSIONS['palmcay-tourist'].brief,
         action: { kind: 'mission', missionId: 'palmcay-tourist' },
+      },
+      {
+        id: 'palmcay-grill',
+        name: 'Shoreline Grill',
+        col: 16,
+        row: 3,
+        color: 0xd08770,
+        art: 'counter',
+        lines: ['Tables on the water, and prices to match the view.'],
+        action: { kind: 'venue', venueId: 'palmcay-grill' },
       },
       {
         id: 'palmcay-travel',
@@ -911,6 +1116,33 @@ export const CITIES: Record<string, CityDef> = {
         action: { kind: 'mission', missionId: 'mesa-read' },
       },
       {
+        id: 'mesa-club',
+        name: 'Ultraviolet',
+        col: 5,
+        row: 6,
+        color: 0xc084fc,
+        lines: ['A rooftop queue of people who all seem to know each other.'],
+        action: { kind: 'venue', venueId: 'mesa-club' },
+      },
+      {
+        id: 'mesa-headsup',
+        name: 'Heads-Up Table',
+        col: 20,
+        row: 6,
+        color: 0x3a9d5c,
+        lines: ['Dealer: Fifty-hundred, one-on-one. Lorna plays here most nights.'],
+        action: { kind: 'table', tableId: 'mesa-headsup' },
+      },
+      {
+        id: 'mesa-private',
+        name: 'The Invitational',
+        col: 13,
+        row: 9,
+        color: 0xf2c14e,
+        lines: ['A door with someone standing in front of it.'],
+        action: { kind: 'table', tableId: 'mesa-private' },
+      },
+      {
         id: 'mesa-travel',
         name: 'Airport Shuttle',
         col: 12,
@@ -929,7 +1161,7 @@ export const CITIES: Record<string, CityDef> = {
     map: PORTO_LUMINA_MAP,
     playerStart: { col: 12, row: 8 },
     background: '#141020',
-    unlockCash: 120000,
+    unlockCash: 90000,
     travelCost: 2500,
     pois: [
       {
@@ -938,7 +1170,7 @@ export const CITIES: Record<string, CityDef> = {
         col: 4,
         row: 3,
         color: COLORS.dealer,
-        lines: ['Dealer: Two hundred, four hundred. One hundred thousand to sit.'],
+        lines: ['Dealer: Hundred-two hundred. Thirty thousand to sit.'],
         action: { kind: 'table', tableId: 'lumina-nosebleed' },
       },
       {
@@ -949,7 +1181,7 @@ export const CITIES: Record<string, CityDef> = {
         color: COLORS.finale,
         lines: [
           'Nadia: I know what you’ve been doing. Small rooms, then bigger ones.',
-          'Nadia: One match. Two hundred fifty thousand each, winner takes it.',
+          'Nadia: One match. A hundred and twenty thousand each, winner takes it.',
           'Nadia: The penthouse upstairs comes with it. I’ve lived there four years.',
         ],
         action: { kind: 'table', tableId: 'lumina-finale' },
@@ -979,8 +1211,8 @@ export const CITIES: Record<string, CityDef> = {
         col: 5,
         row: 9,
         color: COLORS.finale,
-        lines: ['The attendant looks at you, then at the lift, and does not move.'],
-        action: { kind: 'flavor' },
+        lines: ['The attendant watches the lift, then you, and waits.'],
+        action: { kind: 'penthouse' },
       },
       {
         id: 'lumina-travel',

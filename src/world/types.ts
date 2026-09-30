@@ -67,6 +67,8 @@ export interface MissionDef {
   goalText: string
   goal: MissionGoal
   rewardCash: number
+  /** Some jobs pay in goods rather than cash. */
+  rewardItemId?: string
   doneText: string[]
 }
 
@@ -81,6 +83,10 @@ export interface LessonDef {
 
 export type PoiAction =
   | { kind: 'table'; tableId: string }
+  | { kind: 'slots' }
+  | { kind: 'craps' }
+  | { kind: 'venue'; venueId: string }
+  | { kind: 'penthouse' }
   | { kind: 'shop'; shopId: string }
   | { kind: 'mentor' }
   | { kind: 'sponsor'; sponsorId: string }
@@ -99,6 +105,25 @@ export interface PoiDef {
   action: PoiAction
   /** Overrides the sprite chosen from the action kind (people by default). */
   art?: NpcArt
+}
+
+export type VenueKind = 'restaurant' | 'club'
+
+export interface VenueDef {
+  id: string
+  name: string
+  kind: VenueKind
+  blurb: string
+  /** Restaurants: what a meal costs. Clubs: what the door costs. */
+  price: number
+  /** Clubs only: reputation needed before anyone invites you anywhere. */
+  reputationNeeded?: number
+  /** Clubs only: the invite-only table a successful night opens up. */
+  unlocksTableId?: string
+  /** Lines shown on entry. */
+  lines: string[]
+  /** Lines shown when a club invite lands. */
+  inviteLines?: string[]
 }
 
 export interface CityDef {

@@ -28,6 +28,8 @@ export interface GameState {
   completedMissionIds: string[]
   acceptedMissionIds: string[]
   lessonIds: string[]
+  /** Invite-only tables opened up by working the room at clubs and parties. */
+  unlockedTableIds: string[]
   debts: Debt[]
   /** Set when a debt goes past due: collectors are hunting you in this city. */
   huntedInCityId: CityId | null
@@ -55,6 +57,7 @@ export function initialState(): GameState {
     completedMissionIds: [],
     acceptedMissionIds: [],
     lessonIds: [],
+    unlockedTableIds: [],
     debts: [],
     huntedInCityId: null,
     huntGraceUntilDay: 0,
@@ -133,6 +136,24 @@ export function travelTo(state: GameState, cityId: CityId): GameState {
     : [...state.unlockedCityIds, cityId]
   const next = advanceDay({ ...state, cityId, unlockedCityIds: unlocked, huntedInCityId: null })
   return { ...next, huntedInCityId: null, huntGraceUntilDay: next.day }
+}
+
+export function unlockTable(state: GameState, tableId: string): GameState {
+  if (state.unlockedTableIds.includes(tableId)) return state
+  return { ...state, unlockedTableIds: [...state.unlockedTableIds, tableId] }
+}
+
+/**
+ * How seriously the room takes you. Parties and private games open up once
+ * you've actually done something, rather than on a plain cash threshold.
+ */
+export function reputation(state: GameState): number {
+  return (
+    state.stats.handsWon +
+    state.stats.tablesPlayed * 3 +
+    Math.floor(state.stats.biggestPot / 250) +
+    state.lessonIds.length * 4
+  )
 }
 
 export function unlockCity(state: GameState, cityId: CityId): GameState {

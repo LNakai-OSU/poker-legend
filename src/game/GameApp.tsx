@@ -5,9 +5,12 @@ import { BusTransition } from './BusTransition'
 import { TableScene, type SessionResult } from './TableScene'
 import { MentorScene, MenuScreen, ShopScene, SponsorScene, TravelScene } from './MenuScenes'
 import { CaughtScene, EndingScene } from './EndScenes'
+import { CrapsScene, SlotsScene } from './CasinoGameScenes'
+import { PenthouseScene, VenueScene } from './VenueScenes'
+import { SettingsScene } from './SettingsScene'
 import { LESSONS, MISSIONS, SPONSORS, TABLES } from '../world/content'
 import { missionStatus, tableAccess, travelCostTo } from './progression'
-import { loadGame, saveGame } from './save'
+import { clearSave, loadGame, saveGame } from './save'
 import { SoundToggle, useAudioUnlock } from '../audio/SoundToggle'
 import { playSound } from '../audio/audio'
 import {
@@ -16,10 +19,14 @@ import {
   payDebt,
   takeStake,
   travelTo,
+  unlockTable,
   type CityId,
   type GameState,
 } from './state'
 import type { PoiAction } from '../world/types'
+
+/** Tables you cannot simply walk up to; a club invitation opens them. */
+const INVITE_ONLY_TABLES = new Set(['crescent-private', 'mesa-private'])
 
 type View =
   | { kind: 'city' }
@@ -31,6 +38,11 @@ type View =
   | { kind: 'mentor' }
   | { kind: 'sponsor'; sponsorId: string }
   | { kind: 'travel' }
+  | { kind: 'slots' }
+  | { kind: 'craps' }
+  | { kind: 'venue'; venueId: string }
+  | { kind: 'penthouse' }
+  | { kind: 'settings' }
   | { kind: 'caught' }
   | { kind: 'ending' }
 
@@ -69,6 +81,18 @@ export function GameApp() {
       case 'table':
         handleSitDown(action.tableId)
         break
+      case 'slots':
+        setView({ kind: 'slots' })
+        break
+      case 'craps':
+        setView({ kind: 'craps' })
+        break
+      case 'venue':
+        setView({ kind: 'venue', venueId: action.venueId })
+        break
+      case 'penthouse':
+        setView({ kind: 'penthouse' })
+        break
       case 'flavor':
         break
     }
@@ -84,6 +108,10 @@ export function GameApp() {
       setState((s) => ({
         ...s,
         cash: s.cash + mission.rewardCash,
+        ownedItemIds:
+          mission.rewardItemId && !s.ownedItemIds.includes(mission.rewardItemId)
+            ? [...s.ownedItemIds, mission.rewardItemId]
+            : s.ownedItemIds,
         completedMissionIds: [...s.completedMissionIds, missionId],
         acceptedMissionIds: s.acceptedMissionIds.filter((id) => id !== missionId),
       }))
@@ -94,6 +122,14 @@ export function GameApp() {
   const handleSitDown = (tableId: string) => {
     const table = TABLES[tableId]
     if (!table) return
+    if (INVITE_ONLY_TABLES.has(tableId) && !state.unlockedTableIds.includes(tableId)) {
+      setView({
+        kind: 'blocked',
+        title: table.name,
+        message: 'This game is invitation only. Make a name for yourself somewhere they can see you.',
+      })
+      return
+    }
     const access = tableAccess(state, table)
     if (!access.allowed) {
       setView({ kind: 'blocked', title: table.name, message: access.reason ?? 'You cannot sit down here.' })
@@ -238,6 +274,51 @@ export function GameApp() {
         />
       )
 
+    case 'slots':
+      return (
+        <SlotsScene
+          state={state}
+          onResult={(delta) => setState((s) => ({ ...s, cash: Math.max(0, s.cash + delta) }))}
+          onBack={backToCity}
+        />
+      )
+
+    case 'craps':
+      return (
+        <CrapsScene
+          state={state}
+          onResult={(delta) => setState((s) => ({ ...s, cash: Math.max(0, s.cash + delta) }))}
+          onBack={backToCity}
+        />
+      )
+
+    case 'venue':
+      return (
+        <VenueScene
+          venueId={view.venueId}
+          state={state}
+          onSpend={(amount) => setState((s) => ({ ...s, cash: Math.max(0, s.cash - amount) }))}
+          onUnlockTable={(tableId) => setState((s) => unlockTable(s, tableId))}
+          onBack={backToCity}
+        />
+      )
+
+    case 'penthouse':
+      return <PenthouseScene state={state} onBack={backToCity} />
+
+    case 'settings':
+      return (
+        <SettingsScene
+          state={state}
+          onNewGame={() => {
+            clearSave()
+            setState(initialState())
+            setView({ kind: 'city' })
+          }}
+          onBack={backToCity}
+        />
+      )
+
     case 'caught':
       return <CaughtScene onRestart={backToCity} />
 
@@ -252,6 +333,30 @@ export function GameApp() {
   return (
     <>
       <SoundToggle />
+      {view.kind !== 'settings' && (
+        <button
+          data-testid="settings-button"
+          aria-label="Settings"
+          onClick={() => setView({ kind: 'settings' })}
+          style={{
+            position: 'fixed',
+            top: 'max(12px, env(safe-area-inset-top))',
+            right: 60,
+            zIndex: 50,
+            width: 40,
+            minHeight: 40,
+            borderRadius: 8,
+            border: '1px solid #4a4a66',
+            background: 'rgba(10,10,16,0.8)',
+            color: '#e8e8f0',
+            fontFamily: 'monospace',
+            fontSize: 16,
+            cursor: 'pointer',
+          }}
+        >
+          ☰
+        </button>
+      )}
       <div key={view.kind} className="scene-fade">
         {scene}
       </div>

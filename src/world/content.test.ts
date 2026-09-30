@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CITIES, CITY_ORDER, LESSONS, MISSIONS, SHOPS, SPONSORS, TABLES, findItem } from './content'
+import { CITIES, CITY_ORDER, LESSONS, MISSIONS, SHOPS, SPONSORS, TABLES, VENUES, findItem } from './content'
 import { isWalkable, parseMap } from '../overworld/tileRenderer'
 
 describe('parseMap', () => {
@@ -67,6 +67,32 @@ describe('city content', () => {
     }
   })
 
+  it('gives every point of interest an unambiguous approach tile', () => {
+    // Interaction picks the first POI within one tile, so if every approach to
+    // a POI is also next to a different one, the player can never reach it.
+    for (const city of cities) {
+      for (const poi of city.pois) {
+        const approaches = [
+          [poi.col + 1, poi.row],
+          [poi.col - 1, poi.row],
+          [poi.col, poi.row + 1],
+          [poi.col, poi.row - 1],
+        ].filter(([col, row]) => isWalkable(city.map, col, row))
+
+        const unambiguous = approaches.some(([col, row]) =>
+          city.pois.every(
+            (other) =>
+              other.id === poi.id || Math.abs(other.col - col) + Math.abs(other.row - row) !== 1,
+          ),
+        )
+        expect(
+          unambiguous,
+          `${city.name}: ${poi.name} has no approach tile that isn't also next to another POI`,
+        ).toBe(true)
+      }
+    }
+  })
+
   it('only references content that exists', () => {
     for (const city of cities) {
       for (const poi of city.pois) {
@@ -75,6 +101,7 @@ describe('city content', () => {
         if (action.kind === 'shop') expect(SHOPS[action.shopId], `${poi.name}`).toBeDefined()
         if (action.kind === 'sponsor') expect(SPONSORS[action.sponsorId], `${poi.name}`).toBeDefined()
         if (action.kind === 'mission') expect(MISSIONS[action.missionId], `${poi.name}`).toBeDefined()
+        if (action.kind === 'venue') expect(VENUES[action.venueId], `${poi.name}`).toBeDefined()
       }
     }
   })
@@ -135,11 +162,35 @@ describe('progression curve', () => {
   })
 })
 
+describe('venues', () => {
+  it('points clubs at tables that exist', () => {
+    for (const venue of Object.values(VENUES)) {
+      if (venue.unlocksTableId) expect(TABLES[venue.unlocksTableId], venue.id).toBeDefined()
+      if (venue.kind === 'club') expect(venue.reputationNeeded).toBeGreaterThan(0)
+    }
+  })
+
+  it('keeps every invite-only table behind a club', () => {
+    // A private table with no club to unlock it would be unreachable content.
+    const unlockable = new Set(
+      Object.values(VENUES).map((v) => v.unlocksTableId).filter((id): id is string => !!id),
+    )
+    const privateTables = Object.values(CITIES)
+      .flatMap((c) => c.pois)
+      .filter((p) => p.action.kind === 'table' && /private/.test(p.action.tableId))
+      .map((p) => (p.action.kind === 'table' ? p.action.tableId : ''))
+    for (const id of privateTables) {
+      expect(unlockable.has(id), `${id} can never be unlocked`).toBe(true)
+    }
+  })
+})
+
 describe('missions and lessons', () => {
   it('references items and lessons that exist', () => {
     for (const mission of Object.values(MISSIONS)) {
       if (mission.goal.kind === 'ownItem') expect(findItem(mission.goal.itemId), mission.id).not.toBeNull()
       if (mission.goal.kind === 'hasLesson') expect(LESSONS[mission.goal.lessonId], mission.id).toBeDefined()
+      if (mission.rewardItemId) expect(findItem(mission.rewardItemId), mission.id).not.toBeNull()
     }
   })
 

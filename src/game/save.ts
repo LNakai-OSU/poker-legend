@@ -41,6 +41,7 @@ function reconcile(parsed: unknown): GameState | null {
     completedMissionIds: Array.isArray(saved.completedMissionIds) ? saved.completedMissionIds : base.completedMissionIds,
     acceptedMissionIds: Array.isArray(saved.acceptedMissionIds) ? saved.acceptedMissionIds : base.acceptedMissionIds,
     lessonIds: Array.isArray(saved.lessonIds) ? saved.lessonIds : base.lessonIds,
+    unlockedTableIds: Array.isArray(saved.unlockedTableIds) ? saved.unlockedTableIds : base.unlockedTableIds,
     debts: Array.isArray(saved.debts) ? saved.debts : base.debts,
     flags: { ...base.flags, ...(saved.flags ?? {}) },
     stats: { ...base.stats, ...(saved.stats ?? {}) },

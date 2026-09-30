@@ -19,6 +19,7 @@ export type SoundName =
   | 'cash'
 
 const MUTE_KEY = 'poker-legend-muted'
+const VOLUME_KEY = 'poker-legend-volume'
 
 class AudioEngine {
   private ctx: AudioContext | null = null
@@ -28,14 +29,34 @@ class AudioEngine {
   private musicTimer: number | null = null
   private musicNodes: { drone: OscillatorNode; droneEnv: GainNode } | null = null
   private muted = false
+  private volume = 0.9
   private listeners = new Set<(muted: boolean) => void>()
 
   constructor() {
     try {
       this.muted = localStorage.getItem(MUTE_KEY) === '1'
+      const stored = Number(localStorage.getItem(VOLUME_KEY))
+      if (Number.isFinite(stored) && stored >= 0 && stored <= 1) this.volume = stored
     } catch {
       this.muted = false
     }
+  }
+
+  getVolume() {
+    return this.volume
+  }
+
+  setVolume(volume: number) {
+    this.volume = Math.max(0, Math.min(1, volume))
+    try {
+      localStorage.setItem(VOLUME_KEY, String(this.volume))
+    } catch {
+      // Preference is best-effort.
+    }
+    if (this.master && this.ctx) {
+      this.master.gain.setTargetAtTime(this.muted ? 0 : this.volume, this.ctx.currentTime, 0.02)
+    }
+    this.listeners.forEach((l) => l(this.muted))
   }
 
   isMuted() {
@@ -55,7 +76,7 @@ class AudioEngine {
       // Preference is best-effort.
     }
     if (this.master && this.ctx) {
-      this.master.gain.setTargetAtTime(muted ? 0 : 0.9, this.ctx.currentTime, 0.02)
+      this.master.gain.setTargetAtTime(muted ? 0 : this.volume, this.ctx.currentTime, 0.02)
     }
     this.listeners.forEach((l) => l(muted))
   }
@@ -75,7 +96,7 @@ class AudioEngine {
     try {
       const ctx = new Ctor()
       const master = ctx.createGain()
-      master.gain.value = this.muted ? 0 : 0.9
+      master.gain.value = this.muted ? 0 : this.volume
       master.connect(ctx.destination)
 
       const musicGain = ctx.createGain()

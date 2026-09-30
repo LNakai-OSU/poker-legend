@@ -35,7 +35,7 @@ export interface TravelOption {
 
 export function travelOptions(state: GameState): TravelOption[] {
   return Object.values(CITIES)
-    .filter((city) => city.id !== 'apartment' && city.id !== state.cityId)
+    .filter((city) => city.id !== state.cityId)
     .map((city) => {
       const cost = travelCostTo(state, city.id)
       const visited = state.unlockedCityIds.includes(city.id)
