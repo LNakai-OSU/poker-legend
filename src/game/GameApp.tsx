@@ -8,6 +8,8 @@ import { CaughtScene, EndingScene } from './EndScenes'
 import { LESSONS, MISSIONS, SPONSORS, TABLES } from '../world/content'
 import { missionStatus, tableAccess, travelCostTo } from './progression'
 import { loadGame, saveGame } from './save'
+import { SoundToggle, useAudioUnlock } from '../audio/SoundToggle'
+import { playSound } from '../audio/audio'
 import {
   advanceDay,
   initialState,
@@ -35,6 +37,7 @@ type View =
 export function GameApp() {
   const [state, setState] = useState<GameState>(() => loadGame() ?? initialState())
   const [view, setView] = useState<View>({ kind: 'city' })
+  useAudioUnlock()
 
   // Hub locations are the checkpoints; table and menu state is never persisted.
   useEffect(() => {
@@ -84,6 +87,7 @@ export function GameApp() {
         completedMissionIds: [...s.completedMissionIds, missionId],
         acceptedMissionIds: s.acceptedMissionIds.filter((id) => id !== missionId),
       }))
+      playSound('cash')
     }
   }
 
@@ -124,10 +128,12 @@ export function GameApp() {
     // They take everything you're carrying and the slate is wiped; you keep
     // what you've learned and what you own, and start rebuilding.
     setState((s) => ({ ...s, cash: 0, debts: [], huntedInCityId: null }))
+    playSound('lose')
     setView({ kind: 'caught' })
   }
 
-  switch (view.kind) {
+  const scene = (() => {
+    switch (view.kind) {
     case 'pokerNight':
       return (
         <PokerNightScene
@@ -173,13 +179,15 @@ export function GameApp() {
         <ShopScene
           shopId={view.shopId}
           state={state}
-          onBuy={(item) =>
-            setState((s) =>
-              s.cash < item.price || s.ownedItemIds.includes(item.id)
-                ? s
-                : { ...s, cash: s.cash - item.price, ownedItemIds: [...s.ownedItemIds, item.id] },
-            )
-          }
+          onBuy={(item) => {
+            if (state.cash < item.price || state.ownedItemIds.includes(item.id)) return
+            setState((s) => ({
+              ...s,
+              cash: s.cash - item.price,
+              ownedItemIds: [...s.ownedItemIds, item.id],
+            }))
+            playSound('cash')
+          }}
           onBack={backToCity}
         />
       )
@@ -190,11 +198,13 @@ export function GameApp() {
           state={state}
           onLearn={(lessonId) => {
             const lesson = LESSONS[lessonId]
-            setState((s) =>
-              !lesson || s.cash < lesson.price || s.lessonIds.includes(lessonId)
-                ? s
-                : { ...s, cash: s.cash - lesson.price, lessonIds: [...s.lessonIds, lessonId] },
-            )
+            if (!lesson || state.cash < lesson.price || state.lessonIds.includes(lessonId)) return
+            setState((s) => ({
+              ...s,
+              cash: s.cash - lesson.price,
+              lessonIds: [...s.lessonIds, lessonId],
+            }))
+            playSound('cash')
           }}
           onBack={backToCity}
         />
@@ -234,7 +244,17 @@ export function GameApp() {
     case 'ending':
       return <EndingScene state={state} onContinue={backToCity} />
 
-    default:
-      return <CityScene state={state} onAction={handlePoi} onCaught={handleCaught} />
-  }
+      default:
+        return <CityScene state={state} onAction={handlePoi} onCaught={handleCaught} />
+    }
+  })()
+
+  return (
+    <>
+      <SoundToggle />
+      <div key={view.kind} className="scene-fade">
+        {scene}
+      </div>
+    </>
+  )
 }

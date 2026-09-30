@@ -132,6 +132,39 @@ keyboard-driven on desktop:
 - Verified at an iPhone 13 viewport: controls usable, no horizontal overflow,
   and the desktop experience unchanged (controls hidden, no page scroll).
 
+## Audio
+
+Every sound is synthesised at runtime with the Web Audio API
+(`src/audio/audio.ts`) — no audio files ship, matching the sprite approach.
+Cards and chips are filtered noise bursts, wins and losses are arpeggios, and
+the music bed is a low drone plus sparse notes drawn from a scale that changes
+with the scene ('overworld', 'table', and a faster, darker 'tense' set while
+collectors are hunting you).
+
+Browsers refuse to start audio before a user gesture, so the context stays
+suspended and every call is a no-op until the first interaction unlocks it. The
+mute preference persists in `localStorage`.
+
+Verified by tapping the audio graph in a real browser rather than trusting the
+API calls: an analyser mirrored onto the destination measured peak amplitude
+rising from 0.04 (music only) to 0.108 (with effects), and falling to exactly 0
+when muted while the context stayed running.
+
+## Animation
+
+Motion is CSS-driven for the UI and ticker-driven in the overworld:
+
+- Cards deal in staggered and flip face-up at showdown; the pot bumps when it
+  changes and winning seats pulse.
+- Each tell animates the way its cue would move — a lip twitch jitters briefly,
+  an arm shift drifts, chips tap, a glance fades in and out, and stillness
+  simply arrives slowly.
+- The overworld gives people an idle bob on individual phases, and a pulsing
+  red vignette while you are being hunted.
+- Scenes cross-fade on transition.
+
+All of it collapses under `prefers-reduced-motion`.
+
 ## iOS build
 
 Capacitor wraps the same web build — there is no separate native codebase.
@@ -143,10 +176,19 @@ npm run ios:sync   # build the web app and copy it into the native project
 npm run ios:open   # open the project in Xcode to run or archive
 ```
 
-**Not verified on this machine.** The iOS project scaffolds and syncs, but
-building it needs full Xcode (only Command Line Tools are installed here), so
-nothing has been run in a simulator or on a device yet. Capacitor 7 uses Swift
-Package Manager rather than CocoaPods, so no `pod install` step is required.
+Capacitor 7 uses Swift Package Manager rather than CocoaPods, so there is no
+`pod install` step.
+
+**What has been verified here:** the project scaffolds and `cap sync` copies the
+build in; the production bundle (the exact payload the native app loads) runs
+clean at an iPhone viewport with no failed requests or console errors; the
+Swift sources parse; and `Info.plist` and `project.pbxproj` are valid.
+
+**What has not:** the app has never been compiled, linked, or run. That needs
+full Xcode, and this machine has only the Command Line Tools (and too little
+free disk to install it). Treat the native target as unproven until someone
+runs `npm run ios:sync && npm run ios:open` on a machine with Xcode and
+launches it in a simulator.
 
 ## Conventions
 

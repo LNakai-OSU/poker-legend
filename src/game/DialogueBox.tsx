@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { playSound } from '../audio/audio'
 
 interface DialogueBoxProps {
   speaker: string
@@ -30,7 +31,11 @@ export function DialogueBox({ speaker, lines, onFinish }: DialogueBoxProps) {
       <div style={{ color: '#f2c14e', fontWeight: 'bold', marginBottom: 6 }}>{speaker}</div>
       <div style={{ minHeight: 40 }}>{lines[index]}</div>
       <button
-        onClick={() => (isLast ? onFinish() : setIndex(index + 1))}
+        onClick={() => {
+        playSound('dialogue')
+        if (isLast) onFinish()
+        else setIndex(index + 1)
+      }}
         style={{
           marginTop: 12,
           background: '#3a9d5c',

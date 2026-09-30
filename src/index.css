@@ -33,3 +33,89 @@ button {
   /* Large enough to hit reliably on a phone. */
   min-height: 40px;
 }
+
+/* ---------------------------------------------------------------------------
+   Animations. Card motion sells the dealing; the tell animations give each
+   physical cue its own rhythm so they read as behaviour rather than text.
+   --------------------------------------------------------------------------- */
+
+@keyframes card-deal {
+  from { opacity: 0; transform: translateY(-20px) rotate(-8deg) scale(0.92); }
+  to   { opacity: 1; transform: none; }
+}
+.card-deal { animation: card-deal 260ms cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+
+@keyframes card-flip {
+  from { transform: rotateY(90deg) scale(0.9); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+.card-flip { animation: card-flip 320ms ease-out both; }
+
+@keyframes seat-win {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(58, 157, 92, 0); }
+  50%      { box-shadow: 0 0 0 6px rgba(58, 157, 92, 0.45); }
+}
+.seat-win { animation: seat-win 900ms ease-in-out 2; }
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.scene-fade { animation: fade-in 220ms ease-out both; }
+
+@keyframes pot-bump {
+  0%, 100% { transform: scale(1); }
+  40%      { transform: scale(1.18); }
+}
+.pot-bump { animation: pot-bump 320ms ease-out; display: inline-block; }
+
+/* Each tell moves the way the cue it describes would. */
+@keyframes tell-twitch {
+  0%, 90%, 100% { transform: none; }
+  93%           { transform: translateX(2px); }
+  96%           { transform: translateX(-2px); }
+}
+.tell-lip-twitch { animation: tell-twitch 2.4s infinite; }
+
+@keyframes tell-shift {
+  0%, 100% { transform: translateX(0); }
+  50%      { transform: translateX(3px); }
+}
+.tell-arm-shift { animation: tell-shift 3s ease-in-out infinite; }
+
+@keyframes tell-tap {
+  0%, 100% { transform: translateY(0); }
+  25%      { transform: translateY(-2px); }
+}
+.tell-chip-tap { animation: tell-tap 1.1s ease-in-out infinite; }
+
+@keyframes tell-glance {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 1; }
+}
+.tell-glance { animation: tell-glance 2s ease-in-out infinite; }
+
+/* Stillness is the absence of movement — it just arrives, slowly. */
+.tell-stillness { animation: fade-in 1.8s ease-in both; }
+
+@keyframes hunt-pulse {
+  0%, 100% { opacity: 0.16; }
+  50%      { opacity: 0.4; }
+}
+.hunt-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 45%, #b01c1c 140%);
+  animation: hunt-pulse 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

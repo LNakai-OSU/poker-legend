@@ -35,13 +35,19 @@ function positionLabels(state: PublicState): Map<string, string> {
 
 export function PokerTableView({ state, lastResult, players, yourHole, insights }: PokerTableViewProps) {
   const labels = insights?.showPositions ? positionLabels(state) : null
+  const handOver = !state.handInProgress && lastResult?.handNumber === state.handNumber
+  const winnerIds = handOver ? new Set(lastResult.pots.flatMap((pot) => pot.winnerIds)) : new Set<string>()
 
   return (
     <>
       <div style={{ textAlign: 'center', marginBottom: 24 }}>
-        <div data-testid="pot-value" data-pot={state.pot} style={{ marginBottom: 8 }}>Pot: {state.pot}</div>
+        <div data-testid="pot-value" data-pot={state.pot} style={{ marginBottom: 8 }}>
+          Pot: <span key={state.pot} className="pot-bump">{state.pot}</span>
+        </div>
         <div>
-          {state.board.map((c, i) => <Card key={i} card={c} />)}
+          {state.board.map((c, i) => (
+            <Card key={`${state.handNumber}-${i}`} card={c} anim="deal" delayMs={i * 70} />
+          ))}
           {Array.from({ length: 5 - state.board.length }).map((_, i) => <Card key={`hidden-${i}`} faceDown />)}
         </div>
       </div>
@@ -50,6 +56,7 @@ export function PokerTableView({ state, lastResult, players, yourHole, insights 
         {state.players.map((p) => (
           <div
             key={p.id}
+            className={winnerIds.has(p.id) ? 'seat-win' : undefined}
             style={{
               border: p.isActing ? '2px solid #f2c14e' : '1px solid #333',
               borderRadius: 8,
@@ -70,7 +77,9 @@ export function PokerTableView({ state, lastResult, players, yourHole, insights 
             <div>Bet: {p.streetContribution}</div>
             {p.id === 'you' ? (
               <div style={{ marginTop: 6 }}>
-                {yourHole.map((c, i) => <Card key={i} card={c} />)}
+                {yourHole.map((c, i) => (
+                  <Card key={`${state.handNumber}-${i}`} card={c} anim="deal" delayMs={i * 70} />
+                ))}
               </div>
             ) : (
               <div style={{ marginTop: 6 }}>
@@ -80,7 +89,9 @@ export function PokerTableView({ state, lastResult, players, yourHole, insights 
                       ? lastResult.revealed.find((r) => r.playerId === p.id)
                       : undefined
                   return revealedThisHand
-                    ? revealedThisHand.holeCards.map((c, i) => <Card key={i} card={c} />)
+                    ? revealedThisHand.holeCards.map((c, i) => (
+                        <Card key={i} card={c} anim="flip" delayMs={i * 110} />
+                      ))
                     : <><Card faceDown /><Card faceDown /></>
                 })()}
               </div>
@@ -90,6 +101,7 @@ export function PokerTableView({ state, lastResult, players, yourHole, insights 
             {p.tell && !p.folded && (
               <div
                 data-testid={`tell-${p.id}`}
+                className={`tell-${p.tell.kind}`}
                 style={{
                   marginTop: 6,
                   fontSize: 11,

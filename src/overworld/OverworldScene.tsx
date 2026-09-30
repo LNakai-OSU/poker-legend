@@ -82,7 +82,15 @@ export function OverworldScene({
 
     ;(async () => {
       const instance = new Application()
-      await instance.init({ background, resizeTo: container, antialias: false })
+      await instance.init({
+        background,
+        resizeTo: container,
+        antialias: false,
+        // Without this the canvas renders at CSS resolution and the browser
+        // upscales it on a retina phone, which turns the pixel art to mush.
+        resolution: window.devicePixelRatio || 1,
+        autoDensity: true,
+      })
       if (cancelled) {
         instance.destroy(true)
         return
@@ -140,9 +148,20 @@ export function OverworldScene({
 
       let sinceHunterStep = 0
       let caught = false
+      let elapsed = 0
       const stepMs = chaser?.stepMs ?? 430
+      // People breathe; props don't. Each NPC bobs on its own phase so a row
+      // of them doesn't move in lockstep.
+      const idlers = npcs
+        .filter((n) => (n.config.art ?? 'person') === 'person')
+        .map((n, i) => ({ npc: n, baseY: n.sprite.y, phase: i * 1.7 }))
 
       instance.ticker.add((ticker) => {
+        elapsed += ticker.deltaMS
+        for (const idler of idlers) {
+          idler.npc.sprite.y = idler.baseY + Math.sin(elapsed / 620 + idler.phase) * 1.4
+        }
+
         if (!talkingRef.current) {
           const touchDir = touchDirRef.current
           if (touchDir) {
@@ -206,6 +225,7 @@ export function OverworldScene({
   return (
     <div ref={wrapperRef} data-testid="overworld" style={{ position: 'relative', width: '100vw', height: '100vh' }}>
       <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+      {chaser && <div className="hunt-vignette" />}
       {hud && (
         <div
           style={{

@@ -7,6 +7,8 @@ import type { PlayerConfig } from '../engine/types'
 import type { TableDef } from '../world/types'
 import { PokerTableView } from './PokerTableView'
 import type { GameState } from './state'
+import { playSound } from '../audio/audio'
+import { useAmbientMusic } from '../audio/SoundToggle'
 
 export interface SessionResult {
   chipsCashedOut: number
@@ -57,6 +59,8 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
   const biggestPotRef = useRef(0)
   const countedHandRef = useRef(0)
 
+  useAmbientMusic('table')
+
   const engine = tableRef.current
   const publicState = engine.getState()
   const lastResult = engine.getLastHandResult()
@@ -69,12 +73,14 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
   // Tally results once per completed hand.
   if (lastResult && lastResult.handNumber !== countedHandRef.current && !publicState.handInProgress) {
     countedHandRef.current = lastResult.handNumber
+    const wonAnything = lastResult.pots.some((pot) => pot.winnerIds.includes('you'))
     for (const pot of lastResult.pots) {
       if (pot.winnerIds.includes('you')) {
         handsWonRef.current += 1
         biggestPotRef.current = Math.max(biggestPotRef.current, pot.amount)
       }
     }
+    playSound(wonAnything ? 'win' : 'lose')
   }
 
   const rebuyOpponents = () => {
@@ -94,6 +100,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
     if (!publicState.handInProgress && engine.getLastHandResult() === null) {
       dealtFirstHandRef.current = true
       engine.startNewHand()
+      playSound('deal')
       rerender()
     }
   }, [])
@@ -106,7 +113,11 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
     aiBusyRef.current = true
     const timer = setTimeout(() => {
       const ctx = engine.getAiContext(actingPlayer.id)
-      if (ctx) engine.submitAction(actingPlayer.id, decideAiAction(ctx, defaultRng))
+      if (ctx) {
+        const action = decideAiAction(ctx, defaultRng)
+        playSound(action.type === 'fold' ? 'fold' : action.type === 'check' ? 'check' : 'chip')
+        engine.submitAction(actingPlayer.id, action)
+      }
       aiBusyRef.current = false
       rerender()
     }, 500)
@@ -150,10 +161,12 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
       : null
 
   const act = (type: 'fold' | 'check' | 'call') => {
+    playSound(type === 'call' ? 'chip' : type)
     engine.submitAction('you', { type })
     rerender()
   }
   const raiseTo = (to: number) => {
+    playSound('chip')
     engine.submitAction('you', { type: 'raise', to })
     rerender()
   }
@@ -253,6 +266,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
               onClick={() => {
                 rebuyOpponents()
                 engine.startNewHand()
+                playSound('deal')
                 rerender()
               }}
             >

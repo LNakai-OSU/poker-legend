@@ -4,6 +4,7 @@ import { missionStatus } from '../game/progression'
 import { daysUntilDue, totalOwed, type GameState } from '../game/state'
 import type { PoiAction, PoiDef } from '../world/types'
 import type { NpcArt } from './Npc'
+import { useAmbientMusic } from '../audio/SoundToggle'
 
 interface CitySceneProps {
   state: GameState
@@ -14,6 +15,7 @@ interface CitySceneProps {
 export function CityScene({ state, onAction, onCaught }: CitySceneProps) {
   const city = CITIES[state.cityId]
   const hunted = state.huntedInCityId === state.cityId
+  useAmbientMusic(hunted ? 'tense' : 'overworld')
 
   const interactables: Interactable[] = city.pois.map((poi) => ({
     id: poi.id,

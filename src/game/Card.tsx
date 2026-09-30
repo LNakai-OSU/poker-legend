@@ -24,13 +24,27 @@ const cardBaseStyle: CSSProperties = {
   border: '1px solid #4a4a66',
 }
 
-export function Card({ card, faceDown }: { card?: CardData; faceDown?: boolean }) {
+interface CardProps {
+  card?: CardData
+  faceDown?: boolean
+  /** 'deal' slides in from the deck, 'flip' turns face-up at showdown. */
+  anim?: 'deal' | 'flip'
+  delayMs?: number
+}
+
+export function Card({ card, faceDown, anim, delayMs = 0 }: CardProps) {
+  const animClass = anim === 'deal' ? 'card-deal' : anim === 'flip' ? 'card-flip' : undefined
+  const animStyle = anim ? { animationDelay: `${delayMs}ms` } : undefined
+
   if (faceDown || !card) {
-    return <div style={{ ...cardBaseStyle, background: '#2a2a44' }}>?</div>
+    return <div className={animClass} style={{ ...cardBaseStyle, ...animStyle, background: '#2a2a44' }}>?</div>
   }
   const label = RANK_LABEL[card.rank] ?? String(card.rank)
   return (
-    <div style={{ ...cardBaseStyle, background: '#171722', color: SUIT_COLOR[card.suit] }}>
+    <div
+      className={animClass}
+      style={{ ...cardBaseStyle, ...animStyle, background: '#171722', color: SUIT_COLOR[card.suit] }}
+    >
       <div style={{ fontSize: 'clamp(11px, 3.4vw, 16px)' }}>{label}</div>
       <div style={{ fontSize: 'clamp(10px, 3vw, 14px)' }}>{SUIT_SYMBOL[card.suit]}</div>
     </div>
