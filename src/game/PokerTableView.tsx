@@ -46,16 +46,17 @@ export function PokerTableView({ state, lastResult, players, yourHole, insights 
         </div>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'center', gap: 24, marginBottom: 24, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 'clamp(6px, 2vw, 24px)', marginBottom: 20, flexWrap: 'wrap' }}>
         {state.players.map((p) => (
           <div
             key={p.id}
             style={{
               border: p.isActing ? '2px solid #f2c14e' : '1px solid #333',
               borderRadius: 8,
-              padding: 12,
+              padding: 'clamp(6px, 2vw, 12px)',
               opacity: p.folded ? 0.4 : 1,
-              minWidth: 150,
+              minWidth: 'clamp(104px, 28vw, 150px)',
+              fontSize: 'clamp(11px, 3vw, 14px)',
               textAlign: 'center',
             }}
           >

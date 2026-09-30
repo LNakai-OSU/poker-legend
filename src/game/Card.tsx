@@ -10,8 +10,9 @@ const SUIT_COLOR: Record<CardData['suit'], string> = {
 }
 
 const cardBaseStyle: CSSProperties = {
-  width: 40,
-  height: 56,
+  // Shrinks on phone widths so a five-card board still fits without scrolling.
+  width: 'clamp(26px, 8vw, 40px)',
+  height: 'clamp(36px, 11vw, 56px)',
   borderRadius: 6,
   display: 'inline-flex',
   flexDirection: 'column',
@@ -19,7 +20,7 @@ const cardBaseStyle: CSSProperties = {
   justifyContent: 'center',
   fontFamily: 'monospace',
   fontWeight: 'bold',
-  marginRight: 6,
+  marginRight: 4,
   border: '1px solid #4a4a66',
 }
 
@@ -30,8 +31,8 @@ export function Card({ card, faceDown }: { card?: CardData; faceDown?: boolean }
   const label = RANK_LABEL[card.rank] ?? String(card.rank)
   return (
     <div style={{ ...cardBaseStyle, background: '#171722', color: SUIT_COLOR[card.suit] }}>
-      <div style={{ fontSize: 16 }}>{label}</div>
-      <div style={{ fontSize: 14 }}>{SUIT_SYMBOL[card.suit]}</div>
+      <div style={{ fontSize: 'clamp(11px, 3.4vw, 16px)' }}>{label}</div>
+      <div style={{ fontSize: 'clamp(10px, 3vw, 14px)' }}>{SUIT_SYMBOL[card.suit]}</div>
     </div>
   )
 }

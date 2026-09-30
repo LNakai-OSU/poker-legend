@@ -1,4 +1,5 @@
 import type { TileGrid } from '../overworld/tileRenderer'
+import type { NpcArt } from '../overworld/Npc'
 import type { Archetype, SkillTier } from '../engine/types'
 import type { CityId } from '../game/state'
 
@@ -96,6 +97,8 @@ export interface PoiDef {
   color: number
   lines: string[]
   action: PoiAction
+  /** Overrides the sprite chosen from the action kind (people by default). */
+  art?: NpcArt
 }
 
 export interface CityDef {

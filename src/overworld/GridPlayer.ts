@@ -1,7 +1,8 @@
-import { Graphics } from 'pixi.js'
+import { Sprite } from 'pixi.js'
 import { TILE_SIZE, isWalkable, type TileGrid } from './tileRenderer'
+import { characterTextures, paletteFromColor, type CharacterPalette, type Facing } from './sprites'
 
-export type Direction = 'up' | 'down' | 'left' | 'right'
+export type Direction = Facing
 
 const DELTAS: Record<Direction, [number, number]> = {
   up: [0, -1],
@@ -9,6 +10,9 @@ const DELTAS: Record<Direction, [number, number]> = {
   left: [-1, 0],
   right: [1, 0],
 }
+
+/** Distance walked, in pixels, before the sprite swaps to the other step frame. */
+const STRIDE_PX = 16
 
 /** LeafGreen-style grid-locked movement: input only lands between tiles, position interpolates smoothly. */
 export class GridPlayer {
@@ -20,10 +24,18 @@ export class GridPlayer {
   private targetRow: number
   moving = false
   facing: Direction = 'down'
-  sprite: Graphics
+  sprite: Sprite
   private speedPxPerSec: number
+  private textures: Record<Facing, ReturnType<typeof characterTextures>[Facing]>
+  private walkedPx = 0
 
-  constructor(startCol: number, startRow: number, color = 0xf2c14e, speedPxPerSec = 220) {
+  constructor(
+    startCol: number,
+    startRow: number,
+    color = 0xf2c14e,
+    speedPxPerSec = 220,
+    palette?: CharacterPalette,
+  ) {
     this.col = startCol
     this.row = startRow
     this.targetCol = startCol
@@ -31,8 +43,14 @@ export class GridPlayer {
     this.pixelX = startCol * TILE_SIZE
     this.pixelY = startRow * TILE_SIZE
     this.speedPxPerSec = speedPxPerSec
-    this.sprite = new Graphics().rect(4, 4, TILE_SIZE - 8, TILE_SIZE - 8).fill({ color })
+    this.textures = characterTextures(palette ?? paletteFromColor(color))
+    this.sprite = new Sprite(this.textures.down[0])
     this.sprite.position.set(this.pixelX, this.pixelY)
+  }
+
+  private refreshFrame() {
+    const frame = this.moving && Math.floor(this.walkedPx / STRIDE_PX) % 2 === 1 ? 1 : 0
+    this.sprite.texture = this.textures[this.facing][frame]
   }
 
   tryMove(direction: Direction, grid: TileGrid) {
@@ -41,6 +59,7 @@ export class GridPlayer {
     const [dc, dr] = DELTAS[direction]
     const nextCol = this.col + dc
     const nextRow = this.row + dr
+    this.refreshFrame()
     if (!isWalkable(grid, nextCol, nextRow)) return
     this.targetCol = nextCol
     this.targetRow = nextRow
@@ -48,7 +67,10 @@ export class GridPlayer {
   }
 
   update(deltaMs: number) {
-    if (!this.moving) return
+    if (!this.moving) {
+      this.refreshFrame()
+      return
+    }
     const targetX = this.targetCol * TILE_SIZE
     const targetY = this.targetRow * TILE_SIZE
     const dx = targetX - this.pixelX
@@ -65,8 +87,10 @@ export class GridPlayer {
     } else {
       this.pixelX += (dx / dist) * step
       this.pixelY += (dy / dist) * step
+      this.walkedPx += step
     }
     this.sprite.position.set(this.pixelX, this.pixelY)
+    this.refreshFrame()
   }
 
   isAdjacentTo(col: number, row: number): boolean {

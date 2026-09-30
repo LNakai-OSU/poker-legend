@@ -571,6 +571,7 @@ export const CITIES: Record<string, CityDef> = {
       {
         id: 'slots',
         name: 'Slot Row',
+        art: 'slot',
         col: 3,
         row: 2,
         color: COLORS.flavor,
@@ -595,6 +596,7 @@ export const CITIES: Record<string, CityDef> = {
       {
         id: 'craps',
         name: 'Craps Table',
+        art: 'craps',
         col: 12,
         row: 4,
         color: COLORS.flavor,
@@ -973,6 +975,7 @@ export const CITIES: Record<string, CityDef> = {
       {
         id: 'penthouse',
         name: 'Penthouse Lift',
+        art: 'lift',
         col: 5,
         row: 9,
         color: COLORS.finale,

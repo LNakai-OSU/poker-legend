@@ -4,6 +4,7 @@ import { buildTileLayer, isWalkable, TILE_SIZE, type TileGrid } from './tileRend
 import { GridPlayer, type Direction } from './GridPlayer'
 import { Npc, type NpcConfig } from './Npc'
 import { DialogueBox } from '../game/DialogueBox'
+import { TouchControls, useIsTouchDevice } from './TouchControls'
 
 const MOVE_KEYS: Record<string, Direction> = {
   ArrowUp: 'up', w: 'up', W: 'up',
@@ -56,6 +57,11 @@ export function OverworldScene({
   // Callbacks are read from refs inside the Pixi ticker, which is created once.
   const onCaughtRef = useRef(onCaught)
   onCaughtRef.current = onCaught
+  // Touch input drives the same paths as the keyboard rather than synthesising
+  // key events, so the Pixi ticker reads it straight from these refs.
+  const touchDirRef = useRef<Direction | null>(null)
+  const interactRef = useRef<() => void>(() => {})
+  const isTouch = useIsTouchDevice()
 
   useEffect(() => {
     talkingRef.current = talkingId
@@ -116,11 +122,16 @@ export function OverworldScene({
 
       const findAdjacent = () => npcs.find((n) => player.isAdjacentTo(n.config.col, n.config.row))
 
-      const interact = (e: KeyboardEvent) => {
-        if (e.key !== 'e' && e.key !== 'E' && e.key !== 'Enter') return
+      const tryInteract = () => {
         if (talkingRef.current) return
         const adjacent = findAdjacent()
         if (adjacent) setTalkingId(adjacent.config.id)
+      }
+      interactRef.current = tryInteract
+
+      const interact = (e: KeyboardEvent) => {
+        if (e.key !== 'e' && e.key !== 'E' && e.key !== 'Enter') return
+        tryInteract()
       }
 
       window.addEventListener('keydown', keydown)
@@ -133,9 +144,14 @@ export function OverworldScene({
 
       instance.ticker.add((ticker) => {
         if (!talkingRef.current) {
-          for (const key of keysDown) {
-            player.tryMove(MOVE_KEYS[key], map)
-            break
+          const touchDir = touchDirRef.current
+          if (touchDir) {
+            player.tryMove(touchDir, map)
+          } else {
+            for (const key of keysDown) {
+              player.tryMove(MOVE_KEYS[key], map)
+              break
+            }
           }
         }
         player.update(ticker.deltaMS)
@@ -172,7 +188,7 @@ export function OverworldScene({
           setPrompt(null)
         } else {
           const adjacent = findAdjacent()
-          setPrompt(adjacent ? `Press E to talk to ${adjacent.config.name}` : null)
+          setPrompt(adjacent ? adjacent.config.name : null)
         }
       })
     })()
@@ -221,8 +237,14 @@ export function OverworldScene({
             borderRadius: 4,
           }}
         >
-          {prompt}
+          {isTouch ? `Tap E to talk to ${prompt}` : `Press E to talk to ${prompt}`}
         </div>
+      )}
+      {isTouch && !talking && (
+        <TouchControls
+          onHold={(direction) => { touchDirRef.current = direction }}
+          onAction={() => interactRef.current()}
+        />
       )}
       {talking && (
         <DialogueBox

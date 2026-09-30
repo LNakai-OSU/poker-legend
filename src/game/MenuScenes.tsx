@@ -22,7 +22,7 @@ export function MenuScreen({
   return (
     <div style={{
       width: '100vw', minHeight: '100vh', background: '#0f0f17', color: '#e8e8f0',
-      fontFamily: 'monospace', padding: 32, boxSizing: 'border-box', overflowY: 'auto',
+      fontFamily: 'monospace', padding: 'clamp(14px, 4vw, 32px)', boxSizing: 'border-box', overflowX: 'hidden',
     }}>
       <div style={{ maxWidth: 720, margin: '0 auto' }}>
         <h2 style={{ marginTop: 0 }}>{title}</h2>
@@ -37,8 +37,8 @@ export function MenuScreen({
 function Row({ children }: { children: ReactNode }) {
   return (
     <div style={{
-      border: '1px solid #2e2e40', borderRadius: 8, padding: 16, marginBottom: 12,
-      display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16,
+      border: '1px solid #2e2e40', borderRadius: 8, padding: 'clamp(10px, 3vw, 16px)', marginBottom: 12,
+      display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap',
     }}>
       {children}
     </div>

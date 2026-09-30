@@ -215,7 +215,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
   }
 
   return (
-    <div style={{ width: '100vw', height: '100vh', background: '#0d1420', color: '#e8e8f0', fontFamily: 'monospace', padding: 24, boxSizing: 'border-box', overflowY: 'auto' }}>
+    <div style={{ width: '100%', minHeight: '100vh', background: '#0d1420', color: '#e8e8f0', fontFamily: 'monospace', padding: 'clamp(10px, 3vw, 24px)', boxSizing: 'border-box', overflowX: 'hidden' }}>
       <div style={{ textAlign: 'center', marginBottom: 12 }}>
         <div>{table.name} &middot; ${table.smallBlind}/${table.bigBlind}</div>
         <div>Wallet: ${state.cash.toLocaleString()}</div>
@@ -268,7 +268,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
       )}
 
       {publicState.handInProgress && canAct && (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
           {legalActions.some((a) => a.type === 'fold') && (
             <button style={buttonStyle} onClick={() => act('fold')}>Fold</button>
           )}

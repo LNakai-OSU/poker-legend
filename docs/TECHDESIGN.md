@@ -9,12 +9,11 @@ Living doc, paired with `GDD.md`. Update as architecture decisions are made.
 - **PixiJS 8** for the overworld tile renderer. Runs inside a full-viewport
   `<canvas>` mounted by `src/overworld/OverworldScene.tsx`, which every city
   is rendered through.
-  The poker table view turned out cleaner as plain React/CSS (cards, buttons,
-  chip counts) rather than Pixi — no art assets to justify a canvas there yet,
-  and it's easier to keep accessible/testable.
-- **iPhone delivery** via Capacitor, wrapping the same web build — no
-  separate native codebase. Not wired up yet; deferred until the MVP loop is
-  playable in-browser.
+  The poker table view is deliberately plain React/CSS (cards, buttons, chip
+  counts) rather than Pixi — it reflows for phone widths and stays testable.
+- **iPhone delivery** via Capacitor, wrapping the same web build — no separate
+  native codebase. Scaffolded and syncing; see **iOS build** below for what
+  still needs a machine with full Xcode.
 - **Poker engine** (`src/engine/`) is plain TypeScript, framework-agnostic,
   unit-testable in isolation from rendering. Deck/shuffle/hand-eval logic
   must be correct against known probabilities before any UI work builds on
@@ -98,6 +97,56 @@ would otherwise break silently: every POI must have a walkable neighbour or it
 can never be interacted with, every referenced id must resolve, the bankroll
 and buy-in ladders must both increase, and the shops must be able to satisfy
 every dress code in the game.
+
+## Art
+
+Sprites are generated at runtime rather than loaded as image files
+(`src/overworld/sprites.ts`). Each is drawn on a 16x16 grid to an offscreen
+canvas and scaled to the 32px tile size with nearest-neighbour filtering, which
+is what produces the chunky GBA-era look without shipping any assets.
+
+- Tiles (floor, wall, furniture, carpet, water, road) are patterned rather than
+  flat, so large rooms don't read as blocks of colour.
+- Characters are a single drawing routine with a swappable palette, generated
+  per facing (4) and walk frame (2). A POI's accent colour becomes its
+  character palette, so NPC art is derived from content data.
+- Props (slot machine, craps table, shop counter, sign, lift) are chosen from
+  the POI's `art` field, defaulting by action kind.
+
+Textures are cached by palette/kind, so repeated NPCs cost nothing extra.
+
+`tiles.ts` holds the pure tile data and `tileRenderer.ts` the rendering, because
+sprites need `TILE_SIZE` and the renderer needs sprites — keeping constants in a
+third module breaks what would otherwise be an import cycle.
+
+## Mobile
+
+The iPhone target needs more than a responsive layout, since the overworld is
+keyboard-driven on desktop:
+
+- `TouchControls` renders an on-screen d-pad and action button on coarse-pointer
+  or narrow viewports. It drives the same movement and interaction paths through
+  refs rather than synthesising keyboard events.
+- Table and menu screens size with `clamp()` so a five-card board and four seat
+  panels fit at 390px without horizontal scrolling.
+- Verified at an iPhone 13 viewport: controls usable, no horizontal overflow,
+  and the desktop experience unchanged (controls hidden, no page scroll).
+
+## iOS build
+
+Capacitor wraps the same web build — there is no separate native codebase.
+`capacitor.config.ts` points at `dist`, and the native project lives in `ios/`
+(committed; its copied web assets are generated and ignored).
+
+```
+npm run ios:sync   # build the web app and copy it into the native project
+npm run ios:open   # open the project in Xcode to run or archive
+```
+
+**Not verified on this machine.** The iOS project scaffolds and syncs, but
+building it needs full Xcode (only Command Line Tools are installed here), so
+nothing has been run in a simulator or on a device yet. Capacitor 7 uses Swift
+Package Manager rather than CocoaPods, so no `pod install` step is required.
 
 ## Conventions
 

@@ -1,0 +1,272 @@
+import { Texture } from 'pixi.js'
+import { CARPET, FLOOR, FURNITURE, ROAD, TILE_SIZE, WALL, WATER } from './tiles'
+
+/**
+ * Sprites are authored on a 16x16 grid and blown up to the tile size with
+ * nearest-neighbour scaling, which is what gives the chunky GBA-era look.
+ */
+const ART_SIZE = 16
+const SCALE = TILE_SIZE / ART_SIZE
+
+type Draw = (px: (x: number, y: number, w: number, h: number, color: string) => void) => void
+
+function makeTexture(draw: Draw): Texture {
+  const canvas = document.createElement('canvas')
+  canvas.width = ART_SIZE * SCALE
+  canvas.height = ART_SIZE * SCALE
+  const ctx = canvas.getContext('2d')!
+  ctx.imageSmoothingEnabled = false
+
+  draw((x, y, w, h, color) => {
+    ctx.fillStyle = color
+    ctx.fillRect(x * SCALE, y * SCALE, w * SCALE, h * SCALE)
+  })
+
+  const texture = Texture.from(canvas)
+  texture.source.scaleMode = 'nearest'
+  return texture
+}
+
+// ---------------------------------------------------------------------------
+// Tiles
+// ---------------------------------------------------------------------------
+
+const FLOOR_TILE: Draw = (px) => {
+  px(0, 0, 16, 16, '#24243a')
+  px(0, 0, 16, 1, '#2b2b44')
+  // Scattered speckle so large rooms don't read as flat colour.
+  for (const [x, y] of [[2, 4], [11, 3], [6, 9], [13, 11], [4, 13], [9, 6]]) {
+    px(x, y, 1, 1, '#2d2d48')
+  }
+}
+
+const WALL_TILE: Draw = (px) => {
+  px(0, 0, 16, 16, '#121218')
+  px(0, 0, 16, 7, '#1b1b26')
+  px(0, 8, 16, 7, '#191922')
+  // Offset brick courses.
+  px(0, 7, 16, 1, '#0d0d12')
+  px(0, 15, 16, 1, '#0d0d12')
+  px(7, 0, 1, 7, '#0d0d12')
+  px(3, 8, 1, 7, '#0d0d12')
+  px(12, 8, 1, 7, '#0d0d12')
+}
+
+const CARPET_TILE: Draw = (px) => {
+  px(0, 0, 16, 16, '#3a2036')
+  // Casino-carpet diamond motif.
+  px(7, 2, 2, 2, '#4d2a47')
+  px(5, 4, 6, 2, '#4d2a47')
+  px(3, 6, 10, 2, '#552f4f')
+  px(5, 8, 6, 2, '#4d2a47')
+  px(7, 10, 2, 2, '#4d2a47')
+  px(0, 13, 16, 1, '#472742')
+  px(1, 14, 3, 1, '#472742')
+  px(12, 14, 3, 1, '#472742')
+}
+
+const WATER_TILE: Draw = (px) => {
+  px(0, 0, 16, 16, '#16344a')
+  px(0, 3, 16, 1, '#1d4260')
+  px(2, 5, 6, 1, '#20496b')
+  px(10, 7, 5, 1, '#20496b')
+  px(0, 10, 16, 1, '#1d4260')
+  px(4, 12, 7, 1, '#20496b')
+}
+
+const ROAD_TILE: Draw = (px) => {
+  px(0, 0, 16, 16, '#2b2b30')
+  px(0, 0, 16, 1, '#35353c')
+  px(0, 15, 16, 1, '#232328')
+  px(3, 7, 5, 2, '#5a5a48')
+  for (const [x, y] of [[1, 3], [12, 5], [6, 12], [14, 11]]) px(x, y, 1, 1, '#33333a')
+}
+
+/** A generic counter/table surface; POI art sits on top of it. */
+const FURNITURE_TILE: Draw = (px) => {
+  px(0, 0, 16, 16, '#4a3a2a')
+  px(0, 0, 16, 2, '#5c4836')
+  px(0, 14, 16, 2, '#3a2d20')
+  px(0, 0, 1, 16, '#5c4836')
+  px(15, 0, 1, 16, '#3a2d20')
+  for (const y of [4, 9]) px(1, y, 14, 1, '#413224')
+}
+
+let tileCache: Record<number, Texture> | null = null
+
+export function tileTextures(): Record<number, Texture> {
+  if (!tileCache) {
+    tileCache = {
+      [FLOOR]: makeTexture(FLOOR_TILE),
+      [WALL]: makeTexture(WALL_TILE),
+      [FURNITURE]: makeTexture(FURNITURE_TILE),
+      [CARPET]: makeTexture(CARPET_TILE),
+      [WATER]: makeTexture(WATER_TILE),
+      [ROAD]: makeTexture(ROAD_TILE),
+    }
+  }
+  return tileCache
+}
+
+// ---------------------------------------------------------------------------
+// Characters
+// ---------------------------------------------------------------------------
+
+export type Facing = 'down' | 'up' | 'left' | 'right'
+
+export interface CharacterPalette {
+  cloth: string
+  clothShade: string
+  hair: string
+  skin: string
+}
+
+/** Turns a POI's accent colour into a full character palette. */
+export function paletteFromColor(color: number): CharacterPalette {
+  const r = (color >> 16) & 0xff
+  const g = (color >> 8) & 0xff
+  const b = color & 0xff
+  const shade = (c: number) => Math.max(0, Math.round(c * 0.65))
+  const hex = (rr: number, gg: number, bb: number) =>
+    `#${rr.toString(16).padStart(2, '0')}${gg.toString(16).padStart(2, '0')}${bb.toString(16).padStart(2, '0')}`
+  return {
+    cloth: hex(r, g, b),
+    clothShade: hex(shade(r), shade(g), shade(b)),
+    hair: '#2b2118',
+    skin: '#d9a07a',
+  }
+}
+
+const OUTLINE = '#15151c'
+
+function drawCharacter(
+  px: (x: number, y: number, w: number, h: number, color: string) => void,
+  palette: CharacterPalette,
+  facing: Facing,
+  stepped: boolean,
+) {
+  const { cloth, clothShade, hair, skin } = palette
+
+  // Head block with a dark outline behind it.
+  px(3, 1, 10, 8, OUTLINE)
+  px(4, 2, 8, 6, skin)
+
+  if (facing === 'up') {
+    px(4, 2, 8, 5, hair) // back of the head
+  } else if (facing === 'down') {
+    px(4, 2, 8, 2, hair)
+    px(4, 4, 1, 2, hair)
+    px(11, 4, 1, 2, hair)
+    px(6, 5, 1, 1, OUTLINE) // eyes
+    px(9, 5, 1, 1, OUTLINE)
+  } else {
+    px(4, 2, 8, 2, hair)
+    const eyeX = facing === 'left' ? 5 : 10
+    const hairX = facing === 'left' ? 10 : 4
+    px(hairX, 4, 2, 2, hair)
+    px(eyeX, 5, 1, 1, OUTLINE)
+  }
+
+  // Torso.
+  px(3, 8, 10, 6, OUTLINE)
+  px(4, 9, 8, 4, cloth)
+  px(4, 11, 8, 1, clothShade)
+  // Arms.
+  px(3, 9, 1, 3, clothShade)
+  px(12, 9, 1, 3, clothShade)
+
+  // Legs — the only thing that changes between walk frames.
+  if (stepped) {
+    px(4, 13, 3, 3, OUTLINE)
+    px(9, 13, 3, 2, OUTLINE)
+  } else {
+    px(4, 13, 3, 2, OUTLINE)
+    px(9, 13, 3, 3, OUTLINE)
+  }
+}
+
+const characterCache = new Map<string, Record<Facing, Texture[]>>()
+
+export function characterTextures(palette: CharacterPalette): Record<Facing, Texture[]> {
+  const key = `${palette.cloth}|${palette.hair}|${palette.skin}`
+  const cached = characterCache.get(key)
+  if (cached) return cached
+
+  const build = (facing: Facing) =>
+    [false, true].map((stepped) => makeTexture((px) => drawCharacter(px, palette, facing, stepped)))
+
+  const set: Record<Facing, Texture[]> = {
+    down: build('down'),
+    up: build('up'),
+    left: build('left'),
+    right: build('right'),
+  }
+  characterCache.set(key, set)
+  return set
+}
+
+// ---------------------------------------------------------------------------
+// Props
+// ---------------------------------------------------------------------------
+
+export type PropKind = 'slot' | 'craps' | 'counter' | 'sign' | 'lift'
+
+const PROPS: Record<PropKind, Draw> = {
+  slot: (px) => {
+    px(2, 1, 12, 14, OUTLINE)
+    px(3, 2, 10, 5, '#5a3a6e') // screen bezel
+    px(4, 3, 8, 3, '#d9c46a')
+    px(5, 4, 1, 1, '#e05a5a')
+    px(7, 4, 1, 1, '#3a9d5c')
+    px(9, 4, 1, 1, '#6ea8fe')
+    px(3, 8, 10, 6, '#7a4a3a') // cabinet
+    px(4, 9, 8, 1, '#8f5a46')
+    px(13, 8, 2, 3, '#c0c0c8') // lever
+    px(13, 7, 2, 1, '#e05a5a')
+  },
+  craps: (px) => {
+    px(1, 3, 14, 11, OUTLINE)
+    px(2, 4, 12, 9, '#1e5c3a') // felt
+    px(3, 5, 10, 1, '#2a7a4e')
+    px(3, 11, 10, 1, '#17472d')
+    px(5, 7, 2, 2, '#f0f0f0') // dice
+    px(5, 7, 1, 1, '#1a1a1a')
+    px(9, 8, 2, 2, '#f0f0f0')
+    px(10, 9, 1, 1, '#1a1a1a')
+  },
+  counter: (px) => {
+    px(1, 4, 14, 10, OUTLINE)
+    px(2, 5, 12, 8, '#6b4a30')
+    px(2, 5, 12, 1, '#8a6240')
+    px(2, 9, 12, 1, '#5a3d27')
+    px(4, 6, 3, 2, '#c9b07a') // goods on the shelf
+    px(9, 6, 3, 2, '#7a94c9')
+  },
+  sign: (px) => {
+    px(6, 8, 4, 8, OUTLINE) // post
+    px(7, 9, 2, 6, '#5a5a66')
+    px(2, 1, 12, 8, OUTLINE)
+    px(3, 2, 10, 6, '#2f4f6e')
+    px(4, 3, 8, 1, '#8ad4ff')
+    px(4, 5, 5, 1, '#8ad4ff')
+    px(4, 6, 7, 1, '#6ea8fe')
+  },
+  lift: (px) => {
+    px(2, 1, 12, 14, OUTLINE)
+    px(3, 2, 10, 12, '#3a3a4a')
+    px(7, 2, 2, 12, '#20202c') // door split
+    px(4, 3, 3, 3, '#d9c46a')
+    px(9, 3, 3, 3, '#d9c46a')
+    px(4, 11, 8, 1, '#55556a')
+  },
+}
+
+const propCache = new Map<PropKind, Texture>()
+
+export function propTexture(kind: PropKind): Texture {
+  const cached = propCache.get(kind)
+  if (cached) return cached
+  const texture = makeTexture(PROPS[kind])
+  propCache.set(kind, texture)
+  return texture
+}

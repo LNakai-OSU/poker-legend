@@ -3,6 +3,7 @@ import { CITIES, MISSIONS } from '../world/content'
 import { missionStatus } from '../game/progression'
 import { daysUntilDue, totalOwed, type GameState } from '../game/state'
 import type { PoiAction, PoiDef } from '../world/types'
+import type { NpcArt } from './Npc'
 
 interface CitySceneProps {
   state: GameState
@@ -20,6 +21,7 @@ export function CityScene({ state, onAction, onCaught }: CitySceneProps) {
     col: poi.col,
     row: poi.row,
     color: poi.color,
+    art: poi.art ?? defaultArt(poi),
     lines: linesFor(state, poi),
     onFinish: poi.action.kind === 'flavor' ? undefined : () => onAction(poi.action, poi),
   }))
@@ -65,6 +67,12 @@ export function CityScene({ state, onAction, onCaught }: CitySceneProps) {
       }
     />
   )
+}
+
+function defaultArt(poi: PoiDef): NpcArt {
+  if (poi.action.kind === 'shop') return 'counter'
+  if (poi.action.kind === 'travel') return 'sign'
+  return 'person'
 }
 
 function linesFor(state: GameState, poi: PoiDef): string[] {

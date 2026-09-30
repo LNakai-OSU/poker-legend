@@ -8,11 +8,28 @@ body,
   margin: 0;
   padding: 0;
   width: 100%;
-  height: 100%;
-  overflow: hidden;
+  min-height: 100%;
   background: #14141f;
+}
+
+html,
+body {
+  /* The overworld is a fixed viewport; table and menu screens scroll internally. */
+  overflow-x: hidden;
 }
 
 body {
   font-family: system-ui, sans-serif;
+  /* Game feel on touch: no double-tap zoom delay, no accidental text selection
+     while tapping the d-pad, no rubber-band overscroll. */
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+button {
+  /* Large enough to hit reliably on a phone. */
+  min-height: 40px;
 }
