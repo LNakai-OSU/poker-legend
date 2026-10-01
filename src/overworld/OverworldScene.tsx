@@ -26,6 +26,20 @@ const MAX_BUFFERED_TAPS = 2
  */
 const WORLD_ZOOM = 2
 
+/**
+ * Below this width the world is drawn at half the zoom.
+ *
+ * At 2x on a phone the viewport holds about ten tiles, which on a 24-wide street
+ * meant the screen contained the player and some empty pavement — no shopfront, no
+ * person, nothing to walk towards. An overworld you cannot navigate is the whole
+ * premise of the game gone on the form factor it is meant for.
+ */
+const NARROW_SCREEN_PX = 560
+
+function zoomFor(width: number): number {
+  return width < NARROW_SCREEN_PX ? WORLD_ZOOM / 2 : WORLD_ZOOM
+}
+
 export interface Interactable extends NpcConfig {
   lines: string[]
   /** Called after the player clicks through all dialogue lines. Omit for flavor-only objects. */
@@ -138,13 +152,15 @@ export function OverworldScene({
       app = instance
       container.appendChild(instance.canvas)
 
+      // Fixed for the life of the scene; a rotation remounts it.
+      const zoom = zoomFor(instance.screen.width)
       const world = buildTileLayer(map)
       const player = new GridPlayer(playerStart.col, playerStart.row)
       const npcs = interactables.map((cfg) => new Npc(cfg))
       // The whole world is scaled up, which would blow the name plates up with
       // it; counter-scale them so they stay a readable caption size.
       for (const npc of npcs) {
-        npc.label.scale.set(1 / WORLD_ZOOM)
+        npc.label.scale.set(1 / zoom)
         npc.label.position.set(TILE_SIZE / 2, -1)
       }
       world.addChild(player.sprite, ...npcs.map((n) => n.sprite))
@@ -166,13 +182,13 @@ export function OverworldScene({
       }
       instance.stage.addChild(world)
 
-      world.scale.set(WORLD_ZOOM)
-      const worldWidth = map[0].length * TILE_SIZE * WORLD_ZOOM
-      const worldHeight = map.length * TILE_SIZE * WORLD_ZOOM
+      world.scale.set(zoom)
+      const worldWidth = map[0].length * TILE_SIZE * zoom
+      const worldHeight = map.length * TILE_SIZE * zoom
       const centerCamera = () => {
         world.position.set(
-          cameraOffset(instance.screen.width, worldWidth, (player.pixelX + TILE_SIZE / 2) * WORLD_ZOOM),
-          cameraOffset(instance.screen.height, worldHeight, (player.pixelY + TILE_SIZE / 2) * WORLD_ZOOM),
+          cameraOffset(instance.screen.width, worldWidth, (player.pixelX + TILE_SIZE / 2) * zoom),
+          cameraOffset(instance.screen.height, worldHeight, (player.pixelY + TILE_SIZE / 2) * zoom),
         )
       }
       centerCamera()

@@ -13,6 +13,10 @@ export interface Personality {
     /** On sitting down with them. */
     greeting: string[]
     raise: string[]
+    /** Opening the betting when it was checked to them — the commonest action. */
+    bet?: string[]
+    /** Checking it back. */
+    check?: string[]
     call: string[]
     fold: string[]
     /** They won the pot. */
@@ -25,6 +29,8 @@ export interface Personality {
 const DEFAULT_LINES: Personality['lines'] = {
   greeting: ['Good luck.'],
   raise: ['Raise.'],
+  bet: ['Bet.', 'I will put something in.', "Let's find out."],
+  check: ['Check.', 'I am good.', 'Go ahead.'],
   call: ['Call.'],
   fold: ['Fold.'],
   win: ['That one is mine.'],

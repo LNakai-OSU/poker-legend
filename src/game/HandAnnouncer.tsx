@@ -39,9 +39,10 @@ export function HandAnnouncer({ announcement }: { announcement: Announcement | n
       style={{
         position: 'absolute',
         left: '50%',
-        // Sits in the band between the board and the player's own cards, so it
-        // never covers either of the two things being talked about.
-        top: '79%',
+        // Above the board rather than below it. At 79% it sat straight on top of
+        // the player's own seat plate and hole cards, covering the two things a
+        // player most wants to see at the moment a hand is decided.
+        top: '26%',
         transform: 'translate(-50%, -50%)',
         // Never swallows a click: the table underneath stays live while it is up.
         pointerEvents: 'none',

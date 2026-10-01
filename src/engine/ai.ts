@@ -202,9 +202,6 @@ const MAX_CALL_REQUIREMENT = 0.72
  * small relative to the pot — you cannot bluff-raise into a shove. */
 const BLUFF_MAX_PRICE_AS_POT_FRACTION = 0.34
 
-/** Raise sizing, as a fraction of the pot after the call: half-pot to pot. */
-const RAISE_POT_FRACTION_MIN = 0.5
-const RAISE_POT_FRACTION_SPAN = 0.5
 /**
  * Opening a street is sized smaller than raising into one: a third to two
  * thirds of the pot. Betting every street at full pot would turn every hand into
@@ -213,6 +210,104 @@ const RAISE_POT_FRACTION_SPAN = 0.5
  */
 const BET_POT_FRACTION_MIN = 0.33
 const BET_POT_FRACTION_SPAN = 0.3
+
+/** Why a bet is being made, which is what decides how big it should be. */
+export type BetPurpose = 'value' | 'thin' | 'bluff'
+
+/**
+ * The sizings a player actually chooses between, as fractions of the pot.
+ *
+ * Drawing uniformly from a single narrow band — a third to two thirds of the pot,
+ * on every street, for every hand — meant a bet carried no information at all.
+ * Across 211 observed opening bets not one exceeded 80% of the pot and there were
+ * no overbets and no shoves, so a player could never be polarised at, never
+ * induced, and never faced with the decision that makes bet sizing interesting.
+ *
+ * A strong hand wants a big pot and a thin one wants a small pot; a bluff wants to
+ * look like the strong hand, which is why it borrows the same large sizings. The
+ * river is where ranges are most polarised, so the big sizings get more weight
+ * there and the small ones less.
+ */
+const BET_SIZINGS: { fraction: number; value: number; thin: number; bluff: number }[] = [
+  { fraction: 0.25, value: 1, thin: 4, bluff: 1 },
+  { fraction: 0.33, value: 2, thin: 5, bluff: 2 },
+  { fraction: 0.5, value: 4, thin: 4, bluff: 3 },
+  { fraction: 0.75, value: 5, thin: 1, bluff: 4 },
+  { fraction: 1, value: 3, thin: 0, bluff: 3 },
+  { fraction: 1.5, value: 1, thin: 0, bluff: 1 },
+]
+
+/**
+ * How much of a bluffing urge survives on the river, where a real betting range
+ * is about three-quarters value.
+ */
+const RIVER_BLUFF_DAMPING = 0.3
+
+/** How much the big sizings are favoured on each street. 1 is neutral. */
+const SIZING_POLARITY: Record<Street, number> = {
+  preflop: 0.5,
+  flop: 0.8,
+  turn: 1,
+  river: 1.6,
+  showdown: 1,
+}
+
+/**
+ * Preflop has its own ladder, because pot fractions do not describe it: an open
+ * is a multiple of the big blind, and a re-raise is a multiple of the open. Flat
+ * pot-fraction sizing made a three-bet the same size as an open, so the two were
+ * indistinguishable.
+ */
+const PREFLOP_OPEN_BB = [2.2, 2.5, 3, 3.5]
+const PREFLOP_RERAISE_MULTIPLE = { inPosition: 3, outOfPosition: 4 }
+
+/**
+ * What a bet is for, from the strength behind it. A hand that is clearly best
+ * bets for value and wants a big pot; a marginal one bets thin and wants a small
+ * one; anything below the point where checking would be ahead is a bluff.
+ */
+function purposeFor(
+  ctx: AiDecisionContext,
+  perceivedEquity: number,
+  raiseThreshold: number,
+): BetPurpose {
+  const evenShare = 1 / (ctx.opponentsInHand + 1)
+  if (perceivedEquity >= raiseThreshold) return 'value'
+  if (perceivedEquity >= evenShare) return 'thin'
+  return 'bluff'
+}
+
+function pickBetFraction(ctx: AiDecisionContext, purpose: BetPurpose, rng: Rng): number {
+  if (ctx.street === 'preflop' && ctx.bigBlind !== undefined && ctx.bigBlind > 0) {
+    const potAfterCall = Math.max(1, ctx.potSize + ctx.toCall)
+    const opening = ctx.currentBet <= ctx.bigBlind
+    const target = opening
+      ? ctx.bigBlind * PREFLOP_OPEN_BB[Math.floor(rng() * PREFLOP_OPEN_BB.length)]
+      : ctx.currentBet *
+        ((ctx.opponentsToActAfter ?? 0) > 0
+          ? PREFLOP_RERAISE_MULTIPLE.outOfPosition
+          : PREFLOP_RERAISE_MULTIPLE.inPosition)
+    // Expressed back as a pot fraction, since that is what the caller adds on.
+    return Math.max(0.1, (target - ctx.currentBet) / potAfterCall)
+  }
+
+  const polarity = SIZING_POLARITY[ctx.street]
+  const weights = BET_SIZINGS.map((sizing) => {
+    const base = sizing[purpose]
+    // Polarity pushes weight toward the sizings furthest from half-pot.
+    const distance = Math.abs(sizing.fraction - 0.5)
+    return base * Math.pow(polarity, distance * 2)
+  })
+  const total = weights.reduce((sum, w) => sum + w, 0)
+  if (total <= 0) return BET_POT_FRACTION_MIN + rng() * BET_POT_FRACTION_SPAN
+
+  let roll = rng() * total
+  for (let i = 0; i < BET_SIZINGS.length; i++) {
+    roll -= weights[i]
+    if (roll <= 0) return BET_SIZINGS[i].fraction
+  }
+  return BET_SIZINGS[BET_SIZINGS.length - 1].fraction
+}
 /** A single raise never commits more of the stack than this... */
 const MAX_RAISE_STACK_FRACTION = 0.7
 /** ...but once a raise is nearly everything, shove rather than leave a stub. */
@@ -591,6 +686,21 @@ const WHALE_BET_FREQUENCY = 0.55
 const RAISE_INTO_BET_SCALE = 0.6
 
 /**
+ * How often a hand past the raise threshold actually raises rather than calling.
+ *
+ * Below 1 so that calling is a real action with a strong hand. Better players
+ * mix more, because flatting to keep a worse hand in — or to control the pot from
+ * out of position — is a decision rather than timidity.
+ */
+const RAISE_WITH_STRENGTH_FREQUENCY: Record<SkillTier, number> = {
+  novice: 0.5,
+  amateur: 0.55,
+  competent: 0.6,
+  sharp: 0.62,
+  elite: 0.65,
+}
+
+/**
  * Whether a bet to call is really an *opening* decision: facing nothing but the
  * blind preflop, or a small stab postflop that a raise still prices in cheaply.
  */
@@ -619,7 +729,28 @@ export function betToPotRatio(ctx: AiDecisionContext): number {
 export function inferredRangePercentile(ctx: AiDecisionContext, isWhale: boolean): number {
   if (isWhale || ctx.toCall <= 0) return 0
   const read = RANGE_READING[ctx.skillTier] * Math.min(1, betToPotRatio(ctx) / FULL_READ_BET_TO_POT)
-  return ctx.street === 'preflop' ? read * PREFLOP_RANGE_READ_DAMPING : read
+  const damped = ctx.street === 'preflop' ? read * PREFLOP_RANGE_READ_DAMPING : read
+  // You cannot read somebody for a narrower range than they actually bet.
+  return Math.min(damped, MAX_RANGE_READ_BY_STREET[ctx.street])
+}
+
+/**
+ * The narrowest range a bet on each street can credibly represent.
+ *
+ * Without this ceiling the strongest tiers read a flop bet as the bettor's top
+ * 38% of hands — but a player who continuation-bets 60% of flops is betting 60% of
+ * their hands, so crediting them with only the best 38% is arithmetically
+ * impossible and simply wrong. Two elites would therefore each fold to the other's
+ * routine bet, and a table of them reached a showdown on 9% of hands against about
+ * a quarter in real short-handed play. Later streets allow a narrower read because
+ * a range that has survived more betting genuinely is narrower.
+ */
+const MAX_RANGE_READ_BY_STREET: Record<Street, number> = {
+  preflop: 0.35,
+  flop: 0.42,
+  turn: 0.55,
+  river: 0.65,
+  showdown: 0.65,
 }
 
 /**
@@ -700,10 +831,23 @@ export function openBetFrequency(
 
   const stab = (BLUFF_CHANCE[tier] + (isWhale ? WHALE_EXTRA_BLUFF_CHANCE : 0)) * foldEquity
 
-  const position =
-    ctx.opponentsToActAfter === 0 ? POSITION_BET_BONUS[tier] * foldEquity : 0
+  const position = ctx.opponentsToActAfter === 0 ? POSITION_BET_BONUS[tier] * foldEquity : 0
 
-  return anyOf(value, continuation, stab, position, isWhale ? WHALE_BET_FREQUENCY : 0)
+  // Continuation bets, stabs and positional bets are all made without a hand, so
+  // on the river — where there is no card to come and the bluff has to simply
+  // work — they are damped hard. Left at full strength, half of all river bets
+  // were made with high card or a bare pair, which makes a river bet mean nothing
+  // at all: it cannot be folded to correctly and it cannot bluff anyone.
+  const bluffing = perceivedEquity < evenShare
+  const damping = bluffing && ctx.street === 'river' ? RIVER_BLUFF_DAMPING : 1
+
+  return anyOf(
+    value,
+    continuation * damping,
+    stab * damping,
+    position * damping,
+    isWhale ? WHALE_BET_FREQUENCY : 0,
+  )
 }
 
 /**
@@ -744,12 +888,10 @@ export function decideAiAction(ctx: AiDecisionContext, rng: Rng): Action {
   const wantsToBluff = bluffRoll && priceIsSmall
 
   /** Pot-fraction sizing, so a raise is proportionate to what is being fought over. */
-  const raiseTo = () => {
+  const raiseTo = (purpose: BetPurpose = 'value') => {
     const potAfterCall = ctx.potSize + ctx.toCall
-    const opening = ctx.toCall <= 0
-    const min = opening ? BET_POT_FRACTION_MIN : RAISE_POT_FRACTION_MIN
-    const span = opening ? BET_POT_FRACTION_SPAN : RAISE_POT_FRACTION_SPAN
-    const betSize = Math.round(potAfterCall * (min + rng() * span))
+    const fraction = pickBetFraction(ctx, purpose, rng)
+    const betSize = Math.round(potAfterCall * fraction)
     const cap = Math.max(ctx.minRaiseTo, Math.round(ctx.allInTo * MAX_RAISE_STACK_FRACTION))
     let to = Math.min(ctx.currentBet + betSize, cap)
     if (to >= ctx.allInTo * SHOVE_SNAP_FRACTION) to = ctx.allInTo
@@ -765,7 +907,7 @@ export function decideAiAction(ctx: AiDecisionContext, rng: Rng): Action {
     // Nothing to call: this is an opening decision, settled on a frequency
     // rather than a threshold, so thin value and continuation bets both exist.
     if (playable && rng() < openBetFrequency(ctx, perceivedEquity, isWhale)) {
-      return { type: 'raise', to: raiseTo() }
+      return { type: 'raise', to: raiseTo(purposeFor(ctx, perceivedEquity, raiseThreshold)) }
     }
     return { type: 'check' }
   }
@@ -775,14 +917,29 @@ export function decideAiAction(ctx: AiDecisionContext, rng: Rng): Action {
   if (perceivedEquity < callRequirement(ctx, callSlack, isWhale, rng)) {
     return { type: 'fold' }
   }
-  if (perceivedEquity > raiseThreshold || wantsToBluff) {
-    return { type: 'raise', to: raiseTo() }
+  // A hand strong enough to raise is not raised *every* time. Flatting a strong
+  // hand to keep a worse one in, or to keep the pot small out of position, is
+  // ordinary poker, and raising every time instead turned every made hand into a
+  // bet-or-fold contest where calling barely existed as an action.
+  if (perceivedEquity > raiseThreshold && rng() < RAISE_WITH_STRENGTH_FREQUENCY[ctx.skillTier]) {
+    return { type: 'raise', to: raiseTo('value') }
   }
-  // An unopened preflop pot and a tiny postflop stab are openings dressed up as
-  // bets to call. Treating them as calls-only is what left a table where nobody
-  // ever raised before the flop, so every hand went three-handed to a showdown.
-  if (isOpeningSpot(ctx) && rng() < openBetFrequency(ctx, perceivedEquity, isWhale) * RAISE_INTO_BET_SCALE) {
-    return { type: 'raise', to: raiseTo() }
+  if (wantsToBluff) {
+    return { type: 'raise', to: raiseTo('bluff') }
+  }
+  // An unopened *preflop* pot is an opening dressed up as a bet to call: treating
+  // it as calls-only is what left a table where nobody ever raised before the
+  // flop, so every hand went three-handed to a showdown. Postflop the same
+  // fallback was doing real damage — any bet under a third of the pot reopened
+  // the raise branch, so the cheap bets that should be called were raised
+  // instead, and a turn bet was answered by a raise or a fold and almost never
+  // by a call.
+  if (
+    ctx.street === 'preflop' &&
+    isOpeningSpot(ctx) &&
+    rng() < openBetFrequency(ctx, perceivedEquity, isWhale) * RAISE_INTO_BET_SCALE
+  ) {
+    return { type: 'raise', to: raiseTo(purposeFor(ctx, perceivedEquity, raiseThreshold)) }
   }
   return { type: 'call' }
 }

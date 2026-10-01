@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { TexasHoldEmTable, type HandResult } from '../engine/table'
-import { decideAiAction, estimateEquity } from '../engine/ai'
+import { decideAiAction, estimateEquity, inferredRangePercentile } from '../engine/ai'
 import { bestHand, HAND_CATEGORY_NAMES } from '../engine/handRank'
 import { defaultRng } from '../engine/rng'
 import type { PlayerConfig } from '../engine/types'
@@ -38,6 +38,16 @@ const ANNOUNCE_MS = 2600
  * poker keeps happening without being asked to continue every thirty seconds.
  */
 const AUTO_DEAL_MS = 3200
+
+/** How long a line of table talk stays up. */
+const SPEECH_MS = 2200
+
+/**
+ * An opponent sitting behind less than this share of a buy-in tops back up to one
+ * between hands, so the table stays a cash game rather than becoming a mix of
+ * short stacks and one huge one.
+ */
+const TOP_UP_BELOW_FRACTION = 0.6
 
 const STREET_NAMES: Record<string, string> = {
   flop: 'Flop',
@@ -136,16 +146,24 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
    */
   const say = (
     playerId: string,
-    kind: 'greeting' | 'raise' | 'call' | 'fold' | 'win' | 'lose',
+    kind: 'greeting' | 'raise' | 'bet' | 'check' | 'call' | 'fold' | 'win' | 'lose',
     always = false,
   ) => {
+    // Every action clears whatever was on screen, win or lose the roll. Letting a
+    // line sit out its own timer meant "HA! Drinks on me!" hung over the next
+    // player while they folded, so the characters were visibly out of sync with
+    // what they were doing.
+    if (speechTimer.current) window.clearTimeout(speechTimer.current)
+    setSpeech(null)
     if (!always && Math.random() > 0.45) return
-    const lines = personalityFor(playerId).lines[kind]
+    const pools = personalityFor(playerId).lines
+    // Betting and checking are the two commonest actions and had no lines at all,
+    // so most actions were narrated by whatever was said last.
+    const lines = pools[kind] ?? (kind === 'bet' ? pools.raise : undefined)
     if (!lines || lines.length === 0) return
     const text = lines[Math.floor(Math.random() * lines.length)]
     setSpeech({ playerId, text })
-    if (speechTimer.current) window.clearTimeout(speechTimer.current)
-    speechTimer.current = window.setTimeout(() => setSpeech(null), 2600)
+    speechTimer.current = window.setTimeout(() => setSpeech(null), SPEECH_MS)
   }
 
   useEffect(
@@ -244,12 +262,26 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
     }
   }, [lastResult?.handNumber, publicState.handInProgress])
 
+  /**
+   * Opponents re-buy and top up between hands, the way players at a real cash
+   * table do.
+   *
+   * Only re-seating the busted ones let the table drift into nonsense: one seat
+   * grinding on 10 big blinds while another sat behind 700, which turns every pot
+   * into an all-in by the turn and stops the stakes meaning anything. A cash game
+   * is a roughly 100-big-blind ecosystem, and it stays one because people reload.
+   */
   const rebuyOpponents = () => {
     if (isFinale) return
     for (const opponent of table.opponents) {
+      const seat = Math.round(table.buyIn * (opponent.stackMultiplier ?? 1))
       const current = engine.getState().players.find((p) => p.id === opponent.id)
-      if (current && current.stack <= 0) {
-        engine.rebuy(opponent.id, Math.round(table.buyIn * (opponent.stackMultiplier ?? 1)))
+      if (!current) continue
+      if (current.stack <= 0) {
+        engine.rebuy(opponent.id, seat)
+      } else if (current.stack < seat * TOP_UP_BELOW_FRACTION) {
+        // Short-stacked but still alive: put it back to a full buy-in.
+        engine.rebuy(opponent.id, seat - current.stack)
       }
     }
   }
@@ -328,8 +360,10 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
       if (ctx) {
         const action = decideAiAction(ctx, defaultRng)
         playSound(action.type === 'fold' ? 'fold' : action.type === 'check' ? 'check' : 'chip')
-        if (action.type === 'raise') say(actingPlayer.id, 'raise')
+        const facingABet = ctx.toCall > 0
+        if (action.type === 'raise') say(actingPlayer.id, facingABet ? 'raise' : 'bet')
         else if (action.type === 'call') say(actingPlayer.id, 'call')
+        else if (action.type === 'check') say(actingPlayer.id, 'check')
         else if (action.type === 'fold') say(actingPlayer.id, 'fold')
         engine.submitAction(actingPlayer.id, action)
       }
@@ -364,7 +398,35 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
   const handRead = useMemo(() => {
     if (!state.lessonIds.includes('hand-reading')) return null
     if (!publicState.handInProgress || yourHole.length < 2) return null
-    const equity = estimateEquity(yourHole, publicState.board, Math.max(1, opponentsInHand), defaultRng, 200)
+    // Against the range implied by the bet in front of you, not against random
+    // cards. The lesson that unlocks this panel says "ask what they'd play this
+    // way — that's a range, not a hand", and the panel used to do exactly the
+    // thing the lesson warns about: with A-5 on T-6-3 facing a raise it read 51%,
+    // which is the number that talks a player into calling off.
+    const equity = estimateEquity(
+      yourHole,
+      publicState.board,
+      Math.max(1, opponentsInHand),
+      defaultRng,
+      200,
+      {
+        opponentRangePercentile: inferredRangePercentile(
+          {
+            hole: yourHole,
+            board: publicState.board,
+            potSize: publicState.pot,
+            toCall,
+            currentBet: publicState.currentBet,
+            minRaiseTo: publicState.minRaiseTo,
+            allInTo,
+            opponentsInHand: Math.max(1, opponentsInHand),
+            skillTier: 'competent',
+            street: publicState.street,
+          },
+          false,
+        ),
+      },
+    )
     const made =
       publicState.board.length >= 3
         ? HAND_CATEGORY_NAMES[bestHand([...yourHole, ...publicState.board]).category]
@@ -630,13 +692,13 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
       {publicState.handInProgress && canAct && (
         <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
           {legalActions.some((a) => a.type === 'fold') && (
-            <button style={buttonStyle} onClick={() => act('fold')}>Fold</button>
+            <button style={foldButtonStyle} onClick={() => act('fold')}>Fold</button>
           )}
           {legalActions.some((a) => a.type === 'check') && (
-            <button style={buttonStyle} onClick={() => act('check')}>Check</button>
+            <button style={primaryButtonStyle} onClick={() => act('check')}>Check</button>
           )}
           {legalActions.some((a) => a.type === 'call') && (
-            <button style={buttonStyle} onClick={() => act('call')}>Call {toCall}</button>
+            <button style={primaryButtonStyle} onClick={() => act('call')}>Call {toCall}</button>
           )}
           {legalActions.some((a) => a.type === 'raise') && publicState.minRaiseTo < allInTo && (
             <div
@@ -688,7 +750,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
                   <SizingLabel label={preset.label} to={preset.to} />
                 </button>
               ))}
-              <button style={sizingButtonStyle} data-testid="raise-all-in" onClick={() => raiseTo(allInTo)}>
+              <button style={allInButtonStyle} data-testid="raise-all-in" onClick={() => raiseTo(allInTo)}>
                 <SizingLabel label="All in" to={allInTo} />
               </button>
             </>
@@ -741,6 +803,32 @@ function EndPanel({ testId, title, children }: { testId: string; title: string; 
 const buttonStyle = {
   background: '#3a9d5c', color: '#fff', border: 'none', borderRadius: 4,
   padding: '8px 16px', fontFamily: 'monospace', cursor: 'pointer', fontSize: 14,
+} as const
+
+/**
+ * Folding is not the same kind of act as calling, and all-in is not the same kind
+ * of act as either. They used to be ten buttons of identical green stacked on a
+ * phone, with Fold carrying exactly the visual weight of All in — which is how
+ * people shove their stack in by accident.
+ */
+const foldButtonStyle = {
+  ...buttonStyle,
+  background: 'transparent',
+  border: '1px solid #4a5160',
+  color: '#b8c0cc',
+} as const
+
+/** Check and Call: the ordinary thing to do, and the one to make easiest to hit. */
+const primaryButtonStyle = {
+  ...buttonStyle,
+  background: '#2f6ea8',
+} as const
+
+/** Committing everything is red, and says so. */
+const allInButtonStyle = {
+  ...buttonStyle,
+  background: '#a33636',
+  border: '1px solid #c95c5c',
 } as const
 
 /** For the between-hands bar, which should read as a status line, not a prompt. */

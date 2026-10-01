@@ -104,6 +104,19 @@ export class TexasHoldEmTable {
     this.rng = options.rng ?? defaultRng
   }
 
+  /**
+   * Raises the stakes between hands, for a freezeout with a blind structure.
+   *
+   * Without this the home game was a 1,500-chip freezeout at fixed 5/10 blinds:
+   * the median attempt ran past 200 hands, because nothing ever forced the issue.
+   * Escalating blinds are how every real tournament guarantees an ending.
+   */
+  setBlinds(smallBlind: number, bigBlind: number) {
+    if (this.handInProgress) throw new Error('cannot change the blinds mid-hand')
+    this.smallBlind = smallBlind
+    this.bigBlind = bigBlind
+  }
+
   isGameOver(): boolean {
     return this.roster.filter((p) => p.stack > 0).length <= 1
   }
