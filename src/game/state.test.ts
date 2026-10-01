@@ -93,14 +93,23 @@ describe('getting caught', () => {
     return advanceDay(staked({ cash: 500 }), 4)
   }
 
-  it('takes the bankroll but leaves the debt standing', () => {
+  it('takes most of the bankroll but leaves the debt standing', () => {
     // Wiping the debt made deliberately walking into collectors strictly better
     // than paying, which inverted the whole point of borrowing.
     const before = hunted()
     const after = caughtByCollectors(before)
-    expect(after.cash).toBe(0)
+    expect(after.cash).toBeLessThan(before.cash)
     expect(after.debts).toEqual(before.debts)
     expect(totalOwed(after)).toBe(totalOwed(before))
+  })
+
+  it('leaves enough behind to keep playing', () => {
+    // Taking the whole bankroll ended the run on the spot: broke, still in debt,
+    // and with no buy-in to earn it back with. It has to hurt, not be terminal.
+    const before = advanceDay(staked({ cash: 4000 }), 4)
+    const after = caughtByCollectors(before)
+    expect(after.cash).toBeGreaterThan(0)
+    expect(after.cash / before.cash).toBeLessThan(0.5)
   })
 
   it('is never cheaper than paying what you owe', () => {
@@ -191,6 +200,18 @@ describe('missions', () => {
 
     const done = { ...won, completedMissionIds: ['riverbend-marker'] }
     expect(missionStatus(done, 'riverbend-marker')).toBe('done')
+  })
+
+  it('is ready on first contact when the goal is already met', () => {
+    // The Harbor Doorman's brief says "you are not currently meeting them... come
+    // back in a real suit", and it was shown on the strength of never having
+    // spoken to him — so a player already wearing the tailored suit that
+    // completes the mission got told to go and buy one.
+    const base = initialState()
+    expect(missionStatus(base, 'crescent-suit')).toBe('unseen')
+
+    const suited = { ...base, ownedItemIds: ['tailored-suit'] }
+    expect(missionStatus(suited, 'crescent-suit')).toBe('ready')
   })
 })
 

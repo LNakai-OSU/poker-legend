@@ -433,4 +433,13 @@ export function findItem(itemId: string) {
 }
 
 export { SPONSORS, MISSIONS } from './npcs'
-export { CITIES, CITY_ORDER, allAreas, allPois } from './cities'
+export {
+  CITIES,
+  CITY_ORDER,
+  COLLECTOR_MIN_PLAYER_DISTANCE,
+  allAreas,
+  allPois,
+  collectorSpawn,
+  distanceToEscape,
+  escapeTiles,
+} from './cities'

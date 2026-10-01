@@ -17,6 +17,24 @@ export interface AiDecisionContext {
   skillTier: SkillTier
   street: Street
   archetype?: Archetype
+  /**
+   * True when this player made the last aggressive action on the previous
+   * street. A player who raised and then checks the flop has told the table
+   * they missed; continuation betting is what stops that happening.
+   */
+  wasPreviousStreetAggressor?: boolean
+  /**
+   * Live opponents still to act behind this seat on this street; 0 means last
+   * word. Undefined preflop, where the blinds make the orbit a different shape
+   * and position matters far less to a betting decision.
+   */
+  opponentsToActAfter?: number
+  /**
+   * The big blind, so an unopened preflop pot can be told apart from a raised
+   * one: facing nothing but the blind is an *opening* decision even though
+   * there is technically a bet to call.
+   */
+  bigBlind?: number
 }
 
 const EQUITY_ITERATIONS: Record<SkillTier, number> = {
@@ -78,12 +96,25 @@ const FULL_READ_BET_TO_POT = 1
  * Weak players call much too wide, strong players hew close to correct.
  */
 const CALL_SLACK: Record<SkillTier, number> = {
-  novice: 0.72,
-  amateur: 0.78,
-  competent: 0.85,
-  sharp: 0.93,
+  novice: 0.82,
+  amateur: 0.85,
+  competent: 0.9,
+  sharp: 0.95,
   elite: 0.98,
 }
+
+/**
+ * Nobody calls a big bet holding literally nothing, however loose they are.
+ *
+ * Slack alone is a *proportion* of the price, so at long odds it approves calls
+ * on almost no equity at all, and a table of novices — where every seat does that
+ * every street — stopped being poker: six-way, every hand, average pot 150 big
+ * blinds on 100 big blind stacks. Real loose players are loose about marginal
+ * hands, not about air. This floor only ever applies when the bet is a serious
+ * fraction of the pot, so a cheap call at genuinely long odds is still correct.
+ */
+const AIR_FOLD_EQUITY = 0.2
+const AIR_FOLD_MIN_BET_TO_POT = 0.4
 
 /**
  * Extra equity, on top of the break-even price, a tier demands per unit of
@@ -95,8 +126,18 @@ const CALL_SLACK: Record<SkillTier, number> = {
  * hand and never be wrong: they are always paid in full and can never be folded
  * out. The correction is a bluff-catch premium that grows with the size of the
  * bet — a bigger bet is a stronger range, and it also needs to be bluffing more
- * often to be worth calling — and that grows with skill, because reading that
- * message is exactly what a better player does. Whales pay no premium at all.
+ * often to be worth calling. Whales pay no premium at all.
+ *
+ * It grows with skill, because reading that message is what a better player
+ * does — but it only engages at all once the bet is *large* relative to the pot
+ * (see `BLUFF_CATCH_MIN_BET_TO_POT`). Applied to ordinary bets as well, it
+ * double-counted `RANGE_READING`, which already narrows the bettor's range
+ * inside the equity estimate: an elite demanded up to 27% over the break-even
+ * price on top of an equity figure computed against the opponent's top 62% of
+ * hands, and so folded to a routine half-pot bet on every street. A table of
+ * them reached a flop on 31% of hands and a showdown on 3%, which is a folding
+ * contest rather than a poker game. Below the threshold the price is the whole
+ * story, which is correct: pot odds answer a normal bet on their own.
  */
 const BLUFF_CATCH_PREMIUM: Record<SkillTier, number> = {
   novice: 0.02,
@@ -104,6 +145,39 @@ const BLUFF_CATCH_PREMIUM: Record<SkillTier, number> = {
   competent: 0.12,
   sharp: 0.2,
   elite: 0.27,
+}
+
+/**
+ * The bet-to-pot ratio below which no premium applies, because a bet of ordinary
+ * size carries little information: it is made with value hands and bluffs alike,
+ * and the price already accounts for it.
+ *
+ * Set below half-pot, which is the routine bet this is meant to stop punishing. A
+ * pot-size bet still earns most of the premium and a shove earns all of it —
+ * those genuinely are strong, and a player who calls them down with middle pair
+ * can be bet at with impunity.
+ */
+const BLUFF_CATCH_MIN_BET_TO_POT = 0.3
+
+/**
+ * How much of the premium applies on each street.
+ *
+ * A bet means more the later it comes. On the river it is final: there is no card
+ * left to improve with, so a big bet is genuinely polarised and a marginal made
+ * hand is a fold. On the flop the same bet is far weaker information, and a hand
+ * that folds to it has thrown away two streets of playability it had already paid
+ * for. Weighting these equally is what produced a table of sharp players who
+ * folded the flop every time and reached a showdown on 3% of hands, while *also*
+ * calling down river shoves — exactly backwards on both counts.
+ */
+const BLUFF_CATCH_STREET_WEIGHT: Record<Street, number> = {
+  preflop: 0.25,
+  flop: 0.5,
+  turn: 0.75,
+  river: 1,
+  // Nobody acts at showdown, but the map has to be total or the lookup is
+  // `undefined` and the whole requirement silently becomes NaN.
+  showdown: 1,
 }
 
 /** Past this bet-to-pot ratio the message is already "I have it"; it stops scaling. */
@@ -131,6 +205,14 @@ const BLUFF_MAX_PRICE_AS_POT_FRACTION = 0.34
 /** Raise sizing, as a fraction of the pot after the call: half-pot to pot. */
 const RAISE_POT_FRACTION_MIN = 0.5
 const RAISE_POT_FRACTION_SPAN = 0.5
+/**
+ * Opening a street is sized smaller than raising into one: a third to two
+ * thirds of the pot. Betting every street at full pot would turn every hand into
+ * an all-in, which is the opposite problem to the one continuation betting
+ * fixes — a shallow table would just trade stacks instead of playing poker.
+ */
+const BET_POT_FRACTION_MIN = 0.33
+const BET_POT_FRACTION_SPAN = 0.3
 /** A single raise never commits more of the stack than this... */
 const MAX_RAISE_STACK_FRACTION = 0.7
 /** ...but once a raise is nearly everything, shove rather than leave a stub. */
@@ -166,6 +248,124 @@ function preflopScore(hole: Card[]): number {
   else score -= Math.min(hi - lo - 1, 4) * 2
   if (hole[0].suit === hole[1].suit) score += 4
   return score
+}
+
+/**
+ * Every starting hand's score, sorted, so a holding can be placed as a
+ * percentile of the 1,326 combinations rather than judged on a raw number.
+ * Built once: 1,326 cheap scores.
+ */
+const PREFLOP_SCORE_LADDER: number[] = (() => {
+  const deck = createDeck()
+  const scores: number[] = []
+  for (let i = 0; i < deck.length; i++) {
+    for (let j = i + 1; j < deck.length; j++) {
+      scores.push(preflopScore([deck[i], deck[j]]))
+    }
+  }
+  return scores.sort((a, b) => a - b)
+})()
+
+/**
+ * Where a starting hand ranks, as a fraction in [0,1] where 1 is the best hand
+ * in the deck.
+ */
+export function preflopPercentile(hole: Card[]): number {
+  const score = preflopScore(hole)
+  let low = 0
+  let high = PREFLOP_SCORE_LADDER.length
+  while (low < high) {
+    const mid = (low + high) >> 1
+    if (PREFLOP_SCORE_LADDER[mid] < score) low = mid + 1
+    else high = mid
+  }
+  return low / PREFLOP_SCORE_LADDER.length
+}
+
+/**
+ * Roughly what fraction of starting hands a tier is willing to put money in
+ * with, before position and the price tighten it further.
+ *
+ * This is the concept the AI was missing entirely. Pot odds alone will call a
+ * blind with any two cards — a random hand has about a third of the equity
+ * three-handed, and the small blind only has to beat a quarter — so every hand
+ * was played, only 7% of them ended before a flop, and the average pot was over
+ * 100 big blinds. Real low-stakes hold'em folds most hands before the flop,
+ * because what matters is not this one price but whether the hand can keep
+ * playing profitably on three more streets.
+ */
+/*
+ * The spread between tiers here is deliberately almost flat, which is both
+ * realistic and necessary.
+ *
+ * Realistic, because what separates a good player from a bad one is mostly
+ * *postflop* — reading a range, pricing a call, catching a bluff, betting for
+ * thin value — all of which is modelled elsewhere. The number of hands they play
+ * differs far less than people assume, and short-handed everyone plays a lot.
+ *
+ * Necessary, because folds compound across a table: with every seat gated
+ * independently, dropping this from 0.64 to 0.45 took the share of hands that
+ * never reach a flop from 40% to 79%. A wide spread does not read as the good
+ * players being disciplined; it reads as an empty table where no poker happens.
+ */
+const PREFLOP_RANGE: Record<SkillTier, number> = {
+  novice: 0.72,
+  amateur: 0.68,
+  competent: 0.65,
+  sharp: 0.63,
+  elite: 0.61,
+}
+
+/**
+ * How much a raise in front narrows the range, per big blind of raise size.
+ *
+ * This has to scale with the size of the raise rather than being one flat
+ * discount for "there was a raise". Flat, it punished the aggressive tiers
+ * twice: they raise more, so they faced more raises, so they folded more, and a
+ * table of sharp players saw a flop on one hand in six. A min-raise is cheap
+ * information and barely narrows anything; a big three-bet narrows a lot.
+ */
+const PREFLOP_RANGE_PER_BB_RAISED = 0.055
+/** Even the largest re-raise leaves a range this wide — nobody folds everything. */
+const PREFLOP_RANGE_VS_RAISE_FLOOR = 0.45
+
+/** Out of position, it tightens again: a weak hand plays badly from the front. */
+const PREFLOP_RANGE_OUT_OF_POSITION = 0.88
+
+/**
+ * Seat-count adjustment, as `WIDENING - PER_OPPONENT * opponents`: about 1.4x
+ * three-handed down to 0.95x at a full table. The base ranges above are written
+ * for six-handed, which is where most of the ladder sits.
+ */
+const SEAT_RANGE_WIDENING = 1.18
+const SEAT_RANGE_PER_OPPONENT = 0.06
+
+/**
+ * The share of starting hands this player will commit chips with in this spot,
+ * or 1 for a whale, who is the one person at the table genuinely playing
+ * everything.
+ */
+export function preflopRange(ctx: AiDecisionContext, isWhale: boolean): number {
+  if (isWhale) return 1
+  let range = PREFLOP_RANGE[ctx.skillTier]
+  if (ctx.bigBlind !== undefined && ctx.currentBet > ctx.bigBlind) {
+    const raisedBy = (ctx.currentBet - ctx.bigBlind) / ctx.bigBlind
+    range *= Math.max(PREFLOP_RANGE_VS_RAISE_FLOOR, 1 - raisedBy * PREFLOP_RANGE_PER_BB_RAISED)
+  }
+  if ((ctx.opponentsToActAfter ?? 0) > 0) range *= PREFLOP_RANGE_OUT_OF_POSITION
+  // Short-handed, ranges widen: with two opponents there is far less chance
+  // somebody behind holds a real hand, and the blinds come round three times as
+  // often, so folding everything but premiums is not patience but a leak. A flat
+  // range made the high tiers fold 85% of hands three-handed, which is a table
+  // nobody is playing at.
+  range *= SEAT_RANGE_WIDENING - SEAT_RANGE_PER_OPPONENT * ctx.opponentsInHand
+  return clamp01(range)
+}
+
+/** Whether this hand is inside the range the player plays from this seat. */
+export function isPlayablePreflop(ctx: AiDecisionContext, isWhale: boolean): boolean {
+  if (ctx.street !== 'preflop' || ctx.hole.length < 2) return true
+  return preflopPercentile(ctx.hole) >= 1 - preflopRange(ctx, isWhale)
 }
 
 /** How strong a holding is *right now*, which is all an opponent can have acted on. */
@@ -291,6 +491,116 @@ const WHALE_EXTRA_NOISE = 0.25
 const WHALE_CALL_SLACK = 0.55
 const WHALE_EXTRA_BLUFF_CHANCE = 0.12
 
+// --- Betting when nobody has bet --------------------------------------------
+// The AI used to open a street only when it held a 60-75% hand or a flat 3-12%
+// bluff roll fired, which meant a checked-down pot was almost always free: over
+// a measured 400-hand sample at 1/2 the player faced a flop bet 22% of the time
+// and 69% of hands went to showdown. Real low-stakes poker is 20-25%.
+//
+// Betting is modelled as a *frequency* assembled from the three reasons to bet,
+// combined as independent chances rather than a single threshold:
+//
+//  1. Value, on a ramp. There is no 60% cliff: a hand starts betting as soon as
+//     it is better than the opponent's average holding, and bets nearly always
+//     once it is clearly ahead. Better players value-bet thinner.
+//  2. Continuation, i.e. the previous street's aggressor firing again whatever
+//     they hit. This is the single biggest source of postflop action in real
+//     poker, and its absence is why pots sat at 20 through three streets.
+//  3. Fold equity from position: having the last word, and facing fewer
+//     opponents, is what makes a bet without a hand profitable.
+
+// The value ramp is expressed as a multiple of an equal share of the pot
+// (1/(opponents+1)) rather than an absolute number, because "am I ahead of the
+// field" is the question a value bet actually asks: 40% equity is a monster
+// four-handed and a fold heads-up. An absolute threshold meant that preflop,
+// where no hand has 60% against two opponents, nothing was ever worth a raise.
+
+/** Equity, as a multiple of an equal share, at which a bet is pure value. */
+const VALUE_BET_CEILING_MULT: Record<SkillTier, number> = {
+  novice: 1.42,
+  amateur: 1.34,
+  competent: 1.26,
+  sharp: 1.18,
+  elite: 1.12,
+}
+
+/** Equity, as a multiple of an equal share, below which a bet is a bluff. */
+const VALUE_BET_FLOOR_MULT: Record<SkillTier, number> = {
+  novice: 1,
+  amateur: 0.94,
+  competent: 0.88,
+  sharp: 0.82,
+  elite: 0.76,
+}
+
+/** How often the top of the value range actually fires, rather than trapping. */
+const MAX_VALUE_BET_FREQUENCY = 0.92
+
+/** How often last street's aggressor continues, before board and table adjustments. */
+const CONTINUATION_BET: Record<SkillTier, number> = {
+  novice: 0.34,
+  amateur: 0.44,
+  competent: 0.53,
+  sharp: 0.6,
+  elite: 0.66,
+}
+
+/**
+ * Each barrel after the flop gets rarer: by the turn the hands that called a
+ * flop bet are a real range, and firing into it with nothing stops working.
+ */
+const BARREL_DECAY = 0.72
+
+/** Every extra opponent is another hand that has to fold, so bluffs shrink. */
+const FOLD_EQUITY_DECAY = 0.72
+
+/**
+ * Betting a postflop pot nobody has shown any strength in. A limped or
+ * checked-through pot is the softest spot in poker — every range in it is wide
+ * and uncoordinated — and leaving it uncontested is exactly how a table ends up
+ * checking hands down for three streets.
+ */
+const OPEN_STAB: Record<SkillTier, number> = {
+  novice: 0.18,
+  amateur: 0.24,
+  competent: 0.3,
+  sharp: 0.35,
+  elite: 0.4,
+}
+
+/** Extra betting frequency for having the last word on the street. */
+const POSITION_BET_BONUS: Record<SkillTier, number> = {
+  novice: 0.04,
+  amateur: 0.07,
+  competent: 0.11,
+  sharp: 0.14,
+  elite: 0.17,
+}
+
+/**
+ * A whale bets a lot and for no reason at all. Keeping them loose *and* bad
+ * means a high flat frequency rather than a better read of when to bet.
+ */
+const WHALE_BET_FREQUENCY = 0.55
+
+/**
+ * Raising into a bet is a bigger commitment than opening one, so the same read
+ * fires less often — and it is only on the table at a cheap price at all (see
+ * `isOpeningSpot`), never as a way to talk itself into a shove.
+ */
+const RAISE_INTO_BET_SCALE = 0.6
+
+/**
+ * Whether a bet to call is really an *opening* decision: facing nothing but the
+ * blind preflop, or a small stab postflop that a raise still prices in cheaply.
+ */
+function isOpeningSpot(ctx: AiDecisionContext): boolean {
+  if (ctx.street === 'preflop') {
+    return ctx.bigBlind !== undefined && ctx.currentBet <= ctx.bigBlind
+  }
+  return ctx.board.length >= 3 && ctx.toCall <= ctx.potSize * BLUFF_MAX_PRICE_AS_POT_FRACTION
+}
+
 /** How big the bet in front of us is relative to the pot it was fired into. */
 export function betToPotRatio(ctx: AiDecisionContext): number {
   if (ctx.toCall <= 0) return 0
@@ -308,8 +618,21 @@ export function betToPotRatio(ctx: AiDecisionContext): number {
  */
 export function inferredRangePercentile(ctx: AiDecisionContext, isWhale: boolean): number {
   if (isWhale || ctx.toCall <= 0) return 0
-  return RANGE_READING[ctx.skillTier] * Math.min(1, betToPotRatio(ctx) / FULL_READ_BET_TO_POT)
+  const read = RANGE_READING[ctx.skillTier] * Math.min(1, betToPotRatio(ctx) / FULL_READ_BET_TO_POT)
+  return ctx.street === 'preflop' ? read * PREFLOP_RANGE_READ_DAMPING : read
 }
+
+/**
+ * How much of a range read survives being applied before the flop.
+ *
+ * Preflop a raise is very weak information: it is made with a quarter to a third
+ * of all hands, and it is cheap relative to the pot it is raising, so the
+ * bet-to-pot ratio reads as enormous. Undamped, the sharp tiers concluded that
+ * anyone who opened held a premium, computed their own equity against that, and
+ * folded — four hands in five never reached a flop at an elite table. The read
+ * belongs on the later streets, where a bet actually means something.
+ */
+const PREFLOP_RANGE_READ_DAMPING = 0.3
 
 /**
  * The equity a player actually demands before calling: the break-even price,
@@ -325,11 +648,62 @@ export function callRequirement(
   const potOdds = ctx.toCall / (ctx.potSize + ctx.toCall)
   const priced = potOdds * callSlack
   if (isWhale) return priced
-  const betPressure = Math.min(BLUFF_CATCH_MAX_BET_TO_POT, betToPotRatio(ctx))
-  const premium = BLUFF_CATCH_PREMIUM[ctx.skillTier] * betPressure * rng() * BLUFF_CATCH_SPREAD
+  const betPressure = Math.max(
+    0,
+    Math.min(BLUFF_CATCH_MAX_BET_TO_POT, betToPotRatio(ctx)) - BLUFF_CATCH_MIN_BET_TO_POT,
+  )
+  const premium =
+    BLUFF_CATCH_PREMIUM[ctx.skillTier] *
+    BLUFF_CATCH_STREET_WEIGHT[ctx.street] *
+    betPressure *
+    rng() *
+    BLUFF_CATCH_SPREAD
   // The cap only ever trims the premium: a price that is already above it (a
   // huge overbet shove) still has to be beaten on its own terms.
-  return Math.max(priced, Math.min(MAX_CALL_REQUIREMENT, priced + premium))
+  const demanded = Math.max(priced, Math.min(MAX_CALL_REQUIREMENT, priced + premium))
+  // ...and against a real bet, air is folded regardless of the price.
+  const floor = betToPotRatio(ctx) >= AIR_FOLD_MIN_BET_TO_POT ? AIR_FOLD_EQUITY : 0
+  return Math.max(demanded, floor)
+}
+
+/** Chance that independent reasons, each with its own probability, all fail. */
+function anyOf(...chances: number[]): number {
+  return clamp01(1 - chances.reduce((product, p) => product * (1 - clamp01(p)), 1))
+}
+
+/**
+ * How often this player opens the betting on this street, given what they think
+ * of their hand. See the section above for where each term comes from.
+ */
+export function openBetFrequency(
+  ctx: AiDecisionContext,
+  perceivedEquity: number,
+  isWhale: boolean,
+): number {
+  const tier = ctx.skillTier
+  const opponents = Math.max(1, ctx.opponentsInHand)
+  const evenShare = 1 / (opponents + 1)
+  const floor = evenShare * VALUE_BET_FLOOR_MULT[tier]
+  const ceiling = evenShare * VALUE_BET_CEILING_MULT[tier]
+  const valueWeight = clamp01((perceivedEquity - floor) / Math.max(0.01, ceiling - floor))
+  const value = MAX_VALUE_BET_FREQUENCY * valueWeight
+
+  const foldEquity = FOLD_EQUITY_DECAY ** (opponents - 1)
+
+  const barrels = ctx.street === 'turn' ? 1 : ctx.street === 'river' ? 2 : 0
+  const postflop = ctx.board.length >= 3
+  const continuation = ctx.wasPreviousStreetAggressor
+    ? CONTINUATION_BET[tier] * BARREL_DECAY ** barrels * foldEquity
+    : postflop
+      ? OPEN_STAB[tier] * BARREL_DECAY ** barrels * foldEquity
+      : 0
+
+  const stab = (BLUFF_CHANCE[tier] + (isWhale ? WHALE_EXTRA_BLUFF_CHANCE : 0)) * foldEquity
+
+  const position =
+    ctx.opponentsToActAfter === 0 ? POSITION_BET_BONUS[tier] * foldEquity : 0
+
+  return anyOf(value, continuation, stab, position, isWhale ? WHALE_BET_FREQUENCY : 0)
 }
 
 /**
@@ -372,24 +746,42 @@ export function decideAiAction(ctx: AiDecisionContext, rng: Rng): Action {
   /** Pot-fraction sizing, so a raise is proportionate to what is being fought over. */
   const raiseTo = () => {
     const potAfterCall = ctx.potSize + ctx.toCall
-    const betSize = Math.round(potAfterCall * (RAISE_POT_FRACTION_MIN + rng() * RAISE_POT_FRACTION_SPAN))
+    const opening = ctx.toCall <= 0
+    const min = opening ? BET_POT_FRACTION_MIN : RAISE_POT_FRACTION_MIN
+    const span = opening ? BET_POT_FRACTION_SPAN : RAISE_POT_FRACTION_SPAN
+    const betSize = Math.round(potAfterCall * (min + rng() * span))
     const cap = Math.max(ctx.minRaiseTo, Math.round(ctx.allInTo * MAX_RAISE_STACK_FRACTION))
     let to = Math.min(ctx.currentBet + betSize, cap)
     if (to >= ctx.allInTo * SHOVE_SNAP_FRACTION) to = ctx.allInTo
     return Math.min(Math.max(to, ctx.minRaiseTo), ctx.allInTo)
   }
 
+  // Hand selection, before any price is considered. A hand outside the range
+  // this player opens from this seat is not raised with and not called with; it
+  // is checked if that is free and folded if it is not.
+  const playable = isPlayablePreflop(ctx, isWhale)
+
   if (ctx.toCall <= 0) {
-    if (perceivedEquity > raiseThreshold || wantsToBluff) {
+    // Nothing to call: this is an opening decision, settled on a frequency
+    // rather than a threshold, so thin value and continuation bets both exist.
+    if (playable && rng() < openBetFrequency(ctx, perceivedEquity, isWhale)) {
       return { type: 'raise', to: raiseTo() }
     }
     return { type: 'check' }
   }
 
+  if (!playable) return { type: 'fold' }
+
   if (perceivedEquity < callRequirement(ctx, callSlack, isWhale, rng)) {
     return { type: 'fold' }
   }
   if (perceivedEquity > raiseThreshold || wantsToBluff) {
+    return { type: 'raise', to: raiseTo() }
+  }
+  // An unopened preflop pot and a tiny postflop stab are openings dressed up as
+  // bets to call. Treating them as calls-only is what left a table where nobody
+  // ever raised before the flop, so every hand went three-handed to a showdown.
+  if (isOpeningSpot(ctx) && rng() < openBetFrequency(ctx, perceivedEquity, isWhale) * RAISE_INTO_BET_SCALE) {
     return { type: 'raise', to: raiseTo() }
   }
   return { type: 'call' }

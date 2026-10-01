@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { TexasHoldEmTable } from '../engine/table'
+import { TexasHoldEmTable, type HandResult } from '../engine/table'
 import { decideAiAction, estimateEquity } from '../engine/ai'
 import { bestHand, HAND_CATEGORY_NAMES } from '../engine/handRank'
 import { defaultRng } from '../engine/rng'
 import type { PlayerConfig } from '../engine/types'
 import type { TableDef } from '../world/types'
-import { PokerTableView, type SeatSpeech } from './PokerTableView'
+import { PokerTableView, handTakings, potWinnerIds, type SeatSpeech } from './PokerTableView'
+import type { Announcement } from './HandAnnouncer'
 import { personalityFor } from '../world/personalities'
 import type { GameState } from './state'
 import { tableAccess } from './progression'
@@ -26,6 +27,69 @@ interface TableSceneProps {
   /** Deducts a further buy-in from the wallet without leaving (cash games only). */
   onRebuy: (amount: number) => void
   onLeave: (result: SessionResult) => void
+}
+
+/** How long an announcement stays up. Matches the `announce` CSS animation. */
+const ANNOUNCE_MS = 2600
+
+/**
+ * How long the felt is left alone after a hand before the next one is dealt.
+ * Long enough to read the board and the hand that beat you, short enough that
+ * poker keeps happening without being asked to continue every thirty seconds.
+ */
+const AUTO_DEAL_MS = 3200
+
+const STREET_NAMES: Record<string, string> = {
+  flop: 'Flop',
+  turn: 'Turn',
+  river: 'River',
+}
+
+/** The one line that says what just happened, for the banner over the felt. */
+function resultAnnouncement(
+  result: HandResult,
+  handNumber: number,
+  players: PlayerConfig[],
+): Announcement {
+  const nameOf = (id: string) => players.find((p) => p.id === id)?.name ?? id
+  const { won, returned } = handTakings(result, 'you')
+  const key = `result-${handNumber}`
+  const winners = potWinnerIds(result)
+
+  if (won > 0) {
+    const yours = result.revealed.find((r) => r.playerId === 'you')
+    const made = yours
+      ? HAND_CATEGORY_NAMES[bestHand([...yours.holeCards, ...result.board]).category]
+      : null
+    return {
+      key,
+      text: `You win ${won.toLocaleString()}`,
+      detail: made ?? 'everyone folded',
+      tone: 'good',
+    }
+  }
+
+  const other = [...winners].find((id) => id !== 'you')
+  if (other) {
+    const theirs = result.revealed.find((r) => r.playerId === other)
+    const made = theirs
+      ? HAND_CATEGORY_NAMES[bestHand([...theirs.holeCards, ...result.board]).category]
+      : null
+    const amount = handTakings(result, other).won
+    return {
+      key,
+      // The name is carried by the seat lighting up; this says the size of it.
+      text: `${theirs ? 'Beaten by ' : 'Pot to '}${nameOf(other)}`,
+      detail: made ? `${made} · ${amount.toLocaleString()}` : amount.toLocaleString(),
+      tone: 'bad',
+    }
+  }
+
+  return {
+    key,
+    text: returned > 0 ? 'Bet came back uncalled' : 'Hand over',
+    tone: 'neutral',
+  }
 }
 
 function buildPlayers(table: TableDef): PlayerConfig[] {
@@ -96,14 +160,68 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
   const lastResult = engine.getLastHandResult()
   const you = publicState.players.find((p) => p.id === 'you')!
   const youBusted = !publicState.handInProgress && you.stack <= 0
+
+  // --- Announcing key moments ----------------------------------------------
+  const [announcement, setAnnouncement] = useState<Announcement | null>(null)
+  const announceTimer = useRef<number | null>(null)
+  const announce = (a: Announcement) => {
+    setAnnouncement(a)
+    if (announceTimer.current) window.clearTimeout(announceTimer.current)
+    announceTimer.current = window.setTimeout(() => setAnnouncement(null), ANNOUNCE_MS)
+  }
+  useEffect(
+    () => () => {
+      if (announceTimer.current) window.clearTimeout(announceTimer.current)
+    },
+    [],
+  )
+
+  // The dealer calling the street, rather than the player noticing a new card.
+  useEffect(() => {
+    if (!publicState.handInProgress) return
+    const name = STREET_NAMES[publicState.street]
+    if (!name) return
+    announce({
+      key: `street-${publicState.handNumber}-${publicState.street}`,
+      text: name,
+      detail: `Pot ${publicState.pot.toLocaleString()}`,
+      tone: 'neutral',
+    })
+  }, [publicState.street, publicState.handNumber])
+
+  // Somebody shoving is the loudest thing that happens in a hand.
+  const announcedAllInRef = useRef('')
+  useEffect(() => {
+    if (!publicState.handInProgress) return
+    const shoved = publicState.players.filter((p) => p.allIn && !p.folded)
+    if (shoved.length === 0) return
+    const signature = `${publicState.handNumber}:${shoved.map((p) => p.id).join(',')}`
+    if (announcedAllInRef.current === signature) return
+    announcedAllInRef.current = signature
+    const newest = shoved[shoved.length - 1]
+    announce({
+      key: `allin-${signature}`,
+      text: newest.id === 'you' ? 'You are all in' : `${newest.name} is all in`,
+      detail: `${publicState.pot.toLocaleString()} in the middle`,
+      tone: 'tense',
+    })
+  }, [tick])
+
   const isFinale = table.isFinale === true
   const opponentsBusted =
     !publicState.handInProgress && publicState.players.filter((p) => p.id !== 'you').every((p) => p.stack <= 0)
 
   // Tally results once per completed hand. Only pots actually won count: an
   // uncalled bet coming back is not a hand won and not a pot size.
-  if (lastResult && lastResult.handNumber !== countedHandRef.current && !publicState.handInProgress) {
+  //
+  // This runs in an effect rather than in the render body, where it used to set
+  // state (speech, and now the announcement) part-way through rendering the very
+  // component that reads it.
+  useEffect(() => {
+    if (!lastResult || publicState.handInProgress) return
+    if (lastResult.handNumber === countedHandRef.current) return
     countedHandRef.current = lastResult.handNumber
+
     const wonAnything = lastResult.pots.some((pot) => !pot.uncalled && pot.winnerIds.includes('you'))
     for (const pot of lastResult.pots) {
       if (!pot.uncalled && pot.winnerIds.includes('you')) {
@@ -112,6 +230,9 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
       }
     }
     playSound(wonAnything ? 'win' : 'lose')
+
+    announce(resultAnnouncement(lastResult, publicState.handNumber, players))
+
     // Whoever the hand turned on gets the line, so a showdown lands as a moment
     // between two people rather than a number changing.
     const potWinners = lastResult.pots.filter((pot) => !pot.uncalled).flatMap((pot) => pot.winnerIds)
@@ -121,7 +242,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
       const beaten = table.opponents.find((o) => lastResult.revealed.some((r) => r.playerId === o.id))
       if (beaten) say(beaten.id, 'lose', true)
     }
-  }
+  }, [lastResult?.handNumber, publicState.handInProgress])
 
   const rebuyOpponents = () => {
     if (isFinale) return
@@ -132,6 +253,57 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
       }
     }
   }
+
+  const dealNextHand = () => {
+    rebuyOpponents()
+    engine.startNewHand()
+    playSound('deal')
+    rerender()
+  }
+
+  // --- Carrying on between hands -------------------------------------------
+  // The table used to stop dead after every hand and wait to be told to deal
+  // again. A dealer does not wait to be asked, so the next hand comes on its own
+  // once the last one has had time to be read — and "Hold" is there for the hand
+  // worth sitting with.
+  const [holding, setHolding] = useState(false)
+  const handOver = !publicState.handInProgress && lastResult !== null
+  const canPlayOn = handOver && !youBusted && !(isFinale && opponentsBusted)
+
+  useEffect(() => {
+    if (!canPlayOn || holding) return
+    const timer = window.setTimeout(dealNextHand, AUTO_DEAL_MS)
+    return () => window.clearTimeout(timer)
+  }, [canPlayOn, holding, lastResult?.handNumber])
+
+  // Space deals the next hand now, for a player who has already read the board.
+  useEffect(() => {
+    if (!canPlayOn) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== ' ' && e.key !== 'Enter') return
+      e.preventDefault()
+      dealNextHand()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [canPlayOn, lastResult?.handNumber])
+
+  /**
+   * Whether the hand that just ended has been on screen long enough to read.
+   * Busting is announced through this gate so that going all in and losing shows
+   * the showdown first — being told "you are out of chips" the instant the last
+   * card lands, while the hand is still being taken in, read as the game cutting
+   * the player off mid-hand.
+   */
+  const [resultSettled, setResultSettled] = useState(false)
+  useEffect(() => {
+    if (!handOver) {
+      setResultSettled(false)
+      return
+    }
+    const timer = window.setTimeout(() => setResultSettled(true), ANNOUNCE_MS)
+    return () => window.clearTimeout(timer)
+  }, [handOver, lastResult?.handNumber])
 
   useEffect(() => {
     // Guard against React StrictMode's dev-mode double-invoke, which would
@@ -236,8 +408,17 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
         all.findIndex((p) => p.to === preset.to) === i,
     )
 
+  // Only ever shown for a live decision with a real pot behind it. Between
+  // hands the contributions are cleared but currentBet is not, which left a
+  // stale `toCall` next to a pot of 0 and printed "Calling 3557 into 0 — you
+  // need 100% to break even": a division by an empty pot, and advice about a
+  // decision the player no longer has.
   const potOdds =
-    state.lessonIds.includes('pot-odds') && toCall > 0
+    state.lessonIds.includes('pot-odds') &&
+    publicState.handInProgress &&
+    canAct &&
+    toCall > 0 &&
+    publicState.pot > 0
       ? { toCall, breakEven: toCall / (publicState.pot + toCall) }
       : null
 
@@ -268,6 +449,8 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
   const canRebuy = state.cash >= table.buyIn
   const rebuyWarning = tableAccess(state, table).bankrollWarning
   const outcome: ReactNode = (() => {
+    // Nothing is offered until the hand that caused it has been seen.
+    if (!resultSettled) return null
     if (isFinale && opponentsBusted) {
       return (
         <EndPanel testId="finale-won" title="You take the last pot.">
@@ -289,7 +472,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
     }
     if (youBusted) {
       return (
-        <EndPanel testId="busted" title="You're out of chips at this table.">
+        <EndPanel testId="busted" title="That was your last chip at this table.">
           <p>Wallet: ${state.cash.toLocaleString()}</p>
           {/* Buying back in is buying in again, so the bankroll lesson applies here too. */}
           {canRebuy && rebuyWarning && (
@@ -347,6 +530,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
         yourHole={yourHole}
         insights={insights}
         speech={speech}
+        announcement={announcement}
       />
 
       {(potOdds || handRead) && (
@@ -367,8 +551,9 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
 
       {outcome}
 
-      {/* A bar, not a sheet: it sits under the table rather than over it, so the
-          revealed hands and the winning pot stay readable while it is up. */}
+      {/* Between hands: a thin bar that says the next hand is coming, rather than
+          a panel that stops play until it is dismissed. The countdown line fills
+          while it waits, so the delay is visible instead of just felt. */}
       {!publicState.handInProgress && outcome === null && (
         <div
           data-testid="hand-over-bar"
@@ -376,29 +561,67 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
             position: 'sticky',
             bottom: 0,
             display: 'flex',
+            alignItems: 'center',
             justifyContent: 'center',
-            gap: 12,
+            gap: 10,
             flexWrap: 'wrap',
-            padding: '10px 12px calc(10px + env(safe-area-inset-bottom))',
+            padding: '8px 12px calc(8px + env(safe-area-inset-bottom))',
             borderRadius: 8,
-            background: '#0a1018',
-            border: '1px solid #2c3d5e',
+            background: 'rgba(10,16,24,0.92)',
+            border: '1px solid #223047',
+            fontSize: 12,
+            color: '#9aa4b8',
           }}
         >
-          <button
-            style={buttonStyle}
-            onClick={() => {
-              rebuyOpponents()
-              engine.startNewHand()
-              playSound('deal')
-              rerender()
-            }}
-          >
-            Next hand
-          </button>
+          {canPlayOn && !holding && (
+            <>
+              <span data-testid="auto-deal-status">Next hand</span>
+              <span
+                style={{
+                  position: 'relative',
+                  width: 90,
+                  height: 3,
+                  borderRadius: 2,
+                  background: '#223047',
+                  overflow: 'hidden',
+                }}
+              >
+                <span
+                  key={lastResult?.handNumber}
+                  className="deal-countdown"
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    background: '#f2c14e',
+                    animationDuration: `${AUTO_DEAL_MS}ms`,
+                  }}
+                />
+              </span>
+              <button style={smallButtonStyle} onClick={dealNextHand}>
+                Deal now (space)
+              </button>
+              <button style={smallButtonStyle} onClick={() => setHolding(true)}>
+                Hold
+              </button>
+            </>
+          )}
+          {canPlayOn && holding && (
+            <>
+              <span data-testid="auto-deal-status">Holding</span>
+              <button
+                style={smallButtonStyle}
+                onClick={() => {
+                  setHolding(false)
+                  dealNextHand()
+                }}
+              >
+                Next hand (space)
+              </button>
+            </>
+          )}
           {!isFinale && (
-            <button style={buttonStyle} onClick={() => leaveWith(you.stack)}>
-              Leave table (cash out ${you.stack.toLocaleString()})
+            <button style={smallButtonStyle} onClick={() => leaveWith(you.stack)}>
+              Leave table (${you.stack.toLocaleString()})
             </button>
           )}
         </div>
@@ -518,6 +741,16 @@ function EndPanel({ testId, title, children }: { testId: string; title: string; 
 const buttonStyle = {
   background: '#3a9d5c', color: '#fff', border: 'none', borderRadius: 4,
   padding: '8px 16px', fontFamily: 'monospace', cursor: 'pointer', fontSize: 14,
+} as const
+
+/** For the between-hands bar, which should read as a status line, not a prompt. */
+const smallButtonStyle = {
+  ...buttonStyle,
+  background: 'transparent',
+  border: '1px solid #35507a',
+  color: '#bcc8da',
+  padding: '4px 10px',
+  fontSize: 12,
 } as const
 
 /** Tighter, since up to seven sizing buttons have to wrap sanely at 390px. */

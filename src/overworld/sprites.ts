@@ -238,9 +238,20 @@ export function characterTextures(palette: CharacterPalette): Record<Facing, Tex
 // Props
 // ---------------------------------------------------------------------------
 
-export type PropKind = 'slot' | 'craps' | 'counter' | 'sign' | 'lift'
+export type PropKind = 'slot' | 'craps' | 'counter' | 'sign' | 'lift' | 'window'
 
 const PROPS: Record<PropKind, Draw> = {
+  // Scenery, not a person: a sash window with the brick wall four feet behind it.
+  window: (px) => {
+    px(1, 1, 14, 13, '#3a2a22') // frame
+    px(2, 2, 12, 11, '#1a1f2a') // glass
+    px(3, 3, 10, 4, '#2c2420') // the brick outside, lit by nothing
+    px(3, 3, 10, 1, '#352b26')
+    px(3, 8, 10, 4, '#242a36')
+    px(7, 2, 2, 11, '#3a2a22') // mullion
+    px(2, 7, 12, 2, '#3a2a22') // sash rail
+    px(3, 3, 3, 1, '#4a5466') // a weak gleam on the top pane
+  },
   slot: (px) => {
     px(2, 1, 12, 14, OUTLINE)
     px(3, 2, 10, 5, '#5a3a6e') // screen bezel

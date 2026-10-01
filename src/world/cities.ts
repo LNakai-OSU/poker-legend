@@ -1,4 +1,4 @@
-import { parseMap } from '../overworld/tileRenderer'
+import { isWalkable, parseMap } from '../overworld/tileRenderer'
 import { MISSIONS, SPONSORS } from './npcs'
 import type { AreaDef, CityDef, PoiDef } from './types'
 
@@ -139,6 +139,43 @@ const APARTMENT_ROOM = parseMap(`
 ############
 `)
 
+/**
+ * Your own block. Unlike the shared STREET template this one carries on east:
+ * the door in the right-hand wall is the corner, not a building.
+ */
+const BASIN_STREET = parseMap(`
+########################
+######D########D########
+#----------------------D
+#--""--------------""--#
+#----------------------#
+#======================#
+#======================#
+#======================#
+#----------------------#
+#--""--------------""--#
+#----------------------#
+######D########D########
+########################
+`)
+
+/** The next block over, with the shops on it. West door goes back to Basin. */
+const SEVENTH_STREET = parseMap(`
+########################
+####D######D######D#####
+D----------------------#
+#--""--------------""--#
+#----------------------#
+#======================#
+#======================#
+#======================#
+#----------------------#
+#--""--------------""--#
+#----------------------#
+####D######D######D#####
+########################
+`)
+
 const apartmentCity: CityDef = {
   id: 'apartment',
   name: 'Your Apartment',
@@ -167,17 +204,29 @@ const apartmentCity: CityDef = {
           ],
           action: { kind: 'pokerNight' },
         },
-        local('apartment-window', 'Window', 1, 1, [
-          'The window faces a brick wall about four feet away.',
-          'Rent is due in nine days. You have been not thinking about it.',
-        ]),
+        {
+          // Scenery. This used to be drawn as a person standing in the corner
+          // with "Window" floating over their head.
+          id: 'apartment-window',
+          name: 'Window',
+          col: 1,
+          row: 1,
+          color: COLORS.local,
+          art: 'window',
+          labelled: false,
+          lines: [
+            'The window faces a brick wall about four feet away.',
+            'Rent is due in nine days. You have been not thinking about it.',
+          ],
+          action: { kind: 'flavor' },
+        },
       ],
-      [{ col: 5, row: 6, toAreaId: 'block', toCol: 11, toRow: 2, label: 'Outside' }],
+      [{ col: 6, row: 6, toAreaId: 'block', toCol: 6, toRow: 2, label: 'Outside' }],
     ),
     block: area(
       'block',
-      'Ваsin Street',
-      STREET,
+      'Basin Street',
+      BASIN_STREET,
       { col: 11, row: 2 },
       '#0e0e16',
       [
@@ -189,6 +238,14 @@ const apartmentCity: CityDef = {
           color: COLORS.travel,
           art: 'sign',
           lines: ['The route map lists towns you have never had a reason to visit.'],
+          // You do not leave town before you have a reason to. Marcus's game is
+          // the reason, and it is also the only money you have to leave on.
+          requiresFlag: 'wonPokerNight',
+          lockedLines: [
+            'The route map lists towns you have never had a reason to visit.',
+            'Silver Creek. Two hours north, and the fare is most of what you have.',
+            'Not tonight. Marcus is expecting you, and winners travel better than you do.',
+          ],
           action: { kind: 'travel' },
         },
         local('neighbour', 'Neighbour', 4, 3, [
@@ -199,8 +256,92 @@ const apartmentCity: CityDef = {
           'Kid: My uncle says the casino out on the reservation is rigged.',
           'Kid: My uncle also owes my mum four hundred bucks, so.',
         ]),
+        local('basin-laundry-sign', 'Laundromat Sign', 16, 2, [
+          'A hand-written sign: CHANGE MACHINE BROKEN. BE NICE ABOUT IT.',
+        ]),
       ],
-      [{ col: 6, row: 1, toAreaId: 'home', toCol: 5, toRow: 5, label: 'Home' }],
+      [
+        { col: 6, row: 1, toAreaId: 'home', toCol: 6, toRow: 5, label: 'Home' },
+        { col: 15, row: 1, toAreaId: 'laundromat', toCol: 6, toRow: 5, label: 'Laundromat' },
+        { col: 23, row: 2, toAreaId: 'seventh', toCol: 1, toRow: 2, label: 'Seventh Street' },
+      ],
+    ),
+    laundromat: area(
+      'laundromat',
+      'Basin Street Laundromat',
+      SHOP_ROOM,
+      { col: 6, row: 5 },
+      '#141420',
+      [
+        local('laundry-regular', 'Woman Folding Sheets', 3, 3, [
+          'Woman: You are the one upstairs from Marcus, right?',
+          'Woman: Tell him the card games keep my boy awake.',
+          'Woman: ...and tell him I want in next time.',
+        ]),
+        local('laundry-machines', 'Dryers', 10, 2, [
+          'Six dryers. Two of them work. Everyone knows which two.',
+        ]),
+      ],
+      [{ col: 6, row: 6, toAreaId: 'block', toCol: 15, toRow: 2, label: 'Basin Street' }],
+    ),
+    seventh: area(
+      'seventh',
+      'Seventh Street',
+      SEVENTH_STREET,
+      { col: 1, row: 2 },
+      '#0e1018',
+      [
+        local('seventh-busker', 'Busker', 9, 3, [
+          'Busker: Requests are a dollar. Silence is five.',
+          'Busker: Big night for you? You have got the walk of someone with a plan.',
+        ]),
+        local('seventh-cop', 'Patrol Officer', 14, 9, [
+          'Officer: Evening. Keep it on the sidewalk.',
+          'Officer: There is a card game somewhere on Basin every Friday. I never find it.',
+        ]),
+      ],
+      [
+        { col: 0, row: 2, toAreaId: 'block', toCol: 22, toRow: 2, label: 'Basin Street' },
+        { col: 4, row: 1, toAreaId: 'bodega', toCol: 6, toRow: 5, label: "Patel's" },
+        { col: 11, row: 11, toAreaId: 'diner', toCol: 7, toRow: 7, label: 'The Blue Plate' },
+      ],
+    ),
+    bodega: area(
+      'bodega',
+      "Patel's Corner Store",
+      SHOP_ROOM,
+      { col: 6, row: 5 },
+      '#16161f',
+      [
+        local('patel', 'Mr Patel', 4, 3, [
+          'Mr Patel: Late again. Coffee is still hot, I make no promises about fresh.',
+          'Mr Patel: Marcus bought two bags of ice and a deck of cards an hour ago.',
+          'Mr Patel: Whatever you are all doing up there, do it quietly.',
+        ]),
+        local('bodega-cooler', 'Cooler', 10, 2, [
+          'Energy drinks, a sad sandwich, and one bottle of champagne nobody has ever bought.',
+        ]),
+      ],
+      [{ col: 6, row: 6, toAreaId: 'seventh', toCol: 4, toRow: 2, label: 'Seventh Street' }],
+    ),
+    diner: area(
+      'diner',
+      'The Blue Plate',
+      DINING_ROOM,
+      { col: 7, row: 7 },
+      '#191520',
+      [
+        local('diner-waitress', 'Waitress', 12, 5, [
+          'Waitress: Sit anywhere, the booths are all the same amount of broken.',
+          'Waitress: Coffee? You look like a man about to make a decision.',
+        ]),
+        local('diner-regular', 'Man in a Windbreaker', 3, 3, [
+          'Man: I played cards for a living once.',
+          'Man: Ask me how that ended. Go on.',
+          'Man: It ended here, kid. Nine in the morning, every morning.',
+        ]),
+      ],
+      [{ col: 7, row: 8, toAreaId: 'seventh', toCol: 11, toRow: 10, label: 'Seventh Street' }],
     ),
   },
 }
@@ -1121,4 +1262,80 @@ export function allAreas(city: CityDef): AreaDef[] {
 /** Every point of interest in a city, wherever it stands. */
 export function allPois(city: CityDef): PoiDef[] {
   return allAreas(city).flatMap((a) => a.pois)
+}
+
+// --- the collector chase ----------------------------------------------------
+// A collector used to appear at `width - 3`, which in Silver Creek is the tile
+// beside the Bus Stop — the only way out of town. The playtester was caught
+// three tiles after stepping onto the street, with no sponsor on it to pay and
+// the exit standing behind the man chasing them, while the HUD said "get out of
+// town or pay up". Both options were already gone.
+
+/**
+ * A collector never materialises right on top of you; that is a mugging, not a
+ * chase. Five tiles is roughly two of their steps, which at the player's walking
+ * speed (one tile per ~145ms against the collector's 430ms) is enough ground to
+ * turn and run on.
+ */
+export const COLLECTOR_MIN_PLAYER_DISTANCE = 5
+
+const manhattan = (a: { col: number; row: number }, b: { col: number; row: number }) =>
+  Math.abs(a.col - b.col) + Math.abs(a.row - b.row)
+
+/** The tiles that get the player out of this area: the travel point, else any door. */
+export function escapeTiles(area: AreaDef): { col: number; row: number }[] {
+  const travel = area.pois
+    .filter((poi) => poi.action.kind === 'travel')
+    .map((poi) => ({ col: poi.col, row: poi.row }))
+  if (travel.length > 0) return travel
+  return area.exits.map((exit) => ({ col: exit.col, row: exit.row }))
+}
+
+/** How far the nearest way out of this area is from a tile. */
+export function distanceToEscape(area: AreaDef, tile: { col: number; row: number }): number {
+  const escapes = escapeTiles(area)
+  if (escapes.length === 0) return 0
+  return Math.min(...escapes.map((escape) => manhattan(escape, tile)))
+}
+
+/**
+ * Where a collector appears, given where the player is standing.
+ *
+ * The rule is "between you and nowhere": of every tile a collector could stand
+ * on, take the one furthest from the way out of town, and among those the one
+ * closest to the player, so it is still a chase rather than scenery. Tiles
+ * occupied by people and props are skipped, as is anything inside
+ * `COLLECTOR_MIN_PLAYER_DISTANCE` of the player.
+ *
+ * What this buys is the invariant the chase needs: the collector is never closer
+ * to the exit than the player is, so running for the bus is never running at the
+ * man chasing you. Combined with the player's threefold speed advantage, that
+ * makes the race winnable from anywhere on the street.
+ */
+export function collectorSpawn(
+  area: AreaDef,
+  playerTile: { col: number; row: number },
+): { col: number; row: number } {
+  const occupied = new Set(area.pois.map((poi) => `${poi.col},${poi.row}`))
+  let best: { col: number; row: number; fromEscape: number; fromPlayer: number } | null = null
+
+  for (let row = 0; row < area.map.length; row++) {
+    for (let col = 0; col < area.map[row].length; col++) {
+      if (!isWalkable(area.map, col, row)) continue
+      if (occupied.has(`${col},${row}`)) continue
+      const fromPlayer = manhattan(playerTile, { col, row })
+      if (fromPlayer < COLLECTOR_MIN_PLAYER_DISTANCE) continue
+      const fromEscape = distanceToEscape(area, { col, row })
+      if (
+        best === null ||
+        fromEscape > best.fromEscape ||
+        (fromEscape === best.fromEscape && fromPlayer < best.fromPlayer)
+      ) {
+        best = { col, row, fromEscape, fromPlayer }
+      }
+    }
+  }
+
+  // Nowhere far enough away to stand: nobody is waiting for you today.
+  return best ?? area.playerStart
 }

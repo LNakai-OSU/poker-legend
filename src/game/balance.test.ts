@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { decideAiAction, estimateEquity } from '../engine/ai'
+import { decideAiAction, estimateEquity, openBetFrequency, type AiDecisionContext } from '../engine/ai'
 import { createDeck, shuffleDeck } from '../engine/deck'
 import { mulberry32 } from '../engine/rng'
 import { TexasHoldEmTable } from '../engine/table'
@@ -22,6 +22,8 @@ import { CITIES, CITY_ORDER, TABLES, allPois } from '../world/content'
  * few seeds, asserting only the *ordering* of the two extreme tiers with a wide
  * margin.
  */
+
+const SKILL_TIERS: SkillTier[] = ['novice', 'amateur', 'competent', 'sharp', 'elite']
 
 /**
  * Average true equity at the moment a player commits chips. Playing badly means
@@ -156,6 +158,127 @@ describe('difficulty curve', () => {
       `bot beats elite for ${elite.toFixed(0)}bb/100 but novice for only ${novice.toFixed(0)}bb/100`,
     ).toBeLessThan(novice - 100)
   }, 600000)
+})
+
+// --- postflop action --------------------------------------------------------
+// The bug this exists for: with no continuation betting, no thin value betting
+// and no notion of fold equity, the AI opened a street only on a 60-75% hand or
+// a flat 3-12% bluff roll. Checking down was therefore almost always free. A
+// measured 400-hand sample at 1/2 had the player facing a flop bet on 22% of
+// decisions and 69% of hands going to showdown; real low-stakes poker is 20-25%,
+// and the playtest that found this saw 14% and 82%. The symptom is a pot that
+// sits unchanged through flop, turn and river, which is not poker.
+
+/**
+ * Plays out whole hands with every seat on the AI and reports the two numbers
+ * that describe whether a street is actually contested: how often a hand gets
+ * all the way to a showdown, and how often the seat under test has a bet in
+ * front of it when the flop comes down.
+ */
+function actionProfile(seats: PlayerConfig[], sb: number, bb: number, hands: number, seed: number) {
+  const rng = mulberry32(seed)
+  const hero = seats[0].id
+  let showdowns = 0
+  let flopDecisions = 0
+  let flopDecisionsFacingBet = 0
+
+  for (let hand = 0; hand < hands; hand++) {
+    // Rotate the seating so no one seat's position skews the sample.
+    const order = seats.map((_, i) => ({ ...seats[(i + hand) % seats.length] }))
+    const table = new TexasHoldEmTable(order, { smallBlind: sb, bigBlind: bb, rng })
+    table.startNewHand()
+    let steps = 0
+    while (table.getState().handInProgress && steps++ < 300) {
+      const state = table.getState()
+      const acting = state.actingPlayerId!
+      const ctx = table.getAiContext(acting)!
+      if (acting === hero && state.street === 'flop') {
+        flopDecisions++
+        if (ctx.toCall > 0) flopDecisionsFacingBet++
+      }
+      table.submitAction(acting, decideAiAction(ctx, rng))
+    }
+    if (table.getLastHandResult()!.revealed.length > 0) showdowns++
+  }
+
+  return {
+    showdownRate: showdowns / hands,
+    flopBetFacingRate: flopDecisions === 0 ? 0 : flopDecisionsFacingBet / flopDecisions,
+  }
+}
+
+const SOFT_TABLE: PlayerConfig[] = [
+  { id: 'hero', name: 'Hero', isHuman: false, skillTier: 'amateur', startingStack: 100 },
+  { id: 'ray', name: 'Ray', isHuman: false, skillTier: 'novice', startingStack: 100 },
+  { id: 'sully', name: 'Sully', isHuman: false, skillTier: 'amateur', startingStack: 100 },
+]
+
+const TOUGH_TABLE: PlayerConfig[] = [
+  { id: 'hero', name: 'Hero', isHuman: false, skillTier: 'competent', startingStack: 1000 },
+  { id: 'a', name: 'A', isHuman: false, skillTier: 'sharp', startingStack: 1000 },
+  { id: 'b', name: 'B', isHuman: false, skillTier: 'elite', startingStack: 1000 },
+]
+
+describe('postflop action', () => {
+  // Upper bounds, not exact targets. Three-handed with 50bb stacks a showdown is
+  // structurally more likely than at the full-ring tables the 20-25% figure
+  // describes — half the showdowns here are pots that got someone all in — so
+  // the soft table is allowed to run hotter than the tough one. The lower bounds
+  // guard the opposite failure: an AI that bets so much nothing ever gets called.
+  it('does not let hands check down to a showdown', () => {
+    const soft = actionProfile(SOFT_TABLE, 1, 2, 200, 17)
+    expect(soft.showdownRate, `soft table showdown ${(soft.showdownRate * 100).toFixed(0)}%`)
+      .toBeLessThan(0.62)
+    expect(soft.showdownRate, `soft table showdown ${(soft.showdownRate * 100).toFixed(0)}%`)
+      .toBeGreaterThan(0.2)
+
+    const tough = actionProfile(TOUGH_TABLE, 5, 10, 200, 31)
+    expect(tough.showdownRate, `tough table showdown ${(tough.showdownRate * 100).toFixed(0)}%`)
+      .toBeLessThan(0.45)
+    expect(tough.showdownRate, `tough table showdown ${(tough.showdownRate * 100).toFixed(0)}%`)
+      .toBeGreaterThan(0.05)
+  }, 300000)
+
+  it('puts a bet in front of the player on a healthy share of flops', () => {
+    for (const [label, seats, sb, bb, seed] of [
+      ['soft', SOFT_TABLE, 1, 2, 17],
+      ['tough', TOUGH_TABLE, 5, 10, 31],
+    ] as [string, PlayerConfig[], number, number, number][]) {
+      const { flopBetFacingRate } = actionProfile(seats, sb, bb, 200, seed)
+      expect(
+        flopBetFacingRate,
+        `${label} table: a bet in front of you on only ${(flopBetFacingRate * 100).toFixed(0)}% of flop decisions`,
+      ).toBeGreaterThan(0.35)
+    }
+  }, 300000)
+
+  it('has better players continuation-bet more than worse ones', () => {
+    // Tier-dependence is the other half of the fix: barrelling a flop you missed
+    // is a skill, so it has to be monotone in skill rather than a flat rate.
+    const cbetSpot = (skillTier: SkillTier): AiDecisionContext => ({
+      hole: [{ rank: 12, suit: 'clubs' }, { rank: 5, suit: 'hearts' }],
+      board: [{ rank: 9, suit: 'spades' }, { rank: 6, suit: 'diamonds' }, { rank: 2, suit: 'clubs' }],
+      potSize: 60,
+      toCall: 0,
+      currentBet: 0,
+      minRaiseTo: 20,
+      allInTo: 1000,
+      opponentsInHand: 1,
+      skillTier,
+      street: 'flop',
+      wasPreviousStreetAggressor: true,
+    })
+    // A hand that has missed: the whole point is that it bets anyway.
+    const rates = SKILL_TIERS.map((tier) => openBetFrequency(cbetSpot(tier), 0.3, false))
+    const readout = SKILL_TIERS.map((t, i) => `${t} ${(rates[i] * 100).toFixed(0)}%`).join(', ')
+    for (let i = 1; i < rates.length; i++) {
+      expect(rates[i], `continuation betting is not monotone in skill: ${readout}`)
+        .toBeGreaterThan(rates[i - 1])
+    }
+    expect(rates[0], `a novice barrels only ${(rates[0] * 100).toFixed(0)}% of missed flops`)
+      .toBeGreaterThan(0.2)
+    expect(rates[rates.length - 1], `an elite barrels only ${readout}`).toBeGreaterThan(0.6)
+  })
 })
 
 describe('stakes ladder shape', () => {

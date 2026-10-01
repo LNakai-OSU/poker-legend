@@ -20,11 +20,15 @@ export function MenuScreen({
   backLabel?: string
 }) {
   return (
+    // A menu that only fills the top ~45% of the screen reads as a page that
+    // failed to load. The panel is centred vertically instead, and still grows
+    // and scrolls normally once its content is taller than the viewport.
     <div style={{
       width: '100vw', minHeight: '100vh', background: '#0f0f17', color: '#e8e8f0',
       fontFamily: 'monospace', padding: 'clamp(14px, 4vw, 32px)', boxSizing: 'border-box', overflowX: 'hidden',
+      display: 'flex', flexDirection: 'column', justifyContent: 'center',
     }}>
-      <div style={{ maxWidth: 720, margin: '0 auto' }}>
+      <div style={{ width: '100%', maxWidth: 720, margin: '0 auto' }}>
         <h2 style={{ marginTop: 0 }}>{title}</h2>
         {subtitle && <div style={{ color: '#9a9ab0', marginBottom: 20 }}>{subtitle}</div>}
         {children}

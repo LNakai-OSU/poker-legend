@@ -1,5 +1,5 @@
 import { OverworldScene, type ChaserConfig, type Interactable, type SceneExit } from './OverworldScene'
-import { CITIES, MISSIONS } from '../world/content'
+import { CITIES, MISSIONS, collectorSpawn } from '../world/content'
 import { missionStatus } from '../game/progression'
 import { daysUntilDue, totalOwed, type GameState } from '../game/state'
 import type { PoiAction, PoiDef } from '../world/types'
@@ -29,23 +29,24 @@ export function CityScene({ state, entryTile, onAction, onEnterArea, onCaught }:
     row: poi.row,
     color: poi.color,
     art: poi.art ?? defaultArt(poi),
+    labelled: poi.labelled,
     lines: linesFor(state, poi),
     onFinish:
-      poi.action.kind === 'flavor' || isSpent(state, poi) ? undefined : () => onAction(poi.action, poi),
+      poi.action.kind === 'flavor' || isSpent(state, poi) || isLocked(state, poi)
+        ? undefined
+        : () => onAction(poi.action, poi),
   }))
 
   const exits: SceneExit[] = area.exits.map((exit) => ({ col: exit.col, row: exit.row, label: exit.label }))
 
   // Collectors work the streets. Ducking into a shop buys a moment, but the
-  // door puts you straight back out where they are.
+  // door puts you straight back out where they are. Where they are, though, is
+  // the far end of the street from the way out of town — the chase has to be one
+  // the player can actually win by running for the bus.
+  const spawnTile = entryTile ?? area.playerStart
   const chaser: ChaserConfig | undefined =
     hunted && areaId === city.entryAreaId
-      ? {
-          name: 'Collector',
-          col: Math.max(1, area.map[0].length - 3),
-          row: Math.max(1, Math.min(area.map.length - 2, area.playerStart.row)),
-          stepMs: 430,
-        }
+      ? { name: 'Collector', ...collectorSpawn(area, spawnTile), stepMs: 430 }
       : undefined
 
   const owed = totalOwed(state)
@@ -65,6 +66,7 @@ export function CityScene({ state, entryTile, onAction, onEnterArea, onCaught }:
       background={area.background}
       chaser={chaser}
       onCaught={onCaught}
+      areaName={area.name}
       hud={
         <>
           <div>{area.name}</div>
@@ -99,7 +101,14 @@ function isSpent(state: GameState, poi: PoiDef): boolean {
   return poi.action.kind === 'pokerNight' && state.flags.wonPokerNight
 }
 
+/** A POI whose story flag has not been set yet: visible, talkable, but inert. */
+function isLocked(state: GameState, poi: PoiDef): boolean {
+  if (!poi.requiresFlag) return false
+  return !state.flags[poi.requiresFlag as keyof GameState['flags']]
+}
+
 function linesFor(state: GameState, poi: PoiDef): string[] {
+  if (isLocked(state, poi)) return poi.lockedLines ?? poi.lines
   if (isSpent(state, poi)) {
     return [
       `${poi.name}: Still talking about that night, man.`,

@@ -105,6 +105,15 @@ export interface PoiDef {
   action: PoiAction
   /** Overrides the sprite chosen from the action kind (people by default). */
   art?: NpcArt
+  /** Scenery sets this false so no name plate floats over it. */
+  labelled?: boolean
+  /**
+   * A story flag that must be set before the action fires. Until then the POI is
+   * still there to look at and says `lockedLines` instead — a locked door you can
+   * see reads better than one that is simply absent.
+   */
+  requiresFlag?: string
+  lockedLines?: string[]
 }
 
 export type VenueKind = 'restaurant' | 'club'

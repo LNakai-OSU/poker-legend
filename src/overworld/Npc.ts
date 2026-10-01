@@ -11,6 +11,11 @@ export interface NpcConfig {
   row: number
   color?: number
   art?: NpcArt
+  /**
+   * Scenery gets no floating name plate. A window with "Window" hanging over it
+   * reads as a character standing against the wall rather than as a window.
+   */
+  labelled?: boolean
 }
 
 export class Npc {
@@ -32,6 +37,7 @@ export class Npc {
       text: config.name,
       style: { fill: '#ffffff', fontSize: 10, fontFamily: 'monospace' },
     })
+    label.visible = config.labelled !== false
     label.anchor.set(0.5, 1)
     label.position.set(TILE_SIZE / 2, -2)
 

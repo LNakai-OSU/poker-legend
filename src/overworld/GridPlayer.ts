@@ -4,7 +4,7 @@ import { characterTextures, paletteFromColor, type CharacterPalette, type Facing
 
 export type Direction = Facing
 
-const DELTAS: Record<Direction, [number, number]> = {
+export const DELTAS: Record<Direction, [number, number]> = {
   up: [0, -1],
   down: [0, 1],
   left: [-1, 0],
@@ -51,6 +51,13 @@ export class GridPlayer {
   private refreshFrame() {
     const frame = this.moving && Math.floor(this.walkedPx / STRIDE_PX) % 2 === 1 ? 1 : 0
     this.sprite.texture = this.textures[this.facing][frame]
+  }
+
+  /** Turns on the spot without stepping, for facing a door or a person. */
+  face(direction: Direction) {
+    if (this.moving) return
+    this.facing = direction
+    this.refreshFrame()
   }
 
   /**

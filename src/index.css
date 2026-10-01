@@ -155,3 +155,27 @@ button {
   to { transform: translateY(-40px) scale(0.7); opacity: 0; }
 }
 .chips-to-pot { animation: chips-in 420ms ease-in both; }
+
+/* Key moments in a hand: rises in, holds, fades out without being dismissed. */
+@keyframes announce {
+  0%   { opacity: 0; transform: translate(-50%, calc(-50% + 10px)); }
+  12%  { opacity: 1; transform: translate(-50%, -50%); }
+  82%  { opacity: 1; transform: translate(-50%, -50%); }
+  100% { opacity: 0; transform: translate(-50%, calc(-50% - 6px)); }
+}
+.announcement { animation: announce 2600ms ease-out both; }
+
+/* The thin line that fills while the next hand is being dealt. */
+@keyframes deal-countdown {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+.deal-countdown {
+  transform-origin: left center;
+  animation: deal-countdown linear both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .announcement { animation-duration: 2600ms; animation-name: none; opacity: 1; }
+  .deal-countdown { animation: none; transform: scaleX(1); }
+}

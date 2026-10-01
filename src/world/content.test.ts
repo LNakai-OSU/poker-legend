@@ -1,6 +1,22 @@
 import { describe, expect, it } from 'vitest'
-import { CITIES, CITY_ORDER, LESSONS, MISSIONS, SHOPS, SPONSORS, TABLES, VENUES, allAreas, allPois, findItem } from './content'
-import { isWalkable, parseMap } from '../overworld/tileRenderer'
+import {
+  CITIES,
+  CITY_ORDER,
+  COLLECTOR_MIN_PLAYER_DISTANCE,
+  LESSONS,
+  MISSIONS,
+  SHOPS,
+  SPONSORS,
+  TABLES,
+  VENUES,
+  allAreas,
+  allPois,
+  collectorSpawn,
+  distanceToEscape,
+  escapeTiles,
+  findItem,
+} from './content'
+import { DOOR, isWalkable, parseMap } from '../overworld/tileRenderer'
 
 describe('parseMap', () => {
   it('builds a rectangular grid and marks walls unwalkable', () => {
@@ -98,6 +114,42 @@ describe('city content', () => {
           isWalkable(area.map, exit.col, exit.row),
           `${city.name}/${area.name}: door "${exit.label}" at (${exit.col},${exit.row}) is not steppable`,
         ).toBe(true)
+      }
+    }
+  })
+
+  it('puts every door on the tile that is drawn as a door', () => {
+    // A door is opened by walking into it from the tile in front, so the exit
+    // has to coincide with the doorway the player can see. The apartment's exit
+    // was one tile to the left of its own doorframe, which read as the player
+    // stopping in the middle of the room and teleporting.
+    for (const { city, area } of areas) {
+      for (const exit of area.exits) {
+        expect(
+          area.map[exit.row][exit.col],
+          `${city.name}/${area.name}: door "${exit.label}" at (${exit.col},${exit.row}) is not drawn as a door`,
+        ).toBe(DOOR)
+      }
+    }
+  })
+
+  it('leaves somewhere to stand in front of every door', () => {
+    // Doors are no longer stood on, so a door whose only neighbours are walls
+    // and other doors can never be opened at all.
+    for (const { city, area } of areas) {
+      for (const exit of area.exits) {
+        const frontage = [
+          [exit.col + 1, exit.row],
+          [exit.col - 1, exit.row],
+          [exit.col, exit.row + 1],
+          [exit.col, exit.row - 1],
+        ].filter(
+          ([col, row]) => isWalkable(area.map, col, row) && area.map[row]?.[col] !== DOOR,
+        )
+        expect(
+          frontage.length,
+          `${city.name}/${area.name}: door "${exit.label}" has no tile to stand on in front of it`,
+        ).toBeGreaterThan(0)
       }
     }
   })
@@ -246,6 +298,63 @@ describe('venues', () => {
       .map((p) => (p.action.kind === 'table' ? p.action.tableId : ''))
     for (const id of privateTables) {
       expect(unlockable.has(id), `${id} can never be unlocked`).toBe(true)
+    }
+  })
+})
+
+describe('the collector chase', () => {
+  // The bug: the collector spawned at `width - 3`, which in Silver Creek is the
+  // tile beside the Bus Stop — the only way out of town. Being caught three tiles
+  // after stepping onto the street, with the exit behind the man chasing you and
+  // no sponsor on that street to pay, is not a chase.
+  const entryTiles = (city: (typeof CITIES)[string]) => {
+    const area = city.areas[city.entryAreaId]
+    const doors = allAreas(city)
+      .flatMap((a) => a.exits)
+      .filter((exit) => exit.toAreaId === city.entryAreaId)
+      .map((exit) => ({ col: exit.toCol, row: exit.toRow }))
+    return [area.playerStart, ...doors]
+  }
+
+  it('never puts the collector between the player and the way out', () => {
+    // This is the invariant that makes the chase survivable: running for the bus
+    // is never running towards the man chasing you, and the player walks about
+    // three times as fast as a collector steps.
+    for (const city of Object.values(CITIES)) {
+      const area = city.areas[city.entryAreaId]
+      for (const player of entryTiles(city)) {
+        const spawn = collectorSpawn(area, player)
+        const label = `${city.id} from (${player.col},${player.row})`
+        expect(
+          distanceToEscape(area, spawn),
+          `${label}: collector is ${distanceToEscape(area, spawn)} from the exit, player ${distanceToEscape(area, player)}`,
+        ).toBeGreaterThanOrEqual(distanceToEscape(area, player))
+      }
+    }
+  })
+
+  it('never materialises on top of the player, a wall, or someone else', () => {
+    for (const city of Object.values(CITIES)) {
+      const area = city.areas[city.entryAreaId]
+      const occupied = new Set(area.pois.map((poi) => `${poi.col},${poi.row}`))
+      for (const player of entryTiles(city)) {
+        const spawn = collectorSpawn(area, player)
+        const label = `${city.id} from (${player.col},${player.row})`
+        expect(isWalkable(area.map, spawn.col, spawn.row), `${label}: spawned in a wall`).toBe(true)
+        expect(occupied.has(`${spawn.col},${spawn.row}`), `${label}: spawned on an NPC`).toBe(false)
+        const gap = Math.abs(spawn.col - player.col) + Math.abs(spawn.row - player.row)
+        expect(gap, `${label}: spawned ${gap} tiles away`).toBeGreaterThanOrEqual(COLLECTOR_MIN_PLAYER_DISTANCE)
+      }
+    }
+  })
+
+  it('does not park the collector on the travel point itself', () => {
+    for (const city of Object.values(CITIES)) {
+      const area = city.areas[city.entryAreaId]
+      const spawn = collectorSpawn(area, area.playerStart)
+      for (const escape of escapeTiles(area)) {
+        expect(`${spawn.col},${spawn.row}`, `${city.id}`).not.toBe(`${escape.col},${escape.row}`)
+      }
     }
   })
 })

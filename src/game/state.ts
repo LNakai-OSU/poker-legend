@@ -121,16 +121,24 @@ export function payDebt(state: GameState, debtId: string): GameState {
 export const CAUGHT_GRACE_DAYS = 3
 
 /**
- * Collectors catch up with you. They take the bankroll you are carrying and the
- * debt stays exactly where it was: wiping the slate used to make walking into
- * them strictly better than paying, which is the opposite of the intended
- * pressure. They do leave you alone for a few days afterwards, so being broke
- * and hunted is a hole you can still dig out of rather than a dead end.
+ * The share of the bankroll a shakedown costs. Taking all of it was a mugging
+ * rather than a mechanic: the run was over on the spot, with nothing left to
+ * rebuy a table with and the debt still standing. Three quarters hurts badly
+ * enough to be worth running from while leaving something to play out of.
+ */
+export const CAUGHT_CASH_LOSS_FRACTION = 0.75
+
+/**
+ * Collectors catch up with you. They take most of the bankroll you are carrying
+ * and the debt stays exactly where it was: wiping the slate used to make walking
+ * into them strictly better than paying, which is the opposite of the intended
+ * pressure. They also leave you alone for a few days afterwards, so being shaken
+ * down is a hole you can dig out of rather than a dead end.
  */
 export function caughtByCollectors(state: GameState): GameState {
   return {
     ...state,
-    cash: 0,
+    cash: state.cash - Math.round(state.cash * CAUGHT_CASH_LOSS_FRACTION),
     huntedInCityId: null,
     huntGraceUntilDay: state.day + CAUGHT_GRACE_DAYS,
   }

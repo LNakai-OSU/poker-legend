@@ -204,9 +204,10 @@ export function GameApp() {
   }
 
   const handleCaught = () => {
-    // They take everything you're carrying, but the debt still stands — getting
+    // They take most of what you're carrying, but the debt still stands — getting
     // caught must never be cheaper than paying. You keep what you've learned and
-    // what you own, and they give you a few days before they come looking again.
+    // what you own, and they give you a few days before they come looking again,
+    // so there is still a game to climb back out with.
     setState(caughtByCollectors)
     playSound('lose')
     setView({ kind: 'caught' })

@@ -34,9 +34,22 @@ function baseSave(overrides = {}) {
   })
 }
 
+/**
+ * Pages opened by the scenario currently running, so the runner can close them
+ * even when it fails part-way.
+ *
+ * A failing scenario never reaches its own `page.close()`, and every page holds a
+ * live WebGL context for the Pixi canvas. Past Chromium's context limit the
+ * oldest ones are dropped, canvases stop rendering, and every later scenario
+ * fails waiting for one — so a single real failure used to come back as a dozen,
+ * and the real one scrolled off the top.
+ */
+let openPages = []
+
 async function newPage(save, device) {
   const context = device ? await browser.newContext({ ...device }) : null
   const page = context ? await context.newPage() : await browser.newPage({ viewport: { width: 1100, height: 800 } })
+  openPages.push(page)
   page.setDefaultTimeout(5000)
   const errors = []
   page.on('pageerror', (e) => errors.push(String(e)))
@@ -76,27 +89,75 @@ const exitsOf = (page) =>
     return el ? JSON.parse(el.dataset.exits || '[]') : []
   })
 
+const gridOf = (page) =>
+  page.evaluate(() => {
+    const el = document.querySelector('[data-testid="overworld"]')
+    return el ? (el.dataset.grid || '').split('/').map((row) => row.split('')) : []
+  })
+
+const KEY_FOR = { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight' }
+const NEIGHBOURS = [
+  ['up', 0, -1],
+  ['down', 0, 1],
+  ['left', -1, 0],
+  ['right', 1, 0],
+]
+
+/**
+ * Shortest walk from `from` to `to` over the published grid, as a list of key
+ * presses, or null when there is no route.
+ *
+ * Doorways are treated as solid unless one is the destination, because walking
+ * into a door leaves the area — a greedy walker crossing a casino floor would
+ * blunder out of the front entrance and then report that the pit boss was
+ * missing.
+ */
+function routeTo(grid, from, to) {
+  const passable = (c, r) => {
+    const cell = grid[r]?.[c]
+    if (cell === undefined || cell === '#') return false
+    return cell === 'w' || (c === to.col && r === to.row)
+  }
+  if (!passable(to.col, to.row)) return null
+
+  const start = `${from.col},${from.row}`
+  const seen = new Map([[start, []]])
+  const queue = [from]
+  while (queue.length > 0) {
+    const at = queue.shift()
+    const path = seen.get(`${at.col},${at.row}`)
+    if (at.col === to.col && at.row === to.row) return path
+    for (const [direction, dc, dr] of NEIGHBOURS) {
+      const next = { col: at.col + dc, row: at.row + dr }
+      const id = `${next.col},${next.row}`
+      if (seen.has(id) || !passable(next.col, next.row)) continue
+      seen.set(id, [...path, direction])
+      queue.push(next)
+    }
+  }
+  return null
+}
+
 /** Walks to a tile, verifying each step, since synthetic keys can be dropped. */
 async function moveTo(page, col, row, budget = 60) {
-  for (let i = 0; i < budget; i++) {
+  const grid = await gridOf(page)
+  for (let attempt = 0; attempt < 3; attempt++) {
     const at = await posOf(page)
     if (!at || Number.isNaN(at.col)) return false
     if (at.col === col && at.row === row) return true
-    const primary =
-      at.col !== col ? (at.col < col ? 'ArrowRight' : 'ArrowLeft') : at.row < row ? 'ArrowDown' : 'ArrowUp'
-    const before = `${at.col},${at.row}`
-    await step(page, primary)
-    let after = await posOf(page)
-    if (after && `${after.col},${after.row}` !== before) continue
-    for (const side of primary === 'ArrowUp' || primary === 'ArrowDown'
-      ? ['ArrowRight', 'ArrowLeft']
-      : ['ArrowUp', 'ArrowDown']) {
-      await step(page, side)
-      after = await posOf(page)
-      if (after && `${after.col},${after.row}` !== before) break
+
+    const route = grid.length > 0 ? routeTo(grid, at, { col, row }) : null
+    if (route === null) return false
+    if (route.length > budget) return false
+
+    for (const direction of route) {
+      await step(page, KEY_FOR[direction])
     }
+    // A dropped or doubled synthetic keypress leaves us off by a tile, so the
+    // route is recomputed from wherever we actually ended up.
   }
-  return false
+  const at = await posOf(page)
+  return at !== null && at.col === col && at.row === row
 }
 
 const promptOf = (page) =>
@@ -111,27 +172,58 @@ async function approach(page, name) {
   const poi = pois.find((p) => p.name === name)
   if (!poi) throw new Error(`no "${name}" in this area (saw: ${pois.map((p) => p.name).join(', ')})`)
 
-  for (const [col, row] of [
+  // Only tiles that are actually walkable are worth trying. The pit boss stands
+  // with a table below him, and spending the whole step budget trying to reach
+  // that square used to leave the player stranded across the room.
+  const grid = await gridOf(page)
+  const candidates = [
     [poi.col, poi.row + 1],
     [poi.col - 1, poi.row],
     [poi.col + 1, poi.row],
     [poi.col, poi.row - 1],
-  ]) {
-    await moveTo(page, col, row, 40)
+  ].filter(([col, row]) => grid.length === 0 || grid[row]?.[col] === 'w')
+
+  for (const [col, row] of candidates) {
+    if (!(await moveTo(page, col, row, 80))) continue
     const prompt = await promptOf(page)
     if (prompt && prompt.includes(name)) return true
   }
   const at = await posOf(page)
-  throw new Error(`could not get next to "${name}"; stopped at (${at?.col},${at?.row})`)
+  throw new Error(
+    `could not get next to "${name}" at (${poi.col},${poi.row}); stopped at (${at?.col},${at?.row}); ` +
+      `tried ${JSON.stringify(candidates)}`,
+  )
 }
 
-/** Walks into a named doorway, which moves to another area. */
+/**
+ * Walks into a named doorway, which moves to another area.
+ *
+ * Doors are not stood on: the player stops on the tile in front and opening it is
+ * the step they would have taken. So this stands beside the door and walks at it.
+ */
 async function enterDoor(page, label) {
   const exits = await exitsOf(page)
   const door = exits.find((e) => e.label === label)
   if (!door) throw new Error(`no door "${label}" here (saw: ${exits.map((e) => e.label).join(', ')})`)
-  await moveTo(page, door.col, door.row, 60)
-  await page.waitForTimeout(500)
+
+  const grid = await gridOf(page)
+  const frontages = [
+    [door.col, door.row + 1, 'ArrowUp'],
+    [door.col, door.row - 1, 'ArrowDown'],
+    [door.col - 1, door.row, 'ArrowRight'],
+    [door.col + 1, door.row, 'ArrowLeft'],
+  ].filter(([col, row]) => grid.length === 0 || grid[row]?.[col] === 'w')
+
+  for (const [col, row, into] of frontages) {
+    if (!(await moveTo(page, col, row, 80))) continue
+    await step(page, into)
+    await page.waitForTimeout(500)
+    // The area changed if the doors on offer are no longer these ones.
+    const now = await exitsOf(page)
+    if (now.length === 0 || !now.some((e) => e.label === label && e.col === door.col)) return true
+  }
+  const at = await posOf(page)
+  throw new Error(`could not go through "${label}"; stopped at (${at?.col},${at?.row})`)
 }
 
 /** Walks up to a thing and talks to it. */
@@ -154,6 +246,7 @@ async function talkThrough(page) {
 }
 
 async function test(name, fn) {
+  openPages = []
   try {
     await fn()
     results.push({ name, ok: true })
@@ -161,6 +254,14 @@ async function test(name, fn) {
   } catch (err) {
     results.push({ name, ok: false, error: String(err).split('\n')[0] })
     console.log(`  FAIL ${name}\n       ${String(err).split('\n')[0]}`)
+  } finally {
+    // Whatever happened, give the GPU contexts back before the next scenario.
+    for (const page of openPages) {
+      await page.close().catch(() => {})
+      const context = page.context()
+      if (context && context.pages().length === 0) await context.close().catch(() => {})
+    }
+    openPages = []
   }
 }
 
@@ -177,6 +278,123 @@ await test('fresh save starts in the apartment', async () => {
   await page.waitForSelector('canvas')
   await page.waitForTimeout(400)
   assert((await page.locator('body').innerText()).includes('Your Apartment'), 'not in the apartment')
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+})
+
+await test('a door is opened from in front of it, not stood on', async () => {
+  const page = await newPage(null)
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(400)
+
+  const [door] = await exitsOf(page)
+  // Stand in front of the apartment door and confirm we are not on it.
+  assert(await moveTo(page, door.col, door.row - 1, 40), 'could not stand in front of the door')
+  const inFront = await posOf(page)
+  assert(
+    inFront.col === door.col && inFront.row === door.row - 1,
+    `expected to stop in front of the door, was at (${inFront.col},${inFront.row})`,
+  )
+  await step(page, 'ArrowDown')
+  await page.waitForTimeout(500)
+  assert((await page.locator('body').innerText()).includes('Basin Street'), 'the door did not open')
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+})
+
+await test('the bus will not take you anywhere until you win the home game', async () => {
+  const page = await newPage(null)
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(400)
+  await enterDoor(page, 'Outside')
+
+  await talkTo(page, 'Bus Stop')
+  const body = await page.locator('body').innerText()
+  assert(!body.includes('Travel'), 'the bus stop opened the travel screen before the home game')
+  assert((await page.locator('[data-testid="overworld"]').count()) === 1, 'left the street anyway')
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+})
+
+await test('the home town has blocks you can walk between', async () => {
+  const page = await newPage(null)
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(400)
+  await enterDoor(page, 'Outside')
+
+  assert(await page.locator('[data-testid="minimap"]').isVisible(), 'no minimap on the street')
+  await enterDoor(page, 'Seventh Street')
+  assert((await page.locator('body').innerText()).includes('Seventh Street'), 'did not reach Seventh Street')
+
+  // And the shops on it are real rooms, not signs.
+  await enterDoor(page, "Patel's")
+  const pois = await poisOf(page)
+  assert(pois.some((p) => p.name === 'Mr Patel'), `nobody in the shop (saw: ${pois.map((p) => p.name)})`)
+  await enterDoor(page, 'Seventh Street')
+  assert((await page.locator('body').innerText()).includes('Seventh Street'), 'could not get back out')
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+})
+
+await test('the window in the apartment is scenery, not a person', async () => {
+  const page = await newPage(null)
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(400)
+  const pois = await poisOf(page)
+  const window = pois.find((p) => p.name === 'Window')
+  assert(window, 'no window in the apartment')
+  // It is still there to look at; it just has no name plate floating over it.
+  const labelled = await page.evaluate(() => {
+    const el = document.querySelector('[data-testid="overworld"]')
+    return JSON.parse(el.dataset.pois).length
+  })
+  assert(labelled >= 2, 'the window stopped being interactable')
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+})
+
+await test('hands end without a panel to dismiss', async () => {
+  const page = await newPage(baseSave())
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(400)
+  await enterDoor(page, 'Casino')
+  await talkTo(page, 'Pit Boss')
+  assert(await page.locator('[data-testid="pot-value"]').isVisible(), 'never reached the table')
+
+  // Play to the end of a hand, then let it sit: the next one should be dealt
+  // without anything being clicked.
+  let sawBar = false
+  const firstHand = await page.locator('[data-testid="pot-value"]').getAttribute('data-pot')
+  for (let i = 0; i < 40; i++) {
+    if (await page.locator('[data-testid="hand-over-bar"]').isVisible().catch(() => false)) {
+      sawBar = true
+      break
+    }
+    for (const label of ['Check', /^Call/, 'Fold']) {
+      const btn = page.locator('button', { hasText: label })
+      if (await btn.isVisible().catch(() => false)) {
+        await btn.click()
+        break
+      }
+    }
+    await page.waitForTimeout(200)
+  }
+  assert(sawBar, 'never reached the end of a hand')
+  assert(
+    await page.locator('[data-testid="auto-deal-status"]').isVisible(),
+    'the end of a hand did not offer to carry on by itself',
+  )
+  // Nothing clicked: a new hand should arrive on its own.
+  await page.waitForTimeout(4200)
+  assert(
+    await page.locator('button', { hasText: /Fold|Check|^Call/ }).first().isVisible().catch(() => false),
+    'the next hand was never dealt without being asked',
+  )
   assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
   await page.close()
 })
@@ -399,6 +617,68 @@ await test('the penthouse opens after beating the rival', async () => {
   await enterDoor(page, 'Penthouse Lift')
   await talkTo(page, 'Attendant')
   assert(/Your Penthouse/.test(await page.locator('body').innerText()), 'penthouse did not open')
+  await page.close()
+})
+
+// The pot-odds coach divided by the pot without checking it was a live decision.
+// Between hands the contributions are cleared but currentBet is not, so a stale
+// "to call" sat next to an empty pot and it printed "Calling 3557 into 0 — you
+// need 100% to break even".
+await test('the pot-odds coach never divides by an empty pot', async () => {
+  const page = await newPage(baseSave({ lessonIds: ['pot-odds'] }))
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(400)
+  await enterDoor(page, 'Casino')
+  await talkTo(page, 'Pit Boss')
+  assert(await page.locator('[data-testid="pot-value"]').isVisible(), 'never reached the table')
+
+  const coach = page.locator('[data-testid="pot-odds"]')
+  for (let i = 0; i < 60; i++) {
+    if (await coach.isVisible().catch(() => false)) {
+      const text = await coach.innerText()
+      assert(!/into 0\b/.test(text), `pot-odds coach said: ${text}`)
+      const [, pot] = text.match(/into ([\d,]+)/) ?? []
+      assert(pot && Number(pot.replace(/,/g, '')) > 0, `pot-odds coach said: ${text}`)
+    }
+    let acted = false
+    for (const label of ['Next hand', 'Check', /^Call/, /^Fold/]) {
+      const btn = page.locator('button', { hasText: label })
+      if (await btn.isVisible().catch(() => false)) {
+        await btn.click()
+        acted = true
+        break
+      }
+    }
+    if (!acted) break
+    await page.waitForTimeout(150)
+  }
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+})
+
+// Menu scenes used only the top ~45% of the screen, which reads as a page that
+// failed to load.
+await test('menu scenes are centred vertically', async () => {
+  const page = await newPage(baseSave())
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(400)
+  await enterDoor(page, 'Casino')
+  await talkTo(page, 'Slot Row')
+  assert(await page.locator('[data-testid="slot-reels"]').isVisible(), 'slots did not open')
+  const gaps = await page.evaluate(() => {
+    const heading = [...document.querySelectorAll('h2')].at(-1)
+    const panel = heading?.parentElement
+    if (!panel) return null
+    const box = panel.getBoundingClientRect()
+    return { top: box.top, bottom: window.innerHeight - box.bottom, height: box.height }
+  })
+  assert(gaps, 'could not find the menu panel')
+  assert(
+    Math.abs(gaps.top - gaps.bottom) < Math.max(40, gaps.height * 0.25),
+    `menu panel is not centred: ${Math.round(gaps.top)}px above, ${Math.round(gaps.bottom)}px below`,
+  )
   await page.close()
 })
 

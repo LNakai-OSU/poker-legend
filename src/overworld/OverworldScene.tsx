@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Application } from 'pixi.js'
 import { buildTileLayer, isWalkable, TILE_SIZE, type TileGrid } from './tileRenderer'
-import { GridPlayer, type Direction } from './GridPlayer'
+import { DELTAS, GridPlayer, type Direction } from './GridPlayer'
 import { Npc, type NpcConfig } from './Npc'
 import { DialogueBox } from '../game/DialogueBox'
 import { TouchControls, useIsTouchDevice } from './TouchControls'
+import { cameraOffset } from './camera'
+import { Minimap } from './Minimap'
 
 const MOVE_KEYS: Record<string, Direction> = {
   ArrowUp: 'up', w: 'up', W: 'up',
@@ -49,7 +51,7 @@ interface OverworldSceneProps {
   map: TileGrid
   playerStart: { col: number; row: number }
   interactables: Interactable[]
-  /** Door tiles: stepping onto one leaves this area. */
+  /** Door tiles: walking into one leaves this area. */
   exits?: SceneExit[]
   onExit?: (exit: SceneExit) => void
   background?: string
@@ -58,6 +60,8 @@ interface OverworldSceneProps {
   /** A pursuer that hunts the player across the grid. */
   chaser?: ChaserConfig
   onCaught?: () => void
+  /** Labels the corner map. */
+  areaName?: string
 }
 
 export function OverworldScene({
@@ -70,10 +74,13 @@ export function OverworldScene({
   onCaught,
   exits = [],
   onExit,
+  areaName = '',
 }: OverworldSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [prompt, setPrompt] = useState<string | null>(null)
+  // Only changes once per tile stepped, so driving React from it is cheap.
+  const [playerTile, setPlayerTile] = useState(playerStart)
   const [talkingId, setTalkingId] = useState<string | null>(null)
   const talkingRef = useRef<string | null>(null)
   // Callbacks are read from refs inside the Pixi ticker, which is created once.
@@ -160,10 +167,12 @@ export function OverworldScene({
       instance.stage.addChild(world)
 
       world.scale.set(WORLD_ZOOM)
+      const worldWidth = map[0].length * TILE_SIZE * WORLD_ZOOM
+      const worldHeight = map.length * TILE_SIZE * WORLD_ZOOM
       const centerCamera = () => {
         world.position.set(
-          instance.screen.width / 2 - (player.pixelX + TILE_SIZE / 2) * WORLD_ZOOM,
-          instance.screen.height / 2 - (player.pixelY + TILE_SIZE / 2) * WORLD_ZOOM,
+          cameraOffset(instance.screen.width, worldWidth, (player.pixelX + TILE_SIZE / 2) * WORLD_ZOOM),
+          cameraOffset(instance.screen.height, worldHeight, (player.pixelY + TILE_SIZE / 2) * WORLD_ZOOM),
         )
       }
       centerCamera()
@@ -175,6 +184,29 @@ export function OverworldScene({
         occupied.has(`${col},${row}`) || (hunter !== null && hunter.col === col && hunter.row === row)
 
       const findAdjacent = () => npcs.find((n) => player.isAdjacentTo(n.config.col, n.config.row))
+
+      let leaving = false
+
+      /**
+       * A step, except that a door is opened from in front of it rather than
+       * stood on. Walking on top of a doorway and only then being whisked
+       * somewhere else looked like the player had fallen through the floor; now
+       * they stop on the tile before it, turn to face it, and the door takes
+       * them through.
+       */
+      const step = (direction: Direction) => {
+        if (leaving) return
+        const [dc, dr] = DELTAS[direction]
+        const door = exits.find((e) => e.col === player.col + dc && e.row === player.row + dr)
+        if (door) {
+          // Face the door and stay put. The transition is the move.
+          player.face(direction)
+          leaving = true
+          onExitRef.current?.(door)
+          return
+        }
+        player.tryMove(direction, map, isOccupied)
+      }
 
       const tryInteract = () => {
         if (talkingRef.current) return
@@ -194,7 +226,6 @@ export function OverworldScene({
 
       let sinceHunterStep = 0
       let caught = false
-      let leaving = false
       let elapsed = 0
       const stepMs = chaser?.stepMs ?? 430
       // People breathe; props don't. Each NPC bobs on its own phase so a row
@@ -216,28 +247,20 @@ export function OverworldScene({
           const touchDir = touchDirRef.current
           const heldKey = keysDown.values().next().value
           if (touchDir) {
-            player.tryMove(touchDir, map, isOccupied)
+            step(touchDir)
             tapQueue.length = 0
           } else if (heldKey !== undefined) {
             // Still held: walk continuously, and drop the buffered tap that
             // started this hold so releasing doesn't add a phantom extra step.
-            player.tryMove(MOVE_KEYS[heldKey], map, isOccupied)
+            step(MOVE_KEYS[heldKey])
             tapQueue.length = 0
           } else if (tapQueue.length > 0 && !player.moving) {
             // Released already. Serve the tap now, one step per press — and only
             // between tiles, so a tap during a step is honoured after it lands.
-            player.tryMove(tapQueue.shift()!, map, isOccupied)
+            step(tapQueue.shift()!)
           }
         }
-        const wasMoving = player.moving
         player.update(ticker.deltaMS)
-        if (wasMoving && !player.moving && !leaving) {
-          const door = exits.find((e) => e.col === player.col && e.row === player.row)
-          if (door) {
-            leaving = true
-            onExitRef.current?.(door)
-          }
-        }
 
         if (hunter && !caught) {
           sinceHunterStep += ticker.deltaMS
@@ -268,6 +291,11 @@ export function OverworldScene({
         if (wrapper && wrapper.dataset.playerRow !== String(player.row)) {
           wrapper.dataset.playerRow = String(player.row)
         }
+        setPlayerTile((current) =>
+          current.col === player.col && current.row === player.row
+            ? current
+            : { col: player.col, row: player.row },
+        )
 
         if (talkingRef.current) {
           setPrompt(null)
@@ -296,10 +324,42 @@ export function OverworldScene({
         interactables.map((i) => ({ id: i.id, name: i.name, col: i.col, row: i.row })),
       )}
       data-exits={JSON.stringify(exits)}
+      // The walkable grid, so the browser suite can path by breadth-first search
+      // instead of walking greedily at a target and giving up when furniture gets
+      // in the way. A greedy walker could also blunder into a doorway and leave
+      // the room it was trying to cross, which made failures look like missing
+      // content. People are in here too, since they block movement: a route
+      // planned without them walks into a shoulder and stops short.
+      // 'w' walkable, 'd' a door, 'o' someone standing there, '#' solid.
+      data-grid={map
+        .map((row, r) =>
+          row
+            .map((_, c) =>
+              exits.some((e) => e.col === c && e.row === r)
+                ? 'd'
+                : interactables.some((i) => i.col === c && i.row === r)
+                  ? 'o'
+                  : isWalkable(map, c, r)
+                    ? 'w'
+                    : '#',
+            )
+            .join(''),
+        )
+        .join('/')}
       style={{ position: 'relative', width: '100vw', height: '100vh' }}
     >
       <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
       {chaser && <div className="hunt-vignette" />}
+      <Minimap
+        map={map}
+        player={playerTile}
+        areaName={areaName}
+        markers={[
+          ...interactables.map((i) => ({ col: i.col, row: i.row, kind: 'poi' as const })),
+          ...exits.map((e) => ({ col: e.col, row: e.row, kind: 'exit' as const })),
+          ...(chaser ? [{ col: chaser.col, row: chaser.row, kind: 'chaser' as const }] : []),
+        ]}
+      />
       {hud && (
         <div
           style={{

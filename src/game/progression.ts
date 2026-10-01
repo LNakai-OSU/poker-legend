@@ -102,9 +102,14 @@ export type MissionStatus = 'unseen' | 'active' | 'ready' | 'done'
 
 export function missionStatus(state: GameState, missionId: string): MissionStatus {
   if (state.completedMissionIds.includes(missionId)) return 'done'
-  if (!state.acceptedMissionIds.includes(missionId)) return 'unseen'
   const mission = MISSIONS[missionId]
-  return mission && isGoalMet(state, mission.goal) ? 'ready' : 'active'
+  const goalMet = mission !== undefined && isGoalMet(state, mission.goal)
+  // A goal that is *already* met is ready whether or not the mission has been
+  // briefed. Otherwise the Harbor Doorman tells a player in a tailored suit to
+  // "come back in a real suit", because the brief is keyed on having talked to
+  // him rather than on what the player is actually wearing.
+  if (!state.acceptedMissionIds.includes(missionId)) return goalMet ? 'ready' : 'unseen'
+  return goalMet ? 'ready' : 'active'
 }
 
 /** Which stake the player's roll actually supports, for the mentor's advice. */

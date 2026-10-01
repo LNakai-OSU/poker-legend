@@ -7,6 +7,7 @@ import { ChipStack } from './ChipStack'
 import { avatarDataUrl, expressionFor, type Expression } from './avatars'
 import { personalityFor } from '../world/personalities'
 import { tellText } from './tellFlavor'
+import { HandAnnouncer, type Announcement } from './HandAnnouncer'
 
 export interface TableInsights {
   /** Unlocked by the mentor's position lesson. */
@@ -23,6 +24,8 @@ interface PokerTableViewProps {
   insights?: TableInsights
   /** A line of table talk currently on screen. */
   speech?: SeatSpeech | null
+  /** The current key moment, announced over the felt instead of in a panel. */
+  announcement?: Announcement | null
 }
 
 export interface SeatSpeech {
@@ -166,13 +169,47 @@ function seatPositions(count: number): { left: string; top: string }[] {
 
 function seatPlateStyle(isActing: boolean): CSSProperties {
   return {
-    background: 'rgba(8, 14, 12, 0.78)',
-    border: isActing ? '2px solid #f2c14e' : '1px solid #2c3d35',
-    borderRadius: 8,
-    padding: '3px 6px',
-    minWidth: 'clamp(62px, 17vw, 92px)',
-    boxShadow: isActing ? '0 0 14px rgba(242,193,78,0.4)' : 'none',
+    // A name plate on the rail: dark, slightly glassy, and lit when it is your turn.
+    background: isActing
+      ? 'linear-gradient(180deg, rgba(40,34,14,0.95) 0%, rgba(14,18,16,0.95) 100%)'
+      : 'linear-gradient(180deg, rgba(14,22,19,0.9) 0%, rgba(6,11,10,0.92) 100%)',
+    border: isActing ? '1px solid #f2c14e' : '1px solid #2c3d35',
+    borderRadius: 10,
+    padding: '4px 7px',
+    minWidth: 'clamp(66px, 18vw, 96px)',
+    boxShadow: isActing
+      ? '0 0 16px rgba(242,193,78,0.45), inset 0 1px 0 rgba(255,255,255,0.08)'
+      : 'inset 0 1px 0 rgba(255,255,255,0.05), 0 2px 6px rgba(0,0,0,0.4)',
   }
+}
+
+/** The dealer button, as an actual button on the felt. */
+function DealerButton() {
+  return (
+    <span
+      data-testid="dealer-button"
+      title="Dealer"
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 14,
+        height: 14,
+        borderRadius: '50%',
+        background: 'radial-gradient(circle at 35% 30%, #ffffff 0%, #e2ddcf 60%, #b7b0a0 100%)',
+        color: '#2a2a33',
+        fontSize: 9,
+        fontWeight: 'bold',
+        lineHeight: 1,
+        border: '1px solid #8d8678',
+        boxShadow: '0 1px 2px rgba(0,0,0,0.5)',
+        verticalAlign: 'middle',
+        marginLeft: 4,
+      }}
+    >
+      D
+    </span>
+  )
 }
 
 export function PokerTableView({
@@ -182,6 +219,7 @@ export function PokerTableView({
   yourHole,
   insights,
   speech,
+  announcement,
 }: PokerTableViewProps) {
   const labels = insights?.showPositions ? positionLabels(state) : null
   const handOver = !state.handInProgress && lastResult?.handNumber === state.handNumber
@@ -204,11 +242,34 @@ export function PokerTableView({
           // pushed the right-hand seat off the display entirely.
           height: 'clamp(300px, 46vh, 430px)',
           borderRadius: '46% / 58%',
-          background: 'radial-gradient(ellipse at 50% 42%, #1f6b4a 0%, #15543b 55%, #0e3b2a 100%)',
-          border: '10px solid #4a3324',
-          boxShadow: 'inset 0 0 60px rgba(0,0,0,0.45), 0 10px 30px rgba(0,0,0,0.4)',
+          background:
+            // Woven baize rather than a flat green: a broad highlight where the
+            // lights hang, a fine weave over it, and the cloth going dark at the rail.
+            `radial-gradient(ellipse at 50% 38%, rgba(255,255,255,0.09) 0%, transparent 58%),
+             repeating-linear-gradient(45deg, rgba(0,0,0,0.05) 0 1px, transparent 1px 3px),
+             repeating-linear-gradient(-45deg, rgba(255,255,255,0.03) 0 1px, transparent 1px 3px),
+             radial-gradient(ellipse at 50% 42%, #22744f 0%, #175c3f 52%, #0d3927 100%)`,
+          // A padded leather rail, lit from above.
+          border: '11px solid',
+          borderImage: 'linear-gradient(180deg, #6b4a33 0%, #4a3324 45%, #2c1d14 100%) 1 stretch',
+          boxShadow:
+            'inset 0 0 70px rgba(0,0,0,0.5), inset 0 2px 0 rgba(255,255,255,0.07), 0 14px 36px rgba(0,0,0,0.5)',
         }}
       >
+        {/* The betting line: chips go inside it, and it gives the oval a centre. */}
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            inset: '14% 11%',
+            borderRadius: '50%',
+            border: '1px solid rgba(255,255,255,0.1)',
+            boxShadow: 'inset 0 0 28px rgba(0,0,0,0.22)',
+            pointerEvents: 'none',
+          }}
+        />
+        <HandAnnouncer announcement={announcement ?? null} />
+
         {/* Pot and board, in the middle where the chips end up. */}
         <div
           style={{
@@ -235,7 +296,7 @@ export function PokerTableView({
               <Card key={`${state.handNumber}-${i}`} card={c} anim="deal" delayMs={i * 70} />
             ))}
             {Array.from({ length: 5 - state.board.length }).map((_, i) => (
-              <Card key={`hidden-${i}`} faceDown />
+              <Card key={`hidden-${i}`} placeholder />
             ))}
           </div>
         </div>
@@ -279,16 +340,22 @@ export function PokerTableView({
                   height={40}
                   style={{ imageRendering: 'pixelated', display: 'block', margin: '0 auto' }}
                 />
-                <div style={{ fontSize: 11 }}>
+                <div style={{ fontSize: 11, whiteSpace: 'nowrap' }}>
                   {p.name}
-                  {p.isDealer ? ' (D)' : ''}
+                  {p.isDealer && <DealerButton />}
                   {labels?.get(p.id) && <span style={{ color: '#8ad4ff' }}> {labels.get(p.id)}</span>}
                 </div>
-                <div data-testid={`stack-${p.id}`} data-stack={p.stack} style={{ fontSize: 11, color: '#f2c14e' }}>
+                <div
+                  data-testid={`stack-${p.id}`}
+                  data-stack={p.stack}
+                  style={{ fontSize: 12, color: '#f2c14e', fontWeight: 'bold', letterSpacing: 0.3 }}
+                >
                   {p.stack.toLocaleString()}
                 </div>
                 <div style={{ fontSize: 9, color: '#8f8fa6' }}>{personality.style}</div>
-                {p.allIn && <div style={{ fontSize: 9, color: '#e05a5a' }}>ALL IN</div>}
+                {p.allIn && (
+                  <div style={{ fontSize: 9, color: '#f0a0a0', letterSpacing: 1 }}>ALL IN</div>
+                )}
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'center', gap: 2, marginTop: 2 }}>
@@ -343,14 +410,19 @@ export function PokerTableView({
           >
             <ChipStack amount={you.streetContribution} testId="bet-you" />
             <div className={winners.has('you') ? 'seat-win' : undefined} style={seatPlateStyle(you.isActing)}>
-              <div style={{ fontSize: 11 }}>
-                You{you.isDealer ? ' (D)' : ''}
+              <div style={{ fontSize: 11, whiteSpace: 'nowrap' }}>
+                You
+                {you.isDealer && <DealerButton />}
                 {labels?.get('you') && <span style={{ color: '#8ad4ff' }}> {labels.get('you')}</span>}
               </div>
-              <div data-testid="stack-you" data-stack={you.stack} style={{ fontSize: 13, color: '#f2c14e' }}>
+              <div
+                data-testid="stack-you"
+                data-stack={you.stack}
+                style={{ fontSize: 14, color: '#f2c14e', fontWeight: 'bold', letterSpacing: 0.3 }}
+              >
                 {you.stack.toLocaleString()}
               </div>
-              {you.allIn && <div style={{ fontSize: 9, color: '#e05a5a' }}>ALL IN</div>}
+              {you.allIn && <div style={{ fontSize: 9, color: '#f0a0a0', letterSpacing: 1 }}>ALL IN</div>}
             </div>
             <div style={{ display: 'flex', justifyContent: 'center', gap: 3, marginTop: 3 }}>
               {yourHole.map((c, i) => (

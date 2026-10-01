@@ -80,6 +80,10 @@ export class TexasHoldEmTable {
   private handNumber = 0
   private lastResult: HandResult | null = null
   private handInProgress = false
+  /** Who made the last aggressive action on the current street, if anyone. */
+  private streetAggressorId: string | null = null
+  /** Who made the last aggressive action on the street before this one. */
+  private previousStreetAggressorId: string | null = null
   /** Regenerated once per street so a read stays stable while the player studies it. */
   private tellCache = new Map<string, TellSignal>()
 
@@ -198,6 +202,10 @@ export class TexasHoldEmTable {
     this.postBlind(bbIdx, this.bigBlind)
     this.currentBet = this.bigBlind
     this.lastRaiseSize = this.bigBlind
+    // Posting a blind is not aggression, so a limped pot has no preflop raiser
+    // and therefore nobody with a continuation bet to make.
+    this.streetAggressorId = null
+    this.previousStreetAggressorId = null
 
     this.refreshTells()
 
@@ -247,6 +255,26 @@ export class TexasHoldEmTable {
     return this.roster.find((p) => p.id === playerId)?.holeCards ?? []
   }
 
+  /**
+   * How many live opponents still have to act behind this seat on a postflop
+   * street. Postflop the orbit runs from the first live seat after the button
+   * round to the button itself, so everything between this seat and the button
+   * (inclusive) is still to come. 0 means this seat has the last word, which is
+   * the single biggest reason a bet is profitable.
+   */
+  private opponentsToActAfter(idx: number): number {
+    const n = this.roster.length
+    const orbitEnd = (this.dealerSeatIndex + 1) % n
+    let count = 0
+    for (let step = 1; step <= n; step++) {
+      const j = (idx + step) % n
+      if (j === orbitEnd) break
+      const p = this.roster[j]
+      if (!p.folded && !p.allIn && p.stack > 0) count++
+    }
+    return count
+  }
+
   /** Convenience adapter so callers don't have to re-derive AI inputs from getState(). */
   getAiContext(playerId: string): AiDecisionContext | null {
     if (this.actingIndex === null) return null
@@ -255,6 +283,10 @@ export class TexasHoldEmTable {
     const potSize = this.roster.reduce((sum, pl) => sum + pl.handContribution, 0)
     const opponentsInHand = this.roster.filter((pl) => pl !== p && !pl.folded).length
     return {
+      bigBlind: this.bigBlind,
+      wasPreviousStreetAggressor: this.previousStreetAggressorId === p.id,
+      opponentsToActAfter:
+        this.board.length >= 3 ? this.opponentsToActAfter(this.actingIndex) : undefined,
       hole: p.holeCards,
       board: [...this.board],
       potSize,
@@ -318,6 +350,7 @@ export class TexasHoldEmTable {
         if (p.streetContribution > this.currentBet) {
           this.lastRaiseSize = Math.max(raiseSize, this.lastRaiseSize)
           this.currentBet = p.streetContribution
+          this.streetAggressorId = p.id
           // A real raise reopens action for everyone else still live.
           for (const other of this.roster) {
             if (other !== p && !other.folded && !other.allIn) other.hasActedThisStreet = false
@@ -378,6 +411,8 @@ export class TexasHoldEmTable {
     }
     this.currentBet = 0
     this.lastRaiseSize = this.bigBlind
+    this.previousStreetAggressorId = this.streetAggressorId
+    this.streetAggressorId = null
 
     if (this.street === 'preflop') {
       this.board.push(this.deck.pop()!, this.deck.pop()!, this.deck.pop()!)
