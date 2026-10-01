@@ -118,23 +118,76 @@ const DOOR_TILE: Draw = (px) => {
   px(2, 0, 12, 1, '#4a3626')
 }
 
-let tileCache: Record<number, Texture> | null = null
+/**
+ * A town's colour, applied to every tile as a per-channel transform.
+ *
+ * There was one tile palette for the entire world, baked into the draw functions
+ * as literal hex, so Porto Lumina and the street outside your flat were the same
+ * grey — climbing the ladder changed a number rather than taking you somewhere.
+ * Recolouring the generated art keeps one set of tile drawings (which carry the
+ * detail) while letting each town look like itself.
+ */
+export interface TileTheme {
+  /** Per-channel multipliers, then a flat lift toward white. */
+  r: number
+  g: number
+  b: number
+  lift: number
+}
 
-export function tileTextures(): Record<number, Texture> {
-  if (!tileCache) {
-    tileCache = {
-      [FLOOR]: makeTexture(FLOOR_TILE),
-      [WALL]: makeTexture(WALL_TILE),
-      [FURNITURE]: makeTexture(FURNITURE_TILE),
-      [CARPET]: makeTexture(CARPET_TILE),
-      [WATER]: makeTexture(WATER_TILE),
-      [ROAD]: makeTexture(ROAD_TILE),
-      [SIDEWALK]: makeTexture(SIDEWALK_TILE),
-      [GRASS]: makeTexture(GRASS_TILE),
-      [DOOR]: makeTexture(DOOR_TILE),
-    }
+export const TILE_THEMES: Record<string, TileTheme> = {
+  // The baseline the art was drawn in.
+  default: { r: 1, g: 1, b: 1, lift: 0 },
+  /** Your flat and the blocks around it: cold, under-lit, nothing spent on it. */
+  home: { r: 0.9, g: 0.92, b: 1.02, lift: -4 },
+  /** Reservation casino: dust, warm lamps, brown carpet. */
+  dust: { r: 1.2, g: 1.02, b: 0.78, lift: 4 },
+  /** River town: damp green and silt. */
+  river: { r: 0.92, g: 1.12, b: 0.9, lift: 2 },
+  /** Harbour city: cold blue, wet stone. */
+  harbor: { r: 0.85, g: 0.98, b: 1.22, lift: 3 },
+  /** Island resort: bleached sand and shallow water. */
+  island: { r: 1.18, g: 1.14, b: 0.95, lift: 12 },
+  /** The strip: magenta and electric purple. */
+  neon: { r: 1.25, g: 0.82, b: 1.3, lift: 6 },
+  /** Marble and gold, and far too much of both. */
+  marble: { r: 1.22, g: 1.16, b: 1.0, lift: 18 },
+}
+
+function recolor(hex: string, theme: TileTheme): string {
+  const n = parseInt(hex.slice(1), 16)
+  const channel = (value: number, factor: number) =>
+    Math.max(0, Math.min(255, Math.round(value * factor + theme.lift)))
+  const r = channel((n >> 16) & 0xff, theme.r)
+  const g = channel((n >> 8) & 0xff, theme.g)
+  const b = channel(n & 0xff, theme.b)
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
+}
+
+/** Wraps a tile drawing so every colour it asks for is themed first. */
+function themed(draw: Draw, theme: TileTheme): Draw {
+  return (px) => draw((x, y, w, h, color) => px(x, y, w, h, recolor(color, theme)))
+}
+
+const tileCaches = new Map<string, Record<number, Texture>>()
+
+export function tileTextures(themeId = 'default'): Record<number, Texture> {
+  const cached = tileCaches.get(themeId)
+  if (cached) return cached
+  const theme = TILE_THEMES[themeId] ?? TILE_THEMES.default
+  const textures: Record<number, Texture> = {
+    [FLOOR]: makeTexture(themed(FLOOR_TILE, theme)),
+    [WALL]: makeTexture(themed(WALL_TILE, theme)),
+    [FURNITURE]: makeTexture(themed(FURNITURE_TILE, theme)),
+    [CARPET]: makeTexture(themed(CARPET_TILE, theme)),
+    [WATER]: makeTexture(themed(WATER_TILE, theme)),
+    [ROAD]: makeTexture(themed(ROAD_TILE, theme)),
+    [SIDEWALK]: makeTexture(themed(SIDEWALK_TILE, theme)),
+    [GRASS]: makeTexture(themed(GRASS_TILE, theme)),
+    [DOOR]: makeTexture(themed(DOOR_TILE, theme)),
   }
-  return tileCache
+  tileCaches.set(themeId, textures)
+  return textures
 }
 
 // ---------------------------------------------------------------------------

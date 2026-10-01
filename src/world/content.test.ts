@@ -17,6 +17,7 @@ import {
   findItem,
 } from './content'
 import { DOOR, isWalkable, parseMap } from '../overworld/tileRenderer'
+import { PERSONALITIES } from './personalities'
 
 describe('parseMap', () => {
   it('builds a rectangular grid and marks walls unwalkable', () => {
@@ -274,6 +275,112 @@ describe('progression curve', () => {
     for (const table of Object.values(TABLES)) {
       if (table.dressCode) {
         expect(best, `nothing on sale meets ${table.name}'s dress code`).toBeGreaterThanOrEqual(table.dressCode)
+      }
+    }
+  })
+})
+
+describe('the town is a place, not a palette swap', () => {
+  const cities = Object.values(CITIES)
+
+  it('gives every city its own colour', () => {
+    const themes = cities.map((city) => city.theme)
+    for (const city of cities) {
+      expect(city.theme, `${city.name} has no tile theme`).toBeDefined()
+    }
+    // Porto Lumina and the street outside your flat used to be the same grey,
+    // because one palette was baked into the tile art for the whole world.
+    expect(new Set(themes).size, 'two cities share a palette').toBe(cities.length)
+  })
+
+  it('does not draw two casinos as the same room', () => {
+    // Two cities' casino floors were pixel-for-pixel identical, down to the tile
+    // each dealer stood on, so climbing the ladder changed a number rather than
+    // taking you anywhere.
+    const signatures = new Map<string, string[]>()
+    for (const city of cities) {
+      for (const area of allAreas(city)) {
+        // Casino floors are the carpeted rooms.
+        if (!area.map.some((row) => row.includes(3))) continue
+        const signature = area.map.map((row) => row.join('')).join('/')
+        signatures.set(signature, [...(signatures.get(signature) ?? []), `${city.name}/${area.name}`])
+      }
+    }
+    const shared = [...signatures.values()].filter((rooms) => rooms.length > 1)
+    expect(
+      shared,
+      `these rooms are the identical tilemap: ${shared.map((r) => r.join(' = ')).join('; ')}`,
+    ).toHaveLength(0)
+  })
+})
+
+describe('the economy', () => {
+  const allItems = Object.values(SHOPS).flatMap((shop) => shop.items)
+
+  it('gives everything on sale an actual effect', () => {
+    // A lucky card protector, a casino hoodie and a $40,000 gold watch were
+    // inventory strings with a price: half the shops were a cash sink with a
+    // sentence attached.
+    for (const item of allItems) {
+      expect(item.effect, `${item.name} ($${item.price}) does nothing at all`).toBeDefined()
+    }
+  })
+
+  it('makes a vehicle worth buying', () => {
+    // Priced off the fare alone every vehicle was a strict loss — the sports car
+    // repaid itself after forty trips in a game with about twenty. A vehicle has
+    // to buy something other than a discount.
+    const vehicles = allItems.filter((item) => item.effect?.kind === 'fastTravel')
+    expect(vehicles.length, 'nothing in the game saves you a day on the road').toBeGreaterThan(0)
+    for (const vehicle of vehicles) {
+      const effect = vehicle.effect
+      if (effect?.kind !== 'fastTravel') continue
+      // And it should still cut the fare, or a car is a downgrade on price.
+      expect(effect.discount, `${vehicle.name} does not cut the fare`).toBeGreaterThan(0)
+    }
+  })
+
+  it('makes eating somewhere do something', () => {
+    const restaurants = Object.values(VENUES).filter((venue) => venue.kind === 'restaurant')
+    expect(restaurants.length).toBeGreaterThan(0)
+    for (const restaurant of restaurants) {
+      expect(
+        restaurant.restsForDays,
+        `${restaurant.name} charges $${restaurant.price} for two lines of flavour text`,
+      ).toBeGreaterThan(0)
+    }
+  })
+})
+
+describe('the opponents', () => {
+  it('says how every one of them plays', () => {
+    // Skill tier says how well somebody plays; archetype says how. Without the
+    // second, "plays every hand he is dealt" and "grinds small pots" were the same
+    // bot with different captions.
+    for (const table of Object.values(TABLES)) {
+      for (const opponent of table.opponents) {
+        expect(
+          opponent.archetype,
+          `${opponent.name} at ${table.name} has no playing style`,
+        ).toBeDefined()
+      }
+    }
+  })
+
+  it('seats more than two people at the main cash games', () => {
+    // Every table in the game was two or three handed, so the player was in a
+    // blind on most hands and every pot was an all-in by the turn.
+    const sixHanded = Object.values(TABLES).filter((table) => table.opponents.length >= 5)
+    expect(sixHanded.length, 'there is no six-handed game anywhere on the ladder').toBeGreaterThan(0)
+  })
+
+  it('gives every seated opponent a personality to speak with', () => {
+    for (const table of Object.values(TABLES)) {
+      for (const opponent of table.opponents) {
+        expect(
+          PERSONALITIES[opponent.id],
+          `${opponent.name} (${opponent.id}) has no personality entry`,
+        ).toBeDefined()
       }
     }
   })

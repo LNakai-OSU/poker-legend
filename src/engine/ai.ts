@@ -35,7 +35,157 @@ export interface AiDecisionContext {
    * there is technically a bet to call.
    */
   bigBlind?: number
+  /**
+   * What the player who put this bet in front of us has actually been doing, over
+   * the session so far.
+   *
+   * The decision context used to carry no opponent identity and no history at all,
+   * so the AI could not tell whether the bet in front of it came from the maniac
+   * or the nit — which made the "intel" the town sells about named opponents
+   * ("Ray plays every hand he is dealt") information that nothing in the engine
+   * could act on. Only the better tiers use it, and only once there is enough of a
+   * sample to mean anything.
+   */
+  opponentRead?: OpponentRead
 }
+
+export interface OpponentRead {
+  /** Share of their decisions that were a bet or a raise. */
+  aggression: number
+  /** Share of their decisions that were a fold. */
+  foldRate: number
+  /** Decisions observed. Below `MIN_READ_SAMPLES` this is not worth trusting. */
+  samples: number
+}
+
+/**
+ * How an archetype bends each decision, as a multiplier on the tier's own number.
+ *
+ * Every value is relative to `regular`, which is all ones, so a tier's tuning
+ * stays the baseline and an archetype is a deformation of it. The spreads are
+ * deliberately large — this is the axis that makes one opponent feel like a
+ * different person from the next, and a timid spread here is why they all used to
+ * feel the same.
+ */
+export interface ArchetypeProfile {
+  /** Share of starting hands they will put money in with. */
+  range: number
+  /** Calling discipline. Below 1 calls too wide; above 1 demands more than the price. */
+  callSlack: number
+  /** How often they bet when checked to. */
+  aggression: number
+  /** How often they bet with nothing. */
+  bluff: number
+  /** How much they overfold to a big bet. 0 is unbluffable. */
+  foldToBig: number
+  /** How often a hand worth raising is raised rather than flatted. */
+  raiseWithStrength: number
+  /** How much of the overbet vocabulary they have. */
+  overbet: number
+}
+
+const ARCHETYPES: Record<Archetype, ArchetypeProfile> = {
+  regular: {
+    range: 1,
+    callSlack: 1,
+    aggression: 1,
+    bluff: 1,
+    foldToBig: 1,
+    raiseWithStrength: 1,
+    overbet: 1,
+  },
+  // Waits for a hand, and folds the moment somebody fights back.
+  nit: {
+    range: 0.55,
+    callSlack: 1.12,
+    aggression: 0.72,
+    bluff: 0.35,
+    foldToBig: 1.45,
+    raiseWithStrength: 1.1,
+    overbet: 0.5,
+  },
+  // Calls everything, raises almost nothing. Cannot be bluffed and cannot
+  // stop paying off a value bet.
+  station: {
+    range: 1.3,
+    callSlack: 0.62,
+    aggression: 0.4,
+    bluff: 0.25,
+    foldToBig: 0.15,
+    raiseWithStrength: 0.35,
+    overbet: 0.15,
+  },
+  // Plays everything and bets it, whatever it is.
+  maniac: {
+    range: 1.45,
+    callSlack: 0.88,
+    aggression: 1.85,
+    bluff: 3.2,
+    foldToBig: 0.55,
+    raiseWithStrength: 1.35,
+    overbet: 1.5,
+  },
+  // A station with a bankroll. The dedicated whale handling elsewhere stays.
+  whale: {
+    range: 1.4,
+    callSlack: 0.55,
+    aggression: 0.75,
+    bluff: 1.6,
+    foldToBig: 0,
+    raiseWithStrength: 0.5,
+    overbet: 0.3,
+  },
+}
+
+export function archetypeOf(ctx: AiDecisionContext): ArchetypeProfile {
+  return ARCHETYPES[ctx.archetype ?? 'regular']
+}
+
+/** Decisions that have to be observed before a read is worth anything. */
+export const MIN_READ_SAMPLES = 18
+
+/** The aggression and fold rates a read is measured against. */
+const BASELINE_AGGRESSION = 0.3
+const BASELINE_FOLD_RATE = 0.25
+
+/**
+ * How a read of the bettor changes what to do about their bet.
+ *
+ * Two adjustments, both of them the obvious ones a human makes at a table:
+ *
+ * - Somebody who bets constantly is betting a wide range, so their bet means less
+ *   and calling gets looser.
+ * - Somebody who never folds cannot be bluffed, so stop trying.
+ *
+ * Confidence scales with the sample and with observational skill, so a novice
+ * barely adjusts and an elite adjusts most — and nobody adjusts off three hands.
+ */
+export function readAdjustment(
+  ctx: AiDecisionContext,
+): { callLoosening: number; bluffScale: number } {
+  const read = ctx.opponentRead
+  if (!read || read.samples < MIN_READ_SAMPLES) return { callLoosening: 1, bluffScale: 1 }
+
+  const sampleWeight = Math.min(1, read.samples / (MIN_READ_SAMPLES * 3))
+  const confidence = RANGE_READING[ctx.skillTier] * sampleWeight
+
+  // An over-aggressive bettor earns a looser call; a passive one earns respect.
+  const aggressionGap = read.aggression - BASELINE_AGGRESSION
+  const callLoosening = 1 - aggressionGap * confidence * READ_CALL_SENSITIVITY
+
+  // Somebody who folds less than the baseline is worth bluffing less.
+  const foldGap = read.foldRate - BASELINE_FOLD_RATE
+  const bluffScale = Math.max(
+    0.1,
+    1 + foldGap * confidence * READ_BLUFF_SENSITIVITY,
+  )
+
+  return { callLoosening: Math.max(0.5, Math.min(1.5, callLoosening)), bluffScale }
+}
+
+/** How hard a read moves the calling threshold and the bluffing rate. */
+const READ_CALL_SENSITIVITY = 1.2
+const READ_BLUFF_SENSITIVITY = 3
 
 const EQUITY_ITERATIONS: Record<SkillTier, number> = {
   novice: 80,
@@ -332,7 +482,9 @@ function pickBetFraction(ctx: AiDecisionContext, purpose: BetPurpose, rng: Rng):
     // Polarity pushes weight toward the sizings furthest from half-pot.
     const distance = Math.abs(sizing.fraction - 0.5)
     const aptitude =
-      sizing.fraction > OVERBET_THRESHOLD ? OVERBET_APTITUDE[ctx.skillTier] : 1
+      sizing.fraction > OVERBET_THRESHOLD
+        ? OVERBET_APTITUDE[ctx.skillTier] * archetypeOf(ctx).overbet
+        : 1
     return base * Math.pow(polarity, distance * 2) * aptitude
   })
   const total = weights.reduce((sum, w) => sum + w, 0)
@@ -482,7 +634,7 @@ const SEAT_RANGE_PER_OPPONENT = 0.06
  */
 export function preflopRange(ctx: AiDecisionContext, isWhale: boolean): number {
   if (isWhale) return 1
-  let range = PREFLOP_RANGE[ctx.skillTier]
+  let range = PREFLOP_RANGE[ctx.skillTier] * archetypeOf(ctx).range
   if (ctx.bigBlind !== undefined && ctx.currentBet > ctx.bigBlind) {
     const raisedBy = (ctx.currentBet - ctx.bigBlind) / ctx.bigBlind
     range *= Math.max(PREFLOP_RANGE_VS_RAISE_FLOOR, 1 - raisedBy * PREFLOP_RANGE_PER_BB_RAISED)
@@ -826,6 +978,7 @@ export function callRequirement(
   const premium =
     BLUFF_CATCH_PREMIUM[ctx.skillTier] *
     BLUFF_CATCH_STREET_WEIGHT[ctx.street] *
+    archetypeOf(ctx).foldToBig *
     betPressure *
     rng() *
     BLUFF_CATCH_SPREAD
@@ -869,7 +1022,13 @@ export function openBetFrequency(
       ? OPEN_STAB[tier] * BARREL_DECAY ** barrels * foldEquity
       : 0
 
-  const stab = (BLUFF_CHANCE[tier] + (isWhale ? WHALE_EXTRA_BLUFF_CHANCE : 0)) * foldEquity
+  const profile = archetypeOf(ctx)
+  const bluffScale = readAdjustment(ctx).bluffScale
+  const stab =
+    (BLUFF_CHANCE[tier] + (isWhale ? WHALE_EXTRA_BLUFF_CHANCE : 0)) *
+    profile.bluff *
+    bluffScale *
+    foldEquity
 
   const position = ctx.opponentsToActAfter === 0 ? POSITION_BET_BONUS[tier] * foldEquity : 0
 
@@ -881,13 +1040,18 @@ export function openBetFrequency(
   const bluffing = perceivedEquity < evenShare
   const damping = bluffing && ctx.street === 'river' ? RIVER_BLUFF_DAMPING : 1
 
-  return anyOf(
+  const shaped = anyOf(
     value,
-    continuation * damping,
+    continuation * profile.aggression * (bluffing ? bluffScale : 1) * damping,
     stab * damping,
-    position * damping,
-    isWhale ? WHALE_BET_FREQUENCY : 0,
+    position * profile.aggression * damping,
   )
+  // Value betting is scaled too, but gently: even a station bets a monster.
+  const styled = clamp01(shaped * (0.4 + 0.6 * profile.aggression))
+  // A whale's floor is deliberately outside all of that. Scaling it by archetype
+  // aggression made whales *tighter* than a sharp player, which is the one thing
+  // they must never be — betting far too much for the stakes is what they are.
+  return anyOf(styled, isWhale ? WHALE_BET_FREQUENCY : 0)
 }
 
 /**
@@ -915,11 +1079,17 @@ export function decideAiAction(ctx: AiDecisionContext, rng: Rng): Action {
 
   // Whales are looser than even the worst disciplined player, but the two
   // leaks don't stack: take whichever slack is wider.
+  const profile = archetypeOf(ctx)
+  const read = readAdjustment(ctx)
   const callSlack = isWhale
     ? Math.min(WHALE_CALL_SLACK, CALL_SLACK[ctx.skillTier])
-    : CALL_SLACK[ctx.skillTier]
+    : CALL_SLACK[ctx.skillTier] * profile.callSlack * read.callLoosening
 
-  const bluffRoll = rng() < BLUFF_CHANCE[ctx.skillTier] + (isWhale ? WHALE_EXTRA_BLUFF_CHANCE : 0)
+  const bluffRoll =
+    rng() <
+    (BLUFF_CHANCE[ctx.skillTier] + (isWhale ? WHALE_EXTRA_BLUFF_CHANCE : 0)) *
+      profile.bluff *
+      read.bluffScale
   // Bluffing is only on the table when it is cheap: facing nothing, or a small
   // bet relative to the pot, and never when calling would already be all-in.
   const priceIsSmall =
@@ -961,7 +1131,10 @@ export function decideAiAction(ctx: AiDecisionContext, rng: Rng): Action {
   // hand to keep a worse one in, or to keep the pot small out of position, is
   // ordinary poker, and raising every time instead turned every made hand into a
   // bet-or-fold contest where calling barely existed as an action.
-  if (perceivedEquity > raiseThreshold && rng() < RAISE_WITH_STRENGTH_FREQUENCY[ctx.skillTier]) {
+  if (
+    perceivedEquity > raiseThreshold &&
+    rng() < RAISE_WITH_STRENGTH_FREQUENCY[ctx.skillTier] * profile.raiseWithStrength
+  ) {
     return { type: 'raise', to: raiseTo('value') }
   }
   if (wantsToBluff) {

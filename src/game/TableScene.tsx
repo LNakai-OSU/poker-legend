@@ -9,7 +9,7 @@ import { PokerTableView, handTakings, potWinnerIds, type SeatSpeech } from './Po
 import type { Announcement } from './HandAnnouncer'
 import { personalityFor } from '../world/personalities'
 import type { GameState } from './state'
-import { tableAccess } from './progression'
+import { tableAccess, tellClarity } from './progression'
 import { playSound } from '../audio/audio'
 import { useAmbientMusic } from '../audio/SoundToggle'
 
@@ -395,6 +395,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
   const insights = {
     showPositions: state.lessonIds.includes('position'),
     sharpEyes: state.lessonIds.includes('tells'),
+    tellClarity: tellClarity(state),
   }
 
   // Equity is a Monte Carlo run, so only compute it when the read is actually

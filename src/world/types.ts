@@ -28,6 +28,27 @@ export interface TableDef {
 export type ItemEffect =
   | { kind: 'travelDiscount'; value: number }
   | { kind: 'dressCode'; level: number }
+  /**
+   * Makes opponents' tells easier to see, in the same currency as the Spotting
+   * Tells lesson. A keepsake you handle instead of fidgeting with your cards is
+   * one less thing taking your eyes off the table.
+   */
+  | { kind: 'tellClarity'; value: number }
+  /**
+   * Counts toward the reputation that clubs check at the door. A thing you wear
+   * that says you belong here is the whole point of wearing it.
+   */
+  | { kind: 'reputation'; value: number }
+  /**
+   * Travel stops costing a day.
+   *
+   * This is what makes a vehicle worth buying. Priced purely off the fare, every
+   * vehicle in the game was a loss: the sports car saved $2,250 on the most
+   * expensive route, so it paid for itself after forty trips in a game with maybe
+   * twenty. Time is the scarce resource — debts come due on a day count — so time
+   * is what a car should buy.
+   */
+  | { kind: 'fastTravel'; discount: number }
 
 export interface ShopItemDef {
   id: string
@@ -108,6 +129,15 @@ export interface PoiDef {
   /** Scenery sets this false so no name plate floats over it. */
   labelled?: boolean
   /**
+   * Other things this person might say, chosen by the day.
+   *
+   * Ambient locals repeated one line verbatim on the second, third and tenth
+   * talk, which is most of why walking anywhere felt pointless: the town produced
+   * one sentence you had already read. Rotating by day means coming back later
+   * gets you something new.
+   */
+  altLines?: string[][]
+  /**
    * A story flag that must be set before the action fires. Until then the POI is
    * still there to look at and says `lockedLines` instead — a locked door you can
    * see reads better than one that is simply absent.
@@ -133,6 +163,15 @@ export interface VenueDef {
   lines: string[]
   /** Lines shown when a club invite lands. */
   inviteLines?: string[]
+  /**
+   * Restaurants: days of being rested a meal buys.
+   *
+   * Every restaurant in the game charged between $12 and $260 for two lines of
+   * flavour text and changed no state at all, which made half the town a cash sink
+   * with a sentence attached. Sitting down to eat now buys you a session of seeing
+   * the table more clearly.
+   */
+  restsForDays?: number
 }
 
 /** A door: step onto this tile and you come out somewhere else. */
@@ -171,4 +210,6 @@ export interface CityDef {
   /** Bankroll needed before you can travel here at all. */
   unlockCash: number
   travelCost: number
+  /** Which tile palette the whole town is drawn in (see TILE_THEMES). */
+  theme?: string
 }

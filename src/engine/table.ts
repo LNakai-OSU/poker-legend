@@ -5,7 +5,7 @@ import type { Rng } from './rng'
 import { defaultRng } from './rng'
 import type { Action, Card, PlayerConfig, Street, TellSignal } from './types'
 import { generateTell } from './tells'
-import type { AiDecisionContext } from './ai'
+import type { AiDecisionContext, OpponentRead } from './ai'
 
 interface PlayerRuntime extends PlayerConfig {
   stack: number
@@ -86,6 +86,15 @@ export class TexasHoldEmTable {
   private previousStreetAggressorId: string | null = null
   /** Regenerated once per street so a read stays stable while the player studies it. */
   private tellCache = new Map<string, TellSignal>()
+  /**
+   * What each player has actually done at this table, across the whole session.
+   *
+   * This is the material a read is made of. Without it nobody at the table could
+   * tell the maniac from the nit, so no opponent could be played differently from
+   * any other — and the intel the town sells about named players was describing
+   * behaviour the engine had no way to exhibit or to notice.
+   */
+  private actionCounts = new Map<string, { aggressive: number; folds: number; total: number }>()
 
   constructor(players: PlayerConfig[], options: TableOptions) {
     if (players.length < 2) throw new Error('need at least 2 players')
@@ -118,11 +127,28 @@ export class TexasHoldEmTable {
   }
 
   isGameOver(): boolean {
+    /*
+     * Nobody is out while a hand is still being played.
+     *
+     * A player who is all in has a stack of zero but has not lost anything yet —
+     * their chips are in the middle and they may be about to win the pot. Counting
+     * a zero stack as eliminated meant that heads-up, the moment an opponent
+     * shoved, the game announced you had cleaned out the table: the hand was
+     * declared over before the cards that decided it were dealt.
+     */
+    if (this.handInProgress) return false
     return this.roster.filter((p) => p.stack > 0).length <= 1
   }
 
-  /** The single remaining player with chips, once isGameOver() is true. */
+  /**
+   * The single remaining player with chips, once isGameOver() is true.
+   *
+   * Defers to `isGameOver` rather than counting stacks again: asked mid-hand it
+   * used to name the player who was not all in as the winner of the whole
+   * freezeout, which is the same bug in a second place.
+   */
   getFreezeoutWinnerId(): string | null {
+    if (!this.isGameOver()) return null
     const remaining = this.roster.filter((p) => p.stack > 0)
     return remaining.length === 1 ? remaining[0].id : null
   }
@@ -135,7 +161,20 @@ export class TexasHoldEmTable {
     this.tellCache.clear()
     for (const p of this.roster) {
       if (p.isHuman || p.folded || p.stack <= 0 || p.holeCards.length === 0) continue
-      const tell = generateTell(p.id, p.holeCards, this.board, p.skillTier, this.rng, p.archetype)
+      // How many people they are actually up against decides what counts as a
+      // strong hand — and so what there is to react to in the first place.
+      const opponentsInHand = this.roster.filter(
+        (other) => other !== p && !other.folded && other.stack > 0,
+      ).length
+      const tell = generateTell(
+        p.id,
+        p.holeCards,
+        this.board,
+        p.skillTier,
+        this.rng,
+        p.archetype,
+        opponentsInHand,
+      )
       if (tell) this.tellCache.set(p.id, tell)
     }
   }
@@ -308,6 +347,7 @@ export class TexasHoldEmTable {
     return {
       bigBlind: this.bigBlind,
       wasPreviousStreetAggressor: this.previousStreetAggressorId === p.id,
+      opponentRead: this.readOnCurrentAggressor(p.id),
       opponentsToActAfter:
         this.board.length >= 3 ? this.opponentsToActAfter(this.actingIndex) : undefined,
       hole: p.holeCards,
@@ -322,6 +362,13 @@ export class TexasHoldEmTable {
       archetype: p.archetype,
       street: this.street,
     }
+  }
+
+  /** The read on whoever we are facing, or undefined when that is nobody but us. */
+  private readOnCurrentAggressor(selfId: string): OpponentRead | undefined {
+    const aggressor = this.currentAggressorId()
+    if (!aggressor || aggressor === selfId) return undefined
+    return this.getReadOn(aggressor)
   }
 
   getLegalActions(playerId: string): Action[] {
@@ -383,8 +430,39 @@ export class TexasHoldEmTable {
       }
     }
     p.hasActedThisStreet = true
+    this.recordAction(p.id, action)
 
     this.advance()
+  }
+
+  private recordAction(playerId: string, action: Action): void {
+    const stats = this.actionCounts.get(playerId) ?? { aggressive: 0, folds: 0, total: 0 }
+    stats.total += 1
+    if (action.type === 'raise') stats.aggressive += 1
+    if (action.type === 'fold') stats.folds += 1
+    this.actionCounts.set(playerId, stats)
+  }
+
+  /**
+   * The session read on one player: how often they put money in and how often
+   * they give up. Public so the UI can show the player the same notes the AI uses.
+   */
+  getReadOn(playerId: string): OpponentRead | undefined {
+    const stats = this.actionCounts.get(playerId)
+    if (!stats || stats.total === 0) return undefined
+    return {
+      aggression: stats.aggressive / stats.total,
+      foldRate: stats.folds / stats.total,
+      samples: stats.total,
+    }
+  }
+
+  /**
+   * Who put the current bet in. That is the player a decision is actually against,
+   * so it is their read that matters — not an average of the table.
+   */
+  private currentAggressorId(): string | null {
+    return this.streetAggressorId ?? this.previousStreetAggressorId
   }
 
   private advance() {

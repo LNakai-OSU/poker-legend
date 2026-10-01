@@ -14,6 +14,8 @@ export interface TableInsights {
   showPositions: boolean
   /** Unlocked by the tells lesson — faint reads become legible instead of near-invisible. */
   sharpEyes: boolean
+  /** Extra legibility bought with items or a meal, on top of the lesson. */
+  tellClarity?: number
 }
 
 interface PokerTableViewProps {
@@ -162,6 +164,14 @@ function seatPositions(count: number): { left: string; top: string }[] {
       { left: '36%', top: '1%' },
       { left: '64%', top: '1%' },
       { left: '86%', top: '26%' },
+    ],
+    // Six-handed: five opponents round the far rail, you at the near edge.
+    5: [
+      { left: '11%', top: '34%' },
+      { left: '28%', top: '4%' },
+      { left: '50%', top: '0%' },
+      { left: '72%', top: '4%' },
+      { left: '89%', top: '34%' },
     ],
   }
   return layouts[count] ?? layouts[3]
@@ -389,11 +399,14 @@ export function PokerTableView({
                     fontSize: 10,
                     fontStyle: 'italic',
                     marginTop: 2,
-                    color: `rgba(242, 193, 78, ${
-                      insights?.sharpEyes
+                    // The lesson, a card protector and a hot meal all buy the same
+                    // thing: a cue you can actually make out.
+                    color: `rgba(242, 193, 78, ${Math.min(
+                      1,
+                      (insights?.sharpEyes
                         ? Math.max(0.8, 0.4 + p.tell.visibility * 0.6)
-                        : 0.4 + p.tell.visibility * 0.6
-                    })`,
+                        : 0.4 + p.tell.visibility * 0.6) + (insights?.tellClarity ?? 0),
+                    )})`,
                   }}
                 >
                   {tellText(p.name, p.tell)}

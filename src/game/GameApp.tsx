@@ -9,7 +9,7 @@ import { CrapsScene, SlotsScene } from './CasinoGameScenes'
 import { PenthouseScene, VenueScene } from './VenueScenes'
 import { SettingsScene } from './SettingsScene'
 import { LESSONS, MISSIONS, SPONSORS, TABLES } from '../world/content'
-import { missionStatus, tableAccess, travelCostTo } from './progression'
+import { hasFastTravel, missionStatus, tableAccess, travelCostTo } from './progression'
 import { clearSave, loadGame, saveGame } from './save'
 import { SoundToggle, useAudioUnlock } from '../audio/SoundToggle'
 import { playSound } from '../audio/audio'
@@ -367,7 +367,11 @@ export function GameApp() {
         <TravelScene
           state={state}
           onTravel={(cityId: CityId) => {
-            setState((s) => travelTo({ ...s, cash: s.cash - travelCostTo(s, cityId) }, cityId))
+            setState((s) =>
+              travelTo({ ...s, cash: s.cash - travelCostTo(s, cityId) }, cityId, {
+                keepDay: hasFastTravel(s),
+              }),
+            )
             backToCity()
           }}
           onBack={backToCity}
@@ -399,6 +403,9 @@ export function GameApp() {
           state={state}
           onSpend={(amount) => setState((s) => ({ ...s, cash: Math.max(0, s.cash - amount) }))}
           onUnlockTable={(tableId) => setState((s) => unlockTable(s, tableId))}
+          onRest={(days) =>
+            setState((s) => ({ ...s, restedUntilDay: Math.max(s.restedUntilDay, s.day + days) }))
+          }
           onBack={backToCity}
         />
       )

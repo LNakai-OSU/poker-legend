@@ -83,6 +83,84 @@ const CASINO_FLOOR = parseMap(`
 ########D#########
 `)
 
+/*
+ * Every casino in the game was this one map. Two different cities' floors were
+ * pixel-for-pixel identical, down to the tile each dealer stood on, so climbing
+ * the ladder changed a number rather than taking you anywhere. These keep the
+ * same footprint and the same doorway — the POIs in each area are placed against
+ * them — but the floor plan differs, so the rooms read as different rooms.
+ */
+
+/** A riverboat: everything crammed along one side, machines facing the water. */
+const RIVERBOAT_FLOOR = parseMap(`
+##################
+#,,,,,,,,,,,,,,,,#
+#,,FFFFFFFF,,,,,,#
+#,,,,,,,,,,,,,,,,#
+#,,,,,,,,,,,FFFF,#
+#,FFFF,,,,,,FFFF,#
+#,FFFF,,,,,,,,,,,#
+#,,,,,,,,,,,,,,,,#
+#,,,,,,,,,,,,,,,,#
+########D#########
+`)
+
+/** A card room: four tables in a square and no slot machines at all. */
+const CARDROOM_FLOOR = parseMap(`
+##################
+#,,,,,,,,,,,,,,,,#
+#,,FFFF,,,,FFFF,,#
+#,,FFFF,,,,FFFF,,#
+#,,,,,,,,,,,,,,,,#
+#,,,,,,,,,,,,,,,,#
+#,,FFFF,,,,FFFF,,#
+#,,FFFF,,,,FFFF,,#
+#,,,,,,,,,,,,,,,,#
+########D#########
+`)
+
+/** An island room: open, airy, two long tables and space to walk. */
+const CAY_FLOOR = parseMap(`
+##################
+#,,,,,,,,,,,,,,,,#
+#,,,,,,,,,,,,,,,,#
+#,,FFFFF,,FFFFF,,#
+#,,,,,,,,,,,,,,,,#
+#,,,,,,,,,,,,,,,,#
+#,,FFFFF,,FFFFF,,#
+#,,,,,,,,,,,,,,,,#
+#,,,,,,,,,,,,,,,,#
+########D#########
+`)
+
+/** The strip: banks of machines along both walls, pit in the middle. */
+const MESA_FLOOR = parseMap(`
+##################
+#,FF,FF,,,FF,FF,,#
+#,,,,,,,,,,,,,,,,#
+#,,,,,,,,,,,,,,,,#
+#,,,,FFFFFF,,,,,,#
+#,,,,FFFFFF,,,,,,#
+#,,,,,,,,,,,,,,,,#
+#,FF,FF,,,FF,FF,,#
+#,,,,,,,,,,,,,,,,#
+########D#########
+`)
+
+/** Marble and almost nothing in it, which is the point. */
+const LUMINA_FLOOR = parseMap(`
+##################
+#,,,,,,,,,,,,,,,,#
+#,,,,,,,,,,,,,,,,#
+#,,,,,,,,,,,,,,,,#
+#,,,,FFFFFFFF,,,,#
+#,,,,,,,,,,,,,,,,#
+#,,,,,,,,,,,,,,,,#
+#,,,,,,,,,,,,,,,,#
+#,,,,,,,,,,,,,,,,#
+########D#########
+`)
+
 /** A small shop or room: counter along the back. */
 const SHOP_ROOM = parseMap(`
 ##############
@@ -120,8 +198,25 @@ function area(
 }
 
 /** Ambient locals, so a street has people on it rather than just shopfronts. */
-function local(id: string, name: string, col: number, row: number, lines: string[]): PoiDef {
-  return { id, name, col, row, color: COLORS.local, lines, action: { kind: 'flavor' } }
+function local(
+  id: string,
+  name: string,
+  col: number,
+  row: number,
+  lines: string[],
+  /** Other days, other remarks. */
+  ...altLines: string[][]
+): PoiDef {
+  return {
+    id,
+    name,
+    col,
+    row,
+    color: COLORS.local,
+    lines,
+    altLines: altLines.length > 0 ? altLines : undefined,
+    action: { kind: 'flavor' },
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -178,6 +273,7 @@ D----------------------#
 
 const apartmentCity: CityDef = {
   id: 'apartment',
+  theme: 'home',
   name: 'Your Apartment',
   blurb: 'One room, a mattress, and a window that faces a wall.',
   entryAreaId: 'home',
@@ -248,14 +344,41 @@ const apartmentCity: CityDef = {
           ],
           action: { kind: 'travel' },
         },
-        local('neighbour', 'Neighbour', 4, 3, [
-          'Neighbour: You are up late. Or early. I can never tell with you.',
-          'Neighbour: Marcus was banging on your door earlier. Something about cards.',
-        ]),
-        local('street-kid', 'Kid on a Bike', 15, 8, [
-          'Kid: My uncle says the casino out on the reservation is rigged.',
-          'Kid: My uncle also owes my mum four hundred bucks, so.',
-        ]),
+        local(
+          'neighbour',
+          'Neighbour',
+          4,
+          3,
+          [
+            'Neighbour: You are up late. Or early. I can never tell with you.',
+            'Neighbour: Marcus was banging on your door earlier. Something about cards.',
+          ],
+          [
+            'Neighbour: Still no rent cheque under my door, I notice.',
+            'Neighbour: I am not your landlord. I just like knowing things.',
+          ],
+          ['Neighbour: You have got that look. Like you won something.'],
+          [
+            'Neighbour: My brother played cards for money once.',
+            'Neighbour: He is fine. He sells boats now. Mostly fine.',
+          ],
+        ),
+        local(
+          'street-kid',
+          'Kid on a Bike',
+          15,
+          8,
+          [
+            'Kid: My uncle says the casino out on the reservation is rigged.',
+            'Kid: My uncle also owes my mum four hundred bucks, so.',
+          ],
+          ['Kid: Are you actually a gambler? You do not look like one.'],
+          [
+            'Kid: I can do a wheelie for a dollar.',
+            'Kid: ...I cannot do a wheelie. But I would have tried.',
+          ],
+          ['Kid: My mum says the bus north only goes one direction for people like you.'],
+        ),
         local('basin-laundry-sign', 'Laundromat Sign', 16, 2, [
           'A hand-written sign: CHANGE MACHINE BROKEN. BE NICE ABOUT IT.',
         ]),
@@ -352,6 +475,7 @@ const apartmentCity: CityDef = {
 
 const silverCreek: CityDef = {
   id: 'silverCreek',
+  theme: 'dust',
   name: 'Silver Creek',
   blurb: 'Reservation resort casino. Carpet, cigarette smoke, and one live poker table.',
   entryAreaId: 'street',
@@ -375,10 +499,22 @@ const silverCreek: CityDef = {
           lines: ['Departures twice a day, and a timetable nobody has updated.'],
           action: { kind: 'travel' },
         },
-        local('sc-smoker', 'Smoker', 8, 2, [
-          'Smoker: They comp the coffee if you sit long enough.',
-          'Smoker: I have been sitting a very long time.',
-        ]),
+        local(
+          'sc-smoker',
+          'Smoker',
+          8,
+          2,
+          [
+            'Smoker: They comp the coffee if you sit long enough.',
+            'Smoker: I have been sitting a very long time.',
+          ],
+          ['Smoker: Ray is in there. Ray is always in there.'],
+          [
+            'Smoker: Word is somebody new has been winning.',
+            'Smoker: Word is usually wrong. But not always.',
+          ],
+          ['Smoker: Quiet night. Quiet nights are the expensive ones.'],
+        ),
         local('sc-valet', 'Valet', 17, 3, [
           'Valet: Casino is the big doors. Gift shop is the small ones.',
           'Valet: Nobody has ever tipped me for saying that.',
@@ -463,6 +599,7 @@ const silverCreek: CityDef = {
 
 const riverbend: CityDef = {
   id: 'riverbend',
+  theme: 'river',
   name: 'Riverbend Landing',
   blurb: 'A permanently moored riverboat with better players and worse coffee.',
   entryAreaId: 'street',
@@ -513,7 +650,7 @@ const riverbend: CityDef = {
     boat: area(
       'boat',
       'The Riverboat',
-      CASINO_FLOOR,
+      RIVERBOAT_FLOOR,
       { col: 8, row: 8 },
       '#0f1620',
       [
@@ -589,6 +726,7 @@ const riverbend: CityDef = {
 
 const crescentHarbor: CityDef = {
   id: 'crescentHarbor',
+  theme: 'harbor',
   name: 'Crescent Harbor',
   blurb: 'A real city with a real card room, and people who do this for a living.',
   entryAreaId: 'street',
@@ -652,7 +790,7 @@ const crescentHarbor: CityDef = {
     cardroom: area(
       'cardroom',
       'Harbor Card Room',
-      CASINO_FLOOR,
+      CARDROOM_FLOOR,
       { col: 8, row: 8 },
       '#121020',
       [
@@ -792,6 +930,7 @@ const crescentHarbor: CityDef = {
 
 const palmCay: CityDef = {
   id: 'palmCay',
+  theme: 'island',
   name: 'Palm Cay',
   blurb: 'A resort island where the money is soft and the regulars are not.',
   entryAreaId: 'street',
@@ -843,7 +982,7 @@ const palmCay: CityDef = {
     casino: area(
       'casino',
       'The Cay Room',
-      CASINO_FLOOR,
+      CAY_FLOOR,
       { col: 8, row: 8 },
       '#0c1a1c',
       [
@@ -937,6 +1076,7 @@ const palmCay: CityDef = {
 
 const neonMesa: CityDef = {
   id: 'neonMesa',
+  theme: 'neon',
   name: 'Neon Mesa',
   blurb: 'The desert city. Everyone here has studied, and the room upstairs checks your clothes.',
   entryAreaId: 'street',
@@ -1005,7 +1145,7 @@ const neonMesa: CityDef = {
     casino: area(
       'casino',
       'Mesa Casino',
-      CASINO_FLOOR,
+      MESA_FLOOR,
       { col: 8, row: 8 },
       '#1a1020',
       [
@@ -1117,6 +1257,7 @@ const neonMesa: CityDef = {
 
 const portoLumina: CityDef = {
   id: 'portoLumina',
+  theme: 'marble',
   name: 'Porto Lumina',
   blurb: 'The last stop. Marble, harbour light, and the biggest game in the world.',
   entryAreaId: 'street',
@@ -1163,7 +1304,7 @@ const portoLumina: CityDef = {
     casino: area(
       'casino',
       'Porto Lumina Casino',
-      CASINO_FLOOR,
+      LUMINA_FLOOR,
       { col: 8, row: 8 },
       '#141020',
       [

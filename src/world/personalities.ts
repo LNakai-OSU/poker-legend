@@ -46,6 +46,95 @@ function person(
 }
 
 export const PERSONALITIES: Record<string, Personality> = {
+  // --- filling out the six-handed tables ------------------------------------
+  // Every table in the game used to be two or three handed, which meant the
+  // player sat in a blind on most hands and every pot was an all-in by the turn.
+  // These are the extra seats on the main cash games.
+  gus: person(
+    'Talks through every hand.',
+    { skin: '#d8a878', hair: '#8a6a3a', hairStyle: 'short', shirt: '#4a7a8b', accessory: 'none' },
+    {
+      greeting: ['Gus: New blood. Good, good.'],
+      bet: ['Gus: I will lead out here.', 'Gus: Let me put a bet in.'],
+      check: ['Gus: Check. Let us see a card.'],
+      raise: ['Gus: Raising, and I will tell you why.', 'Gus: Up it goes.'],
+      call: ['Gus: Call, call, call.'],
+      fold: ['Gus: Not with this. No.'],
+      win: ['Gus: See, I knew it on the flop.'],
+      lose: ['Gus: I had you until the river. Story of my year.'],
+    },
+  ),
+  pearl: person(
+    'Never looks at her cards twice.',
+    { skin: '#6b4226', hair: '#1a1a1a', hairStyle: 'tied', shirt: '#b5739a', accessory: 'earring' },
+    {
+      greeting: ['Pearl: Sit down then.'],
+      bet: ['Pearl: Bet.'],
+      check: ['Pearl: Check.'],
+      raise: ['Pearl: Raise.', 'Pearl: And more.'],
+      call: ['Pearl: Call.'],
+      fold: ['Pearl: Yours.'],
+      win: ['Pearl: Thank you.'],
+      lose: ['Pearl: Good hand. Deal.'],
+    },
+  ),
+  omar: person(
+    'Here straight from a night shift.',
+    { skin: '#a9743f', hair: '#2a1d14', hairStyle: 'short', shirt: '#5a6a4a', accessory: 'cap' },
+    {
+      greeting: ['Omar: Two hours then I am going to bed.'],
+      bet: ['Omar: Bet. Let us speed this up.'],
+      check: ['Omar: Check.'],
+      raise: ['Omar: Raise, and I mean it.'],
+      call: ['Omar: Yeah, alright.'],
+      fold: ['Omar: Done with it.'],
+      win: ['Omar: That buys breakfast.'],
+      lose: ['Omar: Figures.'],
+    },
+  ),
+  bette: person(
+    'Counts the pot out loud.',
+    { skin: '#eac3a0', hair: '#9a9a9a', hairStyle: 'short', shirt: '#7a5a9a', accessory: 'glasses' },
+    {
+      greeting: ['Bette: Forty years I have played this game.'],
+      bet: ['Bette: Four hundred in there, so — bet.'],
+      check: ['Bette: Check to you.'],
+      raise: ['Bette: That is a raise, dear.'],
+      call: ['Bette: Getting the right price. Call.'],
+      fold: ['Bette: Wrong price. No.'],
+      win: ['Bette: The arithmetic does not lie.'],
+      lose: ['Bette: Correct call, wrong result. It happens.'],
+    },
+  ),
+  teo: person(
+    'Youngest at the table, by a lot.',
+    { skin: '#c08552', hair: '#141414', hairStyle: 'long', shirt: '#2f6ea8', accessory: 'shades' },
+    {
+      greeting: ['Teo: Let us run it up.'],
+      bet: ['Teo: Betting.', 'Teo: Pressure.'],
+      check: ['Teo: Check back.'],
+      raise: ['Teo: Three-bet.', 'Teo: Raise.'],
+      call: ['Teo: Call. I have a plan.'],
+      fold: ['Teo: Fold. Next.'],
+      win: ['Teo: Standard.'],
+      lose: ['Teo: Fine. Variance.'],
+    },
+  ),
+  junie: person(
+    'Plays the people, not the cards.',
+    { skin: '#f0d0b0', hair: '#c04a2a', hairStyle: 'long', shirt: '#3a9d5c', accessory: 'none' },
+    {
+      greeting: ['Junie: I like watching new people play.'],
+      bet: ['Junie: Bet. See what you do.'],
+      check: ['Junie: Check. Your move.'],
+      raise: ['Junie: Raise. You did not like that card.'],
+      call: ['Junie: I think you are lying. Call.'],
+      fold: ['Junie: No, you have it. Fold.'],
+      win: ['Junie: You hesitated.'],
+      lose: ['Junie: Well read.'],
+    },
+  ),
+
   // --- the home game --------------------------------------------------------
   marcus: person(
     'Your friend. Plays scared.',
@@ -159,6 +248,22 @@ export const PERSONALITIES: Record<string, Personality> = {
       fold: ['Vance: I do not like it. Fold.'],
       win: ['Vance: Good. Good.'],
       lose: ['Vance: I knew it. I knew it and I called anyway.'],
+    },
+  ),
+  // The heads-up match against the same man. Shorter-handed and one on one, he
+  // has nowhere to hide, and he knows it.
+  'vance-hu': person(
+    'Thinks about it too long. Worse one on one.',
+    { skin: '#a8673f', hair: '#1c1c1c', hairStyle: 'short', shirt: '#2f6b5c', accessory: 'glasses' },
+    {
+      greeting: ['Vance: Just the two of us. Right. Fine.'],
+      bet: ['Vance: Bet. I think. Yes, bet.'],
+      check: ['Vance: Check. I am not committing to anything yet.'],
+      raise: ['Vance: Raise. No, I mean it this time.'],
+      call: ['Vance: Call. I have to see it.'],
+      fold: ['Vance: Take it. I cannot do this all night.'],
+      win: ['Vance: There. I do know how to do this.'],
+      lose: ['Vance: Every time. Every single time with you.'],
     },
   ),
   hollis: person(

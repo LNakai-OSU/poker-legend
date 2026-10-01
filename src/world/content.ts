@@ -13,8 +13,8 @@ export const TABLES: Record<string, TableDef> = {
     bigBlind: 2,
     buyIn: 100,
     opponents: [
-      { id: 'ray', name: 'Ray', skillTier: 'novice' },
-      { id: 'sully', name: 'Sully', skillTier: 'amateur' },
+      { id: 'ray', name: 'Ray', skillTier: 'novice', archetype: 'station' },
+      { id: 'sully', name: 'Sully', skillTier: 'amateur', archetype: 'nit' },
     ],
   },
   'riverbend-mid': {
@@ -24,9 +24,11 @@ export const TABLES: Record<string, TableDef> = {
     bigBlind: 5,
     buyIn: 300,
     opponents: [
-      { id: 'deb', name: 'Deb', skillTier: 'amateur' },
-      { id: 'mack', name: 'Mack', skillTier: 'competent' },
+      { id: 'deb', name: 'Deb', skillTier: 'amateur', archetype: 'regular' },
+      { id: 'mack', name: 'Mack', skillTier: 'competent', archetype: 'nit' },
       { id: 'tiny', name: 'Tiny', skillTier: 'novice', archetype: 'whale', stackMultiplier: 2 },
+      { id: 'gus', name: 'Gus', skillTier: 'novice', archetype: 'station' },
+      { id: 'pearl', name: 'Pearl', skillTier: 'competent', archetype: 'regular' },
     ],
   },
   'crescent-main': {
@@ -36,9 +38,11 @@ export const TABLES: Record<string, TableDef> = {
     bigBlind: 10,
     buyIn: 1000,
     opponents: [
-      { id: 'corinne', name: 'Corinne', skillTier: 'competent' },
-      { id: 'vance', name: 'Vance', skillTier: 'competent' },
+      { id: 'corinne', name: 'Corinne', skillTier: 'competent', archetype: 'regular' },
+      { id: 'vance', name: 'Vance', skillTier: 'competent', archetype: 'station' },
       { id: 'hollis', name: 'Hollis', skillTier: 'amateur', archetype: 'whale', stackMultiplier: 2 },
+      { id: 'omar', name: 'Omar', skillTier: 'amateur', archetype: 'maniac' },
+      { id: 'bette', name: 'Bette', skillTier: 'competent', archetype: 'nit' },
     ],
   },
   'palmcay-high': {
@@ -48,8 +52,8 @@ export const TABLES: Record<string, TableDef> = {
     bigBlind: 25,
     buyIn: 2500,
     opponents: [
-      { id: 'adaeze', name: 'Adaeze', skillTier: 'competent' },
-      { id: 'kit', name: 'Kit', skillTier: 'sharp' },
+      { id: 'adaeze', name: 'Adaeze', skillTier: 'competent', archetype: 'nit' },
+      { id: 'kit', name: 'Kit', skillTier: 'sharp', archetype: 'maniac' },
     ],
   },
   'palmcay-tourist': {
@@ -60,8 +64,8 @@ export const TABLES: Record<string, TableDef> = {
     buyIn: 2500,
     opponents: [
       { id: 'bernard', name: 'Bernard', skillTier: 'novice', archetype: 'whale', stackMultiplier: 3 },
-      { id: 'rosa', name: 'Rosa', skillTier: 'amateur' },
-      { id: 'kit2', name: 'Kit', skillTier: 'sharp' },
+      { id: 'rosa', name: 'Rosa', skillTier: 'amateur', archetype: 'regular' },
+      { id: 'kit2', name: 'Kit', skillTier: 'sharp', archetype: 'maniac' },
     ],
   },
   'mesa-main': {
@@ -71,9 +75,11 @@ export const TABLES: Record<string, TableDef> = {
     bigBlind: 50,
     buyIn: 10000,
     opponents: [
-      { id: 'lorna', name: 'Lorna', skillTier: 'sharp' },
-      { id: 'dmitri', name: 'Dmitri', skillTier: 'sharp' },
+      { id: 'lorna', name: 'Lorna', skillTier: 'sharp', archetype: 'regular' },
+      { id: 'dmitri', name: 'Dmitri', skillTier: 'sharp', archetype: 'nit' },
       { id: 'whitaker', name: 'Whitaker', skillTier: 'competent', archetype: 'whale', stackMultiplier: 2 },
+      { id: 'teo', name: 'Teo', skillTier: 'competent', archetype: 'maniac' },
+      { id: 'junie', name: 'Junie', skillTier: 'sharp', archetype: 'regular' },
     ],
   },
   'mesa-highroller': {
@@ -84,8 +90,8 @@ export const TABLES: Record<string, TableDef> = {
     buyIn: 40000,
     dressCode: 3,
     opponents: [
-      { id: 'saul', name: 'Saul', skillTier: 'sharp' },
-      { id: 'priya', name: 'Priya', skillTier: 'elite' },
+      { id: 'saul', name: 'Saul', skillTier: 'sharp', archetype: 'nit' },
+      { id: 'priya', name: 'Priya', skillTier: 'elite', archetype: 'regular' },
     ],
   },
   'lumina-nosebleed': {
@@ -96,8 +102,8 @@ export const TABLES: Record<string, TableDef> = {
     buyIn: 30000,
     dressCode: 3,
     opponents: [
-      { id: 'xue', name: 'Xue', skillTier: 'elite' },
-      { id: 'marchetti', name: 'Marchetti', skillTier: 'elite' },
+      { id: 'xue', name: 'Xue', skillTier: 'elite', archetype: 'maniac' },
+      { id: 'marchetti', name: 'Marchetti', skillTier: 'elite', archetype: 'nit' },
       { id: 'kingsley', name: 'Kingsley', skillTier: 'competent', archetype: 'whale', stackMultiplier: 2 },
     ],
   },
@@ -107,7 +113,7 @@ export const TABLES: Record<string, TableDef> = {
     smallBlind: 5,
     bigBlind: 10,
     buyIn: 1000,
-    opponents: [{ id: 'vance-hu', name: 'Vance', skillTier: 'competent' }],
+    opponents: [{ id: 'vance-hu', name: 'Vance', skillTier: 'competent', archetype: 'station' }],
   },
   'crescent-private': {
     id: 'crescent-private',
@@ -116,7 +122,7 @@ export const TABLES: Record<string, TableDef> = {
     bigBlind: 20,
     buyIn: 2000,
     opponents: [
-      { id: 'delphine', name: 'Delphine', skillTier: 'sharp' },
+      { id: 'delphine', name: 'Delphine', skillTier: 'sharp', archetype: 'regular' },
       { id: 'otto', name: 'Otto', skillTier: 'amateur', archetype: 'whale', stackMultiplier: 3 },
     ],
   },
@@ -127,7 +133,7 @@ export const TABLES: Record<string, TableDef> = {
     bigBlind: 100,
     buyIn: 20000,
     dressCode: 2,
-    opponents: [{ id: 'lorna-hu', name: 'Lorna', skillTier: 'sharp' }],
+    opponents: [{ id: 'lorna-hu', name: 'Lorna', skillTier: 'sharp', archetype: 'regular' }],
   },
   'mesa-private': {
     id: 'mesa-private',
@@ -137,7 +143,7 @@ export const TABLES: Record<string, TableDef> = {
     buyIn: 60000,
     dressCode: 3,
     opponents: [
-      { id: 'august', name: 'August', skillTier: 'elite' },
+      { id: 'august', name: 'August', skillTier: 'elite', archetype: 'nit' },
       { id: 'rhodes', name: 'Rhodes', skillTier: 'competent', archetype: 'whale', stackMultiplier: 4 },
     ],
   },
@@ -153,7 +159,7 @@ export const TABLES: Record<string, TableDef> = {
     buyIn: 120000,
     dressCode: 4,
     isFinale: true,
-    opponents: [{ id: 'nadia', name: 'Nadia Okonkwo', skillTier: 'elite' }],
+    opponents: [{ id: 'nadia', name: 'Nadia Okonkwo', skillTier: 'elite', archetype: 'regular' }],
   },
 }
 
@@ -166,8 +172,20 @@ export const SHOPS: Record<string, ShopDef> = {
     id: 'silvercreek-gift',
     name: 'Gift Shop',
     items: [
-      { id: 'card-protector', name: 'Lucky card protector', price: 40, blurb: 'Purely ceremonial. Everyone has one.' },
-      { id: 'hoodie', name: 'Casino hoodie', price: 80, blurb: 'Silver Creek across the chest. Warm, at least.' },
+      {
+        id: 'card-protector',
+        name: 'Lucky card protector',
+        price: 40,
+        blurb: 'Something to hold that is not your cards. You watch the table instead.',
+        effect: { kind: 'tellClarity', value: 0.08 },
+      },
+      {
+        id: 'hoodie',
+        name: 'Casino hoodie',
+        price: 80,
+        blurb: 'Silver Creek across the chest. You look like you are here a lot.',
+        effect: { kind: 'reputation', value: 1 },
+      },
     ],
   },
   'riverbend-outfitters': {
@@ -212,7 +230,7 @@ export const SHOPS: Record<string, ShopDef> = {
         name: 'Used sedan',
         price: 4000,
         blurb: 'Nothing flash. Gets you between towns cheap.',
-        effect: { kind: 'travelDiscount', value: 0.5 },
+        effect: { kind: 'fastTravel', discount: 0.5 },
       },
     ],
   },
@@ -238,7 +256,7 @@ export const SHOPS: Record<string, ShopDef> = {
         name: 'Convertible',
         price: 18000,
         blurb: 'Impractical. Fast. Cheap to run between coasts.',
-        effect: { kind: 'travelDiscount', value: 0.75 },
+        effect: { kind: 'fastTravel', discount: 0.75 },
       },
     ],
   },
@@ -253,7 +271,13 @@ export const SHOPS: Record<string, ShopDef> = {
         blurb: 'The high roller room stops asking questions.',
         effect: { kind: 'dressCode', level: 3 },
       },
-      { id: 'gold-watch', name: 'Gold watch', price: 40000, blurb: 'Says something before you do.' },
+      {
+        id: 'gold-watch',
+        name: 'Gold watch',
+        price: 40000,
+        blurb: 'Says something before you do. Doormen notice it.',
+        effect: { kind: 'reputation', value: 5 },
+      },
     ],
   },
   'mesa-motors': {
@@ -265,7 +289,7 @@ export const SHOPS: Record<string, ShopDef> = {
         name: 'Sports car',
         price: 90000,
         blurb: 'You will never need to think about travel again.',
-        effect: { kind: 'travelDiscount', value: 0.9 },
+        effect: { kind: 'fastTravel', discount: 0.9 },
       },
     ],
   },
@@ -294,6 +318,7 @@ export const VENUES: Record<string, VenueDef> = {
     id: 'riverbend-diner',
     name: 'The Landing Diner',
     kind: 'restaurant',
+    restsForDays: 1,
     price: 12,
     blurb: 'Vinyl booths, bottomless coffee, and every regular from the boat.',
     lines: [
@@ -305,6 +330,7 @@ export const VENUES: Record<string, VenueDef> = {
     id: 'crescent-supper',
     name: 'Bellweather Supper Club',
     kind: 'restaurant',
+    restsForDays: 1,
     price: 120,
     blurb: 'White tablecloths, and half the card room eats here.',
     lines: [
@@ -334,6 +360,7 @@ export const VENUES: Record<string, VenueDef> = {
     id: 'palmcay-grill',
     name: 'Shoreline Grill',
     kind: 'restaurant',
+    restsForDays: 1,
     price: 260,
     blurb: 'Open to the water, and priced accordingly.',
     lines: [

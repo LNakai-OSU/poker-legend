@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { VENUES } from '../world/content'
 import { MenuScreen, buttonStyle } from './MenuScenes'
 import { playSound } from '../audio/audio'
-import { reputation, type GameState } from './state'
+import type { GameState } from './state'
+import { standing } from './progression'
 
 /**
  * Restaurants and clubs. Restaurants trade cash for a read on the room — the
@@ -15,17 +16,20 @@ export function VenueScene({
   state,
   onSpend,
   onUnlockTable,
+  onRest,
   onBack,
 }: {
   venueId: string
   state: GameState
   onSpend: (amount: number) => void
   onUnlockTable: (tableId: string) => void
+  /** A meal bought this many days of being rested. */
+  onRest: (days: number) => void
   onBack: () => void
 }) {
   const venue = VENUES[venueId]
   const [entered, setEntered] = useState(false)
-  const rep = reputation(state)
+  const rep = standing(state)
   const invited = venue.kind === 'club' && rep >= (venue.reputationNeeded ?? 0)
   const alreadyUnlocked = venue.unlocksTableId ? state.unlockedTableIds.includes(venue.unlocksTableId) : false
   const affordable = state.cash >= venue.price
@@ -53,6 +57,7 @@ export function VenueScene({
             onSpend(venue.price)
             playSound('cash')
             setEntered(true)
+            if (venue.restsForDays) onRest(venue.restsForDays)
             if (invited && venue.unlocksTableId) onUnlockTable(venue.unlocksTableId)
           }}
         >

@@ -30,9 +30,12 @@ describe('generateTell', () => {
   it('fires far more often against weak players than strong ones', () => {
     const novice = sample('novice', POCKET_ACES)
     const elite = sample('elite', POCKET_ACES)
-    // novice ~85% of the time, elite ~4%
-    expect(novice.fired / novice.iterations).toBeGreaterThan(0.7)
-    expect(elite.fired / elite.iterations).toBeLessThan(0.15)
+    // The point is the ratio, not the absolute rate. This used to require a
+    // novice to leak on more than 70% of streets, which is what put a cue on
+    // screen for 99% of hands and made the read wallpaper rather than a read.
+    expect(novice.fired / novice.iterations).toBeGreaterThan(0.15)
+    expect(novice.fired / novice.iterations).toBeLessThan(0.5)
+    expect(elite.fired / elite.iterations).toBeLessThan(0.08)
     expect(novice.fired).toBeGreaterThan(elite.fired * 4)
   })
 

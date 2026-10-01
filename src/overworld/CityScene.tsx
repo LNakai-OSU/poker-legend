@@ -67,6 +67,7 @@ export function CityScene({ state, entryTile, onAction, onEnterArea, onCaught }:
       chaser={chaser}
       onCaught={onCaught}
       areaName={area.name}
+      theme={city.theme}
       hud={
         <>
           <div>{area.name}</div>
@@ -109,6 +110,11 @@ function isLocked(state: GameState, poi: PoiDef): boolean {
 
 function linesFor(state: GameState, poi: PoiDef): string[] {
   if (isLocked(state, poi)) return poi.lockedLines ?? poi.lines
+  // Somebody with more than one thing to say says a different one on another day.
+  if (poi.altLines && poi.altLines.length > 0) {
+    const pool = [poi.lines, ...poi.altLines]
+    return pool[state.day % pool.length]
+  }
   if (isSpent(state, poi)) {
     return [
       `${poi.name}: Still talking about that night, man.`,

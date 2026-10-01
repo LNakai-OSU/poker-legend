@@ -38,6 +38,11 @@ export interface GameState {
   /** Skipping town buys you until this day before they pick the trail back up. */
   huntGraceUntilDay: number
   /**
+   * The last day a meal is still doing you any good. Eating is the only thing in
+   * the town that used to change nothing at all.
+   */
+  restedUntilDay: number
+  /**
    * The day Nadia will sit down for the heads-up match again. Losing it sets
    * this into the future: the match is one bet for the whole buy-in, and if
    * losing could be retried immediately it would just be an expensive cash game.
@@ -70,6 +75,7 @@ export function initialState(): GameState {
     debts: [],
     huntedInCityId: null,
     huntGraceUntilDay: 0,
+    restedUntilDay: 0,
     finaleRematchDay: 0,
     flags: { wonPokerNight: false, beatFinalRival: false, hasPenthouse: false },
     stats: { handsWon: 0, biggestPot: 0, tablesPlayed: 0 },
@@ -185,13 +191,23 @@ export function takeStake(
  * Skipping town shakes whoever is looking for you, but only until the next day
  * rolls over — enough breathing room to play a session or find the money.
  */
-export function travelTo(state: GameState, cityId: CityId): GameState {
+export function travelTo(
+  state: GameState,
+  cityId: CityId,
+  options: { keepDay?: boolean } = {},
+): GameState {
   const unlocked = state.unlockedCityIds.includes(cityId)
     ? state.unlockedCityIds
     : [...state.unlockedCityIds, cityId]
-  const next = advanceDay({ ...state, cityId, areaId: null, unlockedCityIds: unlocked, huntedInCityId: null })
+  const moved = { ...state, cityId, areaId: null, unlockedCityIds: unlocked, huntedInCityId: null }
+  // Driving yourself does not cost you a day on the road. That — rather than a
+  // few dollars off the fare — is what makes a vehicle worth its price, because
+  // debts come due on a day count. The caller decides, since working out what the
+  // player owns needs the content tables and this module stays free of them.
+  const next = options.keepDay ? moved : advanceDay(moved)
   return { ...next, huntedInCityId: null, huntGraceUntilDay: next.day }
 }
+
 
 export function unlockTable(state: GameState, tableId: string): GameState {
   if (state.unlockedTableIds.includes(tableId)) return state

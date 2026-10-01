@@ -508,6 +508,44 @@ await test('a table still works with every lesson bought', async () => {
   await page.close()
 })
 
+/**
+ * A six-handed game, rendered without seats landing on top of each other.
+ *
+ * Every table in the game used to be two or three handed, so the player sat in a
+ * blind on most hands and every pot was an all-in by the turn. The felt had no
+ * layout for five opponents either — it silently fell back to the three-seat one
+ * and stacked them.
+ */
+await test('a six-handed table seats everyone', async () => {
+  const page = await newPage(baseSave({ cityId: 'riverbend', cash: 50000 }))
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(400)
+  await enterDoor(page, 'Riverboat')
+  await talkTo(page, 'Dealer')
+  assert(await page.locator('[data-testid="pot-value"]').isVisible(), 'never reached the table')
+
+  const seats = await page.evaluate(() =>
+    [...document.querySelectorAll('[data-testid^="seat-"]')].map((el) => {
+      const box = el.getBoundingClientRect()
+      return { id: el.dataset.testid, left: box.left, top: box.top, right: box.right, bottom: box.bottom }
+    }),
+  )
+  assert(seats.length === 6, `expected 6 seats on the felt, saw ${seats.length}`)
+
+  // No two seat plates may sit on top of one another.
+  for (let i = 0; i < seats.length; i++) {
+    for (let j = i + 1; j < seats.length; j++) {
+      const a = seats[i]
+      const b = seats[j]
+      const overlaps = a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom
+      assert(!overlaps, `${a.id} overlaps ${b.id}`)
+    }
+  }
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+})
+
 await test('can sit down, play, and leave a cash game', async () => {
   const page = await newPage(baseSave())
   await page.goto(BASE)

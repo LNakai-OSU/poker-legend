@@ -42,11 +42,24 @@ export type Street = 'preflop' | 'flop' | 'turn' | 'river' | 'showdown'
 export type SkillTier = 'novice' | 'amateur' | 'competent' | 'sharp' | 'elite'
 
 /**
- * 'whale' plays far too many hands and calls far too much for the stakes, and
- * leaks obvious tells regardless of how high the stakes are — a big-money
- * target of opportunity rather than a difficulty step.
+ * *How* a player plays, independently of how well.
+ *
+ * Skill tier decides how accurately somebody reads a spot; archetype decides what
+ * they do with it. Without a real axis here every opponent in the game played the
+ * same game with a different name over their head: "Ray plays every hand he is
+ * dealt" and "Sully grinds small pots" had action counts that were statistically
+ * indistinguishable, which meant there was nobody to learn and so no reason to
+ * play the two hundredth hand rather than the twentieth.
+ *
+ * - `regular` — balanced; the baseline every multiplier is measured against.
+ * - `nit` — plays few hands, folds to pressure, rarely bluffs.
+ * - `station` — calls far too much and almost never raises. Unbluffable, and
+ *   pays off every value bet.
+ * - `maniac` — plays and raises everything, bluffs constantly, overbets.
+ * - `whale` — a station with money, who also broadcasts honest tells however high
+ *   the stakes: a target of opportunity rather than a difficulty step.
  */
-export type Archetype = 'regular' | 'whale'
+export type Archetype = 'regular' | 'nit' | 'station' | 'maniac' | 'whale'
 
 export interface PlayerConfig {
   id: string

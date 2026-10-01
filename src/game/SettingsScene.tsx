@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { audio } from '../audio/audio'
 import { MenuScreen, buttonStyle } from './MenuScenes'
-import { reputation, type GameState } from './state'
+import type { GameState } from './state'
+import { standing } from './progression'
 
 export function SettingsScene({
   state,
@@ -19,7 +20,7 @@ export function SettingsScene({
   return (
     <MenuScreen
       title="Settings"
-      subtitle={`Day ${state.day} · $${state.cash.toLocaleString()} · reputation ${reputation(state)}`}
+      subtitle={`Day ${state.day} · $${state.cash.toLocaleString()} · reputation ${standing(state)}`}
       onBack={onBack}
       backLabel="Back to the game"
     >

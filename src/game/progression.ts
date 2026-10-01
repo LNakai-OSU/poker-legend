@@ -1,6 +1,6 @@
 import { CITIES, MISSIONS, findItem } from '../world/content'
 import type { MissionGoal, TableDef } from '../world/types'
-import type { CityId, GameState } from './state'
+import { reputation, type CityId, type GameState } from './state'
 
 /** Best dress-code level across everything the player owns. */
 export function dressCodeLevel(state: GameState): number {
@@ -14,8 +14,61 @@ export function dressCodeLevel(state: GameState): number {
 export function travelDiscount(state: GameState): number {
   return state.ownedItemIds.reduce((best, itemId) => {
     const effect = findItem(itemId)?.effect
-    return effect?.kind === 'travelDiscount' ? Math.max(best, effect.value) : best
+    if (effect?.kind === 'travelDiscount') return Math.max(best, effect.value)
+    // A vehicle cuts the fare as well as saving the day.
+    if (effect?.kind === 'fastTravel') return Math.max(best, effect.discount)
+    return best
   }, 0)
+}
+
+/**
+ * Whether anything owned lets you travel without losing a day.
+ *
+ * This is what a vehicle is actually for. Priced off the fare alone every vehicle
+ * was a strictly losing purchase — the $90,000 sports car saved $2,250 on the
+ * dearest route, so it repaid itself after forty trips in a game with about
+ * twenty. Days are the scarce resource, because that is what debts come due on.
+ */
+export function hasFastTravel(state: GameState): boolean {
+  return state.ownedItemIds.some((id) => findItem(id)?.effect?.kind === 'fastTravel')
+}
+
+/** What a meal is worth at the table. */
+export const RESTED_TELL_CLARITY = 0.12
+
+/**
+ * Extra tell visibility, from things you own and from having eaten recently.
+ *
+ * Adds to what the Spotting Tells lesson gives, so a card protector and a hot
+ * meal are small versions of the same help: fewer things taking your eyes off
+ * the other players.
+ */
+export function tellClarity(state: GameState): number {
+  const fromItems = state.ownedItemIds.reduce((sum, id) => {
+    const effect = findItem(id)?.effect
+    return effect?.kind === 'tellClarity' ? sum + effect.value : sum
+  }, 0)
+  const fromRest = state.day <= state.restedUntilDay ? RESTED_TELL_CLARITY : 0
+  return fromItems + fromRest
+}
+
+/** How much a point of item reputation is worth against a club's door policy. */
+const REPUTATION_PER_ITEM_POINT = 6
+
+/** Reputation contributed by what you own and wear, on top of what you have done. */
+export function itemReputation(state: GameState): number {
+  return state.ownedItemIds.reduce((sum, id) => {
+    const effect = findItem(id)?.effect
+    return effect?.kind === 'reputation' ? sum + effect.value : sum
+  }, 0)
+}
+
+/**
+ * What the room thinks of you: what you have done, plus what you turned up in.
+ * This is the number a club checks at the door.
+ */
+export function standing(state: GameState): number {
+  return reputation(state) + itemReputation(state) * REPUTATION_PER_ITEM_POINT
 }
 
 export function travelCostTo(state: GameState, cityId: CityId): number {

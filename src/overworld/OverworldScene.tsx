@@ -76,6 +76,8 @@ interface OverworldSceneProps {
   onCaught?: () => void
   /** Labels the corner map. */
   areaName?: string
+  /** The town's tile palette. */
+  theme?: string
 }
 
 export function OverworldScene({
@@ -89,6 +91,7 @@ export function OverworldScene({
   exits = [],
   onExit,
   areaName = '',
+  theme = 'default',
 }: OverworldSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
@@ -154,7 +157,7 @@ export function OverworldScene({
 
       // Fixed for the life of the scene; a rotation remounts it.
       const zoom = zoomFor(instance.screen.width)
-      const world = buildTileLayer(map)
+      const world = buildTileLayer(map, theme)
       const player = new GridPlayer(playerStart.col, playerStart.row)
       const npcs = interactables.map((cfg) => new Npc(cfg))
       // The whole world is scaled up, which would blow the name plates up with

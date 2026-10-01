@@ -80,7 +80,71 @@ describe('TexasHoldEmTable full freezeout simulation', () => {
       expect(table.getFreezeoutWinnerId()).not.toBeNull()
       expect(totalChips(table)).toBe(startingTotal)
     }
-  }, 60000)
+    // Fifteen whole freezeouts, with a Monte Carlo equity estimate behind every
+    // decision. It fits inside a minute on its own, but vitest runs files in
+    // parallel and alongside the other simulations it does not — and a timeout
+    // reports as a failure with no assertion message, which reads like a real bug.
+  }, 180_000)
+})
+
+describe('when the game is actually over', () => {
+  /**
+   * An all-in is not an elimination.
+   *
+   * Heads-up, the instant an opponent shoved their stack read as zero, so the
+   * freezeout declared the table cleaned out and announced a winner before the
+   * board that decided the hand had been dealt.
+   */
+  it('is not over while an all-in hand is still being played', () => {
+    const players = makePlayers(2, 100)
+    const table = new TexasHoldEmTable(players, {
+      smallBlind: 5,
+      bigBlind: 10,
+      rng: mulberry32(4),
+    })
+    table.startNewHand()
+
+    // Shove, so one player has nothing behind while the hand is still live.
+    const shover = table.getState().actingPlayerId!
+    const me = table.getState().players.find((p) => p.id === shover)!
+    table.submitAction(shover, { type: 'raise', to: me.streetContribution + me.stack })
+
+    const shoved = table.getState().players.find((p) => p.id === shover)!
+    expect(shoved.stack, 'the shover should have nothing behind').toBe(0)
+    expect(table.getState().handInProgress, 'the hand should still be live').toBe(true)
+    expect(table.isGameOver(), 'nobody is out while the pot is undecided').toBe(false)
+    expect(table.getFreezeoutWinnerId()).toBeNull()
+  })
+
+  it('is over once the hand settles and only one player has chips', () => {
+    const players = makePlayers(2, 100)
+    const table = new TexasHoldEmTable(players, {
+      smallBlind: 5,
+      bigBlind: 10,
+      rng: mulberry32(4),
+    })
+    table.startNewHand()
+    // Get everyone all in so the hand runs to a conclusion.
+    let guard = 0
+    while (table.getState().handInProgress && guard++ < 50) {
+      const acting = table.getState().actingPlayerId
+      if (!acting) break
+      const player = table.getState().players.find((p) => p.id === acting)!
+      const allInTo = player.streetContribution + player.stack
+      if (table.getLegalActions(acting).some((a) => a.type === 'raise')) {
+        table.submitAction(acting, { type: 'raise', to: allInTo })
+      } else {
+        table.submitAction(acting, { type: 'call' })
+      }
+    }
+    expect(table.getState().handInProgress).toBe(false)
+    const withChips = table.getState().players.filter((p) => p.stack > 0)
+    // One side of a heads-up all-in has to end up with everything (or they chop).
+    if (withChips.length === 1) {
+      expect(table.isGameOver()).toBe(true)
+      expect(table.getFreezeoutWinnerId()).toBe(withChips[0].id)
+    }
+  })
 })
 
 describe('TexasHoldEmTable rebuy (cash game mode)', () => {
