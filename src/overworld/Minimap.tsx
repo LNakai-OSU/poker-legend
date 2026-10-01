@@ -85,7 +85,10 @@ export function Minimap({
       data-player={`${player.col},${player.row}`}
       style={{
         position: 'absolute',
-        top: 16,
+        // Below the settings and sound buttons, which are fixed to the top-right
+        // corner. At top:16 the hamburger sat directly on top of this on every
+        // screen, desktop and phone.
+        top: 'calc(max(12px, env(safe-area-inset-top)) + 48px)',
         right: 16,
         padding: 6,
         borderRadius: 6,

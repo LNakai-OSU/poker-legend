@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { TexasHoldEmTable } from '../engine/table'
 import { decideAiAction } from '../engine/ai'
 import { defaultRng } from '../engine/rng'
@@ -62,9 +62,11 @@ function createTable() {
 
 interface PokerNightSceneProps {
   onWin: (winnings: number) => void
+  /** Walk away from the game. There was previously no way out of this scene. */
+  onLeave?: () => void
 }
 
-export function PokerNightScene({ onWin }: PokerNightSceneProps) {
+export function PokerNightScene({ onWin, onLeave }: PokerNightSceneProps) {
   const tableRef = useRef(createTable())
   const [tick, setTick] = useState(0)
   const rerender = () => setTick((t) => t + 1)
@@ -212,36 +214,8 @@ export function PokerNightScene({ onWin }: PokerNightSceneProps) {
     bigBlind: levelFor(state.handNumber).big,
   })
 
-  if (gameOver) {
-    const youWon = winnerId === 'you'
-    return (
-      <Overlay>
-        <h2>{youWon ? 'You cleaned out the table.' : "They've got all your chips."}</h2>
-        <p>
-          {youWon
-            ? 'Everyone else is tapped out — the game is yours.'
-            : 'Marcus deals you back in. The blinds start over.'}
-        </p>
-        <button
-          style={buttonStyle}
-          onClick={() => {
-            if (youWon) {
-              onWin(you.stack)
-            } else {
-              tableRef.current = createTable()
-              tableRef.current.startNewHand()
-              setHolding(false)
-              rerender()
-            }
-          }}
-        >
-          {youWon ? 'Head out' : 'Deal me back in'}
-        </button>
-      </Overlay>
-    )
-  }
-
   const level = levelFor(state.handNumber)
+  const youWon = winnerId === 'you'
 
   return (
     <div
@@ -294,6 +268,57 @@ export function PokerNightScene({ onWin }: PokerNightSceneProps) {
           }}
         >
           {coaching}
+        </div>
+      )}
+
+      {/* The result sits under the table, not over it. A full-screen overlay threw
+          away the showdown that just busted you — and since most first attempts
+          end here, that was the one hand the player most needed to see. */}
+      {gameOver && (
+        <div
+          data-testid={youWon ? 'home-game-won' : 'home-game-lost'}
+          style={{
+            maxWidth: 520,
+            margin: '0 auto',
+            padding: 'clamp(10px, 3vw, 16px)',
+            borderRadius: 10,
+            border: `1px solid ${youWon ? 'rgba(127,224,160,0.5)' : 'rgba(224,90,90,0.45)'}`,
+            background: '#101c16',
+            textAlign: 'center',
+            lineHeight: 1.6,
+          }}
+        >
+          <h2 style={{ margin: '0 0 6px', fontSize: 'clamp(15px, 4vw, 19px)' }}>
+            {youWon ? 'You cleaned out the table.' : "They've got all your chips."}
+          </h2>
+          <p style={{ margin: '0 0 10px', color: '#9ab0a0', fontSize: 13 }}>
+            {youWon
+              ? 'Everyone else is tapped out — the game is yours.'
+              : 'Marcus will deal you back in. The blinds start over.'}
+          </p>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <button
+              style={buttonStyle}
+              onClick={() => {
+                if (youWon) {
+                  onWin(you.stack)
+                } else {
+                  tableRef.current = createTable()
+                  tableRef.current.startNewHand()
+                  setHolding(false)
+                  rerender()
+                }
+              }}
+            >
+              {youWon ? 'Head out' : 'Deal me back in'}
+            </button>
+            {!youWon && (
+              // There was no way to leave the home game at all, at any point.
+              <button style={smallButtonStyle} onClick={() => onLeave?.()}>
+                Step outside
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -436,18 +461,6 @@ function coachingFor(options: {
     return 'Marcus: You are short. At this point you want to get it all in with a decent hand rather than bleed it off.'
   }
   return null
-}
-
-function Overlay({ children }: { children: ReactNode }) {
-  return (
-    <div style={{
-      position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center', gap: 8,
-      background: 'rgba(5,5,10,0.85)', color: '#e8e8f0', fontFamily: 'monospace', textAlign: 'center',
-    }}>
-      {children}
-    </div>
-  )
 }
 
 const buttonStyle = {

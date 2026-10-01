@@ -171,9 +171,9 @@ const BLUFF_CATCH_MIN_BET_TO_POT = 0.3
  * calling down river shoves — exactly backwards on both counts.
  */
 const BLUFF_CATCH_STREET_WEIGHT: Record<Street, number> = {
-  preflop: 0.25,
-  flop: 0.5,
-  turn: 0.75,
+  preflop: 0.2,
+  flop: 0.3,
+  turn: 0.55,
   river: 1,
   // Nobody acts at showdown, but the map has to be total or the lookup is
   // `undefined` and the whole requirement silently becomes NaN.
@@ -235,7 +235,42 @@ const BET_SIZINGS: { fraction: number; value: number; thin: number; bluff: numbe
   { fraction: 0.75, value: 5, thin: 1, bluff: 4 },
   { fraction: 1, value: 3, thin: 0, bluff: 3 },
   { fraction: 1.5, value: 1, thin: 0, bluff: 1 },
+  // The player's own buttons offer 1½x and 2x pot, so opponents have to be able
+  // to make those bets too — otherwise the player's overbet is never answered in
+  // kind and an overbet facing them is, by itself, a reliable tell.
+  { fraction: 2, value: 1, thin: 0, bluff: 1 },
+  { fraction: 2.5, value: 0.5, thin: 0, bluff: 0.6 },
 ]
+
+/**
+ * How far a chosen sizing is nudged either side of its nominal fraction.
+ *
+ * Without it every bet in the game landed on one of a handful of exact pot
+ * fractions, which is itself readable: a table where bets are only ever 0.5 or
+ * 0.75 of the pot tells you which one you are facing.
+ */
+const SIZING_JITTER = 0.1
+
+/**
+ * How much of the big sizings a tier actually has in its game.
+ *
+ * Overbetting is an expert tool: it only works if you have a polarised range and
+ * a reason to think it will be called or folded to correctly. Letting every tier
+ * fire 2.5x pot handed the *weakest* opponents the strongest weapon, and it
+ * inverted the whole difficulty curve — a straightforward tight-aggressive bot
+ * that calls on pot odds alone lost 103bb/100 to novices while beating elites for
+ * 6bb/100, which makes the late game easier than the first casino.
+ */
+const OVERBET_APTITUDE: Record<SkillTier, number> = {
+  novice: 0.08,
+  amateur: 0.2,
+  competent: 0.45,
+  sharp: 0.75,
+  elite: 1,
+}
+
+/** Sizings above this count as overbets for the purposes of the above. */
+const OVERBET_THRESHOLD = 1
 
 /**
  * How much of a bluffing urge survives on the river, where a real betting range
@@ -296,17 +331,22 @@ function pickBetFraction(ctx: AiDecisionContext, purpose: BetPurpose, rng: Rng):
     const base = sizing[purpose]
     // Polarity pushes weight toward the sizings furthest from half-pot.
     const distance = Math.abs(sizing.fraction - 0.5)
-    return base * Math.pow(polarity, distance * 2)
+    const aptitude =
+      sizing.fraction > OVERBET_THRESHOLD ? OVERBET_APTITUDE[ctx.skillTier] : 1
+    return base * Math.pow(polarity, distance * 2) * aptitude
   })
   const total = weights.reduce((sum, w) => sum + w, 0)
   if (total <= 0) return BET_POT_FRACTION_MIN + rng() * BET_POT_FRACTION_SPAN
 
+  const jittered = (fraction: number) =>
+    Math.max(0.1, fraction * (1 - SIZING_JITTER + rng() * SIZING_JITTER * 2))
+
   let roll = rng() * total
   for (let i = 0; i < BET_SIZINGS.length; i++) {
     roll -= weights[i]
-    if (roll <= 0) return BET_SIZINGS[i].fraction
+    if (roll <= 0) return jittered(BET_SIZINGS[i].fraction)
   }
-  return BET_SIZINGS[BET_SIZINGS.length - 1].fraction
+  return jittered(BET_SIZINGS[BET_SIZINGS.length - 1].fraction)
 }
 /** A single raise never commits more of the stack than this... */
 const MAX_RAISE_STACK_FRACTION = 0.7

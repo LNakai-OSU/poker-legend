@@ -141,15 +141,25 @@ export class TexasHoldEmTable {
   }
 
   /**
-   * Cash-game rebuy: tops up a busted player's stack between hands (a real
-   * player buying back in, or the same NPC sitting back down). Only valid
-   * between hands and only for a player currently at 0 chips.
+   * Cash-game buy-in: brings a player's stack up *to* `amount` between hands —
+   * a busted player sitting back down, or a short stack reloading.
+   *
+   * `amount` is the stack to end up with, not chips to add. It used to refuse any
+   * player who still had chips, which made topping a short stack back up throw
+   * ("deb does not need a rebuy") in the middle of a session and freeze the table
+   * for good: no hand would deal and no button responded. A buy-in that cannot be
+   * made from a live short stack is not a cash-game buy-in.
+   *
+   * Already at or above `amount` is a no-op rather than an error, so a caller
+   * topping the table up every hand does not have to check first — and can never
+   * accidentally shrink somebody.
    */
   rebuy(playerId: string, amount: number): void {
     if (this.handInProgress) throw new Error('cannot rebuy while a hand is in progress')
     const p = this.roster.find((pl) => pl.id === playerId)
     if (!p) throw new Error(`unknown player ${playerId}`)
-    if (p.stack > 0) throw new Error(`${playerId} does not need a rebuy`)
+    if (amount <= 0) throw new Error(`buy-in must be positive, got ${amount}`)
+    if (p.stack >= amount) return
     p.stack = amount
   }
 

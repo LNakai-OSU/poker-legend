@@ -399,6 +399,115 @@ await test('hands end without a panel to dismiss', async () => {
   await page.close()
 })
 
+/**
+ * A long session, because the short ones hid a table that froze solid.
+ *
+ * Opponents reloading between hands threw once a stack went short, which stopped
+ * the table dead: no hand dealt and no button worked. Every cash game in the build
+ * died at around hand 8, and this suite missed it because the only cash-game case
+ * played a couple of hands and cashed out.
+ */
+await test('a cash game survives a long session', async () => {
+  const page = await newPage(baseSave())
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(400)
+  await enterDoor(page, 'Casino')
+  await talkTo(page, 'Pit Boss')
+  assert(await page.locator('[data-testid="pot-value"]').isVisible(), 'never reached the table')
+
+  const TARGET_HANDS = 20
+  let handsSeen = 0
+  let lastHandSignature = null
+  let idleRounds = 0
+
+  for (let i = 0; i < 400 && handsSeen < TARGET_HANDS; i++) {
+    // A busted player is offered a rebuy; take it so the session continues.
+    const rebuy = page.locator('button', { hasText: /^Rebuy/ })
+    if (await rebuy.isVisible().catch(() => false)) {
+      await rebuy.click()
+      await page.waitForTimeout(250)
+      continue
+    }
+    const deal = page.locator('button', { hasText: /Deal now|Next hand/ })
+    if (await deal.isVisible().catch(() => false)) {
+      await deal.click()
+      await page.waitForTimeout(250)
+      continue
+    }
+    for (const label of ['Check', /^Call/, 'Fold']) {
+      const btn = page.locator('button', { hasText: label })
+      if (await btn.isVisible().catch(() => false)) {
+        await btn.click()
+        break
+      }
+    }
+    await page.waitForTimeout(180)
+
+    const signature = await page.evaluate(() => {
+      const pot = document.querySelector('[data-testid="pot-value"]')
+      const stacks = [...document.querySelectorAll('[data-stack]')].map((el) => el.dataset.stack)
+      return pot ? `${pot.dataset.pot}|${stacks.join(',')}` : null
+    })
+    if (signature === null) break
+    if (signature !== lastHandSignature) {
+      lastHandSignature = signature
+      handsSeen++
+      idleRounds = 0
+    } else {
+      idleRounds++
+      // Nothing on the table has changed for a long time and no button is
+      // offering a way on: that is the freeze.
+      assert(idleRounds < 25, `the table stopped responding after ~${handsSeen} hands`)
+    }
+  }
+
+  assert(handsSeen >= TARGET_HANDS, `only got through ${handsSeen} of ${TARGET_HANDS} hands`)
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+})
+
+/**
+ * Every lesson owned, because one of them used to blank the screen.
+ *
+ * The hand-reading panel read a value declared further down the component, so
+ * owning that lesson threw on mount and unmounted the whole app — a purchasable
+ * upgrade that locked the player out of poker for good.
+ */
+await test('a table still works with every lesson bought', async () => {
+  const page = await newPage(
+    baseSave({
+      lessonIds: ['position', 'pot-odds', 'tells', 'hand-reading', 'bankroll'],
+      cash: 20000,
+    }),
+  )
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(400)
+  await enterDoor(page, 'Casino')
+  await talkTo(page, 'Pit Boss')
+
+  assert(await page.locator('[data-testid="pot-value"]').isVisible(), 'the table did not render')
+  assert(
+    await page.locator('[data-testid="hand-read"]').isVisible(),
+    'the hand-reading panel the lesson pays for is missing',
+  )
+  // Play a few hands with every read on screen at once.
+  for (let i = 0; i < 12; i++) {
+    for (const label of ['Check', /^Call/, 'Deal now', 'Next hand', 'Fold']) {
+      const btn = page.locator('button', { hasText: label })
+      if (await btn.isVisible().catch(() => false)) {
+        await btn.click()
+        break
+      }
+    }
+    await page.waitForTimeout(180)
+  }
+  assert(await page.locator('[data-testid="felt"]').isVisible(), 'the table disappeared mid-session')
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+})
+
 await test('can sit down, play, and leave a cash game', async () => {
   const page = await newPage(baseSave())
   await page.goto(BASE)

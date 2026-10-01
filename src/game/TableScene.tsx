@@ -277,11 +277,10 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
       const seat = Math.round(table.buyIn * (opponent.stackMultiplier ?? 1))
       const current = engine.getState().players.find((p) => p.id === opponent.id)
       if (!current) continue
-      if (current.stack <= 0) {
+      // `rebuy` takes the stack to end up with, so the same call covers sitting a
+      // busted player back down and reloading a short one.
+      if (current.stack <= 0 || current.stack < seat * TOP_UP_BELOW_FRACTION) {
         engine.rebuy(opponent.id, seat)
-      } else if (current.stack < seat * TOP_UP_BELOW_FRACTION) {
-        // Short-stacked but still alive: put it back to a full buy-in.
-        engine.rebuy(opponent.id, seat - current.stack)
       }
     }
   }
@@ -386,6 +385,12 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
   const legalActions = engine.getLegalActions('you')
   const canAct = publicState.actingPlayerId === 'you'
   const toCall = publicState.currentBet - you.streetContribution
+  // Declared here, with `toCall`, because the hand-read memo below reads it. It
+  // used to be declared ~60 lines further down, past that memo: owning the
+  // hand-reading lesson therefore threw "Cannot access 'allInTo' before
+  // initialization" the moment a table mounted, unmounting the app to a blank
+  // screen and locking the player out of poker permanently.
+  const allInTo = you.streetContribution + you.stack
 
   const insights = {
     showPositions: state.lessonIds.includes('position'),
@@ -444,7 +449,6 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
   // Overbets are part of that vocabulary and not a luxury: capped at pot, a
   // 1,200bb-deep table offers only a tiny raise or a whole-stack shove, which is
   // exactly what leaves a maximum-sizing opponent unpunishable.
-  const allInTo = you.streetContribution + you.stack
   const raisePresets = ([
     { key: 'half', label: '½ pot', fraction: 0.5 },
     { key: 'three-quarter', label: '¾ pot', fraction: 0.75 },

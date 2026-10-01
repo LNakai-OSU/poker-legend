@@ -224,6 +224,7 @@ export function GameApp() {
             setState((s) => ({ ...s, cash: s.cash + winnings, flags: { ...s.flags, wonPokerNight: true } }))
             setView({ kind: 'bus' })
           }}
+          onLeave={backToCity}
         />
       )
 

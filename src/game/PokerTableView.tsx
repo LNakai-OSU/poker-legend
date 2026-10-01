@@ -250,10 +250,18 @@ export function PokerTableView({
              repeating-linear-gradient(-45deg, rgba(255,255,255,0.03) 0 1px, transparent 1px 3px),
              radial-gradient(ellipse at 50% 42%, #22744f 0%, #175c3f 52%, #0d3927 100%)`,
           // A padded leather rail, lit from above.
-          border: '11px solid',
-          borderImage: 'linear-gradient(180deg, #6b4a33 0%, #4a3324 45%, #2c1d14 100%) 1 stretch',
+          //
+          // Deliberately NOT border-image: setting one makes Chromium ignore
+          // border-radius entirely, which drew the rail as a hard-cornered
+          // rectangle around the rounded felt — a green oval pasted on a brown
+          // box. The gradient is faked with layered shadows instead.
+          border: '11px solid #4a3324',
           boxShadow:
-            'inset 0 0 70px rgba(0,0,0,0.5), inset 0 2px 0 rgba(255,255,255,0.07), 0 14px 36px rgba(0,0,0,0.5)',
+            'inset 0 0 70px rgba(0,0,0,0.5),' +
+            'inset 0 3px 6px rgba(0,0,0,0.45),' +
+            '0 -3px 0 1px #6b4a33,' +
+            '0 4px 0 1px #2c1d14,' +
+            '0 14px 36px rgba(0,0,0,0.5)',
         }}
       >
         {/* The betting line: chips go inside it, and it gives the oval a centre. */}

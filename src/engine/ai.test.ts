@@ -129,9 +129,11 @@ describe('with the price on its side', () => {
       if (action.type !== 'raise') continue
       raises++
       if (action.to >= 1000) shoves++
-      // Half-pot to pot on top of a 50 bet into a 200 pot, i.e. 175-300.
+      // A pot fraction on top of a 50 bet into a 200 pot. Overbets are part of
+      // the vocabulary now, so the ceiling is the stack cap rather than one pot —
+      // what this guards is that a raise is *sized*, not that it is small.
       expect(action.to).toBeGreaterThanOrEqual(100)
-      expect(action.to).toBeLessThanOrEqual(310)
+      expect(action.to).toBeLessThanOrEqual(700)
     }
     expect(raises).toBeGreaterThan(0)
     expect(shoves).toBe(0)

@@ -163,7 +163,27 @@ export function OverworldScene({
         npc.label.scale.set(1 / zoom)
         npc.label.position.set(TILE_SIZE / 2, -1)
       }
-      world.addChild(player.sprite, ...npcs.map((n) => n.sprite))
+      // Signs over the doors. Every exit already carried a label in the content —
+      // "Card Room", "Menswear", "Auto Row" — and none of it was ever drawn, so a
+      // boulevard was six identical brown rectangles and the only way to find out
+      // which was which was to walk into each one.
+      const doorSigns = exits.map((exit) => {
+        const sign = new Npc({
+          id: `sign-${exit.col}-${exit.row}`,
+          name: exit.label,
+          col: exit.col,
+          row: exit.row,
+        })
+        // The label only; the doorway itself is already drawn by the tile layer.
+        sign.sprite.removeChildren()
+        sign.label.scale.set(1 / zoom)
+        sign.label.position.set(TILE_SIZE / 2, -1)
+        sign.label.style.fill = '#f0d9a0'
+        sign.sprite.addChild(sign.label)
+        return sign
+      })
+
+      world.addChild(player.sprite, ...npcs.map((n) => n.sprite), ...doorSigns.map((s) => s.sprite))
 
       let hunter: GridPlayer | null = null
       let hunterLabel: Npc | null = null
@@ -397,14 +417,22 @@ export function OverworldScene({
         <div
           style={{
             position: 'absolute',
-            top: 16,
+            // Along the bottom, clear of the wallet panel, the minimap and the
+            // settings button, all of which live along the top edge. On a phone
+            // this used to land in the middle of that pile.
+            // Clear of the touch d-pad, which owns the bottom of a phone screen.
+            bottom: isTouch
+              ? 'calc(max(16px, env(safe-area-inset-bottom)) + 180px)'
+              : 'calc(max(16px, env(safe-area-inset-bottom)) + 8px)',
             left: '50%',
             transform: 'translateX(-50%)',
             color: '#e8e8f0',
             fontFamily: 'monospace',
-            background: 'rgba(10,10,16,0.8)',
+            background: 'rgba(10,10,16,0.88)',
+            border: '1px solid #2c3d5e',
             padding: '4px 10px',
             borderRadius: 4,
+            pointerEvents: 'none',
           }}
         >
           {isTouch ? `Tap E to talk to ${prompt}` : `Press E to talk to ${prompt}`}
