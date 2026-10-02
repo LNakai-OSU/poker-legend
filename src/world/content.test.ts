@@ -9,6 +9,7 @@ import {
   SPONSORS,
   TABLES,
   VENUES,
+  AREAS,
   allAreas,
   allPois,
   collectorSpawn,
@@ -183,20 +184,97 @@ describe('city content', () => {
   })
 
   it('can reach every area from the entry area', () => {
+    // Doors *and* edges: a street joins to the next one by being walked off, so
+    // an area reachable only that way is still reachable.
     for (const city of cities) {
       const seen = new Set([city.entryAreaId])
       const queue = [city.entryAreaId]
       while (queue.length > 0) {
-        const current = city.areas[queue.shift()!]
-        for (const exit of current.exits) {
-          if (!seen.has(exit.toAreaId)) {
-            seen.add(exit.toAreaId)
-            queue.push(exit.toAreaId)
+        const current = AREAS[queue.shift()!]?.area
+        if (!current) continue
+        const onward = [
+          ...current.exits.map((exit) => exit.toAreaId),
+          ...Object.values(current.edges ?? {}).map((link) => link.toAreaId),
+        ]
+        for (const next of onward) {
+          if (!seen.has(next)) {
+            seen.add(next)
+            queue.push(next)
           }
         }
       }
       for (const area of allAreas(city)) {
         expect(seen.has(area.id), `${city.name}: ${area.name} is cut off from the entrance`).toBe(true)
+      }
+    }
+  })
+
+  it('gives every area a globally unique id', () => {
+    // Areas resolve by id across the whole world now, because walking off a map
+    // edge can cross a town boundary. Two areas sharing an id would make one of
+    // them unreachable and silently swap the other in.
+    const seen = new Map<string, string>()
+    for (const { city, area } of areas) {
+      const previous = seen.get(area.id)
+      expect(previous, `area id "${area.id}" is used by both ${previous} and ${city.name}`).toBeUndefined()
+      seen.set(area.id, city.name)
+    }
+  })
+
+  it('joins every open edge to a real map, both ways', () => {
+    const OPPOSITE = { north: 'south', south: 'north', east: 'west', west: 'east' } as const
+    for (const { city, area } of areas) {
+      for (const [side, link] of Object.entries(area.edges ?? {})) {
+        const edge = side as keyof typeof OPPOSITE
+        const destination = AREAS[link.toAreaId]
+        expect(
+          destination,
+          `${city.name}/${area.name}: ${edge} edge leads to "${link.toAreaId}", which does not exist`,
+        ).toBeDefined()
+
+        // The way back has to exist, or the player walks somewhere they cannot
+        // return from by retracing a single step.
+        const back = destination.area.edges?.[OPPOSITE[edge]]
+        expect(
+          back?.toAreaId,
+          `${city.name}/${area.name}: ${edge} into ${link.toAreaId}, which has no way back`,
+        ).toBe(area.id)
+        // `|| 0` normalises negative zero, which Object.is treats as distinct.
+        expect(
+          (back?.offset ?? 0) || 0,
+          `${city.name}/${area.name}: ${edge} offset does not match the return trip`,
+        ).toBe(-(link.offset ?? 0) || 0)
+      }
+    }
+  })
+
+  it('leaves a walkable strip on both sides of every open edge', () => {
+    for (const { city, area } of areas) {
+      for (const [side, link] of Object.entries(area.edges ?? {})) {
+        const next = AREAS[link.toAreaId].area
+        const offset = link.offset ?? 0
+        const vertical = side === 'north' || side === 'south'
+        const span = vertical ? area.map[0].length : area.map.length
+        const nextSpan = vertical ? next.map[0].length : next.map.length
+
+        let crossings = 0
+        for (let along = 0; along < span; along++) {
+          const from = vertical
+            ? { col: along, row: side === 'north' ? 0 : area.map.length - 1 }
+            : { col: side === 'west' ? 0 : area.map[0].length - 1, row: along }
+          if (!isWalkable(area.map, from.col, from.row)) continue
+
+          const landingAlong = along + offset
+          if (landingAlong < 0 || landingAlong >= nextSpan) continue
+          const to = vertical
+            ? { col: landingAlong, row: side === 'north' ? next.map.length - 1 : 0 }
+            : { col: side === 'west' ? next.map[0].length - 1 : 0, row: landingAlong }
+          if (isWalkable(next.map, to.col, to.row)) crossings++
+        }
+        expect(
+          crossings,
+          `${city.name}/${area.name}: nothing lines up across the ${side} edge into ${link.toAreaId}`,
+        ).toBeGreaterThan(0)
       }
     }
   })

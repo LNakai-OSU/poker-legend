@@ -1,5 +1,5 @@
 import { Texture } from 'pixi.js'
-import { CARPET, DOOR, FLOOR, FURNITURE, GRASS, ROAD, SIDEWALK, TILE_SIZE, WALL, WATER } from './tiles'
+import { CARPET, DOOR, FLOOR, FLOWER, FURNITURE, GRASS, PLAZA, PROP, ROAD, SAND, SIDEWALK, TILE_SIZE, TREE, WALL, WATER } from './tiles'
 
 /**
  * Sprites are authored on a 16x16 grid and blown up to the tile size with
@@ -118,6 +118,62 @@ const DOOR_TILE: Draw = (px) => {
   px(2, 0, 12, 1, '#4a3626')
 }
 
+/** A full, round tree — what an open map is fenced with instead of walls. */
+const TREE_TILE: Draw = (px) => {
+  px(0, 0, 16, 16, '#24402c')
+  px(3, 1, 10, 11, '#1e5c32')
+  px(2, 3, 12, 8, '#1e5c32')
+  px(4, 2, 8, 3, '#2a7a44')
+  px(3, 5, 4, 3, '#2a7a44')
+  px(5, 9, 6, 3, '#17431f')
+  px(7, 12, 2, 3, '#4a3426') // trunk
+  px(5, 14, 6, 1, '#1a3020')
+}
+
+/** Dry ground: verges, beaches and the lots behind a casino. */
+const SAND_TILE: Draw = (px) => {
+  px(0, 0, 16, 16, '#d8c28e')
+  px(0, 0, 16, 1, '#e2cf9e')
+  for (const [x, y] of [[3, 4], [11, 2], [6, 9], [13, 12], [2, 13], [9, 6]]) {
+    px(x, y, 1, 1, '#c9b07a')
+  }
+}
+
+/** Planting along a path. Walkable, and the only bright colour in a street. */
+const FLOWER_TILE: Draw = (px) => {
+  px(0, 0, 16, 16, '#24402c')
+  px(0, 0, 16, 1, '#2f5237')
+  for (const [x, y, color] of [
+    [2, 3, '#e05a7a'], [9, 2, '#f2c14e'], [12, 7, '#e05a7a'],
+    [5, 10, '#f2c14e'], [10, 12, '#d96ad9'], [3, 7, '#d96ad9'],
+  ] as [number, number, string][]) {
+    px(x, y, 2, 2, color)
+    px(x, y + 2, 1, 1, '#2f5237')
+  }
+}
+
+/** Paved forecourt: the apron in front of a casino, lighter than a pavement. */
+const PLAZA_TILE: Draw = (px) => {
+  px(0, 0, 16, 16, '#565566')
+  px(0, 0, 16, 1, '#656475')
+  px(0, 7, 16, 1, '#4a4958')
+  px(7, 0, 1, 7, '#4a4958')
+  px(3, 8, 1, 8, '#4a4958')
+  px(11, 8, 1, 8, '#4a4958')
+  px(1, 1, 2, 1, '#6e6d80')
+}
+
+/** Street furniture: a planter, a barrier, the plinth of a sign. Solid. */
+const PROP_TILE: Draw = (px) => {
+  px(0, 0, 16, 16, '#565566')
+  px(2, 3, 12, 11, '#3c3b4a')
+  px(2, 3, 12, 2, '#514f62')
+  px(3, 5, 10, 2, '#2a7a44')
+  px(4, 6, 3, 2, '#e05a7a')
+  px(9, 6, 3, 2, '#f2c14e')
+  px(2, 13, 12, 1, '#2a2936')
+}
+
 /**
  * A town's colour, applied to every tile as a per-channel transform.
  *
@@ -185,6 +241,11 @@ export function tileTextures(themeId = 'default'): Record<number, Texture> {
     [SIDEWALK]: makeTexture(themed(SIDEWALK_TILE, theme)),
     [GRASS]: makeTexture(themed(GRASS_TILE, theme)),
     [DOOR]: makeTexture(themed(DOOR_TILE, theme)),
+    [TREE]: makeTexture(themed(TREE_TILE, theme)),
+    [SAND]: makeTexture(themed(SAND_TILE, theme)),
+    [FLOWER]: makeTexture(themed(FLOWER_TILE, theme)),
+    [PLAZA]: makeTexture(themed(PLAZA_TILE, theme)),
+    [PROP]: makeTexture(themed(PROP_TILE, theme)),
   }
   tileCaches.set(themeId, textures)
   return textures

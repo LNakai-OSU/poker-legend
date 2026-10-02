@@ -1,8 +1,8 @@
 import { useState, type ReactNode } from 'react'
-import { LESSONS, SHOPS, SPONSORS } from '../world/content'
+import { CITIES, LESSONS, SHOPS, SPONSORS } from '../world/content'
 import { travelOptions } from './progression'
 import { totalOwed, type CityId, type Debt, type GameState } from './state'
-import type { ShopItemDef } from '../world/types'
+import type { LocalStop, ShopItemDef } from '../world/types'
 
 // --- shared shell -----------------------------------------------------------
 
@@ -236,14 +236,18 @@ export function SponsorScene({
 export function TravelScene({
   state,
   onTravel,
+  onLocalTrip,
   onBack,
 }: {
   state: GameState
   onTravel: (cityId: CityId) => void
+  /** A stop inside this town — somewhere you could walk, only faster. */
+  onLocalTrip: (stop: LocalStop) => void
   onBack: () => void
 }) {
   const options = travelOptions(state)
   const hunted = state.huntedInCityId === state.cityId
+  const stops = CITIES[state.cityId]?.stops ?? []
 
   return (
     <MenuScreen
@@ -256,6 +260,25 @@ export function TravelScene({
       onBack={onBack}
       backLabel="Stay here"
     >
+      {stops.length > 0 && (
+        <div style={{ color: '#8ad4ff', fontSize: 12, letterSpacing: 1 }}>LOCAL SERVICE</div>
+      )}
+      {stops.map((stop) => (
+        <Row key={stop.areaId}>
+          <div>
+            <div>{stop.name}</div>
+            <div style={{ color: '#9a9ab0', fontSize: 13 }}>{stop.blurb}</div>
+          </div>
+          <button style={buttonStyle} onClick={() => onLocalTrip(stop)}>
+            Ride
+          </button>
+        </Row>
+      ))}
+      {stops.length > 0 && options.length > 0 && (
+        <div style={{ color: '#8ad4ff', fontSize: 12, letterSpacing: 1, marginTop: 8 }}>
+          OUT OF TOWN
+        </div>
+      )}
       {options.map((option) => (
         <Row key={option.cityId}>
           <div>

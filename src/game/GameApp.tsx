@@ -8,7 +8,7 @@ import { CaughtScene, EndingScene, FinaleLostScene } from './EndScenes'
 import { CrapsScene, SlotsScene } from './CasinoGameScenes'
 import { PenthouseScene, VenueScene } from './VenueScenes'
 import { SettingsScene } from './SettingsScene'
-import { LESSONS, MISSIONS, SPONSORS, TABLES } from '../world/content'
+import { CITIES, LESSONS, MISSIONS, SPONSORS, TABLES, findArea } from '../world/content'
 import { hasFastTravel, missionStatus, tableAccess, travelCostTo } from './progression'
 import { clearSave, loadGame, saveGame } from './save'
 import { SoundToggle, useAudioUnlock } from '../audio/SoundToggle'
@@ -34,7 +34,13 @@ const INVITE_ONLY_TABLES = new Set(['crescent-private', 'mesa-private'])
 type View =
   | { kind: 'city' }
   | { kind: 'pokerNight' }
-  | { kind: 'bus' }
+  | {
+      kind: 'bus'
+      destination: string
+      caption?: string
+      /** Where the bus puts you down. */
+      arrive: { cityId?: CityId; areaId?: string; col?: number; row?: number }
+    }
   | { kind: 'table'; tableId: string }
   | { kind: 'blocked'; title: string; message: string }
   | { kind: 'bankrollWarning'; tableId: string; warning: string }
@@ -221,22 +227,35 @@ export function GameApp() {
           onWin={(winnings) => {
             // Winnings are *added* to the roll. This used to assign it, so
             // walking in with $250,000 and winning set the bankroll to ~$1,500.
+            // You are still sitting in Marcus's front room. Getting out of town is
+            // a decision for the morning, not something the win does for you.
             setState((s) => ({ ...s, cash: s.cash + winnings, flags: { ...s.flags, wonPokerNight: true } }))
-            setView({ kind: 'bus' })
+            backToCity()
           }}
           onLeave={backToCity}
         />
       )
 
-    case 'bus':
+    case 'bus': {
+      const ride = view
       return (
         <BusTransition
+          destination={ride.destination}
+          caption={ride.caption}
           onArrive={() => {
-            setState((s) => travelTo(s, 'silverCreek'))
+            setState((s) =>
+              ride.arrive.cityId
+                ? travelTo(s, ride.arrive.cityId, { keepDay: hasFastTravel(s) })
+                : { ...s, areaId: ride.arrive.areaId ?? s.areaId },
+            )
+            if (ride.arrive.areaId && ride.arrive.col !== undefined && ride.arrive.row !== undefined) {
+              setEntryTile({ col: ride.arrive.col, row: ride.arrive.row })
+            }
             backToCity()
           }}
         />
       )
+    }
 
     case 'table': {
       const table = TABLES[view.tableId]
@@ -367,12 +386,22 @@ export function GameApp() {
         <TravelScene
           state={state}
           onTravel={(cityId: CityId) => {
-            setState((s) =>
-              travelTo({ ...s, cash: s.cash - travelCostTo(s, cityId) }, cityId, {
-                keepDay: hasFastTravel(s),
-              }),
-            )
-            backToCity()
+            const fare = travelCostTo(state, cityId)
+            setState((s) => ({ ...s, cash: s.cash - fare }))
+            setView({
+              kind: 'bus',
+              destination: CITIES[cityId]?.name ?? 'somewhere else',
+              caption: 'You count what you have twice, just to be sure.',
+              arrive: { cityId },
+            })
+          }}
+          onLocalTrip={(stop) => {
+            setView({
+              kind: 'bus',
+              destination: stop.name,
+              caption: 'Four stops. You could have walked it, but you did not.',
+              arrive: { areaId: stop.areaId, col: stop.col, row: stop.row },
+            })
           }}
           onBack={backToCity}
         />
@@ -442,7 +471,10 @@ export function GameApp() {
             entryTile={entryTile}
             onAction={handlePoi}
             onEnterArea={(areaId, col, row) => {
-              setState((s) => ({ ...s, areaId }))
+              // Walking between towns is just walking, so the city follows the
+              // area rather than the other way round.
+              const destination = findArea(areaId)
+              setState((s) => ({ ...s, areaId, cityId: destination?.cityId ?? s.cityId }))
               setEntryTile({ col, row })
             }}
             onCaught={handleCaught}

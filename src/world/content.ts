@@ -469,4 +469,6 @@ export {
   collectorSpawn,
   distanceToEscape,
   escapeTiles,
+  AREAS,
+  findArea,
 } from './cities'

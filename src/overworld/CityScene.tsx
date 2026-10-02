@@ -1,5 +1,5 @@
 import { OverworldScene, type ChaserConfig, type Interactable, type SceneExit } from './OverworldScene'
-import { CITIES, MISSIONS, collectorSpawn } from '../world/content'
+import { AREAS, CITIES, MISSIONS, collectorSpawn, findArea } from '../world/content'
 import { missionStatus } from '../game/progression'
 import { daysUntilDue, totalOwed, type GameState } from '../game/state'
 import type { PoiAction, PoiDef } from '../world/types'
@@ -16,10 +16,14 @@ interface CitySceneProps {
 }
 
 export function CityScene({ state, entryTile, onAction, onEnterArea, onCaught }: CitySceneProps) {
-  const city = CITIES[state.cityId]
-  const areaId = state.areaId && city.areas[state.areaId] ? state.areaId : city.entryAreaId
-  const area = city.areas[areaId]
-  const hunted = state.huntedInCityId === state.cityId
+  // Areas resolve globally, not within a city: walking off the edge of a street
+  // can take you into the next town, which is the point of the world being one
+  // continuous place rather than a set of islands joined by menus.
+  const located = findArea(state.areaId) ?? findArea(CITIES[state.cityId].entryAreaId)
+  const city = CITIES[located?.cityId ?? state.cityId]
+  const area = located?.area ?? city.areas[city.entryAreaId]
+  const areaId = area.id
+  const hunted = state.huntedInCityId === city.id
   useAmbientMusic(hunted ? 'tense' : 'overworld')
 
   const interactables: Interactable[] = area.pois.map((poi) => ({
@@ -68,6 +72,34 @@ export function CityScene({ state, entryTile, onAction, onEnterArea, onCaught }:
       onCaught={onCaught}
       areaName={area.name}
       theme={city.theme}
+      openEdges={
+        area.edges
+          ? (Object.fromEntries(
+              Object.keys(area.edges).map((edge) => [edge, true]),
+            ) as Partial<Record<'north' | 'south' | 'east' | 'west', true>>)
+          : undefined
+      }
+      onLeaveEdge={(edge, alongAxis) => {
+        const link = area.edges?.[edge]
+        if (!link) return
+        const destination = AREAS[link.toAreaId]
+        if (!destination) return
+        const next = destination.area
+        const offset = link.offset ?? 0
+        // Come out on the matching side, keeping your place along the edge.
+        const width = next.map[0].length
+        const height = next.map.length
+        const clamp = (value: number, max: number) => Math.max(0, Math.min(max - 1, value))
+        const landing =
+          edge === 'east'
+            ? { col: 0, row: clamp(alongAxis + offset, height) }
+            : edge === 'west'
+              ? { col: width - 1, row: clamp(alongAxis + offset, height) }
+              : edge === 'south'
+                ? { col: clamp(alongAxis + offset, width), row: 0 }
+                : { col: clamp(alongAxis + offset, width), row: height - 1 }
+        onEnterArea(link.toAreaId, landing.col, landing.row)
+      }}
       hud={
         <>
           <div>{area.name}</div>

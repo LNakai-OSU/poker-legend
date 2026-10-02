@@ -6,6 +6,7 @@ import { Npc, type NpcConfig } from './Npc'
 import { DialogueBox } from '../game/DialogueBox'
 import { TouchControls, useIsTouchDevice } from './TouchControls'
 import { cameraOffset } from './camera'
+import type { Edge } from '../world/types'
 import { Minimap } from './Minimap'
 
 const MOVE_KEYS: Record<string, Direction> = {
@@ -78,6 +79,12 @@ interface OverworldSceneProps {
   areaName?: string
   /** The town's tile palette. */
   theme?: string
+  /**
+   * Which sides of this map carry on into another one. Walking off such a side is
+   * how streets join: no doorway, no tile to stand on, just the next map.
+   */
+  openEdges?: Partial<Record<Edge, true>>
+  onLeaveEdge?: (edge: Edge, alongAxis: number) => void
 }
 
 export function OverworldScene({
@@ -92,6 +99,8 @@ export function OverworldScene({
   onExit,
   areaName = '',
   theme = 'default',
+  openEdges,
+  onLeaveEdge,
 }: OverworldSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
@@ -105,6 +114,8 @@ export function OverworldScene({
   onCaughtRef.current = onCaught
   const onExitRef = useRef(onExit)
   onExitRef.current = onExit
+  const onLeaveEdgeRef = useRef(onLeaveEdge)
+  onLeaveEdgeRef.current = onLeaveEdge
   // Touch input drives the same paths as the keyboard rather than synthesising
   // key events, so the Pixi ticker reads it straight from these refs.
   const touchDirRef = useRef<Direction | null>(null)
@@ -236,7 +247,26 @@ export function OverworldScene({
       const step = (direction: Direction) => {
         if (leaving) return
         const [dc, dr] = DELTAS[direction]
-        const door = exits.find((e) => e.col === player.col + dc && e.row === player.row + dr)
+        const nextCol = player.col + dc
+        const nextRow = player.row + dr
+
+        // Off the side of the map and onto the neighbouring one. The player keeps
+        // their position along the shared edge, so a street carries on in a
+        // straight line rather than restarting somewhere arbitrary.
+        const edge: Edge | null =
+          nextRow < 0 ? 'north'
+          : nextRow >= map.length ? 'south'
+          : nextCol < 0 ? 'west'
+          : nextCol >= map[0].length ? 'east'
+          : null
+        if (edge && openEdges?.[edge]) {
+          player.face(direction)
+          leaving = true
+          onLeaveEdgeRef.current?.(edge, edge === 'north' || edge === 'south' ? player.col : player.row)
+          return
+        }
+
+        const door = exits.find((e) => e.col === nextCol && e.row === nextRow)
         if (door) {
           // Face the door and stay put. The transition is the move.
           player.face(direction)

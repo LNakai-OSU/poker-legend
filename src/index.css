@@ -175,7 +175,23 @@ button {
   animation: deal-countdown linear both;
 }
 
+/* The bus ride: two layers of scenery at different speeds, and you bobbing
+   along with the road. */
+@keyframes bus-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.bus-scroll-far { animation: bus-scroll 3200ms linear infinite; }
+.bus-scroll-near { animation: bus-scroll 1100ms linear infinite; }
+
+@keyframes bus-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(2px); }
+}
+.bus-bob { animation: bus-bob 620ms ease-in-out infinite; }
+
 @media (prefers-reduced-motion: reduce) {
   .announcement { animation-duration: 2600ms; animation-name: none; opacity: 1; }
   .deal-countdown { animation: none; transform: scaleX(1); }
+  .bus-scroll-far, .bus-scroll-near, .bus-bob { animation: none; }
 }

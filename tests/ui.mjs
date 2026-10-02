@@ -226,6 +226,38 @@ async function enterDoor(page, label) {
   throw new Error(`could not go through "${label}"; stopped at (${at?.col},${at?.row})`)
 }
 
+/**
+ * Walks off the given side of the map and onto the next one.
+ *
+ * This is how streets join now: no doorway in the middle of the road, just the
+ * map carrying on. Picks whichever tile along that edge is actually walkable.
+ */
+async function walkEdge(page, side) {
+  const grid = await gridOf(page)
+  if (grid.length === 0) throw new Error('no grid published')
+  const height = grid.length
+  const width = grid[0].length
+  const vertical = side === 'north' || side === 'south'
+  const span = vertical ? width : height
+
+  const before = await areaNameOf(page)
+  for (let along = 0; along < span; along++) {
+    const tile = vertical
+      ? { col: along, row: side === 'north' ? 0 : height - 1 }
+      : { col: side === 'west' ? 0 : width - 1, row: along }
+    if (grid[tile.row]?.[tile.col] !== 'w') continue
+    if (!(await moveTo(page, tile.col, tile.row, 90))) continue
+    await step(page, { north: 'ArrowUp', south: 'ArrowDown', east: 'ArrowRight', west: 'ArrowLeft' }[side])
+    await page.waitForTimeout(500)
+    if ((await areaNameOf(page)) !== before) return true
+  }
+  throw new Error(`could not walk ${side} out of "${before}"`)
+}
+
+/** The area the player is standing in, as the corner map labels it. */
+const areaNameOf = (page) =>
+  page.evaluate(() => document.querySelector('[data-testid="minimap"]')?.textContent ?? '')
+
 /** Walks up to a thing and talks to it. */
 async function talkTo(page, name) {
   await approach(page, name)
@@ -303,38 +335,53 @@ await test('a door is opened from in front of it, not stood on', async () => {
   await page.close()
 })
 
-await test('the bus will not take you anywhere until you win the home game', async () => {
+await test('the bus runs across town to the game', async () => {
   const page = await newPage(null)
   await page.goto(BASE)
   await page.waitForSelector('canvas')
   await page.waitForTimeout(400)
   await enterDoor(page, 'Outside')
 
+  // Basin Street carries on east into Seventh, and Seventh into the depot. No
+  // doors are involved: the road simply continues.
+  await walkEdge(page, 'east')
+  assert((await areaNameOf(page)).includes('Seventh'), 'walking east did not reach Seventh Street')
+  await walkEdge(page, 'east')
+  assert((await areaNameOf(page)).includes('Depot'), 'walking east again did not reach the depot')
+
   await talkTo(page, 'Bus Stop')
   const body = await page.locator('body').innerText()
-  assert(!body.includes('Travel'), 'the bus stop opened the travel screen before the home game')
-  assert((await page.locator('[data-testid="overworld"]').count()) === 1, 'left the street anyway')
+  assert(body.includes('LOCAL SERVICE'), 'the bus offers no local service')
+  assert(body.includes('Eastgate'), "the bus does not run to Marcus's block")
   assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
   await page.close()
 })
 
-await test('the home town has blocks you can walk between', async () => {
+await test('the town is one continuous place', async () => {
   const page = await newPage(null)
   await page.goto(BASE)
   await page.waitForSelector('canvas')
   await page.waitForTimeout(400)
   await enterDoor(page, 'Outside')
-
   assert(await page.locator('[data-testid="minimap"]').isVisible(), 'no minimap on the street')
-  await enterDoor(page, 'Seventh Street')
-  assert((await page.locator('body').innerText()).includes('Seventh Street'), 'did not reach Seventh Street')
 
-  // And the shops on it are real rooms, not signs.
+  // Out to the edge of town and back again, entirely on foot.
+  await walkEdge(page, 'east')
+  await walkEdge(page, 'east')
+  await walkEdge(page, 'north')
+  assert((await areaNameOf(page)).includes('Eastgate'), 'could not walk north to Eastgate')
+  await walkEdge(page, 'south')
+  await walkEdge(page, 'west')
+  await walkEdge(page, 'west')
+  assert((await areaNameOf(page)).includes('Basin Street'), 'could not walk back home')
+
+  // And the shops on the way are real rooms.
+  await walkEdge(page, 'east')
   await enterDoor(page, "Patel's")
   const pois = await poisOf(page)
   assert(pois.some((p) => p.name === 'Mr Patel'), `nobody in the shop (saw: ${pois.map((p) => p.name)})`)
   await enterDoor(page, 'Seventh Street')
-  assert((await page.locator('body').innerText()).includes('Seventh Street'), 'could not get back out')
+  assert((await areaNameOf(page)).includes('Seventh'), 'could not get back out')
   assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
   await page.close()
 })

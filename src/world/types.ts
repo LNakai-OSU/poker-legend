@@ -174,6 +174,27 @@ export interface VenueDef {
   restsForDays?: number
 }
 
+export type Edge = 'north' | 'south' | 'east' | 'west'
+
+/**
+ * What lies beyond one side of a map.
+ *
+ * Towns used to be islands: every street was joined to the next by a *door*, so
+ * crossing a road meant walking into a doorway and being teleported, and the
+ * world read as a set of disconnected rooms rather than a place. An edge link is
+ * the Pokémon model instead — you walk off the side of one map and straight onto
+ * the next, with no transition to acknowledge and nothing to step on.
+ */
+export interface EdgeLink {
+  toAreaId: string
+  /**
+   * How the two maps line up along the shared side: added to the coordinate you
+   * leave on to get the one you arrive at. A map whose neighbour starts four
+   * tiles further north uses -4.
+   */
+  offset?: number
+}
+
 /** A door: step onto this tile and you come out somewhere else. */
 export interface ExitDef {
   col: number
@@ -197,7 +218,10 @@ export interface AreaDef {
   playerStart: { col: number; row: number }
   background: string
   pois: PoiDef[]
+  /** Doorways into buildings. Streets join to each other with `edges` instead. */
   exits: ExitDef[]
+  /** Which map lies off each side, for walking straight from one into the next. */
+  edges?: Partial<Record<Edge, EdgeLink>>
 }
 
 export interface CityDef {
@@ -212,4 +236,20 @@ export interface CityDef {
   travelCost: number
   /** Which tile palette the whole town is drawn in (see TILE_THEMES). */
   theme?: string
+  /**
+   * Stops the local bus serves inside this town.
+   *
+   * The bus is a shortcut across a world you can also walk, so these are places
+   * you could reach on foot — it just saves the walk.
+   */
+  stops?: LocalStop[]
+}
+
+export interface LocalStop {
+  areaId: string
+  name: string
+  blurb: string
+  /** Where you are put down. */
+  col: number
+  row: number
 }
