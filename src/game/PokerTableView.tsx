@@ -1,7 +1,7 @@
 import type { HandResult, PublicState } from '../engine/table'
 import { bestHand, HAND_CATEGORY_NAMES } from '../engine/handRank'
 import type { Card as CardData, PlayerConfig } from '../engine/types'
-import type { CSSProperties } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { Card, cardText } from './Card'
 import { ChipStack } from './ChipStack'
 import { avatarDataUrl, expressionFor, type Expression } from './avatars'
@@ -193,6 +193,33 @@ function seatPlateStyle(isActing: boolean): CSSProperties {
   }
 }
 
+/**
+ * Chips pushed out in front of a seat, toward the middle.
+ *
+ * Taken out of the seat's column deliberately. In flow, a bet appearing made the
+ * seat taller and pushed the rest of it toward the centre of the felt, so your own
+ * stack grew upward into the community cards and an opponent's grew down into
+ * them — the chips ended up covering the very cards the bet was about. Out of
+ * flow nothing moves when a bet lands, and `zIndex` keeps a card on top if the
+ * two ever do meet.
+ */
+function BetOnFelt({ side, children }: { side: 'above' | 'below'; children: ReactNode }) {
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        ...(side === 'above' ? { bottom: '100%' } : { top: '100%' }),
+        zIndex: 1,
+        pointerEvents: 'none',
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+
 /** The dealer button, as an actual button on the felt. */
 function DealerButton() {
   return (
@@ -250,7 +277,10 @@ export function PokerTableView({
           // Height is set directly rather than via an aspect ratio: coupling the
           // two made a min-height force the felt wider than a phone screen, which
           // pushed the right-hand seat off the display entirely.
-          height: 'clamp(300px, 46vh, 430px)',
+          // The floor has to be low enough to fit a short laptop window. At 300px
+          // the felt refused to shrink below the space available, so on a 500px
+          // viewport the sizing buttons were pushed off the bottom of the screen.
+          height: 'clamp(200px, 44vh, 430px)',
           borderRadius: '46% / 58%',
           background:
             // Woven baize rather than a flat green: a broad highlight where the
@@ -297,6 +327,7 @@ export function PokerTableView({
             transform: 'translate(-50%, -50%)',
             textAlign: 'center',
             width: 'min(72%, 300px)',
+            zIndex: 3,
           }}
         >
           <div
@@ -340,8 +371,12 @@ export function PokerTableView({
                 top: pos.top,
                 transform: 'translate(-50%, 0)',
                 textAlign: 'center',
-                opacity: p.folded ? 0.45 : 1,
-                transition: 'opacity 200ms',
+                // Dimmed with a filter rather than `opacity`, because opacity
+                // below 1 creates a stacking context — which took a folded seat's
+                // chips out of the felt's ordering and let them paint over another
+                // player's cards.
+                filter: p.folded ? 'brightness(0.55) saturate(0.7)' : undefined,
+                transition: 'filter 200ms',
               }}
             >
               {speech?.playerId === p.id && (
@@ -376,7 +411,16 @@ export function PokerTableView({
                 )}
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 2, marginTop: 2 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  gap: 2,
+                  marginTop: 2,
+                  position: 'relative',
+                  zIndex: 2,
+                }}
+              >
                 {revealed
                   ? revealed.holeCards.map((c, ci) => (
                       <Card key={ci} card={c} anim="flip" delayMs={ci * 110} small />
@@ -413,7 +457,9 @@ export function PokerTableView({
                 </div>
               )}
 
-              <ChipStack amount={p.streetContribution} testId={`bet-${p.id}`} />
+              <BetOnFelt side="below">
+                <ChipStack amount={p.streetContribution} testId={`bet-${p.id}`} />
+              </BetOnFelt>
             </div>
           )
         })}
@@ -429,7 +475,9 @@ export function PokerTableView({
               textAlign: 'center',
             }}
           >
-            <ChipStack amount={you.streetContribution} testId="bet-you" />
+            <BetOnFelt side="above">
+              <ChipStack amount={you.streetContribution} testId="bet-you" />
+            </BetOnFelt>
             <div className={winners.has('you') ? 'seat-win' : undefined} style={seatPlateStyle(you.isActing)}>
               <div style={{ fontSize: 11, whiteSpace: 'nowrap' }}>
                 You
@@ -445,7 +493,16 @@ export function PokerTableView({
               </div>
               {you.allIn && <div style={{ fontSize: 9, color: '#f0a0a0', letterSpacing: 1 }}>ALL IN</div>}
             </div>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 3, marginTop: 3 }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                gap: 3,
+                marginTop: 3,
+                position: 'relative',
+                zIndex: 2,
+              }}
+            >
               {yourHole.map((c, i) => (
                 <Card key={`${state.handNumber}-${i}`} card={c} anim="deal" delayMs={i * 70} />
               ))}

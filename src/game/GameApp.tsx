@@ -245,12 +245,22 @@ export function GameApp() {
           onArrive={() => {
             setState((s) =>
               ride.arrive.cityId
-                ? travelTo(s, ride.arrive.cityId, { keepDay: hasFastTravel(s) })
+                ? travelTo(s, ride.arrive.cityId, {
+                    keepDay: hasFastTravel(s),
+                    areaId:
+                      CITIES[ride.arrive.cityId].arrivalAreaId ??
+                      CITIES[ride.arrive.cityId].entryAreaId,
+                  })
                 : { ...s, areaId: ride.arrive.areaId ?? s.areaId },
             )
-            if (ride.arrive.areaId && ride.arrive.col !== undefined && ride.arrive.row !== undefined) {
-              setEntryTile({ col: ride.arrive.col, row: ride.arrive.row })
-            }
+            // A tile from the area you just left means nothing in the one you are
+            // arriving at — and in a room smaller than the map you came from it is
+            // off the grid entirely, which is why it left the player stuck.
+            setEntryTile(
+              ride.arrive.areaId && ride.arrive.col !== undefined && ride.arrive.row !== undefined
+                ? { col: ride.arrive.col, row: ride.arrive.row }
+                : null,
+            )
             backToCity()
           }}
         />

@@ -436,12 +436,19 @@ await test('hands end without a panel to dismiss', async () => {
     await page.locator('[data-testid="auto-deal-status"]').isVisible(),
     'the end of a hand did not offer to carry on by itself',
   )
-  // Nothing clicked: a new hand should arrive on its own.
-  await page.waitForTimeout(4200)
-  assert(
-    await page.locator('button', { hasText: /Fold|Check|^Call/ }).first().isVisible().catch(() => false),
-    'the next hand was never dealt without being asked',
-  )
+  // Nothing clicked: a new hand should arrive on its own. Polled rather than
+  // slept, because the opponents act on their own timers before it is the
+  // player's turn again, and a single fixed wait races them.
+  let dealtItself = false
+  for (let i = 0; i < 40 && !dealtItself; i++) {
+    dealtItself = await page
+      .locator('button', { hasText: /Fold|Check|^Call/ })
+      .first()
+      .isVisible()
+      .catch(() => false)
+    if (!dealtItself) await page.waitForTimeout(300)
+  }
+  assert(dealtItself, 'the next hand was never dealt without being asked')
   assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
   await page.close()
 })
@@ -589,6 +596,144 @@ await test('a six-handed table seats everyone', async () => {
       assert(!overlaps, `${a.id} overlaps ${b.id}`)
     }
   }
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+})
+
+/**
+ * Chips never end up on top of a card.
+ *
+ * Bets used to be laid out *inside* the seat's column, so a bet appearing made
+ * the seat taller and pushed it toward the middle of the felt — your own stack
+ * grew up into the community cards and an opponent's grew down into them, which
+ * covered the very cards the bet was about.
+ */
+await test('a bet never covers a card', async () => {
+  const page = await newPage(baseSave({ cityId: 'riverbend', cash: 50000 }))
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(400)
+  await enterDoor(page, 'Riverboat')
+  await talkTo(page, 'Dealer')
+  assert(await page.locator('[data-testid="pot-value"]').isVisible(), 'never reached the table')
+
+  let worst = 0
+  for (let i = 0; i < 24; i++) {
+    const covered = await page.evaluate(() => {
+      const chips = [...document.querySelectorAll('[data-testid^="bet-"]')]
+        .map((el) => ({ el, r: el.getBoundingClientRect() }))
+        .filter((c) => c.r.width > 0)
+      const cards = [...document.querySelectorAll('[data-facedown], [style*="linear-gradient(170deg"]')]
+        .map((el) => ({ el, r: el.getBoundingClientRect() }))
+      let area = 0
+      for (const c of chips) {
+        for (const k of cards) {
+          const hit = !(c.r.right <= k.r.left || k.r.right <= c.r.left || c.r.bottom <= k.r.top || k.r.bottom <= c.r.top)
+          if (!hit) continue
+          // Ask the browser what is actually on top in the overlap. Comparing
+          // z-index values is meaningless across stacking contexts, and seats
+          // quietly made their own — via `isolation`, and via the `opacity` that
+          // dims a folded player — so the numbers agreed while the pixels did not.
+          const x = (Math.max(c.r.left, k.r.left) + Math.min(c.r.right, k.r.right)) / 2
+          const y = (Math.max(c.r.top, k.r.top) + Math.min(c.r.bottom, k.r.bottom)) / 2
+          const top = document.elementFromPoint(x, y)
+          if (!top || !c.el.contains(top)) continue
+          const w = Math.min(c.r.right, k.r.right) - Math.max(c.r.left, k.r.left)
+          const h = Math.min(c.r.bottom, k.r.bottom) - Math.max(c.r.top, k.r.top)
+          area = Math.max(area, Math.round(w * h))
+        }
+      }
+      return area
+    })
+    worst = Math.max(worst, covered)
+    for (const label of ['Check', /^Call/, 'Deal now', 'Next hand', 'Fold']) {
+      const btn = page.locator('button', { hasText: label })
+      if (await btn.isVisible().catch(() => false)) {
+        await btn.click()
+        break
+      }
+    }
+    await page.waitForTimeout(200)
+  }
+  assert(worst === 0, `a chip stack was drawn over a card (${worst}px of it)`)
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+})
+
+/**
+ * The table and the bus have to fit the window they are in.
+ *
+ * The felt would not shrink below 300px however short the window was, so on a
+ * laptop window the betting buttons were pushed off the bottom of the screen; the
+ * bus scene added its padding *to* a full 100vh, so it was always exactly its own
+ * padding taller than the viewport.
+ */
+for (const [width, height] of [
+  [1366, 500],
+  [1024, 560],
+  [1280, 620],
+]) {
+  await test(`the table fits a ${width}x${height} window`, async () => {
+    const page = await newPage(baseSave({ cityId: 'riverbend', cash: 50000, lessonIds: ['tells', 'pot-odds', 'position'] }))
+    await page.setViewportSize({ width, height })
+    await page.goto(BASE)
+    await page.waitForSelector('canvas')
+    await page.waitForTimeout(400)
+    await enterDoor(page, 'Riverboat')
+    await talkTo(page, 'Dealer')
+    assert(await page.locator('[data-testid="pot-value"]').isVisible(), 'never reached the table')
+
+    let worst = 0
+    for (let i = 0; i < 20; i++) {
+      const m = await page.evaluate(() => ({
+        overflow: document.documentElement.scrollHeight - window.innerHeight,
+        // Every control has to be reachable without scrolling.
+        offscreen: Math.round(
+          Math.max(0, ...[...document.querySelectorAll('button')].map((b) => b.getBoundingClientRect().bottom)) -
+            window.innerHeight,
+        ),
+        sizingRow: !!document.querySelector('[data-testid="raise-all-in"]'),
+      }))
+      worst = Math.max(worst, m.overflow, m.offscreen)
+      if (m.sizingRow && i > 2) break
+      for (const label of ['Check', /^Call/, 'Deal now', 'Next hand']) {
+        const btn = page.locator('button', { hasText: label })
+        if (await btn.isVisible().catch(() => false)) {
+          await btn.click()
+          break
+        }
+      }
+      await page.waitForTimeout(190)
+    }
+    assert(worst <= 0, `the table runs ${worst}px past the bottom of a ${width}x${height} window`)
+    assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+    await page.close()
+  })
+}
+
+await test('the bus ride fits the window', async () => {
+  const page = await newPage(null)
+  await page.setViewportSize({ width: 1024, height: 560 })
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(400)
+  await enterDoor(page, 'Outside')
+  await walkEdge(page, 'east')
+  await walkEdge(page, 'east')
+  await talkTo(page, 'Bus Stop')
+  await page.locator('button', { hasText: 'Ride' }).click()
+  await page.waitForTimeout(700)
+  assert(await page.locator('[data-testid="bus-ride"]').isVisible(), 'the bus never pulled away')
+
+  const m = await page.evaluate(() => ({
+    overflow: document.documentElement.scrollHeight - window.innerHeight,
+    offscreen: Math.round(
+      Math.max(0, ...[...document.querySelectorAll('button')].map((b) => b.getBoundingClientRect().bottom)) -
+        window.innerHeight,
+    ),
+  }))
+  assert(m.overflow <= 0, `the bus runs ${m.overflow}px past the bottom of the window`)
+  assert(m.offscreen <= 0, `the skip button sits ${m.offscreen}px below the window`)
   assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
   await page.close()
 })

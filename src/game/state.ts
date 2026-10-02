@@ -194,12 +194,20 @@ export function takeStake(
 export function travelTo(
   state: GameState,
   cityId: CityId,
-  options: { keepDay?: boolean } = {},
+  options: { keepDay?: boolean; areaId?: string } = {},
 ): GameState {
   const unlocked = state.unlockedCityIds.includes(cityId)
     ? state.unlockedCityIds
     : [...state.unlockedCityIds, cityId]
-  const moved = { ...state, cityId, areaId: null, unlockedCityIds: unlocked, huntedInCityId: null }
+  const moved = {
+    ...state,
+    cityId,
+    // Where the bus stops. Null falls back to wherever the town begins, which is
+    // only right for towns whose first area is a street.
+    areaId: options.areaId ?? null,
+    unlockedCityIds: unlocked,
+    huntedInCityId: null,
+  }
   // Driving yourself does not cost you a day on the road. That — rather than a
   // few dollars off the fare — is what makes a vehicle worth its price, because
   // debts come due on a day count. The caller decides, since working out what the

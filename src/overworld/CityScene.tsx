@@ -27,6 +27,13 @@ export function CityScene({ state, entryTile, onAction, onEnterArea, onCaught }:
   const hunted = state.huntedInCityId === city.id
   useAmbientMusic(hunted ? 'tense' : 'overworld')
 
+  // Falling back to the area's own start if the tile handed in is not somewhere
+  // you could actually stand: out of bounds, or inside a wall. Without this a
+  // stale coordinate strands the player off the edge of the map with no way to
+  // move at all.
+  const landing =
+    entryTile && isWalkable(area.map, entryTile.col, entryTile.row) ? entryTile : area.playerStart
+
   const interactables: Interactable[] = area.pois.map((poi) => ({
     id: poi.id,
     name: poi.name,
@@ -48,7 +55,7 @@ export function CityScene({ state, entryTile, onAction, onEnterArea, onCaught }:
   // door puts you straight back out where they are. Where they are, though, is
   // the far end of the street from the way out of town — the chase has to be one
   // the player can actually win by running for the bus.
-  const spawnTile = entryTile ?? area.playerStart
+  const spawnTile = landing
   const chaser: ChaserConfig | undefined =
     hunted && areaId === city.entryAreaId
       ? { name: 'Collector', ...collectorSpawn(area, spawnTile), stepMs: 430 }
@@ -61,7 +68,7 @@ export function CityScene({ state, entryTile, onAction, onEnterArea, onCaught }:
     <OverworldScene
       key={`${state.cityId}-${areaId}-${hunted}`}
       map={area.map}
-      playerStart={entryTile ?? area.playerStart}
+      playerStart={landing}
       interactables={interactables}
       exits={exits}
       onExit={(exit) => {

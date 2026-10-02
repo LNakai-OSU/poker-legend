@@ -228,8 +228,16 @@ export interface CityDef {
   id: CityId
   name: string
   blurb: string
-  /** The street you arrive on. */
+  /** Where a new game begins. */
   entryAreaId: string
+  /**
+   * Where the bus puts you down, when it is not where the game starts.
+   *
+   * Your home town begins inside your flat, so travelling there dropped the
+   * player into their own bedroom — off a bus, through a locked front door, into
+   * the corner of a room. A bus stops at a bus stop.
+   */
+  arrivalAreaId?: string
   areas: Record<string, AreaDef>
   /** Bankroll needed before you can travel here at all. */
   unlockCash: number

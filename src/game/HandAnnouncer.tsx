@@ -39,10 +39,14 @@ export function HandAnnouncer({ announcement }: { announcement: Announcement | n
       style={{
         position: 'absolute',
         left: '50%',
-        // Above the board rather than below it. At 79% it sat straight on top of
-        // the player's own seat plate and hole cards, covering the two things a
-        // player most wants to see at the moment a hand is decided.
-        top: '26%',
+        // In the band between the far seats and the board.
+        //
+        // At 79% it sat on the player's own cards; at 26% it sat on the middle
+        // opponent's, which only showed up once tables went six-handed and a seat
+        // appeared at the top centre of the felt. The seats end around 30% and the
+        // board starts around 43%, so this is the one stripe that belongs to
+        // nobody.
+        top: '38%',
         transform: 'translate(-50%, -50%)',
         // Never swallows a click: the table underneath stays live while it is up.
         pointerEvents: 'none',

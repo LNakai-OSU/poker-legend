@@ -480,8 +480,9 @@ const apartmentCity: CityDef = {
       row: 13,
     },
   ],
-  blurb: 'One room, a mattress, and a window that faces a wall.',
+  blurb: 'Where you live. Cheap rent, a laundromat, and the 14 running east.',
   entryAreaId: 'home',
+  arrivalAreaId: 'depot',
   unlockCash: 0,
   travelCost: 0,
   areas: {

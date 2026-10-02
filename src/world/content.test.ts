@@ -243,6 +243,28 @@ describe('city content', () => {
     }
   })
 
+  it('puts the bus down somewhere you can walk out of', () => {
+    /*
+     * Where a town *begins* and where the bus *stops* are not the same place. The
+     * home town starts inside your flat, so travelling there put the player in
+     * their own bedroom — and with a stale entry tile from the map they had just
+     * left, in the corner of it, unable to move at all.
+     */
+    for (const city of cities) {
+      const arrivalId = city.arrivalAreaId ?? city.entryAreaId
+      const arrival = AREAS[arrivalId]?.area
+      expect(arrival, `${city.name}: the bus stops at "${arrivalId}", which does not exist`).toBeDefined()
+      expect(
+        isWalkable(arrival.map, arrival.playerStart.col, arrival.playerStart.row),
+        `${city.name}: the bus puts you down somewhere solid`,
+      ).toBe(true)
+
+      // And it has to be somewhere you can leave on foot, not a sealed room.
+      const ways = arrival.exits.length + Object.keys(arrival.edges ?? {}).length
+      expect(ways, `${city.name}: nothing leads out of where the bus stops`).toBeGreaterThan(0)
+    }
+  })
+
   it('gives every area a globally unique id', () => {
     // Areas resolve by id across the whole world now, because walking off a map
     // edge can cross a town boundary. Two areas sharing an id would make one of

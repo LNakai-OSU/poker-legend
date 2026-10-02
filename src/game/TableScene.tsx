@@ -577,13 +577,16 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
         background: 'radial-gradient(ellipse at 50% 30%, #16283a 0%, #0d1420 70%)',
         color: '#e8e8f0',
         fontFamily: 'monospace',
-        padding: 'clamp(10px, 3vw, 20px)',
+        // Vertical padding tracks the window's height, not its width: on a short
+        // laptop window the fixed padding was part of what pushed the betting
+        // buttons off the bottom of the screen.
+        padding: 'clamp(6px, 1.6vh, 20px) clamp(10px, 3vw, 20px)',
         boxSizing: 'border-box',
         overflowX: 'hidden',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
-        gap: 10,
+        gap: 'clamp(4px, 1.2vh, 10px)',
       }}>
       <div style={{ textAlign: 'center', marginBottom: 12 }}>
         <div>{table.name} &middot; ${table.smallBlind}/${table.bigBlind}</div>
