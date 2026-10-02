@@ -1,5 +1,6 @@
 import { OverworldScene, type ChaserConfig, type Interactable, type SceneExit } from './OverworldScene'
 import { AREAS, CITIES, MISSIONS, collectorSpawn, findArea } from '../world/content'
+import { isWalkable } from './tileRenderer'
 import { missionStatus } from '../game/progression'
 import { daysUntilDue, totalOwed, type GameState } from '../game/state'
 import type { PoiAction, PoiDef } from '../world/types'
@@ -90,14 +91,33 @@ export function CityScene({ state, entryTile, onAction, onEnterArea, onCaught }:
         const width = next.map[0].length
         const height = next.map.length
         const clamp = (value: number, max: number) => Math.max(0, Math.min(max - 1, value))
-        const landing =
+        const along = edge === 'north' || edge === 'south' ? width : height
+        const landingAlong = clamp(alongAxis + offset, along)
+        const at = (value: number) =>
           edge === 'east'
-            ? { col: 0, row: clamp(alongAxis + offset, height) }
+            ? { col: 0, row: value }
             : edge === 'west'
-              ? { col: width - 1, row: clamp(alongAxis + offset, height) }
+              ? { col: width - 1, row: value }
               : edge === 'south'
-                ? { col: clamp(alongAxis + offset, width), row: 0 }
-                : { col: clamp(alongAxis + offset, width), row: height - 1 }
+                ? { col: value, row: 0 }
+                : { col: value, row: height - 1 }
+
+        // Two maps rarely have exactly the same shape along a shared side, so the
+        // tile straight across can be a tree. Step along the edge to the nearest
+        // one that is actually ground rather than putting the player inside it.
+        let landing = at(landingAlong)
+        if (!isWalkable(next.map, landing.col, landing.row)) {
+          for (let distance = 1; distance < along; distance++) {
+            const candidates = [landingAlong - distance, landingAlong + distance].filter(
+              (value) => value >= 0 && value < along,
+            )
+            const found = candidates.map(at).find((tile) => isWalkable(next.map, tile.col, tile.row))
+            if (found) {
+              landing = found
+              break
+            }
+          }
+        }
         onEnterArea(link.toAreaId, landing.col, landing.row)
       }}
       hud={

@@ -20,56 +20,6 @@ const COLORS = {
   local: 0x9aa7b5,
 }
 
-/** A two-storey street: buildings north and south, road down the middle. */
-const STREET = parseMap(`
-########################
-######D########D########
-#----------------------#
-#--""--------------""--#
-#----------------------#
-#======================#
-#======================#
-#======================#
-#----------------------#
-#--""--------------""--#
-#----------------------#
-######D########D########
-########################
-`)
-
-/** A wider strip for the big cities, with four shopfronts. */
-const BOULEVARD = parseMap(`
-##############################
-####D######D########D#####D###
-#----------------------------#
-#--""----------------------""#
-#----------------------------#
-#============================#
-#============================#
-#============================#
-#----------------------------#
-#--""----------------------""#
-#----------------------------#
-####D######D########D#####D###
-##############################
-`)
-
-/** A waterfront promenade. */
-const PROMENADE = parseMap(`
-##############################
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-#----------------------------#
-#--""----------------------""#
-#============================#
-#============================#
-#--""----------------------""#
-#----------------------------#
-#----------------------------#
-####D#######D#######D####D####
-##############################
-`)
-
 /** A casino floor: carpet, banks of machines, tables. */
 const CASINO_FLOOR = parseMap(`
 ##################
@@ -161,6 +111,174 @@ const LUMINA_FLOOR = parseMap(`
 #,,,,,,,,,,,,,,,,#
 ########D#########
 `)
+
+/**
+ * The road between towns.
+ *
+ * The world is continuous, so towns are joined by somewhere rather than by a
+ * menu: scrub, trees and a stretch of highway you can walk if you would rather
+ * keep the fare. Each stretch belongs to the town it leads into, so it takes
+ * that town's colour as you get close.
+ */
+const HIGHWAY = parseMap(`TTTTTTTTTTTTTTTTTTTTTTTTTTTT
+T"""""TTTT""""""TTTT""""""TT
+T""""""""""""""""""""""""""T
+T"""TT""""TT"""""""TT"""""""
+T""""""""""""""""""""""""""T
+----------------------------
+============================
+============================
+----------------------------
+T"""""""""""""""""""""""""""
+T""::::"""""""""""::::"""""T
+T"":::::TT""""""TT:::::""""T
+T"""""""TTTT""TTTT""""""""""
+TTTTTTTTTTTTTTTTTTTTTTTTTTTT`)
+
+/**
+ * The reservation.
+ *
+ * One lit facade set back behind a wide forecourt, desert either side, and the
+ * highway running straight past the front door — Vegas as it looks two hours
+ * north of anywhere, which is what the reservation casino is.
+ */
+const SILVER_CREEK_TOWN = parseMap(`TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+T::::::::::::::::::::::::::::::T
+T::##########################::T
+T::##########################::T
+T::#############D############::T
+T::++++++++++++++++++++++++++::T
+T::++oo++++++++++++++++oo++++::T
+T::++++++++++++++++++++++++++::T
+----++++++++++++++++++++++++----
+================================
+================================
+----++++++++++++++++++++++++----
+T::++++++++++++++++++++++++++::T
+T::+oo+++++++++++++++++++oo++::T
+T::++++++++++++++++++++++++++::T
+T::::::#####::::::::#####::::::T
+T::::::##D##::::::::#####::::::T
+T::::::::::::::::::::::::::::::T
+TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT`)
+
+/**
+ * A river town. The water runs along the north and the boat is moored against it.
+ */
+const RIVERBEND_TOWN = parseMap(`TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+T~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~T
+T~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~T
+T::::::::::::::::::::::::::::::T
+T::#######::::::::::::#######::T
+T::######D::::::::::::D######::T
+T::::::::::::**::**::::::::::::T
+T::++++++++++++++++++++++++++::T
+----++++++++++++++++++++++++----
+================================
+================================
+----++++++++++++++++++++++++----
+T::++++++++++++++++++++++++++::T
+T::::::::::::oo::oo::::::::::::T
+T::#####::::::::::::::::#####::T
+T::##D##::::::::::::::::#####::T
+T::::::::::::::::::::::::::::::T
+T""""""""""""""""""""""""""""""T
+TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT`)
+
+/**
+ * A working harbour: a stone quay, tall frontages along the north, water south.
+ */
+const CRESCENT_HARBOR_TOWN = parseMap(`TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+T++++++++++++++++++++++++++++++T
+T+############++############+++T
+T+##D########D++D###########+++T
+T++++++++++++++++++++++++++++++T
+T++oo++++++++++++++++++++++oo++T
+T++++++++++++++++++++++++++++++T
+T++++++##D#####++#####D##++++++T
+--------#######++#######--------
+================================
+================================
+----++++++++++++++++++++++++----
+T++++++++++++++++++++++++++++++T
+T+++++++++oo++++++++oo+++++++++T
+T++++++++++++++++++++++++++++++T
+T~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~T
+T~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~T
+T~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~T
+TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT`)
+
+/**
+ * An island resort — sand, palms, and the sea along the bottom of the map.
+ */
+const PALM_CAY_TOWN = parseMap(`TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+T::::::::::::::::::::::::::::::T
+T::T::::#########::::::T:::::::T
+T::::::##########::::::::::::::T
+T::::::D####D####:::::T::::::::T
+T:::T:::::::::::::::::::::::T::T
+T::::::::::**::::::**::::::::::T
+T::::::::::::::::::::::::::::::T
+----::::::::::::::::::::::::----
+================================
+================================
+----::::::::::::::::::::::::----
+T::::::::::::::::::::::::::::::T
+T::::T::::::oo::::oo::::::T::::T
+T::::::#####:::::::::#####:::::T
+T::::::##D##:::::::::##D##:::::T
+T::::::::::::::::::::::::::::::T
+T~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~T
+TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT`)
+
+/**
+ * The Strip.
+ *
+ * Enormous facades down both sides, a fountain in the middle of the plaza, and
+ * six lanes of road running through the lot of it.
+ */
+const NEON_MESA_TOWN = parseMap(`TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+T##############################T
+T##############################T
+T#######D###########D##########T
+T++++++++++++++++++++++++++++++T
+T++oo+++++++~~~~~~++++++++oo+++T
+T+++++++++++~~~~~~+++++++++++++T
+T++++++++++++++++++++++++++++++T
+--------++++++++++++++++--------
+================================
+================================
+================================
+--------++++++++++++++++--------
+T++++++++++++++++++++++++++++++T
+T++oo+++++++++++++++++++++oo+++T
+T#########D##########D#########T
+T##############################T
+T##############################T
+TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT`)
+
+/**
+ * Marble and water: colonnades down both sides and a reflecting pool between.
+ */
+const PORTO_LUMINA_TOWN = parseMap(`TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+T++++++++++++++++++++++++++++++T
+T++##########################++T
+T++#########D######D#########++T
+T++++++++++++++++++++++++++++++T
+T++oo++++~~~~~~~~~~~~~~++++oo++T
+T++++++++~~~~~~~~~~~~~~++++++++T
+T++++++++++++++++++++++++++++++T
+--------++++++++++++++++--------
+================================
+================================
+--------++++++++++++++++--------
+T++++++++++++++++++++++++++++++T
+T++oo++++++++++++++++++++++oo++T
+T++#########D################++T
+T++##########################++T
+T++##########################++T
+T++++++++++++++++++++++++++++++T
+TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT`)
 
 /** A small shop or room: counter along the back. */
 const SHOP_ROOM = parseMap(`
@@ -486,7 +604,11 @@ const apartmentCity: CityDef = {
         ]),
       ],
       [],
-      { west: { toAreaId: 'seventh', offset: 2 }, north: { toAreaId: 'eastgate' } },
+      {
+        west: { toAreaId: 'seventh', offset: 2 },
+        north: { toAreaId: 'eastgate' },
+        east: { toAreaId: 'road-silvercreek' },
+      },
     ),
     eastgate: area(
       'eastgate',
@@ -601,18 +723,38 @@ const silverCreek: CityDef = {
   unlockCash: 0,
   travelCost: 0,
   areas: {
+    'road-silvercreek': area(
+      'road-silvercreek',
+      'Reservation Road',
+      HIGHWAY,
+      { col: 14, row: 6 },
+      '#161018',
+      [
+        local('road-sc-hitcher', 'Hitchhiker', 6, 4, [
+          'Hitchhiker: Going as far as the casino? Everyone is.',
+          'Hitchhiker: I will walk it. I always walk it.',
+        ]),
+        local('road-sc-sign', 'Mile Sign', 20, 10, [
+          'SILVER CREEK 2 MI. Underneath, scratched in: AND NOT ONE MILE FURTHER.',
+        ]),
+      ],
+      [],
+      { west: { toAreaId: 'depot', offset: 0 }, east: { toAreaId: 'sc-street', offset: 3 } },
+    ),
     'sc-street': area(
       'sc-street',
       'Silver Creek Approach',
-      STREET,
-      { col: 11, row: 8 },
+      SILVER_CREEK_TOWN,
+      // The forecourt on the near side of the highway, with the casino across
+      // the road. Standing three tiles under its door meant walking straight in.
+      { col: 16, row: 12 },
       '#161018',
       [
         {
           id: 'sc-busstop',
           name: 'Bus Stop',
-          col: 20,
-          row: 9,
+          col: 28,
+          row: 12,
           color: COLORS.travel,
           art: 'sign',
           lines: ['Departures twice a day, and a timetable nobody has updated.'],
@@ -622,7 +764,7 @@ const silverCreek: CityDef = {
           'sc-smoker',
           'Smoker',
           8,
-          2,
+          6,
           [
             'Smoker: They comp the coffee if you sit long enough.',
             'Smoker: I have been sitting a very long time.',
@@ -634,15 +776,16 @@ const silverCreek: CityDef = {
           ],
           ['Smoker: Quiet night. Quiet nights are the expensive ones.'],
         ),
-        local('sc-valet', 'Valet', 17, 3, [
+        local('sc-valet', 'Valet', 20, 6, [
           'Valet: Casino is the big doors. Gift shop is the small ones.',
           'Valet: Nobody has ever tipped me for saying that.',
         ]),
       ],
       [
-        { col: 6, row: 1, toAreaId: 'sc-floor', toCol: 8, toRow: 8, label: 'Casino' },
-        { col: 15, row: 1, toAreaId: 'sc-gift', toCol: 6, toRow: 5, label: 'Gift Shop' },
+        { col: 16, row: 4, toAreaId: 'sc-floor', toCol: 8, toRow: 8, label: 'Casino' },
+        { col: 9, row: 16, toAreaId: 'sc-gift', toCol: 6, toRow: 5, label: 'Gift Shop' },
       ],
+      { west: { toAreaId: 'road-silvercreek', offset: -3 }, east: { toAreaId: 'road-riverbend', offset: -3 } },
     ),
     'sc-floor': area(
       'sc-floor',
@@ -688,7 +831,7 @@ const silverCreek: CityDef = {
           'Regular: I have made more off Ray than I have off my job.',
         ]),
       ],
-      [{ col: 8, row: 9, toAreaId: 'sc-street', toCol: 6, toRow: 2, label: 'Out' }],
+      [{ col: 8, row: 9, toAreaId: 'sc-street', toCol: 16, toRow: 5, label: 'Out' }],
     ),
     'sc-gift': area(
       'sc-gift',
@@ -707,7 +850,7 @@ const silverCreek: CityDef = {
           action: { kind: 'shop', shopId: 'silvercreek-gift' },
         },
       ],
-      [{ col: 6, row: 6, toAreaId: 'sc-street', toCol: 15, toRow: 2, label: 'Out' }],
+      [{ col: 6, row: 6, toAreaId: 'sc-street', toCol: 9, toRow: 17, label: 'Out' }],
     ),
   },
 }
@@ -725,18 +868,35 @@ const riverbend: CityDef = {
   unlockCash: 600,
   travelCost: 40,
   areas: {
+    'road-riverbend': area(
+      'road-riverbend',
+      'River Road',
+      HIGHWAY,
+      { col: 14, row: 6 },
+      '#0f1620',
+      [
+        local('road-rb-angler', 'Angler', 8, 10, [
+          'Angler: Current is wrong today. Everything is wrong today.',
+        ]),
+        local('road-rb-walker', 'Woman Walking', 19, 4, [
+          'Woman: You can hear the boat from here on a quiet night.',
+        ]),
+      ],
+      [],
+      { west: { toAreaId: 'sc-street', offset: 3 }, east: { toAreaId: 'rb-street', offset: 3 } },
+    ),
     'rb-street': area(
       'rb-street',
       'Riverbend Landing',
-      PROMENADE,
-      { col: 14, row: 7 },
+      RIVERBEND_TOWN,
+      { col: 16, row: 7 },
       '#0f1620',
       [
         {
           id: 'rb-dock',
           name: 'Dock',
-          col: 26,
-          row: 3,
+          col: 28,
+          row: 12,
           color: COLORS.travel,
           art: 'sign',
           lines: ['Buses and boats, both running late.'],
@@ -745,26 +905,27 @@ const riverbend: CityDef = {
         {
           id: 'cass',
           name: 'Cass',
-          col: 8,
-          row: 4,
+          col: 4,
+          row: 7,
           color: COLORS.sponsor,
           lines: SPONSORS.cass.pitch,
           action: { kind: 'sponsor', sponsorId: 'cass' },
         },
-        local('rb-fisher', 'Fisherman', 3, 3, [
+        local('rb-fisher', 'Fisherman', 27, 7, [
           'Fisherman: Boat has not moved in eleven years. They still call it a cruise.',
           'Fisherman: Two-five in there. Tiny sits down at noon and leaves when they close.',
         ]),
-        local('rb-runner', 'Deckhand', 20, 7, [
+        local('rb-runner', 'Deckhand', 14, 16, [
           'Deckhand: Careful who you borrow from around here.',
           'Deckhand: Cass is pleasant right up until the day it is due.',
         ]),
       ],
       [
-        { col: 4, row: 10, toAreaId: 'rb-boat', toCol: 8, toRow: 8, label: 'Riverboat' },
-        { col: 12, row: 10, toAreaId: 'rb-diner', toCol: 7, toRow: 7, label: 'Diner' },
-        { col: 20, row: 10, toAreaId: 'rb-outfitters', toCol: 6, toRow: 5, label: 'Outfitters' },
+        { col: 9, row: 5, toAreaId: 'rb-boat', toCol: 8, toRow: 8, label: 'Riverboat' },
+        { col: 5, row: 15, toAreaId: 'rb-diner', toCol: 7, toRow: 7, label: 'Diner' },
+        { col: 22, row: 5, toAreaId: 'rb-outfitters', toCol: 6, toRow: 5, label: 'Outfitters' },
       ],
+      { west: { toAreaId: 'road-riverbend', offset: -3 }, east: { toAreaId: 'road-crescent', offset: -3 } },
     ),
     'rb-boat': area(
       'rb-boat',
@@ -787,7 +948,7 @@ const riverbend: CityDef = {
           'Bartender: Do not tell him I said that. Do not tell him anything, honestly.',
         ]),
       ],
-      [{ col: 8, row: 9, toAreaId: 'rb-street', toCol: 4, toRow: 9, label: 'Ashore' }],
+      [{ col: 8, row: 9, toAreaId: 'rb-street', toCol: 9, toRow: 6, label: 'Ashore' }],
     ),
     'rb-diner': area(
       'rb-diner',
@@ -815,7 +976,7 @@ const riverbend: CityDef = {
           action: { kind: 'mission', missionId: 'riverbend-marker' },
         },
       ],
-      [{ col: 7, row: 8, toAreaId: 'rb-street', toCol: 12, toRow: 9, label: 'Out' }],
+      [{ col: 7, row: 8, toAreaId: 'rb-street', toCol: 5, toRow: 16, label: 'Out' }],
     ),
     'rb-outfitters': area(
       'rb-outfitters',
@@ -834,7 +995,7 @@ const riverbend: CityDef = {
           action: { kind: 'shop', shopId: 'riverbend-outfitters' },
         },
       ],
-      [{ col: 6, row: 6, toAreaId: 'rb-street', toCol: 20, toRow: 9, label: 'Out' }],
+      [{ col: 6, row: 6, toAreaId: 'rb-street', toCol: 22, toRow: 6, label: 'Out' }],
     ),
   },
 }
@@ -852,18 +1013,35 @@ const crescentHarbor: CityDef = {
   unlockCash: 2500,
   travelCost: 120,
   areas: {
+    'road-crescent': area(
+      'road-crescent',
+      'Harbour Approach',
+      HIGHWAY,
+      { col: 14, row: 6 },
+      '#121020',
+      [
+        local('road-ch-driver', 'Van Driver', 7, 4, [
+          'Driver: Harbour is up ahead. Mind the suits.',
+        ]),
+        local('road-ch-gull', 'Gull on a Post', 21, 10, [
+          'It watches you the whole way past. It is not impressed.',
+        ]),
+      ],
+      [],
+      { west: { toAreaId: 'rb-street', offset: 3 }, east: { toAreaId: 'ch-street', offset: 3 } },
+    ),
     'ch-street': area(
       'ch-street',
       'Harbor Boulevard',
-      BOULEVARD,
-      { col: 14, row: 8 },
+      CRESCENT_HARBOR_TOWN,
+      { col: 15, row: 4 },
       '#121020',
       [
         {
           id: 'ch-transit',
           name: 'Transit Hub',
-          col: 27,
-          row: 3,
+          col: 28,
+          row: 12,
           color: COLORS.travel,
           art: 'sign',
           lines: ['Departure boards for half the coast.'],
@@ -872,8 +1050,8 @@ const crescentHarbor: CityDef = {
         {
           id: 'hal',
           name: 'Hal',
-          col: 6,
-          row: 8,
+          col: 27,
+          row: 4,
           color: COLORS.person,
           lines: [
             'Hal: Forty years in card rooms and I still take students.',
@@ -884,27 +1062,28 @@ const crescentHarbor: CityDef = {
         {
           id: 'emeka',
           name: 'Mr. Emeka',
-          col: 22,
-          row: 8,
+          col: 6,
+          row: 12,
           color: COLORS.sponsor,
           lines: SPONSORS.emeka.pitch,
           action: { kind: 'sponsor', sponsorId: 'emeka' },
         },
-        local('ch-busker', 'Busker', 10, 3, [
+        local('ch-busker', 'Busker', 25, 12, [
           'Busker: Play you for the hat money. No? Nobody ever does.',
         ]),
-        local('ch-suit', 'Woman in a Suit', 18, 3, [
+        local('ch-suit', 'Woman in a Suit', 15, 13, [
           'Woman in a Suit: The Harbour Room only lets in people it already knows.',
           'Woman in a Suit: Build a name in the five-ten game first. That is how everyone does it.',
         ]),
       ],
       [
-        { col: 4, row: 1, toAreaId: 'ch-cardroom', toCol: 8, toRow: 8, label: 'Card Room' },
-        { col: 11, row: 1, toAreaId: 'ch-menswear', toCol: 6, toRow: 5, label: 'Menswear' },
-        { col: 20, row: 1, toAreaId: 'ch-autorow', toCol: 6, toRow: 5, label: 'Auto Row' },
-        { col: 26, row: 1, toAreaId: 'ch-supper', toCol: 7, toRow: 7, label: 'Supper Club' },
-        { col: 4, row: 11, toAreaId: 'ch-club', toCol: 7, toRow: 7, label: 'The Harbour Room' },
+        { col: 13, row: 3, toAreaId: 'ch-cardroom', toCol: 8, toRow: 8, label: 'Card Room' },
+        { col: 16, row: 3, toAreaId: 'ch-menswear', toCol: 6, toRow: 5, label: 'Menswear' },
+        { col: 22, row: 7, toAreaId: 'ch-autorow', toCol: 6, toRow: 5, label: 'Auto Row' },
+        { col: 9, row: 7, toAreaId: 'ch-supper', toCol: 7, toRow: 7, label: 'Supper Club' },
+        { col: 4, row: 3, toAreaId: 'ch-club', toCol: 7, toRow: 7, label: 'The Harbour Room' },
       ],
+      { west: { toAreaId: 'road-crescent', offset: -3 }, east: { toAreaId: 'road-palmcay', offset: -3 } },
     ),
     'ch-cardroom': area(
       'ch-cardroom',
@@ -941,7 +1120,7 @@ const crescentHarbor: CityDef = {
           action: { kind: 'mission', missionId: 'crescent-suit' },
         },
       ],
-      [{ col: 8, row: 9, toAreaId: 'ch-street', toCol: 4, toRow: 2, label: 'Out' }],
+      [{ col: 8, row: 9, toAreaId: 'ch-street', toCol: 13, toRow: 4, label: 'Out' }],
     ),
     'ch-menswear': area(
       'ch-menswear',
@@ -969,7 +1148,7 @@ const crescentHarbor: CityDef = {
           action: { kind: 'mission', missionId: 'crescent-courier' },
         },
       ],
-      [{ col: 6, row: 6, toAreaId: 'ch-street', toCol: 11, toRow: 2, label: 'Out' }],
+      [{ col: 6, row: 6, toAreaId: 'ch-street', toCol: 16, toRow: 4, label: 'Out' }],
     ),
     'ch-autorow': area(
       'ch-autorow',
@@ -988,7 +1167,7 @@ const crescentHarbor: CityDef = {
           action: { kind: 'shop', shopId: 'crescent-auto' },
         },
       ],
-      [{ col: 6, row: 6, toAreaId: 'ch-street', toCol: 20, toRow: 2, label: 'Out' }],
+      [{ col: 6, row: 6, toAreaId: 'ch-street', toCol: 22, toRow: 6, label: 'Out' }],
     ),
     'ch-supper': area(
       'ch-supper',
@@ -1010,7 +1189,7 @@ const crescentHarbor: CityDef = {
           'Regular: Half this room plays for a living. The other half thinks it does.',
         ]),
       ],
-      [{ col: 7, row: 8, toAreaId: 'ch-street', toCol: 26, toRow: 2, label: 'Out' }],
+      [{ col: 7, row: 8, toAreaId: 'ch-street', toCol: 9, toRow: 6, label: 'Out' }],
     ),
     'ch-club': area(
       'ch-club',
@@ -1038,7 +1217,7 @@ const crescentHarbor: CityDef = {
           action: { kind: 'table', tableId: 'crescent-private' },
         },
       ],
-      [{ col: 7, row: 8, toAreaId: 'ch-street', toCol: 4, toRow: 10, label: 'Out' }],
+      [{ col: 7, row: 8, toAreaId: 'ch-street', toCol: 4, toRow: 4, label: 'Out' }],
     ),
   },
 }
@@ -1056,18 +1235,35 @@ const palmCay: CityDef = {
   unlockCash: 8000,
   travelCost: 350,
   areas: {
+    'road-palmcay': area(
+      'road-palmcay',
+      'Causeway',
+      HIGHWAY,
+      { col: 14, row: 6 },
+      '#0c1a1c',
+      [
+        local('road-pc-cyclist', 'Cyclist', 9, 4, [
+          'Cyclist: Flat the whole way. Lovely, until the wind.',
+        ]),
+        local('road-pc-stall', 'Fruit Stall', 20, 10, [
+          'Nobody is behind it. An honesty box, half full.',
+        ]),
+      ],
+      [],
+      { west: { toAreaId: 'ch-street', offset: 3 }, east: { toAreaId: 'pc-street', offset: 3 } },
+    ),
     'pc-street': area(
       'pc-street',
       'Cay Promenade',
-      PROMENADE,
-      { col: 14, row: 7 },
+      PALM_CAY_TOWN,
+      { col: 15, row: 6 },
       '#0c1a1c',
       [
         {
           id: 'pc-ferry',
           name: 'Ferry Dock',
-          col: 26,
-          row: 3,
+          col: 28,
+          row: 12,
           color: COLORS.travel,
           art: 'sign',
           lines: ['The ferry runs to the mainland twice a day.'],
@@ -1076,27 +1272,28 @@ const palmCay: CityDef = {
         {
           id: 'rosa',
           name: 'Rosa',
-          col: 9,
-          row: 4,
+          col: 4,
+          row: 6,
           color: COLORS.person,
           lines: MISSIONS['palmcay-tourist'].brief,
           action: { kind: 'mission', missionId: 'palmcay-tourist' },
         },
-        local('pc-tourist', 'Sunburnt Tourist', 4, 3, [
+        local('pc-tourist', 'Sunburnt Tourist', 27, 6, [
           'Tourist: I am up four hundred dollars! On the slots!',
           'Tourist: I have been here since Tuesday.',
         ]),
-        local('pc-lifeguard', 'Lifeguard', 20, 7, [
+        local('pc-lifeguard', 'Lifeguard', 15, 16, [
           'Lifeguard: Bernard has not left the tourist table in two days.',
           'Lifeguard: Someone should check on him. Someone with cards.',
         ]),
       ],
       [
-        { col: 4, row: 10, toAreaId: 'pc-casino', toCol: 8, toRow: 8, label: 'Cay Room' },
-        { col: 12, row: 10, toAreaId: 'pc-boutique', toCol: 6, toRow: 5, label: 'Boutique' },
-        { col: 20, row: 10, toAreaId: 'pc-grill', toCol: 7, toRow: 7, label: 'Shoreline Grill' },
-        { col: 25, row: 10, toAreaId: 'pc-marina', toCol: 6, toRow: 5, label: 'Marina Motors' },
+        { col: 12, row: 4, toAreaId: 'pc-casino', toCol: 8, toRow: 8, label: 'Cay Room' },
+        { col: 9, row: 15, toAreaId: 'pc-boutique', toCol: 6, toRow: 5, label: 'Boutique' },
+        { col: 23, row: 15, toAreaId: 'pc-grill', toCol: 7, toRow: 7, label: 'Shoreline Grill' },
+        { col: 7, row: 4, toAreaId: 'pc-marina', toCol: 6, toRow: 5, label: 'Marina Motors' },
       ],
+      { west: { toAreaId: 'road-palmcay', offset: -3 }, east: { toAreaId: 'road-mesa', offset: -3 } },
     ),
     'pc-casino': area(
       'pc-casino',
@@ -1127,7 +1324,7 @@ const palmCay: CityDef = {
           action: { kind: 'table', tableId: 'palmcay-tourist' },
         },
       ],
-      [{ col: 8, row: 9, toAreaId: 'pc-street', toCol: 4, toRow: 9, label: 'Out' }],
+      [{ col: 8, row: 9, toAreaId: 'pc-street', toCol: 12, toRow: 5, label: 'Out' }],
     ),
     'pc-boutique': area(
       'pc-boutique',
@@ -1146,7 +1343,7 @@ const palmCay: CityDef = {
           action: { kind: 'shop', shopId: 'palmcay-boutique' },
         },
       ],
-      [{ col: 6, row: 6, toAreaId: 'pc-street', toCol: 12, toRow: 9, label: 'Out' }],
+      [{ col: 6, row: 6, toAreaId: 'pc-street', toCol: 9, toRow: 16, label: 'Out' }],
     ),
     'pc-grill': area(
       'pc-grill',
@@ -1165,7 +1362,7 @@ const palmCay: CityDef = {
           action: { kind: 'venue', venueId: 'palmcay-grill' },
         },
       ],
-      [{ col: 7, row: 8, toAreaId: 'pc-street', toCol: 20, toRow: 9, label: 'Out' }],
+      [{ col: 7, row: 8, toAreaId: 'pc-street', toCol: 23, toRow: 16, label: 'Out' }],
     ),
     'pc-marina': area(
       'pc-marina',
@@ -1184,7 +1381,7 @@ const palmCay: CityDef = {
           action: { kind: 'shop', shopId: 'palmcay-marina' },
         },
       ],
-      [{ col: 6, row: 6, toAreaId: 'pc-street', toCol: 25, toRow: 9, label: 'Out' }],
+      [{ col: 6, row: 6, toAreaId: 'pc-street', toCol: 7, toRow: 5, label: 'Out' }],
     ),
   },
 }
@@ -1202,18 +1399,35 @@ const neonMesa: CityDef = {
   unlockCash: 30000,
   travelCost: 900,
   areas: {
+    'road-mesa': area(
+      'road-mesa',
+      'Mesa Highway',
+      HIGHWAY,
+      { col: 14, row: 6 },
+      '#1a1020',
+      [
+        local('road-nm-billboard', 'Billboard', 6, 10, [
+          'NEON MESA — WHERE THE NIGHT STARTS. A man is painting over the last word.',
+        ]),
+        local('road-nm-walker', 'Man with a Suitcase', 21, 4, [
+          'Man: I am leaving. Do not ask me how it went.',
+        ]),
+      ],
+      [],
+      { west: { toAreaId: 'pc-street', offset: 3 }, east: { toAreaId: 'nm-street', offset: 3 } },
+    ),
     'nm-street': area(
       'nm-street',
       'The Mesa Strip',
-      BOULEVARD,
-      { col: 14, row: 8 },
+      NEON_MESA_TOWN,
+      { col: 15, row: 7 },
       '#1a1020',
       [
         {
           id: 'nm-shuttle',
           name: 'Airport Shuttle',
-          col: 27,
-          row: 3,
+          col: 28,
+          row: 13,
           color: COLORS.travel,
           art: 'sign',
           lines: ['International departures, one gate.'],
@@ -1222,8 +1436,8 @@ const neonMesa: CityDef = {
         {
           id: 'hal-mesa',
           name: 'Hal',
-          col: 6,
-          row: 8,
+          col: 4,
+          row: 6,
           color: COLORS.person,
           lines: [
             'Hal: You made it out here. Good.',
@@ -1234,8 +1448,8 @@ const neonMesa: CityDef = {
         {
           id: 'consortium',
           name: 'Broker',
-          col: 22,
-          row: 8,
+          col: 27,
+          row: 6,
           color: COLORS.sponsor,
           lines: SPONSORS.consortium.pitch,
           action: { kind: 'sponsor', sponsorId: 'consortium' },
@@ -1243,23 +1457,24 @@ const neonMesa: CityDef = {
         {
           id: 'fixer',
           name: 'Fixer',
-          col: 17,
-          row: 3,
+          col: 6,
+          row: 13,
           color: COLORS.person,
           lines: MISSIONS['mesa-read'].brief,
           action: { kind: 'mission', missionId: 'mesa-read' },
         },
-        local('nm-tout', 'Tout', 10, 3, [
+        local('nm-tout', 'Tout', 24, 13, [
           'Tout: High roller room is up the stairs. They will look at your shoes.',
           'Tout: I am serious about the shoes.',
         ]),
       ],
       [
-        { col: 4, row: 1, toAreaId: 'nm-casino', toCol: 8, toRow: 8, label: 'Mesa Casino' },
-        { col: 11, row: 1, toAreaId: 'nm-luxury', toCol: 6, toRow: 5, label: 'Mesa Luxury' },
-        { col: 20, row: 1, toAreaId: 'nm-motors', toCol: 6, toRow: 5, label: 'Mesa Motors' },
-        { col: 26, row: 1, toAreaId: 'nm-club', toCol: 7, toRow: 7, label: 'Ultraviolet' },
+        { col: 8, row: 3, toAreaId: 'nm-casino', toCol: 8, toRow: 8, label: 'Mesa Casino' },
+        { col: 20, row: 3, toAreaId: 'nm-luxury', toCol: 6, toRow: 5, label: 'Mesa Luxury' },
+        { col: 10, row: 15, toAreaId: 'nm-motors', toCol: 6, toRow: 5, label: 'Mesa Motors' },
+        { col: 21, row: 15, toAreaId: 'nm-club', toCol: 7, toRow: 7, label: 'Ultraviolet' },
       ],
+      { west: { toAreaId: 'road-mesa', offset: -3 }, east: { toAreaId: 'road-lumina', offset: -3 } },
     ),
     'nm-casino': area(
       'nm-casino',
@@ -1299,7 +1514,7 @@ const neonMesa: CityDef = {
           action: { kind: 'table', tableId: 'mesa-highroller' },
         },
       ],
-      [{ col: 8, row: 9, toAreaId: 'nm-street', toCol: 4, toRow: 2, label: 'Out' }],
+      [{ col: 8, row: 9, toAreaId: 'nm-street', toCol: 8, toRow: 4, label: 'Out' }],
     ),
     'nm-luxury': area(
       'nm-luxury',
@@ -1318,7 +1533,7 @@ const neonMesa: CityDef = {
           action: { kind: 'shop', shopId: 'mesa-luxury' },
         },
       ],
-      [{ col: 6, row: 6, toAreaId: 'nm-street', toCol: 11, toRow: 2, label: 'Out' }],
+      [{ col: 6, row: 6, toAreaId: 'nm-street', toCol: 20, toRow: 4, label: 'Out' }],
     ),
     'nm-motors': area(
       'nm-motors',
@@ -1337,7 +1552,7 @@ const neonMesa: CityDef = {
           action: { kind: 'shop', shopId: 'mesa-motors' },
         },
       ],
-      [{ col: 6, row: 6, toAreaId: 'nm-street', toCol: 20, toRow: 2, label: 'Out' }],
+      [{ col: 6, row: 6, toAreaId: 'nm-street', toCol: 10, toRow: 14, label: 'Out' }],
     ),
     'nm-club': area(
       'nm-club',
@@ -1365,7 +1580,7 @@ const neonMesa: CityDef = {
           action: { kind: 'table', tableId: 'mesa-private' },
         },
       ],
-      [{ col: 7, row: 8, toAreaId: 'nm-street', toCol: 26, toRow: 2, label: 'Out' }],
+      [{ col: 7, row: 8, toAreaId: 'nm-street', toCol: 21, toRow: 14, label: 'Out' }],
     ),
   },
 }
@@ -1383,18 +1598,35 @@ const portoLumina: CityDef = {
   unlockCash: 90000,
   travelCost: 2500,
   areas: {
+    'road-lumina': area(
+      'road-lumina',
+      'Lumina Coast Road',
+      HIGHWAY,
+      { col: 14, row: 6 },
+      '#141020',
+      [
+        local('road-pl-guard', 'Private Security', 8, 4, [
+          'Security: This stretch is private. Walking is fine. Stopping is not.',
+        ]),
+        local('road-pl-view', 'Viewpoint', 20, 10, [
+          'The tower is visible from here, lit from the base. It does not look real.',
+        ]),
+      ],
+      [],
+      { west: { toAreaId: 'nm-street', offset: 3 }, east: { toAreaId: 'pl-street', offset: 3 } },
+    ),
     'pl-street': area(
       'pl-street',
       'Lumina Waterfront',
-      PROMENADE,
-      { col: 14, row: 7 },
+      PORTO_LUMINA_TOWN,
+      { col: 15, row: 7 },
       '#141020',
       [
         {
           id: 'pl-terminal',
           name: 'Terminal',
-          col: 26,
-          row: 3,
+          col: 28,
+          row: 12,
           color: COLORS.travel,
           art: 'sign',
           lines: ['Everywhere you have ever played, listed on one board.'],
@@ -1403,22 +1635,23 @@ const portoLumina: CityDef = {
         {
           id: 'wen',
           name: 'Madame Wen',
-          col: 9,
-          row: 4,
+          col: 4,
+          row: 7,
           color: COLORS.sponsor,
           lines: SPONSORS.wen.pitch,
           action: { kind: 'sponsor', sponsorId: 'wen' },
         },
-        local('pl-photographer', 'Photographer', 4, 3, [
+        local('pl-photographer', 'Photographer', 27, 7, [
           'Photographer: I shoot the winners. I have shot Ms. Okonkwo four years running.',
           'Photographer: Give me a reason to shoot somebody else.',
         ]),
       ],
       [
-        { col: 4, row: 10, toAreaId: 'pl-casino', toCol: 8, toRow: 8, label: 'Casino' },
-        { col: 12, row: 10, toAreaId: 'pl-atelier', toCol: 6, toRow: 5, label: 'Atelier' },
-        { col: 20, row: 10, toAreaId: 'pl-lift', toCol: 6, toRow: 5, label: 'Penthouse Lift' },
+        { col: 12, row: 3, toAreaId: 'pl-casino', toCol: 8, toRow: 8, label: 'Casino' },
+        { col: 19, row: 3, toAreaId: 'pl-atelier', toCol: 6, toRow: 5, label: 'Atelier' },
+        { col: 12, row: 14, toAreaId: 'pl-lift', toCol: 6, toRow: 5, label: 'Penthouse Lift' },
       ],
+      { west: { toAreaId: 'road-lumina', offset: -3 } },
     ),
     'pl-casino': area(
       'pl-casino',
@@ -1450,7 +1683,7 @@ const portoLumina: CityDef = {
           action: { kind: 'table', tableId: 'lumina-finale' },
         },
       ],
-      [{ col: 8, row: 9, toAreaId: 'pl-street', toCol: 4, toRow: 9, label: 'Out' }],
+      [{ col: 8, row: 9, toAreaId: 'pl-street', toCol: 12, toRow: 4, label: 'Out' }],
     ),
     'pl-atelier': area(
       'pl-atelier',
@@ -1469,7 +1702,7 @@ const portoLumina: CityDef = {
           action: { kind: 'shop', shopId: 'lumina-atelier' },
         },
       ],
-      [{ col: 6, row: 6, toAreaId: 'pl-street', toCol: 12, toRow: 9, label: 'Out' }],
+      [{ col: 6, row: 6, toAreaId: 'pl-street', toCol: 19, toRow: 4, label: 'Out' }],
     ),
     'pl-lift': area(
       'pl-lift',
@@ -1489,7 +1722,7 @@ const portoLumina: CityDef = {
           action: { kind: 'penthouse' },
         },
       ],
-      [{ col: 6, row: 6, toAreaId: 'pl-street', toCol: 20, toRow: 9, label: 'Out' }],
+      [{ col: 6, row: 6, toAreaId: 'pl-street', toCol: 12, toRow: 13, label: 'Out' }],
     ),
   },
 }

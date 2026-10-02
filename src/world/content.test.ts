@@ -209,6 +209,40 @@ describe('city content', () => {
     }
   })
 
+  it('lets you walk from your front door to the last town', () => {
+    /*
+     * The whole world is one continuous place. Towns are joined by roads you can
+     * walk, and the bus is a shortcut through it rather than the only way across —
+     * so every town has to be reachable on foot from the apartment, using doors
+     * and open edges and nothing else.
+     */
+    const start = CITIES.apartment.entryAreaId
+    const seen = new Set([start])
+    const queue = [start]
+    while (queue.length > 0) {
+      const current = AREAS[queue.shift()!]?.area
+      if (!current) continue
+      const onward = [
+        ...current.exits.map((exit) => exit.toAreaId),
+        ...Object.values(current.edges ?? {}).map((link) => link.toAreaId),
+      ]
+      for (const next of onward) {
+        if (!seen.has(next)) {
+          seen.add(next)
+          queue.push(next)
+        }
+      }
+    }
+
+    for (const city of cities) {
+      const unreachable = allAreas(city).filter((area) => !seen.has(area.id))
+      expect(
+        unreachable.map((a) => a.name),
+        `${city.name} cannot be walked to from your front door`,
+      ).toEqual([])
+    }
+  })
+
   it('gives every area a globally unique id', () => {
     // Areas resolve by id across the whole world now, because walking off a map
     // edge can cross a town boundary. Two areas sharing an id would make one of
