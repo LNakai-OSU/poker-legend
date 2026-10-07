@@ -1,7 +1,7 @@
 import type { HandResult, PublicState } from '../engine/table'
 import { bestHand, HAND_CATEGORY_NAMES } from '../engine/handRank'
 import type { Card as CardData, PlayerConfig } from '../engine/types'
-import type { CSSProperties, ReactNode } from 'react'
+import type { CSSProperties } from 'react'
 import { Card, cardText } from './Card'
 import { ChipStack } from './ChipStack'
 import { avatarDataUrl, expressionFor, type Expression } from './avatars'
@@ -185,39 +185,14 @@ function seatPlateStyle(isActing: boolean): CSSProperties {
       : 'linear-gradient(180deg, rgba(14,22,19,0.9) 0%, rgba(6,11,10,0.92) 100%)',
     border: isActing ? '1px solid #f2c14e' : '1px solid #2c3d35',
     borderRadius: 10,
-    padding: '4px 7px',
-    minWidth: 'clamp(66px, 18vw, 96px)',
+    // Sized against the window's height, because the felt is: at a fixed size the
+    // plates were two-thirds of a short table and the seats overlapped the board.
+    padding: 'clamp(1px, 0.5vh, 4px) clamp(4px, 1vw, 7px)',
+    minWidth: 'clamp(58px, 16vw, 96px)',
     boxShadow: isActing
       ? '0 0 16px rgba(242,193,78,0.45), inset 0 1px 0 rgba(255,255,255,0.08)'
       : 'inset 0 1px 0 rgba(255,255,255,0.05), 0 2px 6px rgba(0,0,0,0.4)',
   }
-}
-
-/**
- * Chips pushed out in front of a seat, toward the middle.
- *
- * Taken out of the seat's column deliberately. In flow, a bet appearing made the
- * seat taller and pushed the rest of it toward the centre of the felt, so your own
- * stack grew upward into the community cards and an opponent's grew down into
- * them — the chips ended up covering the very cards the bet was about. Out of
- * flow nothing moves when a bet lands, and `zIndex` keeps a card on top if the
- * two ever do meet.
- */
-function BetOnFelt({ side, children }: { side: 'above' | 'below'; children: ReactNode }) {
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        ...(side === 'above' ? { bottom: '100%' } : { top: '100%' }),
-        zIndex: 1,
-        pointerEvents: 'none',
-      }}
-    >
-      {children}
-    </div>
-  )
 }
 
 /** The dealer button, as an actual button on the felt. */
@@ -265,6 +240,8 @@ export function PokerTableView({
   const you = state.players.find((p) => p.id === 'you')
   const opponents = state.players.filter((p) => p.id !== 'you')
   const positions = seatPositions(opponents.length)
+  /** A full table needs more felt than a short-handed one. */
+  const crowded = opponents.length >= 4
 
   return (
     <div style={{ width: '100%', maxWidth: 960, margin: '0 auto' }}>
@@ -277,10 +254,14 @@ export function PokerTableView({
           // Height is set directly rather than via an aspect ratio: coupling the
           // two made a min-height force the felt wider than a phone screen, which
           // pushed the right-hand seat off the display entirely.
-          // The floor has to be low enough to fit a short laptop window. At 300px
-          // the felt refused to shrink below the space available, so on a 500px
-          // viewport the sizing buttons were pushed off the bottom of the screen.
-          height: 'clamp(200px, 44vh, 430px)',
+          // Scales with the window, and with how many people are at it: six seats,
+          // a board and a pot do not fit in the same felt three seats do, and
+          // squeezing them in is what pushed the far seats onto the pot. The floor
+          // stays low enough that a short laptop window still fits the betting
+          // buttons underneath.
+          height: crowded
+            ? 'clamp(195px, 45vh, 470px)'
+            : 'clamp(200px, 44vh, 430px)',
           borderRadius: '46% / 58%',
           background:
             // Woven baize rather than a flat green: a broad highlight where the
@@ -330,10 +311,23 @@ export function PokerTableView({
             zIndex: 3,
           }}
         >
+          {/* Above the board. Below it is worse, not better: that is where your own
+              seat comes up to, so the pot simply collided with the near side
+              instead of the far one. */}
           <div
             data-testid="pot-value"
             data-pot={state.pot}
-            style={{ marginBottom: 6, fontSize: 'clamp(11px, 2.6vw, 14px)', color: '#cfe8d8' }}
+            style={{
+              marginBottom: 6,
+              fontSize: 'clamp(11px, 2.6vw, 14px)',
+              color: '#cfe8d8',
+              // Its own backing, so the pot stays readable even on a crowded
+              // table where a far seat's box reaches this part of the felt.
+              display: 'inline-block',
+              padding: '1px 10px',
+              borderRadius: 999,
+              background: 'rgba(6,14,11,0.72)',
+            }}
           >
             Pot{' '}
             <span key={state.pot} className="pot-bump" style={{ color: '#f2c14e', fontWeight: 'bold' }}>
@@ -367,6 +361,11 @@ export function PokerTableView({
               data-testid={`seat-${p.id}`}
               style={{
                 position: 'absolute',
+                // No z-index and no isolation here on purpose: either one makes the
+                // seat its own stacking context, and a chip's z-index would then
+                // only be compared with its own seat's cards — so a bet could still
+                // paint over the neighbouring seat's hand.
+
                 left: pos.left,
                 top: pos.top,
                 transform: 'translate(-50%, 0)',
@@ -389,11 +388,15 @@ export function PokerTableView({
                 <img
                   src={avatarDataUrl(personality.look, expression)}
                   alt=""
-                  width={40}
-                  height={40}
-                  style={{ imageRendering: 'pixelated', display: 'block', margin: '0 auto' }}
+                  style={{
+                    imageRendering: 'pixelated',
+                    display: 'block',
+                    margin: '0 auto',
+                    width: 'clamp(22px, 4.6vh, 40px)',
+                    height: 'clamp(22px, 4.6vh, 40px)',
+                  }}
                 />
-                <div style={{ fontSize: 11, whiteSpace: 'nowrap' }}>
+                <div style={{ fontSize: 'clamp(8px, 1.3vh, 11px)', whiteSpace: 'nowrap' }}>
                   {p.name}
                   {p.isDealer && <DealerButton />}
                   {labels?.get(p.id) && <span style={{ color: '#8ad4ff' }}> {labels.get(p.id)}</span>}
@@ -401,14 +404,29 @@ export function PokerTableView({
                 <div
                   data-testid={`stack-${p.id}`}
                   data-stack={p.stack}
-                  style={{ fontSize: 12, color: '#f2c14e', fontWeight: 'bold', letterSpacing: 0.3 }}
+                  style={{
+                    fontSize: 'clamp(9px, 1.5vh, 12px)',
+                    color: '#f2c14e',
+                    fontWeight: 'bold',
+                    letterSpacing: 0.3,
+                  }}
                 >
                   {p.stack.toLocaleString()}
                 </div>
-                <div style={{ fontSize: 9, color: '#8f8fa6' }}>{personality.style}</div>
+                {/* Dropped entirely when the screen is too small to spare the
+                    two lines — see `.seat-style` in index.css. It is flavour, and
+                    the alternative is seats that reach the middle of the felt. */}
+                <div
+                  className="seat-style"
+                  style={{ fontSize: 'clamp(7px, 1.1vh, 9px)', color: '#8f8fa6', lineHeight: 1.2 }}
+                >
+                  {personality.style}
+                </div>
                 {p.allIn && (
                   <div style={{ fontSize: 9, color: '#f0a0a0', letterSpacing: 1 }}>ALL IN</div>
                 )}
+                {/* What they have out in front of them this street. */}
+                <ChipStack amount={p.streetContribution} testId={`bet-${p.id}`} />
               </div>
 
               <div
@@ -457,9 +475,6 @@ export function PokerTableView({
                 </div>
               )}
 
-              <BetOnFelt side="below">
-                <ChipStack amount={p.streetContribution} testId={`bet-${p.id}`} />
-              </BetOnFelt>
             </div>
           )
         })}
@@ -475,11 +490,8 @@ export function PokerTableView({
               textAlign: 'center',
             }}
           >
-            <BetOnFelt side="above">
-              <ChipStack amount={you.streetContribution} testId="bet-you" />
-            </BetOnFelt>
             <div className={winners.has('you') ? 'seat-win' : undefined} style={seatPlateStyle(you.isActing)}>
-              <div style={{ fontSize: 11, whiteSpace: 'nowrap' }}>
+              <div style={{ fontSize: 'clamp(8px, 1.3vh, 11px)', whiteSpace: 'nowrap' }}>
                 You
                 {you.isDealer && <DealerButton />}
                 {labels?.get('you') && <span style={{ color: '#8ad4ff' }}> {labels.get('you')}</span>}
@@ -487,11 +499,17 @@ export function PokerTableView({
               <div
                 data-testid="stack-you"
                 data-stack={you.stack}
-                style={{ fontSize: 14, color: '#f2c14e', fontWeight: 'bold', letterSpacing: 0.3 }}
+                style={{
+                  fontSize: 'clamp(10px, 1.8vh, 14px)',
+                  color: '#f2c14e',
+                  fontWeight: 'bold',
+                  letterSpacing: 0.3,
+                }}
               >
                 {you.stack.toLocaleString()}
               </div>
               {you.allIn && <div style={{ fontSize: 9, color: '#f0a0a0', letterSpacing: 1 }}>ALL IN</div>}
+              <ChipStack amount={you.streetContribution} testId="bet-you" />
             </div>
             <div
               style={{

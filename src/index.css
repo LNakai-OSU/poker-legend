@@ -195,3 +195,13 @@ button {
   .deal-countdown { animation: none; transform: scaleX(1); }
   .bus-scroll-far, .bus-scroll-near, .bus-bob { animation: none; }
 }
+
+/*
+ * The line of flavour under a player's name is the tallest thing in a seat, and
+ * on a crowded table it is what pushes the far seats down onto the pot. On a
+ * screen with no room to spare it goes, and the seat keeps the parts that are
+ * actually load-bearing: who they are, what they have, and what they have bet.
+ */
+@media (max-height: 680px), (max-width: 520px) {
+  .seat-style { display: none; }
+}

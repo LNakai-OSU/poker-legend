@@ -27,7 +27,7 @@ const CHIP_W = 18
 const CHIP_H = 7
 
 /** Breaks an amount into chips, capped so a huge bet doesn't draw a skyscraper. */
-function chipBreakdown(amount: number, maxChips = 9): Denomination[] {
+function chipBreakdown(amount: number, maxChips = 5): Denomination[] {
   const chips: Denomination[] = []
   let left = amount
   for (const denom of DENOMINATIONS) {
@@ -39,6 +39,16 @@ function chipBreakdown(amount: number, maxChips = 9): Denomination[] {
   return chips
 }
 
+/**
+ * Height of the row a bet occupies, reserved whether or not there is a bet.
+ *
+ * Reserved because the alternative is a seat that changes size the moment somebody
+ * bets, and a seat that changes size pushes its own cards — and everything else —
+ * around the felt. That is what put bets on top of the pot and the community
+ * cards in the first place.
+ */
+export const BET_ROW_HEIGHT = 'clamp(10px, 2vh, 16px)'
+
 export function ChipStack({
   amount,
   testId,
@@ -49,7 +59,8 @@ export function ChipStack({
   /** Animate the stack sliding into the middle, as at the end of a street. */
   toPot?: boolean
 }) {
-  if (amount <= 0) return null
+  // The row is always there; only the chips in it come and go.
+  if (amount <= 0) return <div style={{ height: BET_ROW_HEIGHT }} />
   const chips = chipBreakdown(amount)
 
   return (
@@ -59,22 +70,21 @@ export function ChipStack({
       className={toPot ? 'chips-to-pot' : undefined}
       style={{
         position: 'relative',
-        height: 26,
+        height: BET_ROW_HEIGHT,
         display: 'flex',
-        alignItems: 'flex-end',
+        alignItems: 'center',
         justifyContent: 'center',
         gap: 4,
-        margin: '2px 0',
       }}
     >
-      <div style={{ position: 'relative', width: CHIP_W, height: 24 }}>
+      <div style={{ position: 'relative', width: CHIP_W, height: BET_ROW_HEIGHT }}>
         {chips.map((chip, i) => (
           <span
             key={i}
             style={{
               position: 'absolute',
               left: 0,
-              bottom: i * 3,
+              bottom: i * 2.5,
               width: CHIP_W,
               height: CHIP_H,
               borderRadius: '50%',

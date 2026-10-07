@@ -239,6 +239,7 @@ async function walkEdge(page, side) {
   const width = grid[0].length
   const vertical = side === 'north' || side === 'south'
   const span = vertical ? width : height
+  const key = { north: 'ArrowUp', south: 'ArrowDown', east: 'ArrowRight', west: 'ArrowLeft' }[side]
 
   const before = await areaNameOf(page)
   for (let along = 0; along < span; along++) {
@@ -247,11 +248,42 @@ async function walkEdge(page, side) {
       : { col: side === 'west' ? 0 : width - 1, row: along }
     if (grid[tile.row]?.[tile.col] !== 'w') continue
     if (!(await moveTo(page, tile.col, tile.row, 90))) continue
-    await step(page, { north: 'ArrowUp', south: 'ArrowDown', east: 'ArrowRight', west: 'ArrowLeft' }[side])
-    await page.waitForTimeout(500)
-    if ((await areaNameOf(page)) !== before) return true
+
+    await step(page, key)
+    // Polled, not slept: a fixed wait raced the next map mounting, and when it
+    // lost, this carried on trying edge tiles while the player was already
+    // standing in the new one — walking them somewhere else entirely.
+    for (let waited = 0; waited < 3000; waited += 150) {
+      const now = await areaNameOf(page)
+      if (now !== before) return now
+      await page.waitForTimeout(150)
+    }
   }
   throw new Error(`could not walk ${side} out of "${before}"`)
+}
+
+/**
+ * Keeps walking one way until the named area is reached.
+ *
+ * Counting edge crossings is fragile: a keypress that lands as a map is swapping
+ * can carry the player across the next boundary too, and then every later step is
+ * measured from the wrong place. Walking until you arrive says what the test
+ * actually means — the world is continuous in this direction — and does not care
+ * how many maps are in between.
+ */
+async function walkUntil(page, side, nameFragment, maxHops = 6) {
+  let where = await areaNameOf(page)
+  const seen = [where]
+  for (let hop = 0; hop < maxHops && !where.includes(nameFragment); hop++) {
+    // Taken from the crossing itself rather than read back afterwards, so there
+    // is no window in which the answer is one map out of date.
+    where = await walkEdge(page, side)
+    seen.push(where)
+  }
+  if (where.includes(nameFragment)) return true
+  throw new Error(
+    `walked ${side} without reaching "${nameFragment}"; went ${seen.map((x) => `"${x}"`).join(' -> ')}`,
+  )
 }
 
 /** The area the player is standing in, as the corner map labels it. */
@@ -344,10 +376,8 @@ await test('the bus runs across town to the game', async () => {
 
   // Basin Street carries on east into Seventh, and Seventh into the depot. No
   // doors are involved: the road simply continues.
-  await walkEdge(page, 'east')
-  assert((await areaNameOf(page)).includes('Seventh'), 'walking east did not reach Seventh Street')
-  await walkEdge(page, 'east')
-  assert((await areaNameOf(page)).includes('Depot'), 'walking east again did not reach the depot')
+  await walkUntil(page, 'east', 'Seventh')
+  await walkUntil(page, 'east', 'Depot')
 
   await talkTo(page, 'Bus Stop')
   const body = await page.locator('body').innerText()
@@ -366,17 +396,13 @@ await test('the town is one continuous place', async () => {
   assert(await page.locator('[data-testid="minimap"]').isVisible(), 'no minimap on the street')
 
   // Out to the edge of town and back again, entirely on foot.
-  await walkEdge(page, 'east')
-  await walkEdge(page, 'east')
-  await walkEdge(page, 'north')
-  assert((await areaNameOf(page)).includes('Eastgate'), 'could not walk north to Eastgate')
-  await walkEdge(page, 'south')
-  await walkEdge(page, 'west')
-  await walkEdge(page, 'west')
-  assert((await areaNameOf(page)).includes('Basin Street'), 'could not walk back home')
+  await walkUntil(page, 'east', 'Depot')
+  await walkUntil(page, 'north', 'Eastgate')
+  await walkUntil(page, 'south', 'Depot')
+  await walkUntil(page, 'west', 'Basin Street')
 
   // And the shops on the way are real rooms.
-  await walkEdge(page, 'east')
+  await walkUntil(page, 'east', 'Seventh')
   await enterDoor(page, "Patel's")
   const pois = await poisOf(page)
   assert(pois.some((p) => p.name === 'Mr Patel'), `nobody in the shop (saw: ${pois.map((p) => p.name)})`)
@@ -608,7 +634,7 @@ await test('a six-handed table seats everyone', async () => {
  * grew up into the community cards and an opponent's grew down into them, which
  * covered the very cards the bet was about.
  */
-await test('a bet never covers a card', async () => {
+await test('a bet never covers a card or the pot', async () => {
   const page = await newPage(baseSave({ cityId: 'riverbend', cash: 50000 }))
   await page.goto(BASE)
   await page.waitForSelector('canvas')
@@ -618,7 +644,27 @@ await test('a bet never covers a card', async () => {
   assert(await page.locator('[data-testid="pot-value"]').isVisible(), 'never reached the table')
 
   let worst = 0
+  let worstPot = 0
   for (let i = 0; i < 24; i++) {
+    // The pot is the one number on the felt that must stay readable — a bet
+    // written across it is what started this.
+    worstPot = Math.max(
+      worstPot,
+      await page.evaluate(() => {
+        const pot = document.querySelector('[data-testid="pot-value"]')?.getBoundingClientRect()
+        if (!pot) return 0
+        let area = 0
+        for (const el of document.querySelectorAll('[data-testid^="bet-"]')) {
+          const r = el.getBoundingClientRect()
+          if (r.width === 0) continue
+          if (r.right <= pot.left || pot.right <= r.left || r.bottom <= pot.top || pot.bottom <= r.top) continue
+          const w = Math.min(r.right, pot.right) - Math.max(r.left, pot.left)
+          const h = Math.min(r.bottom, pot.bottom) - Math.max(r.top, pot.top)
+          area = Math.max(area, Math.round(w * h))
+        }
+        return area
+      }),
+    )
     const covered = await page.evaluate(() => {
       const chips = [...document.querySelectorAll('[data-testid^="bet-"]')]
         .map((el) => ({ el, r: el.getBoundingClientRect() }))
@@ -656,6 +702,7 @@ await test('a bet never covers a card', async () => {
     await page.waitForTimeout(200)
   }
   assert(worst === 0, `a chip stack was drawn over a card (${worst}px of it)`)
+  assert(worstPot === 0, `a bet was drawn across the pot readout (${worstPot}px of it)`)
   assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
   await page.close()
 })
