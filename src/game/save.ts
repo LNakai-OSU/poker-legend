@@ -49,6 +49,7 @@ function reconcile(parsed: unknown): GameState | null {
     unlockedTableIds: Array.isArray(saved.unlockedTableIds) ? saved.unlockedTableIds : base.unlockedTableIds,
     debts: Array.isArray(saved.debts) ? saved.debts : base.debts,
     flags: { ...base.flags, ...(saved.flags ?? {}) },
+    completedEventIds: Array.isArray(saved.completedEventIds) ? saved.completedEventIds : base.completedEventIds,
     stats: { ...base.stats, ...(saved.stats ?? {}) },
   }
 }

@@ -230,8 +230,8 @@ export const CHARACTERS: Record<string, CharacterDef> = {
           'Marcus: Morning. You look like you slept on the floor again.',
           'Marcus: Game is Friday. It is always Friday.',
         ] },
-        { period: 'afternoon', areaId: 'bodega', col: 9, row: 4, lines: [
-          'Marcus: Patel lets me run a tab. Do not tell him I told you.',
+        { period: 'afternoon', areaId: 'marcus-house', col: 5, row: 6, lines: [
+          'Marcus: Home early. Cleared the table off and everything.',
         ] },
         { period: 'evening', areaId: 'marcus-house', col: 5, row: 6, lines: [
           'Marcus: Door is open. Chairs are out.',

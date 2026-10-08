@@ -2,12 +2,13 @@ import { OverworldScene, type ChaserConfig, type Interactable, type SceneExit } 
 import { AREAS, CITIES, MISSIONS, collectorSpawn, findArea } from '../world/content'
 import { isWalkable } from './tileRenderer'
 import { missionStatus } from '../game/progression'
-import { daysUntilDue, totalOwed, type GameState } from '../game/state'
+import { daysUntilDue, totalOwed, type GameState, type StoryFlag } from '../game/state'
 import type { PoiAction, PoiDef } from '../world/types'
 import type { NpcArt } from './Npc'
 import { useAmbientMusic } from '../audio/SoundToggle'
 import { PERIOD_LABEL, PERIOD_LIGHT } from '../game/time'
 import { charactersIn } from '../world/characters'
+import { EVENTS, eventFor, type GameEvent } from '../world/events'
 
 interface CitySceneProps {
   state: GameState
@@ -16,9 +17,21 @@ interface CitySceneProps {
   onAction: (action: PoiAction, poi: PoiDef) => void
   onEnterArea: (areaId: string, col: number, row: number) => void
   onCaught: () => void
+  /** Hand a scripted beat to the runner. Without it, events do not fire. */
+  onEvent?: (event: GameEvent) => void
+  /** Anybody an event has stood somewhere other than their scheduled tile. */
+  moved?: Record<string, { col: number; row: number }>
 }
 
-export function CityScene({ state, entryTile, onAction, onEnterArea, onCaught }: CitySceneProps) {
+export function CityScene({
+  state,
+  entryTile,
+  onAction,
+  onEnterArea,
+  onCaught,
+  onEvent,
+  moved,
+}: CitySceneProps) {
   // Areas resolve globally, not within a city: walking off the edge of a street
   // can take you into the next town, which is the point of the world being one
   // continuous place rather than a set of islands joined by menus.
@@ -47,21 +60,28 @@ export function CityScene({ state, entryTile, onAction, onEnterArea, onCaught }:
       labelled: poi.labelled,
       lines: linesFor(state, poi),
       onFinish:
-        poi.action.kind === 'flavor' || isSpent(state, poi) || isLocked(state, poi)
+        poi.action.kind === 'flavor' || isLocked(state, poi)
           ? undefined
           : () => onAction(poi.action, poi),
     })),
     // Whoever the hour puts here. A POI is part of the map and is always in it;
     // these are people, and where they are depends on when you came.
-    ...charactersIn(areaId, state.period).map(({ id, character, at }) => ({
-      id: `character-${id}`,
-      name: character.name,
-      col: at.col,
-      row: at.row,
-      color: character.overworld?.color ?? SCHEDULED_CHARACTER_COLOR,
-      art: character.overworld?.art ?? ('person' as NpcArt),
-      lines: at.lines ?? character.overworld?.lines ?? [],
-    })),
+    ...charactersIn(areaId, state.period).map(({ id, character, at }) => {
+      // Somebody with something scripted to say says that instead of their
+      // usual line for the hour.
+      const event = onEvent ? eventFor(EVENTS, { kind: 'talkTo', characterId: id }, state) : undefined
+      const placed = moved?.[id] ?? at
+      return {
+        id: `character-${id}`,
+        name: character.name,
+        col: placed.col,
+        row: placed.row,
+        color: character.overworld?.color ?? SCHEDULED_CHARACTER_COLOR,
+        art: character.overworld?.art ?? ('person' as NpcArt),
+        lines: at.lines ?? character.overworld?.lines ?? [],
+        onTalk: event && onEvent ? () => (onEvent(event), true) : undefined,
+      }
+    }),
   ]
 
   // A scheduled character standing on a tile the map does not allow is a content
@@ -176,18 +196,10 @@ function defaultArt(poi: PoiDef): NpcArt {
   return 'person'
 }
 
-/**
- * Winning the home game is a one-time story beat that opens the campaign, not a
- * table you can sit at again for the payout.
- */
-function isSpent(state: GameState, poi: PoiDef): boolean {
-  return poi.action.kind === 'pokerNight' && state.flags.wonPokerNight
-}
-
 /** A POI whose story flag has not been set yet: visible, talkable, but inert. */
 function isLocked(state: GameState, poi: PoiDef): boolean {
   if (!poi.requiresFlag) return false
-  return !state.flags[poi.requiresFlag as keyof GameState['flags']]
+  return !state.flags[poi.requiresFlag as StoryFlag]
 }
 
 function linesFor(state: GameState, poi: PoiDef): string[] {
@@ -196,12 +208,6 @@ function linesFor(state: GameState, poi: PoiDef): string[] {
   if (poi.altLines && poi.altLines.length > 0) {
     const pool = [poi.lines, ...poi.altLines]
     return pool[state.day % pool.length]
-  }
-  if (isSpent(state, poi)) {
-    return [
-      `${poi.name}: Still talking about that night, man.`,
-      `${poi.name}: I'm out of the game for a while. Go win something real.`,
-    ]
   }
   if (poi.action.kind !== 'mission') return poi.lines
 

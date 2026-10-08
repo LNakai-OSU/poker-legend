@@ -633,19 +633,6 @@ const apartmentCity: CityDef = {
       { col: 7, row: 8 },
       '#141018',
       [
-        {
-          id: 'marcus',
-          name: 'Marcus',
-          col: 7,
-          row: 3,
-          color: COLORS.person,
-          lines: [
-            'Marcus: You made it! Sit down, sit down.',
-            'Marcus: Everything on the table, winner takes the lot. That is the rule.',
-            'Marcus: You in?',
-          ],
-          action: { kind: 'pokerNight' },
-        },
         local('marcus-dana', 'Dana', 11, 7, [
           'Dana: He has been talking about this game all week.',
           'Dana: He is going to lose. He always loses.',

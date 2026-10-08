@@ -126,7 +126,6 @@ export type PoiAction =
   | { kind: 'mission'; missionId: string }
   | { kind: 'travel' }
   | { kind: 'flavor' }
-  | { kind: 'pokerNight' }
 
 export interface PoiDef {
   id: string

@@ -424,6 +424,73 @@ await test('the bus runs across town to the game', async () => {
   await page.close()
 })
 
+
+/**
+ * The game that opens the campaign, which is now an event rather than code.
+ *
+ * It used to be a POI with an action kind of its own, a flag read in three
+ * files and a branch in the view switch. Nothing in this suite ever talked to
+ * Marcus, so the one beat every run begins with was the least covered thing in
+ * the game.
+ */
+await test("Marcus's game starts by talking to him at his place", async () => {
+  const page = await newPage(
+    baseSave({
+      cityId: 'apartment',
+      areaId: 'eastgate',
+      period: 'afternoon',
+      cash: 200,
+      flags: { wonPokerNight: false, beatFinalRival: false, hasPenthouse: false },
+    }),
+  )
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(500)
+  await enterDoor(page, "Marcus's")
+
+  const here = await poisOf(page)
+  assert(
+    here.some((p) => p.name === 'Marcus'),
+    `Marcus is not home in the afternoon (saw: ${here.map((p) => p.name).join(', ')})`,
+  )
+
+  await approach(page, 'Marcus')
+  await page.keyboard.press('e')
+  await page.waitForTimeout(400)
+
+  // The event runs the conversation, not the scene's own text box.
+  assert(
+    await page.locator('[data-testid="event-dialogue"]').isVisible(),
+    'talking to Marcus started no event',
+  )
+  await talkThrough(page)
+  await page.waitForTimeout(600)
+
+  const body = await page.locator('body').innerText()
+  assert(/winner takes|Poker Night|Sit down/i.test(body), `the game never started (saw: ${body.slice(0, 200)})`)
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+})
+
+/** The same beat, at an hour he is not home. */
+await test('Marcus is out in the morning, and his game is not on', async () => {
+  const page = await newPage(
+    baseSave({
+      cityId: 'apartment',
+      areaId: 'marcus-house',
+      period: 'morning',
+      flags: { wonPokerNight: false, beatFinalRival: false, hasPenthouse: false },
+    }),
+  )
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(500)
+  const here = await poisOf(page)
+  assert(!here.some((p) => p.name === 'Marcus'), 'Marcus is home at an hour he should be out')
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+})
+
 await test('the town is one continuous place', async () => {
   const page = await newPage(null)
   await page.goto(BASE)

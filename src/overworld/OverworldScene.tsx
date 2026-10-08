@@ -45,6 +45,12 @@ export interface Interactable extends NpcConfig {
   lines: string[]
   /** Called after the player clicks through all dialogue lines. Omit for flavor-only objects. */
   onFinish?: () => void
+  /**
+   * Offered the interaction before the scene's own text box opens. Returning
+   * true means somebody else is handling it — a scripted event taking over the
+   * conversation — and this scene should stay out of the way.
+   */
+  onTalk?: () => boolean
 }
 
 export interface ChaserConfig {
@@ -112,6 +118,12 @@ export function OverworldScene({
   const [playerTile, setPlayerTile] = useState(playerStart)
   const [talkingId, setTalkingId] = useState<string | null>(null)
   const talkingRef = useRef<string | null>(null)
+  // Read through a ref because the interaction handler lives inside the Pixi
+  // ticker, which is built once: the list captured at mount goes stale as soon
+  // as what an event offers changes, and a stale handler would run yesterday's
+  // scene.
+  const interactablesRef = useRef(interactables)
+  interactablesRef.current = interactables
   // Callbacks are read from refs inside the Pixi ticker, which is created once.
   const onCaughtRef = useRef(onCaught)
   onCaughtRef.current = onCaught
@@ -283,7 +295,12 @@ export function OverworldScene({
       const tryInteract = () => {
         if (talkingRef.current) return
         const adjacent = findAdjacent()
-        if (adjacent) setTalkingId(adjacent.config.id)
+        if (!adjacent) return
+        const interactable = interactablesRef.current.find((i) => i.id === adjacent.config.id)
+        // A scripted event gets first refusal: it runs its own conversation,
+        // because it has more to say than a text box and a callback.
+        if (interactable?.onTalk?.()) return
+        setTalkingId(adjacent.config.id)
       }
       interactRef.current = tryInteract
 

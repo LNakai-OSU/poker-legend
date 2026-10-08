@@ -1,5 +1,13 @@
 import { periodAfter, type TimePeriod } from './time'
 
+/**
+ * Something true about the world that content can ask about.
+ *
+ * Named rather than free-form strings so a typo in an event is a type error
+ * instead of a condition that is quietly never satisfied.
+ */
+export type StoryFlag = 'wonPokerNight' | 'beatFinalRival' | 'hasPenthouse'
+
 export type CityId =
   | 'apartment'
   | 'silverCreek'
@@ -61,11 +69,17 @@ export interface GameState {
    * losing could be retried immediately it would just be an expensive cash game.
    */
   finaleRematchDay: number
-  flags: {
-    wonPokerNight: boolean
-    beatFinalRival: boolean
-    hasPenthouse: boolean
-  }
+  flags: Record<StoryFlag, boolean>
+  /**
+   * Scripted beats that have already happened.
+   *
+   * Kept apart from `flags` because they answer different questions: a flag is
+   * something true about the world that content can ask about, and this is a
+   * record of what the player has already been shown. An event that fires every
+   * time you walk back through a door is the commonest way a system like this
+   * goes wrong, and this is what stops it.
+   */
+  completedEventIds: string[]
   stats: {
     handsWon: number
     biggestPot: number
@@ -92,6 +106,7 @@ export function initialState(): GameState {
     restedUntilDay: 0,
     finaleRematchDay: 0,
     flags: { wonPokerNight: false, beatFinalRival: false, hasPenthouse: false },
+    completedEventIds: [],
     stats: { handsWon: 0, biggestPot: 0, tablesPlayed: 0 },
   }
 }

@@ -11,6 +11,9 @@ import { SettingsScene } from './SettingsScene'
 import { CITIES, LESSONS, MISSIONS, SPONSORS, TABLES, findArea } from '../world/content'
 import { hasFastTravel, missionStatus, tableAccess, travelCostTo } from './progression'
 import { clearSave, loadGame, saveGame } from './save'
+import { useEventRunner } from './useEventRunner'
+import { DialogueBox } from './DialogueBox'
+import { CHARACTERS } from '../world/characters'
 import { SoundToggle, useAudioUnlock } from '../audio/SoundToggle'
 import { playSound } from '../audio/audio'
 import {
@@ -28,6 +31,11 @@ import {
   type GameState,
 } from './state'
 import type { PoiAction } from '../world/types'
+
+/** A speaker id becomes the name that character is known by; anything else stands. */
+function speakerName(speaker: string): string {
+  return CHARACTERS[speaker]?.name ?? speaker
+}
 
 /** Tables you cannot simply walk up to; a club invitation opens them. */
 const INVITE_ONLY_TABLES = new Set(['crescent-private', 'mesa-private'])
@@ -84,14 +92,22 @@ export function GameApp() {
 
   const backToCity = () => setView({ kind: 'city' })
 
+  /**
+   * The runner for scripted beats. Everything it cannot do by itself — changing
+   * scene, putting the player somewhere — it hands back here.
+   */
+  const events = useEventRunner(setState, {
+    onStartTable: (tableId) => setView({ kind: 'table', tableId }),
+    onStartPokerNight: () => setView({ kind: 'pokerNight' }),
+    onTeleport: (areaId, col, row) => {
+      const destination = findArea(areaId)
+      setState((s) => ({ ...s, areaId, cityId: destination?.cityId ?? s.cityId }))
+      setEntryTile({ col, row })
+    },
+  })
+
   const handlePoi = (action: PoiAction) => {
     switch (action.kind) {
-      case 'pokerNight':
-        // One-time story beat: the game that starts the campaign, not a table
-        // you can farm. Marcus stops dealing you in once you've taken his night.
-        if (state.flags.wonPokerNight) break
-        setView({ kind: 'pokerNight' })
-        break
       case 'travel':
         setView({ kind: 'travel' })
         break
@@ -492,6 +508,8 @@ export function GameApp() {
               setEntryTile({ col, row })
             }}
             onCaught={handleCaught}
+            onEvent={events.run}
+            moved={events.stage.moved}
           />
         )
     }
@@ -505,6 +523,28 @@ export function GameApp() {
   return (
     <>
       <SoundToggle />
+      {events.stage.faded && (
+        <div
+          data-testid="event-fade"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: '#07070c',
+            zIndex: 90,
+            pointerEvents: 'none',
+            animation: 'fade-in 420ms ease-out both',
+          }}
+        />
+      )}
+      {events.stage.dialogue && (
+        <div data-testid="event-dialogue" style={{ position: 'fixed', inset: 0, zIndex: 95 }}>
+          <DialogueBox
+            speaker={speakerName(events.stage.dialogue.speaker)}
+            lines={events.stage.dialogue.lines}
+            onFinish={events.advance}
+          />
+        </div>
+      )}
       {!settingsOpen && !lockedInAtTable && (
         <button
           data-testid="settings-button"
