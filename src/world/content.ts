@@ -12,10 +12,7 @@ export const TABLES: Record<string, TableDef> = {
     smallBlind: 1,
     bigBlind: 2,
     buyIn: 100,
-    opponents: [
-      { id: 'ray', name: 'Ray', skillTier: 'novice', archetype: 'station' },
-      { id: 'sully', name: 'Sully', skillTier: 'amateur', archetype: 'nit' },
-    ],
+    opponents: ['ray', 'sully'],
   },
   'riverbend-mid': {
     id: 'riverbend-mid',
@@ -23,13 +20,7 @@ export const TABLES: Record<string, TableDef> = {
     smallBlind: 2,
     bigBlind: 5,
     buyIn: 300,
-    opponents: [
-      { id: 'deb', name: 'Deb', skillTier: 'amateur', archetype: 'regular' },
-      { id: 'mack', name: 'Mack', skillTier: 'competent', archetype: 'nit' },
-      { id: 'tiny', name: 'Tiny', skillTier: 'novice', archetype: 'whale', stackMultiplier: 2 },
-      { id: 'gus', name: 'Gus', skillTier: 'novice', archetype: 'station' },
-      { id: 'pearl', name: 'Pearl', skillTier: 'competent', archetype: 'regular' },
-    ],
+    opponents: ['deb', 'mack', 'tiny', 'gus', 'pearl'],
   },
   'crescent-main': {
     id: 'crescent-main',
@@ -37,13 +28,7 @@ export const TABLES: Record<string, TableDef> = {
     smallBlind: 5,
     bigBlind: 10,
     buyIn: 1000,
-    opponents: [
-      { id: 'corinne', name: 'Corinne', skillTier: 'competent', archetype: 'regular' },
-      { id: 'vance', name: 'Vance', skillTier: 'competent', archetype: 'station' },
-      { id: 'hollis', name: 'Hollis', skillTier: 'amateur', archetype: 'whale', stackMultiplier: 2 },
-      { id: 'omar', name: 'Omar', skillTier: 'amateur', archetype: 'maniac' },
-      { id: 'bette', name: 'Bette', skillTier: 'competent', archetype: 'nit' },
-    ],
+    opponents: ['corinne', 'vance', 'hollis', 'omar', 'bette'],
   },
   'palmcay-high': {
     id: 'palmcay-high',
@@ -51,10 +36,7 @@ export const TABLES: Record<string, TableDef> = {
     smallBlind: 10,
     bigBlind: 25,
     buyIn: 2500,
-    opponents: [
-      { id: 'adaeze', name: 'Adaeze', skillTier: 'competent', archetype: 'nit' },
-      { id: 'kit', name: 'Kit', skillTier: 'sharp', archetype: 'maniac' },
-    ],
+    opponents: ['adaeze', 'kit'],
   },
   'palmcay-tourist': {
     id: 'palmcay-tourist',
@@ -62,11 +44,7 @@ export const TABLES: Record<string, TableDef> = {
     smallBlind: 10,
     bigBlind: 25,
     buyIn: 2500,
-    opponents: [
-      { id: 'bernard', name: 'Bernard', skillTier: 'novice', archetype: 'whale', stackMultiplier: 3 },
-      { id: 'rosa', name: 'Rosa', skillTier: 'amateur', archetype: 'regular' },
-      { id: 'kit2', name: 'Kit', skillTier: 'sharp', archetype: 'maniac' },
-    ],
+    opponents: ['bernard', 'rosa', { character: 'kit', persona: 'returning' }],
   },
   'mesa-main': {
     id: 'mesa-main',
@@ -74,13 +52,7 @@ export const TABLES: Record<string, TableDef> = {
     smallBlind: 25,
     bigBlind: 50,
     buyIn: 10000,
-    opponents: [
-      { id: 'lorna', name: 'Lorna', skillTier: 'sharp', archetype: 'regular' },
-      { id: 'dmitri', name: 'Dmitri', skillTier: 'sharp', archetype: 'nit' },
-      { id: 'whitaker', name: 'Whitaker', skillTier: 'competent', archetype: 'whale', stackMultiplier: 2 },
-      { id: 'teo', name: 'Teo', skillTier: 'competent', archetype: 'maniac' },
-      { id: 'junie', name: 'Junie', skillTier: 'sharp', archetype: 'regular' },
-    ],
+    opponents: ['lorna', 'dmitri', 'whitaker', 'teo', 'junie'],
   },
   'mesa-highroller': {
     id: 'mesa-highroller',
@@ -89,10 +61,7 @@ export const TABLES: Record<string, TableDef> = {
     bigBlind: 200,
     buyIn: 40000,
     dressCode: 3,
-    opponents: [
-      { id: 'saul', name: 'Saul', skillTier: 'sharp', archetype: 'nit' },
-      { id: 'priya', name: 'Priya', skillTier: 'elite', archetype: 'regular' },
-    ],
+    opponents: ['saul', 'priya'],
   },
   'lumina-nosebleed': {
     id: 'lumina-nosebleed',
@@ -101,11 +70,7 @@ export const TABLES: Record<string, TableDef> = {
     bigBlind: 200,
     buyIn: 30000,
     dressCode: 3,
-    opponents: [
-      { id: 'xue', name: 'Xue', skillTier: 'elite', archetype: 'maniac' },
-      { id: 'marchetti', name: 'Marchetti', skillTier: 'elite', archetype: 'nit' },
-      { id: 'kingsley', name: 'Kingsley', skillTier: 'competent', archetype: 'whale', stackMultiplier: 2 },
-    ],
+    opponents: ['xue', 'marchetti', 'kingsley'],
   },
   'crescent-headsup': {
     id: 'crescent-headsup',
@@ -113,7 +78,7 @@ export const TABLES: Record<string, TableDef> = {
     smallBlind: 5,
     bigBlind: 10,
     buyIn: 1000,
-    opponents: [{ id: 'vance-hu', name: 'Vance', skillTier: 'competent', archetype: 'station' }],
+    opponents: [{ character: 'vance', persona: 'headsUp' }],
   },
   'crescent-private': {
     id: 'crescent-private',
@@ -121,10 +86,7 @@ export const TABLES: Record<string, TableDef> = {
     smallBlind: 10,
     bigBlind: 20,
     buyIn: 2000,
-    opponents: [
-      { id: 'delphine', name: 'Delphine', skillTier: 'sharp', archetype: 'regular' },
-      { id: 'otto', name: 'Otto', skillTier: 'amateur', archetype: 'whale', stackMultiplier: 3 },
-    ],
+    opponents: ['delphine', 'otto'],
   },
   'mesa-headsup': {
     id: 'mesa-headsup',
@@ -133,7 +95,7 @@ export const TABLES: Record<string, TableDef> = {
     bigBlind: 100,
     buyIn: 20000,
     dressCode: 2,
-    opponents: [{ id: 'lorna-hu', name: 'Lorna', skillTier: 'sharp', archetype: 'regular' }],
+    opponents: [{ character: 'lorna', persona: 'headsUp' }],
   },
   'mesa-private': {
     id: 'mesa-private',
@@ -142,10 +104,7 @@ export const TABLES: Record<string, TableDef> = {
     bigBlind: 400,
     buyIn: 60000,
     dressCode: 3,
-    opponents: [
-      { id: 'august', name: 'August', skillTier: 'elite', archetype: 'nit' },
-      { id: 'rhodes', name: 'Rhodes', skillTier: 'competent', archetype: 'whale', stackMultiplier: 4 },
-    ],
+    opponents: ['august', 'rhodes'],
   },
   'lumina-finale': {
     id: 'lumina-finale',
@@ -159,7 +118,7 @@ export const TABLES: Record<string, TableDef> = {
     buyIn: 120000,
     dressCode: 4,
     isFinale: true,
-    opponents: [{ id: 'nadia', name: 'Nadia Okonkwo', skillTier: 'elite', archetype: 'regular' }],
+    opponents: ['nadia'],
   },
 }
 

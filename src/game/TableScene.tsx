@@ -4,10 +4,10 @@ import { decideAiAction, estimateEquity, inferredRangePercentile } from '../engi
 import { bestHand, HAND_CATEGORY_NAMES } from '../engine/handRank'
 import { defaultRng } from '../engine/rng'
 import type { PlayerConfig } from '../engine/types'
-import type { TableDef } from '../world/types'
+import type { OpponentDef, TableDef } from '../world/types'
 import { PokerTableView, handTakings, potWinnerIds, type SeatSpeech } from './PokerTableView'
 import type { Announcement } from './HandAnnouncer'
-import { personalityFor } from '../world/personalities'
+import { personalityFor, seatsOf } from '../world/characters'
 import type { GameState } from './state'
 import { tableAccess, tellClarity } from './progression'
 import { playSound } from '../audio/audio'
@@ -102,10 +102,10 @@ function resultAnnouncement(
   }
 }
 
-function buildPlayers(table: TableDef): PlayerConfig[] {
+function buildPlayers(table: TableDef, seats: OpponentDef[]): PlayerConfig[] {
   return [
     { id: 'you', name: 'You', isHuman: true, skillTier: 'amateur', startingStack: table.buyIn },
-    ...table.opponents.map((opponent) => ({
+    ...seats.map((opponent) => ({
       id: opponent.id,
       name: opponent.name,
       isHuman: false,
@@ -117,7 +117,15 @@ function buildPlayers(table: TableDef): PlayerConfig[] {
 }
 
 export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) {
-  const players = useMemo(() => buildPlayers(table), [table])
+  // Who is actually sitting here: the table names characters, and this looks
+  // each one up once for the life of the table.
+  const seats = useMemo(() => seatsOf(table), [table])
+  const players = useMemo(() => buildPlayers(table, seats), [table, seats])
+  /** Which of a character's personas has taken this seat, for what they say. */
+  const personas = useMemo(
+    () => Object.fromEntries(seats.flatMap((s) => (s.persona ? [[s.id, s.persona]] : []))),
+    [seats],
+  )
   const tableRef = useRef(
     new TexasHoldEmTable(players, {
       smallBlind: table.smallBlind,
@@ -156,7 +164,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
     if (speechTimer.current) window.clearTimeout(speechTimer.current)
     setSpeech(null)
     if (!always && Math.random() > 0.45) return
-    const pools = personalityFor(playerId).lines
+    const pools = personalityFor(playerId, personas[playerId]).lines
     // Betting and checking are the two commonest actions and had no lines at all,
     // so most actions were narrated by whatever was said last.
     const lines = pools[kind] ?? (kind === 'bet' ? pools.raise : undefined)
@@ -257,7 +265,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
     const opponentWinner = potWinners.find((id) => id !== 'you')
     if (opponentWinner) say(opponentWinner, 'win', true)
     else if (wonAnything) {
-      const beaten = table.opponents.find((o) => lastResult.revealed.some((r) => r.playerId === o.id))
+      const beaten = seats.find((o) => lastResult.revealed.some((r) => r.playerId === o.id))
       if (beaten) say(beaten.id, 'lose', true)
     }
   }, [lastResult?.handNumber, publicState.handInProgress])
@@ -273,7 +281,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
    */
   const rebuyOpponents = () => {
     if (isFinale) return
-    for (const opponent of table.opponents) {
+    for (const opponent of seats) {
       const seat = Math.round(table.buyIn * (opponent.stackMultiplier ?? 1))
       const current = engine.getState().players.find((p) => p.id === opponent.id)
       if (!current) continue
@@ -599,6 +607,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
         players={players}
         yourHole={yourHole}
         insights={insights}
+        personas={personas}
         speech={speech}
         announcement={announcement}
       />

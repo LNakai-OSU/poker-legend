@@ -18,7 +18,7 @@ import {
   findItem,
 } from './content'
 import { DOOR, isWalkable, parseMap } from '../overworld/tileRenderer'
-import { PERSONALITIES } from './personalities'
+import { CHARACTERS, seatsOf } from './characters'
 
 describe('parseMap', () => {
   it('builds a rectangular grid and marks walls unwalkable', () => {
@@ -492,7 +492,7 @@ describe('the opponents', () => {
     // second, "plays every hand he is dealt" and "grinds small pots" were the same
     // bot with different captions.
     for (const table of Object.values(TABLES)) {
-      for (const opponent of table.opponents) {
+      for (const opponent of seatsOf(table)) {
         expect(
           opponent.archetype,
           `${opponent.name} at ${table.name} has no playing style`,
@@ -508,12 +508,33 @@ describe('the opponents', () => {
     expect(sixHanded.length, 'there is no six-handed game anywhere on the ladder').toBeGreaterThan(0)
   })
 
-  it('gives every seated opponent a personality to speak with', () => {
+  it('seats only characters who exist and who play', () => {
+    // A seat names a character; this is what turns the name into a player. It
+    // used to be possible to seat somebody with no personality entry at all and
+    // get a nameless stranger on the felt.
     for (const table of Object.values(TABLES)) {
-      for (const opponent of table.opponents) {
+      expect(() => seatsOf(table), `${table.name} seats somebody who does not exist`).not.toThrow()
+    }
+  })
+
+  it('gives every character who plays something to say', () => {
+    for (const [id, character] of Object.entries(CHARACTERS)) {
+      if (!character.seat) continue
+      expect(character.style, `${id} has no line under their name`).toBeTruthy()
+      expect(character.lines.greeting, `${id} says nothing when you sit down`).toBeTruthy()
+    }
+  })
+
+  it('only gives a persona to a character who has one', () => {
+    // A table can seat "Vance, one on one" — but a persona that does not exist
+    // silently falls back to the character's usual lines, which reads as the
+    // variant simply not working.
+    for (const table of Object.values(TABLES)) {
+      for (const ref of table.opponents) {
+        if (typeof ref === 'string' || !ref.persona) continue
         expect(
-          PERSONALITIES[opponent.id],
-          `${opponent.name} (${opponent.id}) has no personality entry`,
+          CHARACTERS[ref.character]?.personas?.[ref.persona],
+          `${table.name} seats ${ref.character} as "${ref.persona}", which they do not have`,
         ).toBeDefined()
       }
     }

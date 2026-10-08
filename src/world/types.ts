@@ -3,6 +3,16 @@ import type { NpcArt } from '../overworld/Npc'
 import type { Archetype, SkillTier } from '../engine/types'
 import type { CityId } from '../game/state'
 
+/**
+ * Who a table seats.
+ *
+ * A character id, or that id with one of their alternate personas — Vance plays
+ * a different way one on one, and Kit greets you differently the second time she
+ * finds you at her table. See `CharacterDef` in `characters.ts`.
+ */
+export type SeatRef = string | { character: string; persona?: string }
+
+/** A seat with its character resolved. Produced by `seatsOf`. */
 export interface OpponentDef {
   id: string
   name: string
@@ -10,6 +20,8 @@ export interface OpponentDef {
   archetype?: Archetype
   /** Whales sit down deeper than everyone else. */
   stackMultiplier?: number
+  /** Which of the character's personas is sitting here, if not their usual one. */
+  persona?: string
 }
 
 export interface TableDef {
@@ -18,7 +30,7 @@ export interface TableDef {
   smallBlind: number
   bigBlind: number
   buyIn: number
-  opponents: OpponentDef[]
+  opponents: SeatRef[]
   /** Minimum dress-code level the room enforces (see ITEM dressCode effects). */
   dressCode?: number
   /** Heads-up finale tables end the game rather than being a normal cash game. */

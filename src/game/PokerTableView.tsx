@@ -5,7 +5,7 @@ import type { CSSProperties } from 'react'
 import { Card, cardText } from './Card'
 import { ChipStack } from './ChipStack'
 import { avatarDataUrl, expressionFor, type Expression } from './avatars'
-import { personalityFor } from '../world/personalities'
+import { personalityFor } from '../world/characters'
 import { tellText } from './tellFlavor'
 import { HandAnnouncer, type Announcement } from './HandAnnouncer'
 
@@ -24,6 +24,11 @@ interface PokerTableViewProps {
   players: PlayerConfig[]
   yourHole: CardData[]
   insights?: TableInsights
+  /**
+   * Which of a character's personas has taken each seat, where it is not their
+   * usual one — Vance one on one talks differently from Vance six-handed.
+   */
+  personas?: Record<string, string>
   /** A line of table talk currently on screen. */
   speech?: SeatSpeech | null
   /** The current key moment, announced over the felt instead of in a panel. */
@@ -252,6 +257,7 @@ export function PokerTableView({
   players,
   yourHole,
   insights,
+  personas,
   speech,
   announcement,
 }: PokerTableViewProps) {
@@ -369,7 +375,7 @@ export function PokerTableView({
         {opponents.map((p, i) => {
           const pos = positions[i] ?? positions[0]
           const revealed = handOver ? lastResult.revealed.find((r) => r.playerId === p.id) : undefined
-          const personality = personalityFor(p.id)
+          const personality = personalityFor(p.id, personas?.[p.id])
           const expression: Expression = expressionFor({
             tellKind: p.tell && !p.folded ? (p.tell.kind as Expression) : null,
             isActing: p.isActing,
