@@ -1,5 +1,10 @@
 # Poker Legend — Game Design Document
 
+> **[GAME_BIBLE.md](GAME_BIBLE.md) is the front door.** It states the rules of
+> the universe and the four kinds of content you write. This document is the
+> original design intent and the open questions behind those rules — useful for
+> *why*, not for *what is true now*. Where the two disagree, the Bible wins.
+
 Living doc. Update this as design decisions are made or revised; future build
 requests should reference sections here ("build Phase 3 per GDD §5") instead
 of re-explaining context.

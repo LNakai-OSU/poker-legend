@@ -1,5 +1,10 @@
 # Poker Legend — Technical Design
 
+> **[GAME_BIBLE.md](GAME_BIBLE.md) is the front door.** It states the rules of
+> the universe and the four kinds of content you write. This document is the
+> architecture and the build history underneath them. Where the two disagree,
+> the Bible wins.
+
 Living doc, paired with `GDD.md`. Update as architecture decisions are made.
 
 ## Stack
