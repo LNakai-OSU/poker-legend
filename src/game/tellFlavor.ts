@@ -7,6 +7,10 @@ import type { TellSignal } from '../engine/types'
  * hand (see STRONG_TELL_KINDS / WEAK_TELL_KINDS in engine/tells), so these
  * strings must stay neutral or they would give the read away for free.
  *
+ * They are also kept short. A tell is drawn under its own seat, and a seat on a
+ * six-handed table is about as wide as its name plate — a sentence that does not
+ * fit in two lines there is a sentence written across the next player's hand.
+ *
  * Several phrasings per cue, so two opponents reacting on the same street do not
  * both produce the identical sentence. Every phrasing for a given cue has to
  * describe the *same* physical behaviour, because the cue is the signal: if one
@@ -15,33 +19,33 @@ import type { TellSignal } from '../engine/types'
 export const TELL_FLAVOR_TEXT: Record<TellSignal['kind'], string[]> = {
   'arm-shift': [
     ' shifts in their seat',
-    ' re-settles their arms on the rail',
+    ' re-settles their arms',
     ' leans back a little',
     ' shifts their weight',
   ],
   'lip-twitch': [
     "'s lip twitches",
-    "'s mouth tightens for a moment",
+    "'s mouth tightens",
     ' presses their lips together',
     "'s jaw moves slightly",
   ],
   glance: [
     ' glances at their chips',
-    " looks down at their stack and back up",
+    ' looks at their stack, then up',
     ' checks their stack again',
     "'s eyes flick to their chips",
   ],
   stillness: [
     ' goes very still',
     ' stops moving entirely',
-    ' has not moved since the card came',
+    ' has not moved at all',
     ' sits perfectly motionless',
   ],
   'chip-tap': [
     ' taps the felt',
-    ' taps a chip against the table',
-    ' drums one finger on the felt',
-    ' rattles a chip between two fingers',
+    ' taps a chip on the table',
+    ' drums a finger on the felt',
+    ' rolls a chip in their fingers',
   ],
 }
 

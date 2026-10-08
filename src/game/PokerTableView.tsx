@@ -177,6 +177,27 @@ function seatPositions(count: number): { left: string; top: string }[] {
   return layouts[count] ?? layouts[3]
 }
 
+/**
+ * How wide a seat is, name plate and all.
+ *
+ * A fixed width, not a minimum. A seat is positioned by its centre, so a child
+ * wider than its seat grows out of both sides and over the neighbours — and the
+ * seats hold text nobody sized: a line of flavour, and a tell. Left to themselves
+ * they made the far-rail seats 150px wide with 15px between them, so whether two
+ * players collided came down to how long their descriptions happened to be.
+ *
+ * Everything inside a seat wraps or clips within this instead.
+ */
+const SEAT_WIDTH = 'clamp(58px, 16vw, 96px)'
+
+/**
+ * Height reserved for the line of tell text, whether or not there is a tell.
+ *
+ * Two lines at the tell's font size. Reserved for the same reason the bet row is:
+ * a seat that grows when a cue appears pushes its own cards around the felt.
+ */
+const TELL_ROW_HEIGHT = 26
+
 function seatPlateStyle(isActing: boolean): CSSProperties {
   return {
     // A name plate on the rail: dark, slightly glassy, and lit when it is your turn.
@@ -188,7 +209,8 @@ function seatPlateStyle(isActing: boolean): CSSProperties {
     // Sized against the window's height, because the felt is: at a fixed size the
     // plates were two-thirds of a short table and the seats overlapped the board.
     padding: 'clamp(1px, 0.5vh, 4px) clamp(4px, 1vw, 7px)',
-    minWidth: 'clamp(58px, 16vw, 96px)',
+    width: '100%',
+    boxSizing: 'border-box',
     boxShadow: isActing
       ? '0 0 16px rgba(242,193,78,0.45), inset 0 1px 0 rgba(255,255,255,0.08)'
       : 'inset 0 1px 0 rgba(255,255,255,0.05), 0 2px 6px rgba(0,0,0,0.4)',
@@ -370,6 +392,7 @@ export function PokerTableView({
                 top: pos.top,
                 transform: 'translate(-50%, 0)',
                 textAlign: 'center',
+                width: SEAT_WIDTH,
                 // Dimmed with a filter rather than `opacity`, because opacity
                 // below 1 creates a stacking context — which took a folded seat's
                 // chips out of the felt's ordering and let them paint over another
@@ -418,7 +441,17 @@ export function PokerTableView({
                     the alternative is seats that reach the middle of the felt. */}
                 <div
                   className="seat-style"
-                  style={{ fontSize: 'clamp(7px, 1.1vh, 9px)', color: '#8f8fa6', lineHeight: 1.2 }}
+                  style={{
+                    fontSize: 'clamp(7px, 1.1vh, 9px)',
+                    color: '#8f8fa6',
+                    lineHeight: 1.2,
+                    // Wraps inside the seat, and stops at two lines: it is flavour,
+                    // and the seats below it are a hand of cards and a bet.
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                  }}
                 >
                   {personality.style}
                 </div>
@@ -453,14 +486,21 @@ export function PokerTableView({
                       )}
               </div>
 
-              {p.tell && !p.folded && (
+              {p.tell && !p.folded ? (
                 <div
                   data-testid={`tell-${p.id}`}
                   className={`tell-${p.tell.kind}`}
                   style={{
                     fontSize: 10,
                     fontStyle: 'italic',
+                    // Wrapped inside the seat rather than sizing it. Left to size
+                    // itself, a cue like "Mack re-settles their arms" made the seat
+                    // half again as wide as its plate, and wrote the sentence across
+                    // the next player's cards.
                     marginTop: 2,
+                    height: TELL_ROW_HEIGHT,
+                    overflow: 'hidden',
+                    lineHeight: 1.2,
                     // The lesson, a card protector and a hot meal all buy the same
                     // thing: a cue you can actually make out.
                     color: `rgba(242, 193, 78, ${Math.min(
@@ -473,6 +513,8 @@ export function PokerTableView({
                 >
                   {tellText(p.name, p.tell)}
                 </div>
+              ) : (
+                <div style={{ height: TELL_ROW_HEIGHT, marginTop: 2 }} />
               )}
 
             </div>
@@ -488,6 +530,7 @@ export function PokerTableView({
               bottom: '1%',
               transform: 'translate(-50%, 0)',
               textAlign: 'center',
+              width: SEAT_WIDTH,
             }}
           >
             <div className={winners.has('you') ? 'seat-win' : undefined} style={seatPlateStyle(you.isActing)}>

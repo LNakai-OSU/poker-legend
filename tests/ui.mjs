@@ -608,23 +608,53 @@ await test('a six-handed table seats everyone', async () => {
   await talkTo(page, 'Dealer')
   assert(await page.locator('[data-testid="pot-value"]').isVisible(), 'never reached the table')
 
-  const seats = await page.evaluate(() =>
-    [...document.querySelectorAll('[data-testid^="seat-"]')].map((el) => {
-      const box = el.getBoundingClientRect()
-      return { id: el.dataset.testid, left: box.left, top: box.top, right: box.right, bottom: box.bottom }
-    }),
-  )
-  assert(seats.length === 6, `expected 6 seats on the felt, saw ${seats.length}`)
+  const seatCount = await page.locator('[data-testid^="seat-"]').count()
+  assert(seatCount === 6, `expected 6 seats on the felt, saw ${seatCount}`)
 
-  // No two seat plates may sit on top of one another.
-  for (let i = 0; i < seats.length; i++) {
-    for (let j = i + 1; j < seats.length; j++) {
-      const a = seats[i]
-      const b = seats[j]
-      const overlaps = a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom
-      assert(!overlaps, `${a.id} overlaps ${b.id}`)
+  // Checked over several hands rather than once on sit-down, because what a seat
+  // holds changes hand to hand: each player's tell is a different cue each hand,
+  // and a long one used to stretch the seat out over its neighbour. A single
+  // snapshot caught that only when the unlucky cue happened to be showing.
+  let worst = null
+  for (let i = 0; i < 24; i++) {
+    const clash = await page.evaluate(() => {
+      const seats = [...document.querySelectorAll('[data-testid^="seat-"]')].map((el) => {
+        const b = el.getBoundingClientRect()
+        return { id: el.dataset.testid, left: b.left, top: b.top, right: b.right, bottom: b.bottom }
+      })
+      const box = (s) =>
+        `${s.id} x:${Math.round(s.left)}-${Math.round(s.right)} y:${Math.round(s.top)}-${Math.round(s.bottom)}`
+      for (let a = 0; a < seats.length; a++) {
+        for (let b = a + 1; b < seats.length; b++) {
+          const p = seats[a]
+          const q = seats[b]
+          if (p.left < q.right && q.left < p.right && p.top < q.bottom && q.top < p.bottom) {
+            return `${box(p)} overlaps ${box(q)}`
+          }
+        }
+      }
+      // Overlapping is only the symptom. A seat is a fixed width, so that what it
+      // happens to hold this hand — a line of flavour, a tell — cannot change how
+      // much of the felt it takes. Two seats of different widths means something
+      // inside one of them is sizing it again, and the collision is one unlucky
+      // description away.
+      const widths = seats.map((s) => s.right - s.left)
+      if (Math.max(...widths) - Math.min(...widths) > 1) {
+        return `seats are not all one width: ${seats.map(box).join(', ')}`
+      }
+      return null
+    })
+    worst = worst ?? clash
+    for (const label of ['Check', /^Call/, 'Deal now', 'Next hand', 'Fold']) {
+      const btn = page.locator('button', { hasText: label })
+      if (await btn.isVisible().catch(() => false)) {
+        await btn.click()
+        break
+      }
     }
+    await page.waitForTimeout(200)
   }
+  assert(worst === null, worst)
   assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
   await page.close()
 })
@@ -768,8 +798,10 @@ await test('the bus ride fits the window', async () => {
   await page.waitForSelector('canvas')
   await page.waitForTimeout(400)
   await enterDoor(page, 'Outside')
-  await walkEdge(page, 'east')
-  await walkEdge(page, 'east')
+  // Walked until the depot is actually underfoot, not a fixed two crossings: a
+  // crossing that takes longer than expected under load used to be retried from
+  // inside the next map, which carried the player several towns past the stop.
+  await walkUntil(page, 'east', 'Depot')
   await talkTo(page, 'Bus Stop')
   await page.locator('button', { hasText: 'Ride' }).click()
   await page.waitForTimeout(700)
