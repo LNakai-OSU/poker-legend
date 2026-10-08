@@ -6,6 +6,8 @@ import { daysUntilDue, totalOwed, type GameState } from '../game/state'
 import type { PoiAction, PoiDef } from '../world/types'
 import type { NpcArt } from './Npc'
 import { useAmbientMusic } from '../audio/SoundToggle'
+import { PERIOD_LABEL, PERIOD_LIGHT } from '../game/time'
+import { charactersIn } from '../world/characters'
 
 interface CitySceneProps {
   state: GameState
@@ -34,20 +36,37 @@ export function CityScene({ state, entryTile, onAction, onEnterArea, onCaught }:
   const landing =
     entryTile && isWalkable(area.map, entryTile.col, entryTile.row) ? entryTile : area.playerStart
 
-  const interactables: Interactable[] = area.pois.map((poi) => ({
-    id: poi.id,
-    name: poi.name,
-    col: poi.col,
-    row: poi.row,
-    color: poi.color,
-    art: poi.art ?? defaultArt(poi),
-    labelled: poi.labelled,
-    lines: linesFor(state, poi),
-    onFinish:
-      poi.action.kind === 'flavor' || isSpent(state, poi) || isLocked(state, poi)
-        ? undefined
-        : () => onAction(poi.action, poi),
-  }))
+  const interactables: Interactable[] = [
+    ...area.pois.map((poi) => ({
+      id: poi.id,
+      name: poi.name,
+      col: poi.col,
+      row: poi.row,
+      color: poi.color,
+      art: poi.art ?? defaultArt(poi),
+      labelled: poi.labelled,
+      lines: linesFor(state, poi),
+      onFinish:
+        poi.action.kind === 'flavor' || isSpent(state, poi) || isLocked(state, poi)
+          ? undefined
+          : () => onAction(poi.action, poi),
+    })),
+    // Whoever the hour puts here. A POI is part of the map and is always in it;
+    // these are people, and where they are depends on when you came.
+    ...charactersIn(areaId, state.period).map(({ id, character, at }) => ({
+      id: `character-${id}`,
+      name: character.name,
+      col: at.col,
+      row: at.row,
+      color: character.overworld?.color ?? SCHEDULED_CHARACTER_COLOR,
+      art: character.overworld?.art ?? ('person' as NpcArt),
+      lines: at.lines ?? character.overworld?.lines ?? [],
+    })),
+  ]
+
+  // A scheduled character standing on a tile the map does not allow is a content
+  // bug, and `content.test.ts` fails on it rather than letting somebody be
+  // unreachable in the corner of a wall.
 
   const exits: SceneExit[] = area.exits.map((exit) => ({ col: exit.col, row: exit.row, label: exit.label }))
 
@@ -127,11 +146,12 @@ export function CityScene({ state, entryTile, onAction, onEnterArea, onCaught }:
         }
         onEnterArea(link.toAreaId, landing.col, landing.row)
       }}
+      light={PERIOD_LIGHT[state.period]}
       hud={
         <>
           <div>{area.name}</div>
           <div style={{ color: '#9a9ab0', fontSize: 12 }}>
-            {city.name} &middot; Day {state.day}
+            {city.name} &middot; Day {state.day} &middot; {PERIOD_LABEL[state.period]}
           </div>
           <div>Cash: ${state.cash.toLocaleString()}</div>
           {owed > 0 && (
@@ -146,6 +166,9 @@ export function CityScene({ state, entryTile, onAction, onEnterArea, onCaught }:
     />
   )
 }
+
+/** The name plate colour for somebody who is here because of the hour. */
+const SCHEDULED_CHARACTER_COLOR = 0x6ea8fe
 
 function defaultArt(poi: PoiDef): NpcArt {
   if (poi.action.kind === 'shop') return 'counter'

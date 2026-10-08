@@ -1,3 +1,5 @@
+import { periodAfter, type TimePeriod } from './time'
+
 export type CityId =
   | 'apartment'
   | 'silverCreek'
@@ -21,6 +23,17 @@ export interface Debt {
 
 export interface GameState {
   day: number
+  /**
+   * What time of day it is.
+   *
+   * Deliberately *not* what the poker economy is denominated in. Days are the
+   * scarce resource — debts come due on a day count, and a session at a table
+   * costs one — and slicing a day into four would have quadrupled how many
+   * sessions fit before a debt landed. The period moves on the things that cost
+   * no days at all: a local bus ride, a meal, an hour spent walking. It buys you
+   * somewhere to be rather than more time to play.
+   */
+  period: TimePeriod
   cash: number
   cityId: CityId
   /** Which space inside the city you're in — a street, a casino floor, a shop. */
@@ -63,6 +76,7 @@ export interface GameState {
 export function initialState(): GameState {
   return {
     day: 1,
+    period: 'morning',
     cash: 0,
     cityId: 'apartment',
     areaId: null,
@@ -102,12 +116,38 @@ export function daysUntilDue(state: GameState): number | null {
  * collectors start hunting you wherever you are.
  */
 export function advanceDay(state: GameState, days = 1): GameState {
-  const next = { ...state, day: state.day + days }
+  // You come out of a session or a long drive at the start of the next day, not
+  // at the hour you went into it.
+  return atTime(state, state.day + days, 'morning')
+}
+
+/**
+ * Puts the clock somewhere and lets the collectors catch up.
+ *
+ * Both ways time passes come through here, because the check that matters is
+ * about the date and not about which of them moved it: a debt that came due
+ * while you were walking around town is just as overdue as one that came due
+ * while you were at a table.
+ */
+function atTime(state: GameState, day: number, period: TimePeriod): GameState {
+  const next = { ...state, day, period }
   const stillInGrace = next.day <= next.huntGraceUntilDay
   if (overdueDebts(next).length > 0 && next.huntedInCityId === null && !stillInGrace) {
     return { ...next, huntedInCityId: next.cityId }
   }
   return next
+}
+
+/**
+ * Moves the clock on without spending a day.
+ *
+ * This is what a bus ride across town or an hour over a meal costs. Rolling past
+ * night hands over to `advanceDay`, so going to bed late still puts the
+ * collectors on you if a debt came due while you were out.
+ */
+export function advancePeriod(state: GameState, steps = 1): GameState {
+  const { period, daysPassed } = periodAfter(state.period, steps)
+  return atTime(state, state.day + daysPassed, period)
 }
 
 export function payDebt(state: GameState, debtId: string): GameState {

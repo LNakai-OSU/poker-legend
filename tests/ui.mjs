@@ -19,6 +19,7 @@ let browser
 function baseSave(overrides = {}) {
   return JSON.stringify({
     day: 1,
+    period: 'morning',
     cash: 5000,
     cityId: 'silverCreek',
     unlockedCityIds: ['apartment', 'silverCreek', 'riverbend', 'crescentHarbor'],
@@ -446,6 +447,49 @@ await test('the town is one continuous place', async () => {
   assert((await areaNameOf(page)).includes('Seventh'), 'could not get back out')
   assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
   await page.close()
+})
+
+/**
+ * The town keeps its own hours.
+ *
+ * Every walk through a street used to meet exactly the same people on exactly
+ * the same tiles, whatever you had been doing. A character with a schedule is
+ * somewhere else by the evening, which is the only thing that makes the clock
+ * worth having — and the only thing that makes coming back later a reason to.
+ */
+await test('who is on the street depends on the hour', async () => {
+  const page = await newPage(baseSave({ cityId: 'apartment', areaId: 'basin', period: 'morning' }))
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(500)
+
+  const whoIsHere = () => poisOf(page).then((people) => people.map((p) => p.name).sort())
+  const hudSays = () => page.textContent('[data-testid="overworld"]').catch(() => '')
+
+  const morning = await whoIsHere()
+  assert(morning.includes('Marcus'), `Marcus is not on Basin Street in the morning (saw: ${morning})`)
+  assert((await hudSays()).includes('Morning'), 'the clock does not say what time it is')
+
+  // The light of the hour is drawn over the map, and morning is the one hour
+  // that is left clear.
+  assert(
+    (await page.locator('[data-testid="period-light"]').count()) === 0,
+    'the morning is being tinted',
+  )
+
+  const evening = await newPage(baseSave({ cityId: 'apartment', areaId: 'basin', period: 'evening' }))
+  await evening.goto(BASE)
+  await evening.waitForSelector('canvas')
+  await evening.waitForTimeout(500)
+  const later = await poisOf(evening).then((people) => people.map((p) => p.name).sort())
+  assert(!later.includes('Marcus'), 'Marcus is still on Basin Street in the evening')
+  assert(
+    (await evening.locator('[data-testid="period-light"]').count()) === 1,
+    'the evening looks exactly like the morning',
+  )
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+  await evening.close()
 })
 
 await test('the window in the apartment is scenery, not a person', async () => {

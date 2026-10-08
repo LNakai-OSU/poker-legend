@@ -15,6 +15,7 @@ import { SoundToggle, useAudioUnlock } from '../audio/SoundToggle'
 import { playSound } from '../audio/audio'
 import {
   advanceDay,
+  advancePeriod,
   caughtByCollectors,
   daysUntilRematch,
   initialState,
@@ -261,7 +262,10 @@ export function GameApp() {
                       CITIES[ride.arrive.cityId].arrivalAreaId ??
                       CITIES[ride.arrive.cityId].entryAreaId,
                   })
-                : { ...s, areaId: ride.arrive.areaId ?? s.areaId },
+                : // A ride across town costs no day — that is what makes the bus
+                  // worth taking — but it is still an hour of your afternoon, and
+                  // the hour is how you find somebody who is not where they were.
+                  advancePeriod({ ...s, areaId: ride.arrive.areaId ?? s.areaId }),
             )
             // A tile from the area you just left means nothing in the one you are
             // arriving at — and in a room smaller than the map you came from it is
@@ -453,7 +457,10 @@ export function GameApp() {
           onSpend={(amount) => setState((s) => ({ ...s, cash: Math.max(0, s.cash - amount) }))}
           onUnlockTable={(tableId) => setState((s) => unlockTable(s, tableId))}
           onRest={(days) =>
-            setState((s) => ({ ...s, restedUntilDay: Math.max(s.restedUntilDay, s.day + days) }))
+            // Sitting down to eat takes the time sitting down to eat takes.
+            setState((s) =>
+              advancePeriod({ ...s, restedUntilDay: Math.max(s.restedUntilDay, s.day + days) }),
+            )
           }
           onBack={backToCity}
         />

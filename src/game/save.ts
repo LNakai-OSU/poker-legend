@@ -1,4 +1,5 @@
 import { initialState, type GameState } from './state'
+import { TIME_PERIODS, type TimePeriod } from './time'
 
 const SAVE_KEY = 'poker-legend-save-v2'
 
@@ -36,6 +37,8 @@ function reconcile(parsed: unknown): GameState | null {
     ...saved,
     cash: Math.max(0, saved.cash),
     day: typeof saved.day === 'number' && saved.day > 0 ? saved.day : base.day,
+    // Saves written before the clock existed start their next walk in the morning.
+    period: TIME_PERIODS.includes(saved.period as TimePeriod) ? (saved.period as TimePeriod) : base.period,
     finaleRematchDay: typeof saved.finaleRematchDay === 'number' ? saved.finaleRematchDay : base.finaleRematchDay,
     areaId: typeof saved.areaId === 'string' ? saved.areaId : base.areaId,
     unlockedCityIds: Array.isArray(saved.unlockedCityIds) ? saved.unlockedCityIds : base.unlockedCityIds,

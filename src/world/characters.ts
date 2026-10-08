@@ -1,6 +1,8 @@
 import type { AvatarLook } from '../game/avatars'
 import type { Archetype, SkillTier } from '../engine/types'
 import type { OpponentDef, TableDef } from './types'
+import type { NpcArt } from '../overworld/Npc'
+import { TIME_PERIODS, type TimePeriod } from '../game/time'
 
 /**
  * Who somebody is, in one place.
@@ -52,6 +54,35 @@ export interface Persona {
   lines?: Partial<TableLines>
 }
 
+/**
+ * Where a character is at a given time of day.
+ *
+ * A character with a schedule exists in the world outside the card room: you
+ * pass Deb on Basin Street in the morning and find her in the bodega by evening.
+ * The point is not the walking — it is that the town has somebody in it who was
+ * somewhere else an hour ago, and who you could have gone looking for.
+ */
+export interface ScheduleEntry {
+  period: TimePeriod
+  /** An area id, as `AREAS` keys them. */
+  areaId: string
+  col: number
+  row: number
+  /** What they say here. Falls back to the character's usual lines. */
+  lines?: string[]
+}
+
+/** A character you can walk up to in the street, as opposed to sit down against. */
+export interface OverworldPresence {
+  art?: NpcArt
+  /** Their name plate's colour on the map. */
+  color?: number
+  /** What they say when you have nothing more specific for the hour. */
+  lines: string[]
+  /** Where they are through the day. An empty schedule means they are nowhere. */
+  schedule: ScheduleEntry[]
+}
+
 export interface CharacterDef {
   name: string
   /** Shown under their name at the table, e.g. "Calls everything". */
@@ -61,6 +92,9 @@ export interface CharacterDef {
   seat?: Seat
   lines: Partial<TableLines>
   personas?: Record<string, Persona>
+  /** Where they are in the town, and when. Characters who only ever sit at a
+   *  table have none. */
+  overworld?: OverworldPresence
 }
 
 /** What anyone says when their character has nothing of their own for it. */
@@ -187,6 +221,27 @@ export const CHARACTERS: Record<string, CharacterDef> = {
       win: ['Marcus: YES. Finally.', 'Marcus: Did you see that?'],
       lose: ['Marcus: Of course. Of course you had it.'],
     },
+    overworld: {
+      // He works, he eats, he goes home and deals. The Friday game is at his
+      // place because his place is where he already is.
+      lines: ['Marcus: Catch me later. I am always around.'],
+      schedule: [
+        { period: 'morning', areaId: 'basin', col: 9, row: 11, lines: [
+          'Marcus: Morning. You look like you slept on the floor again.',
+          'Marcus: Game is Friday. It is always Friday.',
+        ] },
+        { period: 'afternoon', areaId: 'bodega', col: 9, row: 4, lines: [
+          'Marcus: Patel lets me run a tab. Do not tell him I told you.',
+        ] },
+        { period: 'evening', areaId: 'marcus-house', col: 5, row: 6, lines: [
+          'Marcus: Door is open. Chairs are out.',
+          'Marcus: I am not saying I will win. I am saying I will be there.',
+        ] },
+        { period: 'night', areaId: 'marcus-house', col: 5, row: 6, lines: [
+          'Marcus: Still up. Cannot sleep after a session. You know how it is.',
+        ] },
+      ],
+    },
   },
   dana: {
     name: 'Dana',
@@ -199,6 +254,22 @@ export const CHARACTERS: Record<string, CharacterDef> = {
       fold: ['Dana: No.'],
       win: ['Dana: Mm.'],
       lose: ['Dana: Hm. Noted.'],
+    },
+    overworld: {
+      // She is at the laundromat because it is warm and nobody asks her anything.
+      lines: ['Dana: Mm.'],
+      schedule: [
+        { period: 'morning', areaId: 'laundromat', col: 8, row: 4, lines: [
+          'Dana: Dryer four is the only one that works. Now you know.',
+        ] },
+        { period: 'afternoon', areaId: 'seventh', col: 12, row: 9, lines: [
+          'Dana: You played Tuesday. You raised the river with nothing.',
+          'Dana: I watch. That is all. It costs nothing to watch.',
+        ] },
+        { period: 'evening', areaId: 'diner', col: 13, row: 1, lines: [
+          'Dana: Coffee. Corner booth. Back to the wall.',
+        ] },
+      ],
     },
   },
   ray: {
@@ -214,6 +285,21 @@ export const CHARACTERS: Record<string, CharacterDef> = {
       win: ['Ray: TOLD you I was due!'],
       lose: ['Ray: Bah. Next one.'],
     },
+    overworld: {
+      lines: ['Ray: I am due. I can feel it.'],
+      schedule: [
+        { period: 'afternoon', areaId: 'sc-street', col: 18, row: 9, lines: [
+          'Ray: Heading in. You heading in?',
+        ] },
+        { period: 'evening', areaId: 'sc-street', col: 18, row: 9, lines: [
+          'Ray: Down a bit. It is early.',
+        ] },
+        { period: 'night', areaId: 'sc-street', col: 18, row: 9, lines: [
+          'Ray: Down a lot. It is late.',
+          'Ray: Tomorrow, though. Tomorrow I am due.',
+        ] },
+      ],
+    },
   },
   sully: {
     name: 'Sully',
@@ -227,6 +313,17 @@ export const CHARACTERS: Record<string, CharacterDef> = {
       fold: ['Sully: Not at that price.'],
       win: ['Sully: Appreciated.'],
       lose: ['Sully: Well played.'],
+    },
+    overworld: {
+      lines: ['Sully: Working.'],
+      schedule: [
+        { period: 'morning', areaId: 'sc-street', col: 11, row: 14, lines: [
+          'Sully: In early. Out early. That is the whole trick.',
+        ] },
+        { period: 'afternoon', areaId: 'sc-street', col: 11, row: 14, lines: [
+          'Sully: Up forty. I will take forty.',
+        ] },
+      ],
     },
   },
   deb: {
@@ -242,6 +339,17 @@ export const CHARACTERS: Record<string, CharacterDef> = {
       win: ['Deb: Told you I have been here longer.'],
       lose: ['Deb: Alright. That was good.'],
     },
+    overworld: {
+      lines: ['Deb: Been here longer than you.'],
+      schedule: [
+        { period: 'morning', areaId: 'rb-street', col: 9, row: 7, lines: [
+          'Deb: Boat does not open till noon. Everyone forgets that.',
+        ] },
+        { period: 'evening', areaId: 'rb-street', col: 9, row: 7, lines: [
+          'Deb: Busy tonight. Good. Busy is good for me.',
+        ] },
+      ],
+    },
   },
   mack: {
     name: 'Mack',
@@ -255,6 +363,17 @@ export const CHARACTERS: Record<string, CharacterDef> = {
       fold: ['Mack: Fold. Easy.'],
       win: ['Mack: That is why I waited.'],
       lose: ['Mack: Hm.'],
+    },
+    overworld: {
+      lines: ['Mack: Waiting on a hand. Same as always.'],
+      schedule: [
+        { period: 'afternoon', areaId: 'rb-street', col: 20, row: 12, lines: [
+          'Mack: I fold all afternoon so I can play one hand right.',
+        ] },
+        { period: 'night', areaId: 'rb-street', col: 20, row: 12, lines: [
+          'Mack: One hand. That is all it took. Goodnight.',
+        ] },
+      ],
     },
   },
   tiny: {
@@ -647,4 +766,55 @@ export function seatsOf(table: TableDef): OpponentDef[] {
     }
     return { id, name: character.name, ...character.seat, ...(persona ? { persona } : {}) }
   })
+}
+
+
+/**
+ * Everybody who is standing in this area at this hour.
+ *
+ * Looked up per area and per period rather than kept as moving state, because a
+ * schedule is a statement about where somebody *is*, not a simulation of them
+ * walking there. It costs nothing while you are not looking, it cannot drift out
+ * of step with the clock, and a save holds the hour rather than everyone's
+ * coordinates.
+ */
+export function charactersIn(areaId: string, period: TimePeriod): Array<{
+  id: string
+  character: CharacterDef
+  at: ScheduleEntry
+}> {
+  const here = []
+  for (const [id, character] of Object.entries(CHARACTERS)) {
+    const at = character.overworld?.schedule.find(
+      (entry) => entry.areaId === areaId && entry.period === period,
+    )
+    if (at) here.push({ id, character, at })
+  }
+  return here
+}
+
+/** Every period a character is somewhere, for checking nobody is in two places. */
+export function scheduleConflicts(): string[] {
+  const seen = new Map<string, string>()
+  const problems: string[] = []
+  for (const [id, character] of Object.entries(CHARACTERS)) {
+    const periods = new Set<TimePeriod>()
+    for (const entry of character.overworld?.schedule ?? []) {
+      if (periods.has(entry.period)) {
+        problems.push(`${id} is in two places at once in the ${entry.period}`)
+      }
+      periods.add(entry.period)
+      const key = `${entry.areaId}:${entry.period}:${entry.col},${entry.row}`
+      const other = seen.get(key)
+      if (other) problems.push(`${id} and ${other} stand on the same tile in the ${entry.period}`)
+      seen.set(key, id)
+    }
+  }
+  return problems
+}
+
+/** Periods a character has nowhere to be, so you can tell a gap from an oversight. */
+export function periodsAway(character: CharacterDef): TimePeriod[] {
+  const scheduled = new Set(character.overworld?.schedule.map((e) => e.period))
+  return TIME_PERIODS.filter((period) => !scheduled.has(period))
 }

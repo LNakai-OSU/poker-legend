@@ -72,6 +72,8 @@ interface OverworldSceneProps {
   background?: string
   /** Optional persistent corner UI, e.g. a wallet readout. */
   hud?: ReactNode
+  /** The colour of the hour, laid over the map. See PERIOD_LIGHT. */
+  light?: string
   /** A pursuer that hunts the player across the grid. */
   chaser?: ChaserConfig
   onCaught?: () => void
@@ -93,6 +95,7 @@ export function OverworldScene({
   interactables,
   background = '#101018',
   hud,
+  light,
   chaser,
   onCaught,
   exits = [],
@@ -429,6 +432,24 @@ export function OverworldScene({
           ...(chaser ? [{ col: chaser.col, row: chaser.row, kind: 'chaser' as const }] : []),
         ]}
       />
+      {/*
+        The light of the hour, laid over the whole map.
+        Over the canvas rather than mixed into the tiles, so every town gets an
+        evening and a night without each map having to be drawn four times, and
+        under everything you read — the clock is not worth dimming the HUD for.
+      */}
+      {light && light !== 'transparent' && (
+        <div
+          data-testid="period-light"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: light,
+            pointerEvents: 'none',
+            transition: 'background 600ms ease',
+          }}
+        />
+      )}
       {hud && (
         <div
           style={{

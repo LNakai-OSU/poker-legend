@@ -15,10 +15,12 @@ import {
   collectorSpawn,
   distanceToEscape,
   escapeTiles,
+  findArea,
   findItem,
 } from './content'
 import { DOOR, isWalkable, parseMap } from '../overworld/tileRenderer'
-import { CHARACTERS, seatsOf } from './characters'
+import { CHARACTERS, charactersIn, periodsAway, scheduleConflicts, seatsOf } from './characters'
+import { TIME_PERIODS } from '../game/time'
 
 describe('parseMap', () => {
   it('builds a rectangular grid and marks walls unwalkable', () => {
@@ -537,6 +539,113 @@ describe('the opponents', () => {
           `${table.name} seats ${ref.character} as "${ref.persona}", which they do not have`,
         ).toBeDefined()
       }
+    }
+  })
+})
+
+describe('the town keeps its own hours', () => {
+  it('stands every scheduled character somewhere that exists', () => {
+    for (const [id, character] of Object.entries(CHARACTERS)) {
+      for (const entry of character.overworld?.schedule ?? []) {
+        const located = findArea(entry.areaId)
+        expect(located, `${id} is scheduled into "${entry.areaId}", which is not an area`).toBeDefined()
+      }
+    }
+  })
+
+  it('stands nobody inside a wall', () => {
+    // A character on an unwalkable tile is a name plate floating in scenery that
+    // you can see and never reach.
+    for (const [id, character] of Object.entries(CHARACTERS)) {
+      for (const entry of character.overworld?.schedule ?? []) {
+        const area = findArea(entry.areaId)?.area
+        if (!area) continue
+        expect(
+          isWalkable(area.map, entry.col, entry.row),
+          `${id} stands in a wall in ${area.name} (${entry.col},${entry.row}) in the ${entry.period}`,
+        ).toBe(true)
+      }
+    }
+  })
+
+  it('leaves somewhere to stand next to everyone', () => {
+    for (const [id, character] of Object.entries(CHARACTERS)) {
+      for (const entry of character.overworld?.schedule ?? []) {
+        const area = findArea(entry.areaId)?.area
+        if (!area) continue
+        const approaches = [
+          [entry.col, entry.row + 1],
+          [entry.col, entry.row - 1],
+          [entry.col - 1, entry.row],
+          [entry.col + 1, entry.row],
+        ].filter(([col, row]) => isWalkable(area.map, col, row))
+        expect(
+          approaches.length,
+          `nobody can walk up to ${id} in ${area.name} in the ${entry.period}`,
+        ).toBeGreaterThan(0)
+      }
+    }
+  })
+
+  it('does not put anybody in two places at once', () => {
+    expect(scheduleConflicts()).toEqual([])
+  })
+
+  it('does not stand a character on top of a fixture', () => {
+    // POIs are part of the map and are always there; a character who shares a
+    // tile with one hides it for that whole period.
+    for (const [id, character] of Object.entries(CHARACTERS)) {
+      for (const entry of character.overworld?.schedule ?? []) {
+        const area = findArea(entry.areaId)?.area
+        if (!area) continue
+        const clash = area.pois.find((p) => p.col === entry.col && p.row === entry.row)
+        expect(clash, `${id} stands on ${clash?.name} in ${area.name} in the ${entry.period}`).toBeUndefined()
+        const door = area.exits.find((e) => e.col === entry.col && e.row === entry.row)
+        expect(door, `${id} stands in the ${door?.label} doorway in the ${entry.period}`).toBeUndefined()
+      }
+    }
+  })
+
+  it('gives anybody with a schedule something to say at every hour of it', () => {
+    for (const [id, character] of Object.entries(CHARACTERS)) {
+      const presence = character.overworld
+      if (!presence) continue
+      expect(presence.lines.length, `${id} is out in the town with nothing to say`).toBeGreaterThan(0)
+      for (const entry of presence.schedule) {
+        const said = entry.lines ?? presence.lines
+        expect(said.length, `${id} has nothing to say in the ${entry.period}`).toBeGreaterThan(0)
+      }
+    }
+  })
+
+  it('actually changes who is on the street as the day goes on', () => {
+    // The whole point. If every period produced the same people, the clock would
+    // be a caption rather than a reason to come back later.
+    const scheduled = Object.values(CHARACTERS).filter((c) => c.overworld)
+    expect(scheduled.length, 'nobody in the game keeps hours').toBeGreaterThan(0)
+
+    const areaIds = new Set(scheduled.flatMap((c) => c.overworld!.schedule.map((e) => e.areaId)))
+    const differs = [...areaIds].some((areaId) => {
+      const rosters = TIME_PERIODS.map((period) =>
+        charactersIn(areaId, period)
+          .map((entry) => entry.id)
+          .sort()
+          .join(','),
+      )
+      return new Set(rosters).size > 1
+    })
+    expect(differs, 'every area holds the same people all day').toBe(true)
+  })
+
+  it('says plainly which hours a character is nowhere', () => {
+    // Not a failure — Sully goes home at teatime and that is the character. This
+    // only has to be visible, so a gap reads as a decision and not an oversight.
+    const gaps = Object.entries(CHARACTERS)
+      .filter(([, c]) => c.overworld)
+      .map(([id, c]) => [id, periodsAway(c)] as const)
+    expect(gaps.length).toBeGreaterThan(0)
+    for (const [id, away] of gaps) {
+      expect(away.length, `${id} keeps no hours at all`).toBeLessThan(TIME_PERIODS.length)
     }
   })
 })
