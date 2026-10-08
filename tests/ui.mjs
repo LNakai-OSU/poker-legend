@@ -10,6 +10,8 @@ import { chromium, devices } from 'playwright'
 const PORT = process.argv[2] ?? '5173'
 const BASE = `http://localhost:${PORT}/`
 const SAVE_KEY = 'poker-legend-save-v2'
+/** Narrow the run to the scenarios whose name contains this, while fixing one. */
+const ONLY = process.env.UI_ONLY
 
 const results = []
 let browser
@@ -310,6 +312,7 @@ async function talkThrough(page) {
 }
 
 async function test(name, fn) {
+  if (ONLY && !name.includes(ONLY)) return
   openPages = []
   try {
     await fn()
@@ -781,6 +784,66 @@ await test('the bus ride fits the window', async () => {
   }))
   assert(m.overflow <= 0, `the bus runs ${m.overflow}px past the bottom of the window`)
   assert(m.offscreen <= 0, `the skip button sits ${m.offscreen}px below the window`)
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+})
+
+/**
+ * The menu is a panel over the game, not a place you go.
+ *
+ * As a view of its own it replaced the scene, which unmounted the poker table —
+ * and the table is where the hand, the chips in front of you and the buy-in
+ * already taken out of your wallet all live. Opening the menu mid-session cost
+ * the player everything they had won and put them back on the street.
+ */
+await test('opening the menu mid-hand does not cost you the table', async () => {
+  const page = await newPage(baseSave())
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(400)
+  await enterDoor(page, 'Casino')
+  await talkTo(page, 'Pit Boss')
+  assert(await page.locator('[data-testid="pot-value"]').isVisible(), 'never reached the table')
+
+  // Play a little so the stack is no longer just the buy-in.
+  for (let i = 0; i < 12; i++) {
+    for (const label of ['Check', /^Call/, 'Deal now', 'Next hand']) {
+      const btn = page.locator('button', { hasText: label })
+      if (await btn.isVisible().catch(() => false)) {
+        await btn.click()
+        break
+      }
+    }
+    await page.waitForTimeout(190)
+  }
+
+  const snapshot = () =>
+    page.evaluate(() => ({
+      stack: document.querySelector('[data-testid="stack-you"]')?.dataset.stack ?? null,
+      atTable: !!document.querySelector('[data-testid="pot-value"]'),
+      wallet: (document.body.innerText.match(/Wallet: \$([\d,]+)/) || [])[1] ?? null,
+    }))
+
+  const before = await snapshot()
+  assert(before.atTable && before.stack !== null, 'lost the table before even opening the menu')
+
+  await page.locator('[data-testid="settings-button"]').click()
+  await page.waitForTimeout(400)
+  assert((await page.locator('body').innerText()).includes('Settings'), 'the menu did not open')
+
+  await page.locator('button', { hasText: 'Back to the game' }).click()
+  await page.waitForTimeout(500)
+
+  const after = await snapshot()
+  assert(after.atTable, 'coming back from the menu dumped the player out of the game')
+  assert(
+    after.stack === before.stack,
+    `the chips in front of the player changed over the menu (${before.stack} -> ${after.stack})`,
+  )
+  assert(
+    after.wallet === before.wallet,
+    `the wallet changed over the menu (${before.wallet} -> ${after.wallet})`,
+  )
   assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
   await page.close()
 })

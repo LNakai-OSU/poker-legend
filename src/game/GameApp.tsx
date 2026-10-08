@@ -53,7 +53,6 @@ type View =
   | { kind: 'craps' }
   | { kind: 'venue'; venueId: string }
   | { kind: 'penthouse' }
-  | { kind: 'settings' }
   | { kind: 'caught' }
   | { kind: 'ending' }
   | { kind: 'finaleLost' }
@@ -64,6 +63,17 @@ export function GameApp() {
   // Where to stand when walking through a door, so you appear at the doorway
   // rather than at the area's default spawn.
   const [entryTile, setEntryTile] = useState<{ col: number; row: number } | null>(null)
+  /**
+   * Settings is laid over the game rather than being somewhere you go.
+   *
+   * As a view of its own it replaced whatever was on screen, which unmounted the
+   * poker table — and the table is where the hand, the chips in front of you and
+   * the buy-in already taken out of your wallet all live. Opening the menu
+   * mid-session therefore cost the player everything they had won and put them
+   * back on the street. Over the top, nothing unmounts and closing it puts you
+   * back exactly where you were.
+   */
+  const [settingsOpen, setSettingsOpen] = useState(false)
   useAudioUnlock()
 
   // Hub locations are the checkpoints; table and menu state is never persisted.
@@ -452,19 +462,6 @@ export function GameApp() {
     case 'penthouse':
       return <PenthouseScene state={state} onBack={backToCity} />
 
-    case 'settings':
-      return (
-        <SettingsScene
-          state={state}
-          onNewGame={() => {
-            clearSave()
-            setState(initialState())
-            setView({ kind: 'city' })
-          }}
-          onBack={backToCity}
-        />
-      )
-
     case 'caught':
       return <CaughtScene onRestart={backToCity} />
 
@@ -493,20 +490,19 @@ export function GameApp() {
     }
   })()
 
-  // Leaving the finale mid-match has to be impossible, and stepping into the
-  // settings screen unmounts the table — which would have been a way to abandon
-  // a losing match, dodge the loss and sit straight back down. The sound toggle
-  // stays; the one door that leads off the table is shut.
+  // The finale still hides the button. Settings no longer unmounts the table, so
+  // it is not an escape hatch any more, but the match is meant to feel like a
+  // door that has shut behind you and a menu button undercuts that.
   const lockedInAtTable = view.kind === 'table' && TABLES[view.tableId]?.isFinale === true
 
   return (
     <>
       <SoundToggle />
-      {view.kind !== 'settings' && !lockedInAtTable && (
+      {!settingsOpen && !lockedInAtTable && (
         <button
           data-testid="settings-button"
           aria-label="Settings"
-          onClick={() => setView({ kind: 'settings' })}
+          onClick={() => setSettingsOpen(true)}
           style={{
             position: 'fixed',
             top: 'max(12px, env(safe-area-inset-top))',
@@ -529,6 +525,23 @@ export function GameApp() {
       <div key={view.kind} className="scene-fade">
         {scene}
       </div>
+
+      {/* Over the game, not instead of it: the scene underneath stays mounted, so
+          closing this puts the player back in the same hand with the same chips. */}
+      {settingsOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, overflowY: 'auto' }}>
+          <SettingsScene
+            state={state}
+            onNewGame={() => {
+              clearSave()
+              setState(initialState())
+              setSettingsOpen(false)
+              setView({ kind: 'city' })
+            }}
+            onBack={() => setSettingsOpen(false)}
+          />
+        </div>
+      )}
     </>
   )
 }
