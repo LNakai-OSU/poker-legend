@@ -1409,6 +1409,92 @@ await test('the map editor says when you have broken the map', async () => {
   await page.close()
 })
 
+/**
+ * Dragging what stands on a map.
+ *
+ * Where a shop counter or a doorway sits used to mean hand-editing coordinates
+ * in `cities.ts` and guessing what they looked like. These tests do not save —
+ * saving writes to the real source file, and a test suite that edits the game
+ * while checking the game is a bad trade.
+ */
+await test('the map editor drags a doorway to a new tile', async () => {
+  const page = await newPage(null)
+  await page.goto(`${BASE}#editor`)
+  await page.waitForSelector('[data-testid="editor-grid"]')
+  await page.waitForTimeout(500)
+
+  const doorCell = await page.evaluate(
+    () => document.querySelector('[data-marker="door"]')?.getAttribute('data-cell') ?? null,
+  )
+  assert(doorCell, 'no doorway on the first map to drag')
+
+  // Somewhere empty to drop it, on the same map.
+  const target = await page.evaluate(() => {
+    const free = [...document.querySelectorAll('[data-cell]')].find((c) => !c.getAttribute('data-marker'))
+    return free ? free.getAttribute('data-cell') : null
+  })
+  assert(target && target !== doorCell, 'nowhere free to drag the doorway to')
+
+  const from = page.locator(`[data-cell="${doorCell}"]`)
+  const to = page.locator(`[data-cell="${target}"]`)
+  const sketchBefore = await page.inputValue('[data-testid="sketch"]')
+  await from.hover()
+  await page.mouse.down()
+  await to.hover()
+  await page.mouse.up()
+  await page.waitForTimeout(250)
+
+  const movedTo = await page.locator(`[data-cell="${target}"]`).getAttribute('data-marker')
+  assert(movedTo === 'door', `the doorway did not move (target is "${movedTo}")`)
+  assert(
+    (await page.locator(`[data-cell="${doorCell}"]`).getAttribute('data-marker')) !== 'door',
+    'the doorway is in both places at once',
+  )
+
+  // Dragging a marker must not paint the tiles it was dragged across.
+  assert(
+    (await page.inputValue('[data-testid="sketch"]')) === sketchBefore,
+    'dragging a marker painted over the map',
+  )
+
+  // Moving a doorway onto a tile that is not a door is a problem worth saying.
+  const problems = await page.locator('[data-testid="problems"]').innerText()
+  assert(/doorway/i.test(problems), `moving a door raised nothing useful: ${problems}`)
+
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+})
+
+await test('the map editor offers to save, and warns about a shared map', async () => {
+  const page = await newPage(null)
+  await page.goto(`${BASE}#editor`)
+  await page.waitForSelector('[data-testid="editor-grid"]')
+  await page.waitForTimeout(500)
+
+  // Nothing painted yet, so there is nothing to save.
+  assert(await page.locator('[data-testid="save"]').isDisabled(), 'Save is offered before anything changed')
+
+  await page.locator('[data-testid="brush-~"]').click()
+  await page.locator('[data-cell="3,3"]').click()
+  await page.waitForTimeout(200)
+  assert(!(await page.locator('[data-testid="save"]').isDisabled()), 'Save is not offered after painting')
+
+  // Eleven shops are drawn from one map, and the editor has to say so.
+  await page.selectOption('select', 'bodega')
+  await page.waitForTimeout(600)
+  const warning = page.locator('[data-testid="shared-warning"]')
+  assert(await warning.isVisible(), 'no warning that this room is ten other rooms')
+  assert(
+    await page.locator('[data-testid="save-split"]').isVisible(),
+    'no way to give this area a map of its own',
+  )
+  const text = await warning.innerText()
+  assert(/shared with \d+/.test(text), `unclear warning: ${text}`)
+
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+})
+
 await browser.close()
 
 const failed = results.filter((r) => !r.ok)

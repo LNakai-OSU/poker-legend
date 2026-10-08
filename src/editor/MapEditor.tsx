@@ -30,7 +30,37 @@ import { TIME_PERIODS } from '../game/time'
 
 const CELL = 24
 
-type Marker = { kind: 'poi' | 'door' | 'start' | 'person'; label: string }
+type Marker = { kind: Placed['kind'] | 'person'; label: string; draggable?: boolean }
+
+/** Something on the map whose position lives in `cities.ts` and can be moved. */
+interface Placed {
+  kind: 'poi' | 'door' | 'start'
+  /** A POI id, a doorway's sign, or 'start'. */
+  key: string
+  label: string
+  col: number
+  row: number
+}
+
+function placeables(area: (typeof AREAS)[string]['area']): Placed[] {
+  return [
+    { kind: 'start', key: 'start', label: 'the player arrives', ...area.playerStart },
+    ...area.pois.map((poi) => ({
+      kind: 'poi' as const,
+      key: poi.id,
+      label: poi.name,
+      col: poi.col,
+      row: poi.row,
+    })),
+    ...area.exits.map((exit) => ({
+      kind: 'door' as const,
+      key: exit.label,
+      label: exit.label,
+      col: exit.col,
+      row: exit.row,
+    })),
+  ]
+}
 
 export function MapEditor({ onClose }: { onClose: () => void }) {
   const areaIds = useMemo(() => Object.keys(AREAS).sort(), [])
@@ -45,18 +75,78 @@ export function MapEditor({ onClose }: { onClose: () => void }) {
   const [showMarkers, setShowMarkers] = useState(true)
   const [period, setPeriod] = useState<(typeof TIME_PERIODS)[number]>('morning')
   const painting = useRef(false)
+  /** A marker being dragged, so a drag paints nothing underneath it. */
+  const dragging = useRef<Placed | null>(null)
+  // Where the draggable things are now, which starts as where the content says
+  // they are and diverges as you move them.
+  const [placed, setPlaced] = useState<Placed[]>(() => placeables(area))
+  const [sharing, setSharing] = useState<string[]>([])
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState<{ ok: boolean; text: string } | null>(null)
 
   // Switching area loads that map. Kept as a render-time comparison rather than
   // an effect so the grid and the area can never be one render out of step.
   if (loadedFrom !== areaId) {
     setLoadedFrom(areaId)
     setGrid(area.map.map((row) => [...row]))
+    setPlaced(placeables(area))
+    setSaved(null)
+    setSharing([])
+    // Who else is drawn from this same map, which decides whether saving it
+    // redraws ten other rooms. Asked of the source, because that is where the
+    // answer lives.
+    fetch(`/__editor/area?id=${encodeURIComponent(areaId)}`)
+      .then((r) => r.json())
+      .then((info) => setSharing(info.sharedWith ?? []))
+      .catch(() => setSharing([]))
   }
 
   const canvases = tileCanvases(theme)
   const sketch = toSketch(grid)
+  const movedMarkers = placed.filter((item) => {
+    const original = placeables(area).find((o) => o.kind === item.kind && o.key === item.key)
+    return original && (original.col !== item.col || original.row !== item.row)
+  })
+  const mapChanged = sketch !== toSketch(area.map)
+  const dirty = mapChanged || movedMarkers.length > 0
+
+  /** Writes back to cities.ts. `split` gives this area its own copy of the map. */
+  const save = async (split: boolean) => {
+    setSaving(true)
+    setSaved(null)
+    try {
+      const response = await fetch('/__editor/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          areaId,
+          sketch: mapChanged || split ? sketch : undefined,
+          split,
+          markers: {
+            start: movedMarkers.find((m) => m.kind === 'start'),
+            pois: movedMarkers.filter((m) => m.kind === 'poi').map((m) => ({ id: m.key, col: m.col, row: m.row })),
+            exits: movedMarkers
+              .filter((m) => m.kind === 'door')
+              .map((m) => ({ label: m.key, col: m.col, row: m.row })),
+          },
+        }),
+      })
+      const body = await response.json()
+      setSaved(
+        response.ok
+          ? { ok: true, text: (body.notes ?? ['saved']).join(' · ') }
+          : { ok: false, text: body.error ?? 'save failed' },
+      )
+    } catch (error) {
+      setSaved({ ok: false, text: `could not reach the dev server: ${error}` })
+    } finally {
+      setSaving(false)
+    }
+  }
 
   const paint = (col: number, row: number) => {
+    if (dragging.current) return
+    setSaved(null)
     setGrid((current) => {
       if (current[row]?.[col] === brush) return current
       const next = current.map((r) => [...r])
@@ -65,19 +155,26 @@ export function MapEditor({ onClose }: { onClose: () => void }) {
     })
   }
 
-  /** Everything already standing on the map, so you do not build over it. */
+  /** Everything standing on the map, so you do not build over it. */
   const markers = useMemo(() => {
     const found = new Map<string, Marker>()
-    found.set(`${area.playerStart.col},${area.playerStart.row}`, { kind: 'start', label: 'start' })
-    for (const poi of area.pois) found.set(`${poi.col},${poi.row}`, { kind: 'poi', label: poi.name })
-    for (const exit of area.exits) found.set(`${exit.col},${exit.row}`, { kind: 'door', label: exit.label })
+    for (const item of placed) {
+      found.set(`${item.col},${item.row}`, { kind: item.kind, label: item.label, draggable: true })
+    }
+    // Scheduled people are shown but not draggable: where somebody stands at a
+    // given hour belongs to their schedule in characters.ts, not to this map.
     for (const { character, at } of charactersIn(areaId, period)) {
-      found.set(`${at.col},${at.row}`, { kind: 'person', label: character.name })
+      if (!found.has(`${at.col},${at.row}`)) {
+        found.set(`${at.col},${at.row}`, { kind: 'person', label: character.name })
+      }
     }
     return found
-  }, [area, areaId, period])
+  }, [placed, areaId, period])
 
-  const problems = useMemo(() => check(grid, area, areaId, period), [grid, area, areaId, period])
+  const problems = useMemo(
+    () => check(grid, placed, areaId, period),
+    [grid, placed, areaId, period],
+  )
 
   return (
     <div style={page}>
@@ -105,7 +202,42 @@ export function MapEditor({ onClose }: { onClose: () => void }) {
           who is standing here
         </label>
         <div style={{ flex: 1 }} />
-        <button style={control} onClick={() => setGrid(area.map.map((r) => [...r]))}>
+        {sharing.length > 0 && (
+          <span
+            data-testid="shared-warning"
+            title={`also ${sharing.join(', ')}`}
+            style={{ fontSize: 12, color: '#f2c14e' }}
+          >
+            shared with {sharing.length} other {sharing.length === 1 ? 'area' : 'areas'}
+          </span>
+        )}
+        <button
+          data-testid="save"
+          disabled={!dirty || saving}
+          onClick={() => save(false)}
+          style={{ ...control, opacity: dirty && !saving ? 1 : 0.45, borderColor: dirty ? '#3a9d5c' : '#2c3d35' }}
+        >
+          {saving ? 'Saving…' : 'Save'}
+        </button>
+        {sharing.length > 0 && (
+          <button
+            data-testid="save-split"
+            disabled={!dirty || saving}
+            onClick={() => save(true)}
+            title={`Copy this map so ${sharing.join(', ')} keep the one they have`}
+            style={{ ...control, opacity: dirty && !saving ? 1 : 0.45 }}
+          >
+            Save as its own map
+          </button>
+        )}
+        <button
+          style={control}
+          onClick={() => {
+            setGrid(area.map.map((r) => [...r]))
+            setPlaced(placeables(area))
+            setSaved(null)
+          }}
+        >
           Revert
         </button>
         <button style={control} onClick={onClose}>
@@ -179,8 +311,14 @@ export function MapEditor({ onClose }: { onClose: () => void }) {
           data-width={grid[0].length}
           data-height={grid.length}
           onPointerDown={() => (painting.current = true)}
-          onPointerUp={() => (painting.current = false)}
-          onPointerLeave={() => (painting.current = false)}
+          onPointerUp={() => {
+            painting.current = false
+            dragging.current = null
+          }}
+          onPointerLeave={() => {
+            painting.current = false
+            dragging.current = null
+          }}
           style={{
             display: 'grid',
             gridTemplateColumns: `repeat(${grid[0].length}, ${CELL}px)`,
@@ -198,10 +336,46 @@ export function MapEditor({ onClose }: { onClose: () => void }) {
                 <div
                   key={`${c},${r}`}
                   data-cell={`${c},${r}`}
+                  data-marker={marker ? marker.kind : undefined}
                   title={marker ? `${marker.label} (${c},${r})` : `${c},${r}`}
-                  onPointerDown={() => paint(c, r)}
-                  onPointerEnter={() => painting.current && paint(c, r)}
-                  style={{ position: 'relative', width: CELL, height: CELL, cursor: 'crosshair' }}
+                  onPointerDown={() => {
+                    // A marker is picked up, not painted over — but only once the
+                    // pointer actually moves. Press and release in one place and
+                    // you meant to paint that tile, which is the only way to put
+                    // a floor back under a doorway you are about to move off it.
+                    const held = marker?.draggable ? placed.find((i) => i.col === c && i.row === r) : undefined
+                    if (held) {
+                      dragging.current = held
+                      return
+                    }
+                    paint(c, r)
+                  }}
+                  onPointerEnter={() => {
+                    if (dragging.current) return
+                    if (painting.current) paint(c, r)
+                  }}
+                  onPointerUp={() => {
+                    const held = dragging.current
+                    dragging.current = null
+                    if (!held) return
+                    if (held.col === c && held.row === r) {
+                      // Released where it started: a click, so paint.
+                      paint(c, r)
+                      return
+                    }
+                    setPlaced((current) =>
+                      current.map((item) =>
+                        item.kind === held.kind && item.key === held.key ? { ...item, col: c, row: r } : item,
+                      ),
+                    )
+                    setSaved(null)
+                  }}
+                  style={{
+                    position: 'relative',
+                    width: CELL,
+                    height: CELL,
+                    cursor: marker?.draggable ? 'grab' : 'crosshair',
+                  }}
                 >
                   <img
                     src={canvases[tile]?.toDataURL()}
@@ -269,6 +443,34 @@ export function MapEditor({ onClose }: { onClose: () => void }) {
               so a map that is wrong says so here rather than at the next test
               run.
             </p>
+
+            {sharing.length > 0 && (
+              <p style={{ fontSize: 12, color: '#f2c14e', marginTop: 10, lineHeight: 1.5 }}>
+                This map is also {sharing.join(', ')}. <strong>Save</strong> redraws
+                all of them. <strong>Save as its own map</strong> gives this area a
+                copy and leaves the others alone.
+              </p>
+            )}
+
+            {saved && (
+              <p
+                data-testid="save-result"
+                style={{
+                  fontSize: 12,
+                  marginTop: 10,
+                  lineHeight: 1.5,
+                  color: saved.ok ? '#3a9d5c' : '#e05a5a',
+                }}
+              >
+                {saved.ok ? 'Written to cities.ts — ' : 'Not saved — '}
+                {saved.text}
+              </p>
+            )}
+
+            <p style={{ fontSize: 12, color: '#8f8fa6', marginTop: 10, lineHeight: 1.5 }}>
+              Saving edits <code>src/world/cities.ts</code> directly. There is no
+              undo in here; git is the undo.
+            </p>
           </div>
         </div>
       </div>
@@ -285,7 +487,7 @@ export function MapEditor({ onClose }: { onClose: () => void }) {
  */
 function check(
   grid: TileGrid,
-  area: (typeof AREAS)[string]['area'],
+  placed: Placed[],
   areaId: string,
   period: (typeof TIME_PERIODS)[number],
 ): string[] {
@@ -300,18 +502,26 @@ function check(
       [col + 1, row],
     ].some(([c, r]) => walkable(c, r))
 
-  if (!walkable(area.playerStart.col, area.playerStart.row)) {
-    problems.push(`the player starts in a wall at (${area.playerStart.col},${area.playerStart.row})`)
-  }
-  for (const poi of area.pois) {
-    if (!approachable(poi.col, poi.row)) problems.push(`nobody can reach ${poi.name}`)
-  }
-  for (const exit of area.exits) {
-    if (grid[exit.row]?.[exit.col] !== DOOR) {
-      problems.push(`the ${exit.label} doorway is not drawn as a door`)
+  const seen = new Map<string, string>()
+  for (const item of placed) {
+    const at = `${item.col},${item.row}`
+    const other = seen.get(at)
+    if (other) problems.push(`${item.label} and ${other} are on the same tile`)
+    seen.set(at, item.label)
+
+    if (item.kind === 'start' && !walkable(item.col, item.row)) {
+      problems.push(`the player starts in a wall at (${item.col},${item.row})`)
     }
-    if (!approachable(exit.col, exit.row)) {
-      problems.push(`there is nowhere to stand in front of ${exit.label}`)
+    if (item.kind === 'poi' && !approachable(item.col, item.row)) {
+      problems.push(`nobody can reach ${item.label}`)
+    }
+    if (item.kind === 'door') {
+      if (grid[item.row]?.[item.col] !== DOOR) {
+        problems.push(`the ${item.label} doorway is not drawn as a door`)
+      }
+      if (!approachable(item.col, item.row)) {
+        problems.push(`there is nowhere to stand in front of ${item.label}`)
+      }
     }
   }
   for (const { character, at } of charactersIn(areaId, period)) {

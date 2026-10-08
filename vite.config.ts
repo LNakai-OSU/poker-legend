@@ -1,12 +1,15 @@
 // From vitest/config rather than vite, which is what types the `test` block.
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
+import { editorServer } from './src/editor/editorServerPlugin.js'
 
 // GitHub Pages serves a project site from /<repo>/, so assets need that prefix.
 // Capacitor and local dev serve from the root, hence the env switch.
 export default defineConfig({
   base: process.env.GITHUB_PAGES === '1' ? '/poker-legend/' : '/',
-  plugins: [react()],
+  // The map editor's save endpoint. `apply: 'serve'` inside it means it exists
+  // in dev and never in a build, so nothing shipped can reach it.
+  plugins: [react(), editorServer()],
   test: {
     /*
      * Several of these tests are simulations: thousands of hands, each running a
