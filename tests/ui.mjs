@@ -10,8 +10,8 @@ import { chromium, devices } from 'playwright'
 const PORT = process.argv[2] ?? '5173'
 const BASE = `http://localhost:${PORT}/`
 const SAVE_KEY = 'poker-legend-save-v2'
-/** Narrow the run to the scenarios whose name contains this, while fixing one. */
-const ONLY = process.env.UI_ONLY
+/** Narrow the run to the scenarios matching these substrings, while fixing some. */
+const ONLY = process.env.UI_ONLY ? process.env.UI_ONLY.split(',').map((s) => s.trim()) : null
 
 const results = []
 let browser
@@ -143,7 +143,14 @@ function routeTo(grid, from, to) {
 /** Walks to a tile, verifying each step, since synthetic keys can be dropped. */
 async function moveTo(page, col, row, budget = 60) {
   const grid = await gridOf(page)
+  const startedIn = await areaNameOf(page)
   for (let attempt = 0; attempt < 3; attempt++) {
+    // Stop the moment the ground changes. A doubled keypress at the edge of a map
+    // carries the player onto the next one, and from there this route and this
+    // grid describe somewhere the player is no longer standing — so retrying
+    // walked them on east, map after map, several towns past where they meant to
+    // stop. Where they are now is the caller's business, not this helper's.
+    if ((await areaNameOf(page)) !== startedIn) return false
     const at = await posOf(page)
     if (!at || Number.isNaN(at.col)) return false
     if (at.col === col && at.row === row) return true
@@ -234,8 +241,29 @@ async function enterDoor(page, label) {
  * This is how streets join now: no doorway in the middle of the road, just the
  * map carrying on. Picks whichever tile along that edge is actually walkable.
  */
+/**
+ * Waits until the published grid and the published position come from the same
+ * map.
+ *
+ * A crossing is detected by the area name changing, but the name, the grid and
+ * the player's tile are three separate bits of published state and they do not
+ * all land on the same render. Routing against the previous map's grid sends the
+ * player at a wall, every edge tile fails to be reached, and the crossing reads
+ * as "could not walk east out of X" — in a world that is perfectly walkable.
+ */
+async function settle(page, budget = 2000) {
+  for (let waited = 0; waited <= budget; waited += 100) {
+    const [grid, at] = await Promise.all([gridOf(page), posOf(page)])
+    if (grid.length > 0 && at && !Number.isNaN(at.col) && grid[at.row]?.[at.col] && grid[at.row][at.col] !== '#') {
+      return grid
+    }
+    await page.waitForTimeout(100)
+  }
+  return gridOf(page)
+}
+
 async function walkEdge(page, side) {
-  const grid = await gridOf(page)
+  const grid = await settle(page)
   if (grid.length === 0) throw new Error('no grid published')
   const height = grid.length
   const width = grid[0].length
@@ -249,7 +277,12 @@ async function walkEdge(page, side) {
       ? { col: along, row: side === 'north' ? 0 : height - 1 }
       : { col: side === 'west' ? 0 : width - 1, row: along }
     if (grid[tile.row]?.[tile.col] !== 'w') continue
-    if (!(await moveTo(page, tile.col, tile.row, 90))) continue
+    if (!(await moveTo(page, tile.col, tile.row, 90))) {
+      // Crossing while walking into position is still crossing.
+      const now = await areaNameOf(page)
+      if (now !== before) return now
+      continue
+    }
 
     await step(page, key)
     // Polled, not slept: a fixed wait raced the next map mounting, and when it
@@ -312,7 +345,7 @@ async function talkThrough(page) {
 }
 
 async function test(name, fn) {
-  if (ONLY && !name.includes(ONLY)) return
+  if (ONLY && !ONLY.some((want) => name.includes(want))) return
   openPages = []
   try {
     await fn()

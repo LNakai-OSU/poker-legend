@@ -445,10 +445,13 @@ export function PokerTableView({
                     fontSize: 'clamp(7px, 1.1vh, 9px)',
                     color: '#8f8fa6',
                     lineHeight: 1.2,
-                    // Wraps inside the seat, and stops at two lines: it is flavour,
-                    // and the seats below it are a hand of cards and a bet.
+                    // Wraps inside the seat, and stops at three lines. Three rather
+                    // than two because these lines are how the regulars introduce
+                    // themselves, and two cut most of them off mid-sentence; the
+                    // extra line costs nothing on a window tall enough to show the
+                    // flavour at all, since below that it is dropped outright.
                     display: '-webkit-box',
-                    WebkitLineClamp: 2,
+                    WebkitLineClamp: 3,
                     WebkitBoxOrient: 'vertical',
                     overflow: 'hidden',
                   }}
