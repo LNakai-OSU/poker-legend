@@ -30,6 +30,50 @@ export const PROP = 13
 
 const WALKABLE = new Set([FLOOR, CARPET, ROAD, SIDEWALK, GRASS, DOOR, SAND, FLOWER, PLAZA])
 
+/**
+ * Every tile, with the character that writes it and a name to show a person.
+ *
+ * One table, so the parser, the editor's palette and anything else that has to
+ * name a tile all read the same list — a tile that exists in one of those and
+ * not the others is exactly the kind of gap nobody notices until a map will not
+ * load.
+ */
+export const TILE_VOCABULARY: Array<{ tile: number; char: string; name: string }> = [
+  { tile: FLOOR, char: '.', name: 'Floor' },
+  { tile: WALL, char: '#', name: 'Wall' },
+  { tile: FURNITURE, char: 'F', name: 'Furniture' },
+  { tile: CARPET, char: ',', name: 'Carpet' },
+  { tile: WATER, char: '~', name: 'Water' },
+  { tile: ROAD, char: '=', name: 'Road' },
+  { tile: SIDEWALK, char: '-', name: 'Pavement' },
+  { tile: GRASS, char: '"', name: 'Grass' },
+  { tile: DOOR, char: 'D', name: 'Door' },
+  { tile: TREE, char: 'T', name: 'Tree' },
+  { tile: SAND, char: ':', name: 'Sand' },
+  { tile: FLOWER, char: '*', name: 'Flowers' },
+  { tile: PLAZA, char: '+', name: 'Plaza' },
+  { tile: PROP, char: 'o', name: 'Prop' },
+]
+
+/** The character that writes each tile, for turning a grid back into a sketch. */
+export const CHAR_FOR_TILE: Record<number, string> = Object.fromEntries(
+  TILE_VOCABULARY.map(({ tile, char }) => [tile, char]),
+)
+
+export function isTileWalkable(tile: number): boolean {
+  return WALKABLE.has(tile)
+}
+
+/**
+ * Turns a grid back into the sketch that would parse to it.
+ *
+ * The exact inverse of `parseMap`, so a map taken into the editor and brought
+ * back out again is the same map.
+ */
+export function toSketch(grid: TileGrid): string {
+  return grid.map((row) => row.map((tile) => CHAR_FOR_TILE[tile] ?? '#').join('')).join('\n')
+}
+
 const TILE_CHARS: Record<string, number> = {
   '.': FLOOR,
   '#': WALL,

@@ -10,7 +10,7 @@ const SCALE = TILE_SIZE / ART_SIZE
 
 type Draw = (px: (x: number, y: number, w: number, h: number, color: string) => void) => void
 
-function makeTexture(draw: Draw): Texture {
+function makeCanvas(draw: Draw): HTMLCanvasElement {
   const canvas = document.createElement('canvas')
   canvas.width = ART_SIZE * SCALE
   canvas.height = ART_SIZE * SCALE
@@ -21,8 +21,11 @@ function makeTexture(draw: Draw): Texture {
     ctx.fillStyle = color
     ctx.fillRect(x * SCALE, y * SCALE, w * SCALE, h * SCALE)
   })
+  return canvas
+}
 
-  const texture = Texture.from(canvas)
+function makeTexture(draw: Draw): Texture {
+  const texture = Texture.from(makeCanvas(draw))
   texture.source.scaleMode = 'nearest'
   return texture
 }
@@ -227,28 +230,55 @@ function themed(draw: Draw, theme: TileTheme): Draw {
 
 const tileCaches = new Map<string, Record<number, Texture>>()
 
+/** Every tile and the drawing for it, in one place so nothing can be forgotten. */
+const TILE_DRAWINGS: Record<number, Draw> = {
+  [FLOOR]: FLOOR_TILE,
+  [WALL]: WALL_TILE,
+  [FURNITURE]: FURNITURE_TILE,
+  [CARPET]: CARPET_TILE,
+  [WATER]: WATER_TILE,
+  [ROAD]: ROAD_TILE,
+  [SIDEWALK]: SIDEWALK_TILE,
+  [GRASS]: GRASS_TILE,
+  [DOOR]: DOOR_TILE,
+  [TREE]: TREE_TILE,
+  [SAND]: SAND_TILE,
+  [FLOWER]: FLOWER_TILE,
+  [PLAZA]: PLAZA_TILE,
+  [PROP]: PROP_TILE,
+}
+
 export function tileTextures(themeId = 'default'): Record<number, Texture> {
   const cached = tileCaches.get(themeId)
   if (cached) return cached
   const theme = TILE_THEMES[themeId] ?? TILE_THEMES.default
-  const textures: Record<number, Texture> = {
-    [FLOOR]: makeTexture(themed(FLOOR_TILE, theme)),
-    [WALL]: makeTexture(themed(WALL_TILE, theme)),
-    [FURNITURE]: makeTexture(themed(FURNITURE_TILE, theme)),
-    [CARPET]: makeTexture(themed(CARPET_TILE, theme)),
-    [WATER]: makeTexture(themed(WATER_TILE, theme)),
-    [ROAD]: makeTexture(themed(ROAD_TILE, theme)),
-    [SIDEWALK]: makeTexture(themed(SIDEWALK_TILE, theme)),
-    [GRASS]: makeTexture(themed(GRASS_TILE, theme)),
-    [DOOR]: makeTexture(themed(DOOR_TILE, theme)),
-    [TREE]: makeTexture(themed(TREE_TILE, theme)),
-    [SAND]: makeTexture(themed(SAND_TILE, theme)),
-    [FLOWER]: makeTexture(themed(FLOWER_TILE, theme)),
-    [PLAZA]: makeTexture(themed(PLAZA_TILE, theme)),
-    [PROP]: makeTexture(themed(PROP_TILE, theme)),
+  const textures: Record<number, Texture> = {}
+  for (const [tile, draw] of Object.entries(TILE_DRAWINGS)) {
+    textures[Number(tile)] = makeTexture(themed(draw, theme))
   }
   tileCaches.set(themeId, textures)
   return textures
+}
+
+const tileCanvasCaches = new Map<string, Record<number, HTMLCanvasElement>>()
+
+/**
+ * The same tile art as plain canvases, for anything drawing outside Pixi.
+ *
+ * The map editor paints with these, so what you paint really is what the game
+ * draws — an editor with its own idea of what a tile looks like is an editor
+ * you cannot trust.
+ */
+export function tileCanvases(themeId = 'default'): Record<number, HTMLCanvasElement> {
+  const cached = tileCanvasCaches.get(themeId)
+  if (cached) return cached
+  const theme = TILE_THEMES[themeId] ?? TILE_THEMES.default
+  const canvases: Record<number, HTMLCanvasElement> = {}
+  for (const [tile, draw] of Object.entries(TILE_DRAWINGS)) {
+    canvases[Number(tile)] = makeCanvas(themed(draw, theme))
+  }
+  tileCanvasCaches.set(themeId, canvases)
+  return canvases
 }
 
 // ---------------------------------------------------------------------------

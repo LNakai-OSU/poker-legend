@@ -1328,6 +1328,87 @@ await test('touch controls appear on a phone and move the player', async () => {
   await page.close()
 })
 
+/**
+ * The map editor.
+ *
+ * Maps are ASCII in source, which is the right format to keep them in and a bad
+ * one to design in: you cannot see a street while counting commas, and a row one
+ * character short is invisible by eye and fatal on load. This paints with the
+ * game's own tile art and writes the sketch back out.
+ */
+await test('the map editor paints a map and writes the sketch back out', async () => {
+  const page = await newPage(null)
+  await page.goto(`${BASE}#editor`)
+  await page.waitForSelector('[data-testid="editor-grid"]')
+  await page.waitForTimeout(400)
+
+  const sketch = () => page.inputValue('[data-testid="sketch"]')
+  const before = await sketch()
+  const grid = page.locator('[data-testid="editor-grid"]')
+  const width = Number(await grid.getAttribute('data-width'))
+  const height = Number(await grid.getAttribute('data-height'))
+  assert(width > 0 && height > 0, 'the editor loaded no map')
+  assert(before.split('\n').length === height, 'the sketch is a different height from the map')
+  assert(
+    before.split('\n').every((row) => row.length === width),
+    'the sketch came out ragged, which would not parse',
+  )
+
+  // Paint one tile and watch it reach the sketch.
+  await page.locator('[data-testid="brush-~"]').click()
+  await page.locator('[data-cell="4,4"]').click()
+  await page.waitForTimeout(150)
+  const after = await sketch()
+  assert(after !== before, 'painting changed nothing')
+  assert(after.split('\n')[4][4] === '~', `tile (4,4) is "${after.split('\n')[4][4]}", not water`)
+  assert(
+    after.split('\n').every((row) => row.length === width),
+    'painting made the sketch ragged',
+  )
+
+  // Problems are counted against the map as painted, not as saved.
+  await page.locator('[data-testid="brush-#"]').click()
+  const start = await page.locator('[data-testid="editor-grid"]').getAttribute('data-width')
+  assert(start !== null, 'the grid vanished')
+
+  // Reverting puts the map back exactly as it was.
+  await page.locator('button:has-text("Revert")').click()
+  await page.waitForTimeout(150)
+  assert((await sketch()) === before, 'reverting did not restore the map')
+
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+})
+
+/** Walling in a doorway is the kind of mistake the editor should say out loud. */
+await test('the map editor says when you have broken the map', async () => {
+  const page = await newPage(null)
+  await page.goto(`${BASE}#editor`)
+  await page.waitForSelector('[data-testid="editor-grid"]')
+  await page.waitForTimeout(400)
+
+  const count = async () => (await page.locator('[data-testid="problem-count"]').textContent()).trim()
+  assert((await count()) === '(0)', `a freshly loaded map already has problems: ${await count()}`)
+
+  // Find a doorway from the markers and build a wall over it.
+  const door = await page.evaluate(() => {
+    const cells = [...document.querySelectorAll('[data-cell]')]
+    const found = cells.find((c) => (c.getAttribute('title') ?? '').match(/^(Marcus's|Home|Outside)/))
+    return found ? found.getAttribute('data-cell') : null
+  })
+  assert(door, 'no doorway on this map to test with')
+
+  await page.locator('[data-testid="brush-#"]').click()
+  await page.locator(`[data-cell="${door}"]`).click()
+  await page.waitForTimeout(200)
+  assert((await count()) !== '(0)', 'walling in a doorway raised no problem')
+  const problems = await page.locator('[data-testid="problems"]').innerText()
+  assert(/doorway|stand in front/i.test(problems), `unhelpful problem text: ${problems}`)
+
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+})
+
 await browser.close()
 
 const failed = results.filter((r) => !r.ok)
