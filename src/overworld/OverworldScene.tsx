@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Application } from 'pixi.js'
-import { buildTileLayer, isWalkable, TILE_SIZE, type TileGrid } from './tileRenderer'
+import { buildStampLayer, buildTileLayer, isWalkable, TILE_SIZE, type TileGrid } from './tileRenderer'
+import type { PlacedStamp } from '../world/stamps'
 import { DELTAS, GridPlayer, type Direction } from './GridPlayer'
 import { Npc, type NpcConfig } from './Npc'
 import { DialogueBox } from '../game/DialogueBox'
@@ -80,6 +81,8 @@ interface OverworldSceneProps {
   hud?: ReactNode
   /** The colour of the hour, laid over the map. See PERIOD_LIGHT. */
   light?: string
+  /** Objects bigger than a tile standing on this map. */
+  stamps?: PlacedStamp[]
   /** A pursuer that hunts the player across the grid. */
   chaser?: ChaserConfig
   onCaught?: () => void
@@ -102,6 +105,7 @@ export function OverworldScene({
   background = '#101018',
   hud,
   light,
+  stamps,
   chaser,
   onCaught,
   exits = [],
@@ -184,6 +188,8 @@ export function OverworldScene({
       // Fixed for the life of the scene; a rotation remounts it.
       const zoom = zoomFor(instance.screen.width)
       const world = buildTileLayer(map, theme)
+      // Objects over the tiles, under everybody who walks about on them.
+      world.addChild(buildStampLayer(stamps ?? []))
       const player = new GridPlayer(playerStart.col, playerStart.row)
       const npcs = interactables.map((cfg) => new Npc(cfg))
       // The whole world is scaled up, which would blow the name plates up with

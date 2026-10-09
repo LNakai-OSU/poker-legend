@@ -1,6 +1,7 @@
 import { isWalkable, parseMap } from '../overworld/tileRenderer'
 import { MISSIONS, SPONSORS } from './npcs'
 import type { AreaDef, CityDef, PoiDef } from './types'
+import type { PlacedStamp } from './stamps'
 import type { CityId } from '../game/state'
 
 /**
@@ -1741,6 +1742,21 @@ export function allAreas(city: CityDef): AreaDef[] {
 }
 
 /**
+ * Objects bigger than a tile standing on each map.
+ *
+ * Kept beside the areas rather than inside them because `area()` is a positional
+ * helper eight arguments long, and because this is the one part of a map the
+ * editor writes wholesale — a keyed block is something it can replace exactly,
+ * where a ninth argument would mean threading `undefined` past the optional one
+ * in front of it.
+ *
+ * The tiles these objects sit on are already written into the maps above. This
+ * is only what lets the renderer draw a poker table instead of four patches of
+ * furniture, so the game is correct with or without it.
+ */
+export const AREA_STAMPS: Record<string, PlacedStamp[]> = {}
+
+/**
  * Every area in the world, by id, with the town it belongs to.
  *
  * Walking off the edge of one map and onto the next can cross a town boundary —
@@ -1752,6 +1768,9 @@ export const AREAS: Record<string, { area: AreaDef; cityId: CityId }> = (() => {
   const index: Record<string, { area: AreaDef; cityId: CityId }> = {}
   for (const city of Object.values(CITIES)) {
     for (const area of Object.values(city.areas)) {
+      // Attached here rather than passed in, so there is one area object and
+      // everything that already holds one sees its objects too.
+      if (AREA_STAMPS[area.id]) area.stamps = AREA_STAMPS[area.id]
       index[area.id] = { area, cityId: city.id }
     }
   }

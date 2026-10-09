@@ -167,6 +167,7 @@ export function CityScene({
         onEnterArea(link.toAreaId, landing.col, landing.row)
       }}
       light={PERIOD_LIGHT[state.period]}
+      stamps={area.stamps}
       hud={
         <>
           <div>{area.name}</div>

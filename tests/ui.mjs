@@ -1495,6 +1495,78 @@ await test('the map editor offers to save, and warns about a shared map', async 
   await page.close()
 })
 
+/**
+ * Objects bigger than a tile.
+ *
+ * A poker table was four `FFFF` furniture tiles and a house was a block of `#`
+ * with a `D` in it, so nothing in the world was an object — only patches of
+ * texture that happened not to be walkable. These tests place objects but never
+ * save, because saving writes to the real source file.
+ */
+await test('the map editor puts down an object with its own tiles', async () => {
+  const page = await newPage(null)
+  await page.goto(`${BASE}#editor`)
+  await page.waitForSelector('[data-testid="editor-grid"]')
+  await page.waitForTimeout(500)
+
+  await page.locator('[data-testid="mode-stamps"]').click()
+  await page.locator('[data-testid="stamp-poker-table"]').click()
+  const before = await page.inputValue('[data-testid="sketch"]')
+  await page.locator('[data-cell="8,8"]').click()
+  await page.waitForTimeout(300)
+
+  // The object is drawn as one picture over the tiles.
+  assert(
+    (await page.locator('[data-testid="placed-poker-table"]').count()) === 1,
+    'the table was not put down',
+  )
+
+  // It writes its own felt, and leaves everything round it as it found it: an
+  // object dropped on a road must not lay a square of indoor floor.
+  const after = await page.inputValue('[data-testid="sketch"]')
+  const rows = after.split('\n')
+  assert(rows[9].slice(9, 11) === 'FF', `the felt is "${rows[9].slice(9, 11)}", not furniture`)
+  const changed = rows.filter((row, i) => row !== before.split('\n')[i]).length
+  assert(changed === 1, `putting a table down changed ${changed} rows, expected 1`)
+
+  // A poker table brings a dealer, who has to be pointed at a table.
+  assert(await page.locator('[data-testid="wiring"]').isVisible(), 'the table brought no dealer')
+  await page.locator('[data-testid="save"]').click()
+  await page.waitForTimeout(400)
+  await page.waitForSelector('[data-testid="save-result"]')
+  const message = await page.locator('[data-testid="save-result"]').innerText()
+  assert(/points nowhere/.test(message), `saved a dealer that deals nothing: ${message}`)
+
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+})
+
+await test('a house brings its own front door, which has to lead somewhere', async () => {
+  const page = await newPage(null)
+  await page.goto(`${BASE}#editor`)
+  await page.waitForSelector('[data-testid="editor-grid"]')
+  await page.waitForTimeout(500)
+
+  await page.locator('[data-testid="mode-stamps"]').click()
+  await page.locator('[data-testid="stamp-townhouse"]').click()
+  await page.locator('[data-cell="3,3"]').click()
+  await page.waitForTimeout(300)
+
+  const sketch = (await page.inputValue('[data-testid="sketch"]')).split('\n')
+  assert(sketch[3].slice(3, 8) === '#####', `the walls are "${sketch[3].slice(3, 8)}"`)
+  assert(sketch[6][5] === 'D', `the door is "${sketch[6][5]}", not a door`)
+
+  // Saving is refused until the door leads somewhere, because a door that leads
+  // nowhere compiles and strands whoever walks through it.
+  await page.locator('[data-testid="save"]').click()
+  await page.waitForSelector('[data-testid="save-result"]')
+  const message = await page.locator('[data-testid="save-result"]').innerText()
+  assert(/leads nowhere/.test(message), `expected a refusal, got: ${message}`)
+
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+})
+
 await browser.close()
 
 const failed = results.filter((r) => !r.ok)

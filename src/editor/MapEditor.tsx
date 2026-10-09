@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { AREAS, CITIES } from '../world/cities'
+import { TABLES } from '../world/content'
 import {
   DOOR,
   TILE_VOCABULARY,
@@ -10,6 +11,8 @@ import {
 } from '../overworld/tileRenderer'
 import { TILE_THEMES, tileCanvases } from '../overworld/sprites'
 import { charactersIn } from '../world/characters'
+import { KEEP, STAMPS, findStamp, stampSize, type PlacedStamp } from '../world/stamps'
+import { stampCanvas } from '../overworld/stampArt'
 import { TIME_PERIODS } from '../game/time'
 
 /**
@@ -40,6 +43,34 @@ interface Placed {
   label: string
   col: number
   row: number
+  /**
+   * Set when a stamp brought this with it and it does not exist in the source
+   * yet — a house's front door, a poker table's dealer. Saving creates it;
+   * everything without this is only ever moved.
+   */
+  added?: { kind: 'exit' } | { kind: 'poi'; action: string; name: string }
+}
+
+/**
+ * Actions that are meaningless without something to point at.
+ *
+ * Slots and craps are whole games in themselves; a dealer has to be dealing a
+ * particular table, and a shopfront has to be selling a particular shop's stock.
+ */
+const NEEDS_TARGET = new Set(['table', 'shop', 'venue', 'sponsor', 'mission'])
+
+/** Whether two stamps would sit on the same corner. */
+function overlaps(a: PlacedStamp, b: PlacedStamp): boolean {
+  return a.col === b.col && a.row === b.row
+}
+
+/** A key nothing else on this map is using, so two front doors can coexist. */
+function uniqueKey(existing: Placed[], wanted: string): string {
+  if (!existing.some((item) => item.key === wanted)) return wanted
+  for (let n = 2; ; n++) {
+    const candidate = `${wanted} ${n}`
+    if (!existing.some((item) => item.key === candidate)) return candidate
+  }
 }
 
 function placeables(area: (typeof AREAS)[string]['area']): Placed[] {
@@ -72,6 +103,10 @@ export function MapEditor({ onClose }: { onClose: () => void }) {
   const [grid, setGrid] = useState<TileGrid>(() => area.map.map((row) => [...row]))
   const [loadedFrom, setLoadedFrom] = useState(areaId)
   const [brush, setBrush] = useState(TILE_VOCABULARY[0].tile)
+  /** Painting one tile at a time, or putting down objects. */
+  const [mode, setMode] = useState<'tiles' | 'stamps'>('tiles')
+  const [stampId, setStampId] = useState(STAMPS[0].id)
+  const [stamps, setStamps] = useState<PlacedStamp[]>(() => [...(area.stamps ?? [])])
   const [showMarkers, setShowMarkers] = useState(true)
   const [period, setPeriod] = useState<(typeof TIME_PERIODS)[number]>('morning')
   const painting = useRef(false)
@@ -80,6 +115,8 @@ export function MapEditor({ onClose }: { onClose: () => void }) {
   // Where the draggable things are now, which starts as where the content says
   // they are and diverges as you move them.
   const [placed, setPlaced] = useState<Placed[]>(() => placeables(area))
+  /** What each new door or dealer has been pointed at, keyed by marker key. */
+  const [wiring, setWiring] = useState<Record<string, string>>({})
   const [sharing, setSharing] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState<{ ok: boolean; text: string } | null>(null)
@@ -90,6 +127,8 @@ export function MapEditor({ onClose }: { onClose: () => void }) {
     setLoadedFrom(areaId)
     setGrid(area.map.map((row) => [...row]))
     setPlaced(placeables(area))
+    setStamps([...(area.stamps ?? [])])
+    setWiring({})
     setSaved(null)
     setSharing([])
     // Who else is drawn from this same map, which decides whether saving it
@@ -108,10 +147,26 @@ export function MapEditor({ onClose }: { onClose: () => void }) {
     return original && (original.col !== item.col || original.row !== item.row)
   })
   const mapChanged = sketch !== toSketch(area.map)
-  const dirty = mapChanged || movedMarkers.length > 0
+  const addedMarkers = placed.filter((item) => item.added)
+  const stampsChanged = JSON.stringify(stamps) !== JSON.stringify(area.stamps ?? [])
+  const dirty = mapChanged || movedMarkers.length > 0 || addedMarkers.length > 0 || stampsChanged
 
   /** Writes back to cities.ts. `split` gives this area its own copy of the map. */
   const save = async (split: boolean) => {
+    // A door with no destination would compile and strand whoever walked
+    // through it, which is exactly the class of bug the content tests exist for.
+    const unwired = addedMarkers.filter((m) => {
+      if (wiring[m.key]) return false
+      if (m.added?.kind === 'exit') return true
+      // A dealer with no table deals nothing: the action would be written with
+      // its target missing, which is a POI that cannot do the one thing it is for.
+      return m.added?.kind === 'poi' && NEEDS_TARGET.has(m.added.action)
+    })
+    if (unwired.length > 0) {
+      const what = unwired.map((m) => `${m.label} ${m.added?.kind === 'exit' ? 'leads' : 'points'} nowhere`)
+      setSaved({ ok: false, text: `${what.join(', ')} yet` })
+      return
+    }
     setSaving(true)
     setSaved(null)
     try {
@@ -123,12 +178,39 @@ export function MapEditor({ onClose }: { onClose: () => void }) {
           sketch: mapChanged || split ? sketch : undefined,
           split,
           markers: {
-            start: movedMarkers.find((m) => m.kind === 'start'),
-            pois: movedMarkers.filter((m) => m.kind === 'poi').map((m) => ({ id: m.key, col: m.col, row: m.row })),
+            // Only things that already exist get *moved*; the rest are created.
+            start: movedMarkers.find((m) => m.kind === 'start' && !m.added),
+            pois: movedMarkers
+              .filter((m) => m.kind === 'poi' && !m.added)
+              .map((m) => ({ id: m.key, col: m.col, row: m.row })),
             exits: movedMarkers
-              .filter((m) => m.kind === 'door')
+              .filter((m) => m.kind === 'door' && !m.added)
               .map((m) => ({ label: m.key, col: m.col, row: m.row })),
           },
+          stamps,
+          addPois: addedMarkers
+            .filter((m) => m.added?.kind === 'poi')
+            .map((m) => ({
+              id: `${areaId}-${m.added!.kind === 'poi' ? (m.added as { action: string }).action : 'poi'}-${m.col}${m.row}`,
+              name: m.label,
+              col: m.col,
+              row: m.row,
+              action: (m.added as { action: string }).action,
+              target: wiring[m.key] || undefined,
+            })),
+          addExits: addedMarkers
+            .filter((m) => m.added?.kind === 'exit')
+            .map((m) => {
+              const destination = AREAS[wiring[m.key]]?.area
+              return {
+                col: m.col,
+                row: m.row,
+                toAreaId: wiring[m.key],
+                toCol: destination?.playerStart.col ?? 1,
+                toRow: destination?.playerStart.row ?? 1,
+                label: m.label,
+              }
+            }),
         }),
       })
       const body = await response.json()
@@ -156,6 +238,66 @@ export function MapEditor({ onClose }: { onClose: () => void }) {
   }
 
   /** Everything standing on the map, so you do not build over it. */
+  /**
+   * Puts an object down with its top-left corner here.
+   *
+   * Writes the stamp's tiles into the grid as well as recording the object, so
+   * the walls of a house really are walls and everything that reads the grid —
+   * collision, pathing, the content checks — needs to know nothing about this.
+   */
+  const placeStamp = (col: number, row: number) => {
+    const stamp = findStamp(stampId)
+    if (!stamp) return
+    const { cols, rows } = stampSize(stamp)
+    if (col + cols > grid[0].length || row + rows > grid.length) {
+      setSaved({ ok: false, text: `${stamp.name} does not fit there` })
+      return
+    }
+    const shape = stamp.tiles.split('\n')
+    setGrid((current) => {
+      const next = current.map((r) => [...r])
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const char = shape[r][c]
+          // `?` means leave the tile alone, so an object dropped on a road keeps
+          // the road around it instead of laying a square of indoor floor.
+          if (char === KEEP) continue
+          next[row + r][col + c] = parseMap(char)[0][0]
+        }
+      }
+      return next
+    })
+    setStamps((current) => [
+      // One object per footprint: putting a table where a table already is
+      // replaces it rather than stacking two pictures.
+      ...current.filter((item) => !overlaps(item, { stampId: stamp.id, col, row })),
+      { stampId: stamp.id, col, row },
+    ])
+    if (stamp.wiring) {
+      setPlaced((current) => [
+        ...current,
+        stamp.wiring!.kind === 'exit'
+          ? {
+              kind: 'door' as const,
+              key: uniqueKey(current, stamp.wiring!.label),
+              label: uniqueKey(current, stamp.wiring!.label),
+              col: col + stamp.wiring!.at.col,
+              row: row + stamp.wiring!.at.row,
+              added: { kind: 'exit' as const },
+            }
+          : {
+              kind: 'poi' as const,
+              key: uniqueKey(current, `${areaId}-${stamp.wiring!.action}`),
+              label: stamp.wiring!.name,
+              col: col + stamp.wiring!.at.col,
+              row: row + stamp.wiring!.at.row,
+              added: { kind: 'poi' as const, action: stamp.wiring!.action, name: stamp.wiring!.name },
+            },
+      ])
+    }
+    setSaved(null)
+  }
+
   const markers = useMemo(() => {
     const found = new Map<string, Marker>()
     for (const item of placed) {
@@ -235,6 +377,8 @@ export function MapEditor({ onClose }: { onClose: () => void }) {
           onClick={() => {
             setGrid(area.map.map((r) => [...r]))
             setPlaced(placeables(area))
+            setStamps([...(area.stamps ?? [])])
+            setWiring({})
             setSaved(null)
           }}
         >
@@ -247,7 +391,82 @@ export function MapEditor({ onClose }: { onClose: () => void }) {
 
       <div style={{ display: 'flex', gap: 16, padding: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
         <div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10, maxWidth: 240 }}>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+            {(['tiles', 'stamps'] as const).map((option) => (
+              <button
+                key={option}
+                data-testid={`mode-${option}`}
+                onClick={() => setMode(option)}
+                style={{
+                  ...control,
+                  flex: 1,
+                  borderColor: mode === option ? '#f2c14e' : '#2c3d35',
+                  color: mode === option ? '#f2c14e' : '#e8e8f0',
+                }}
+              >
+                {option === 'tiles' ? 'Tiles' : 'Objects'}
+              </button>
+            ))}
+          </div>
+
+          {mode === 'stamps' && (
+            <div style={{ maxWidth: 240 }}>
+              <div style={{ display: 'grid', gap: 6, marginBottom: 10 }}>
+                {STAMPS.map((stamp) => {
+                  const canvas = stampCanvas(stamp.id)
+                  const { cols, rows } = stampSize(stamp)
+                  return (
+                    <button
+                      key={stamp.id}
+                      data-testid={`stamp-${stamp.id}`}
+                      onClick={() => setStampId(stamp.id)}
+                      title={stamp.about}
+                      style={{
+                        ...control,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 9,
+                        textAlign: 'left',
+                        padding: 6,
+                        borderColor: stampId === stamp.id ? '#f2c14e' : '#2c3d35',
+                      }}
+                    >
+                      {canvas && (
+                        <img
+                          src={canvas.toDataURL()}
+                          alt=""
+                          width={Math.min(56, cols * 14)}
+                          height={Math.min(56, cols * 14) * (rows / cols)}
+                          style={pixelated}
+                        />
+                      )}
+                      <span style={{ lineHeight: 1.3 }}>
+                        <span style={{ display: 'block' }}>{stamp.name}</span>
+                        <span style={{ fontSize: 10, color: '#8f8fa6' }}>
+                          {cols}×{rows}
+                          {stamp.wiring ? ` · brings a ${stamp.wiring.kind === 'exit' ? 'door' : 'dealer'}` : ''}
+                        </span>
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+              <div style={{ fontSize: 12, color: '#8f8fa6' }}>
+                Click to put one down by its top-left corner. It writes its own
+                tiles, so a house's walls really are walls.
+              </div>
+            </div>
+          )}
+
+          <div
+            style={{
+              display: mode === 'tiles' ? 'flex' : 'none',
+              gap: 6,
+              flexWrap: 'wrap',
+              marginBottom: 10,
+              maxWidth: 240,
+            }}
+          >
             {TILE_VOCABULARY.map(({ tile, char, name }) => (
               <button
                 key={tile}
@@ -267,10 +486,12 @@ export function MapEditor({ onClose }: { onClose: () => void }) {
               </button>
             ))}
           </div>
-          <div style={{ fontSize: 12, color: '#8f8fa6', maxWidth: 240 }}>
-            Click or drag to paint. The art and the tint are the ones the game
-            draws this town in.
-          </div>
+          {mode === 'tiles' && (
+            <div style={{ fontSize: 12, color: '#8f8fa6', maxWidth: 240 }}>
+              Click or drag to paint. The art and the tint are the ones the game
+              draws this town in.
+            </div>
+          )}
 
           <div style={{ marginTop: 14, fontSize: 12, display: 'grid', gap: 4, maxWidth: 240 }}>
             <div style={{ color: '#8f8fa6' }}>Already on this map</div>
@@ -306,6 +527,7 @@ export function MapEditor({ onClose }: { onClose: () => void }) {
           </div>
         </div>
 
+        <div style={{ position: 'relative' }}>
         <div
           data-testid="editor-grid"
           data-width={grid[0].length}
@@ -343,6 +565,10 @@ export function MapEditor({ onClose }: { onClose: () => void }) {
                     // pointer actually moves. Press and release in one place and
                     // you meant to paint that tile, which is the only way to put
                     // a floor back under a doorway you are about to move off it.
+                    if (mode === 'stamps') {
+                      placeStamp(c, r)
+                      return
+                    }
                     const held = marker?.draggable ? placed.find((i) => i.col === c && i.row === r) : undefined
                     if (held) {
                       dragging.current = held
@@ -390,6 +616,32 @@ export function MapEditor({ onClose }: { onClose: () => void }) {
               )
             }),
           )}
+        </div>
+        {/* The objects, drawn over the tiles exactly as the game draws them.
+            Pointer-transparent, so you still paint and drag through them. */}
+        {stamps.map((item, i) => {
+          const canvas = stampCanvas(item.stampId)
+          const stamp = findStamp(item.stampId)
+          if (!canvas || !stamp) return null
+          const { cols, rows } = stampSize(stamp)
+          return (
+            <img
+              key={`${item.stampId}-${item.col}-${item.row}-${i}`}
+              data-testid={`placed-${item.stampId}`}
+              src={canvas.toDataURL()}
+              alt=""
+              style={{
+                ...pixelated,
+                position: 'absolute',
+                left: item.col * CELL,
+                top: item.row * CELL,
+                width: cols * CELL,
+                height: rows * CELL,
+                pointerEvents: 'none',
+              }}
+            />
+          )
+        })}
         </div>
 
         <div style={{ flex: '1 1 320px', minWidth: 300 }}>
@@ -450,6 +702,63 @@ export function MapEditor({ onClose }: { onClose: () => void }) {
                 all of them. <strong>Save as its own map</strong> gives this area a
                 copy and leaves the others alone.
               </p>
+            )}
+
+            {addedMarkers.length > 0 && (
+              <div data-testid="wiring" style={{ marginTop: 14 }}>
+                <strong style={{ fontSize: 13 }}>New here — connect them up</strong>
+                <div style={{ display: 'grid', gap: 8, marginTop: 6 }}>
+                  {addedMarkers.map((item) => (
+                    <div key={item.key} style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 12, minWidth: 92 }}>
+                        {item.label}{' '}
+                        <span style={{ color: '#8f8fa6' }}>
+                          ({item.col},{item.row})
+                        </span>
+                      </span>
+                      {item.added?.kind === 'exit' ? (
+                        <select
+                          data-testid={`wire-${item.key}`}
+                          value={wiring[item.key] ?? ''}
+                          onChange={(e) => setWiring((w) => ({ ...w, [item.key]: e.target.value }))}
+                          style={control}
+                        >
+                          <option value="">leads to…</option>
+                          {areaIds.map((id) => (
+                            <option key={id} value={id}>
+                              {AREAS[id].area.name}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <select
+                          data-testid={`wire-${item.key}`}
+                          value={wiring[item.key] ?? ''}
+                          onChange={(e) => setWiring((w) => ({ ...w, [item.key]: e.target.value }))}
+                          style={control}
+                        >
+                          <option value="">
+                            {(item.added as { action: string }).action === 'table' ? 'deals…' : 'no target needed'}
+                          </option>
+                          {(item.added as { action: string }).action === 'table' &&
+                            Object.values(TABLES).map((table) => (
+                              <option key={table.id} value={table.id}>
+                                {table.name}
+                              </option>
+                            ))}
+                        </select>
+                      )}
+                      <button
+                        style={{ ...control, minHeight: 28, padding: '2px 8px' }}
+                        onClick={() => setPlaced((current) => current.filter((p) => p.key !== item.key))}
+                        title="Leave the object, drop what it brought"
+                      >
+                        drop
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
 
             {saved && (

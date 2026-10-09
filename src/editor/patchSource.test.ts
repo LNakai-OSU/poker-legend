@@ -161,3 +161,95 @@ describe('doing nothing', () => {
     expect(notes).toEqual(['nothing changed'])
   })
 })
+
+describe('objects standing on a map', () => {
+  it('records them where the game reads them from', () => {
+    const { source, notes } = applyEdit(SOURCE, {
+      areaId: 'basin',
+      stamps: [
+        { stampId: 'townhouse', col: 3, row: 12 },
+        { stampId: 'fountain', col: 18, row: 7 },
+      ],
+    })
+    expect(source).toContain("basin: [")
+    expect(source).toContain("{ stampId: 'townhouse', col: 3, row: 12 },")
+    expect(source).toContain("{ stampId: 'fountain', col: 18, row: 7 },")
+    expect(notes.join(' ')).toContain('2 object(s)')
+  })
+
+  it('replaces the list rather than merging, so an object can be taken away', () => {
+    const once = applyEdit(SOURCE, {
+      areaId: 'basin',
+      stamps: [
+        { stampId: 'townhouse', col: 3, row: 12 },
+        { stampId: 'fountain', col: 18, row: 7 },
+      ],
+    }).source
+    const twice = applyEdit(once, { areaId: 'basin', stamps: [{ stampId: 'fountain', col: 18, row: 7 }] }).source
+    expect(twice).not.toContain('townhouse')
+    expect(twice).toContain("{ stampId: 'fountain', col: 18, row: 7 },")
+  })
+
+  it('clears the entry entirely when the last object is removed', () => {
+    const once = applyEdit(SOURCE, { areaId: 'basin', stamps: [{ stampId: 'fountain', col: 1, row: 1 }] }).source
+    const empty = applyEdit(once, { areaId: 'basin', stamps: [] }).source
+    expect(empty).not.toContain("stampId: 'fountain'")
+    expect(empty).toContain('AREA_STAMPS')
+  })
+
+  it('quotes an area id that is not a plain word', () => {
+    const { source } = applyEdit(SOURCE, {
+      areaId: 'marcus-house',
+      stamps: [{ stampId: 'bar', col: 2, row: 2 }],
+    })
+    expect(source).toContain("'marcus-house': [")
+  })
+})
+
+describe('wiring a stamp brings with it', () => {
+  it('adds a dealer pointing at a real table', () => {
+    const { source, notes } = applyEdit(SOURCE, {
+      areaId: 'basin',
+      addPois: [
+        { id: 'basin-newtable', name: 'Dealer', col: 5, row: 5, action: 'table', target: 'silvercreek-low' },
+      ],
+    })
+    expect(source).toMatch(
+      /\{ id: 'basin-newtable', name: 'Dealer', col: 5, row: 5,[^}]*action: \{ kind: 'table', tableId: 'silvercreek-low' \} \}/,
+    )
+    expect(notes.join(' ')).toContain('added Dealer')
+  })
+
+  it('adds a doorway that leads somewhere real', () => {
+    const { source, notes } = applyEdit(SOURCE, {
+      areaId: 'basin',
+      addExits: [{ col: 5, row: 15, toAreaId: 'bodega', toCol: 6, toRow: 5, label: 'Door' }],
+    })
+    expect(source).toContain(
+      "{ col: 5, row: 15, toAreaId: 'bodega', toCol: 6, toRow: 5, label: 'Door' },",
+    )
+    expect(notes.join(' ')).toContain('Door')
+  })
+
+  it('adds to the right list, leaving the other alone', () => {
+    const before = SOURCE.split('\n')
+    const { source } = applyEdit(SOURCE, {
+      areaId: 'basin',
+      addExits: [{ col: 5, row: 15, toAreaId: 'bodega', toCol: 6, toRow: 5, label: 'Door' }],
+    })
+    const added = source.split('\n').filter((line) => !before.includes(line))
+    expect(added).toHaveLength(1)
+    expect(added[0]).toContain("label: 'Door'")
+  })
+
+  it('puts a house, its door and its record in with one edit', () => {
+    const { source, notes } = applyEdit(SOURCE, {
+      areaId: 'basin',
+      stamps: [{ stampId: 'townhouse', col: 3, row: 12 }],
+      addExits: [{ col: 5, row: 15, toAreaId: 'bodega', toCol: 6, toRow: 5, label: 'Front door' }],
+    })
+    expect(source).toContain("{ stampId: 'townhouse', col: 3, row: 12 },")
+    expect(source).toContain("label: 'Front door' },")
+    expect(notes.length).toBeGreaterThanOrEqual(2)
+  })
+})

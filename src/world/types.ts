@@ -2,6 +2,7 @@ import type { TileGrid } from '../overworld/tileRenderer'
 import type { NpcArt } from '../overworld/Npc'
 import type { Archetype, SkillTier } from '../engine/types'
 import type { CityId } from '../game/state'
+import type { PlacedStamp } from './stamps'
 
 /**
  * Who a table seats.
@@ -233,6 +234,14 @@ export interface AreaDef {
   exits: ExitDef[]
   /** Which map lies off each side, for walking straight from one into the next. */
   edges?: Partial<Record<Edge, EdgeLink>>
+  /**
+   * Objects bigger than a tile standing on this map — a poker table, a house.
+   *
+   * Their tiles are already written into `map`, so everything that reads the
+   * grid works whether or not this is here; this is what lets the renderer draw
+   * one object instead of a patch of repeated texture.
+   */
+  stamps?: PlacedStamp[]
 }
 
 export interface CityDef {
