@@ -93,7 +93,7 @@ function placeables(area: (typeof AREAS)[string]['area']): Placed[] {
   ]
 }
 
-export function MapEditor({ onClose }: { onClose: () => void }) {
+export function MapEditor({ onClose, nav }: { onClose: () => void; nav?: React.ReactNode }) {
   const areaIds = useMemo(() => Object.keys(AREAS).sort(), [])
   const [areaId, setAreaId] = useState(areaIds[0])
   const located = AREAS[areaId]
@@ -321,7 +321,7 @@ export function MapEditor({ onClose }: { onClose: () => void }) {
   return (
     <div style={page}>
       <header style={bar}>
-        <strong style={{ fontSize: 15 }}>Map editor</strong>
+        {nav ?? <strong style={{ fontSize: 15 }}>Map editor</strong>}
         <select value={areaId} onChange={(e) => setAreaId(e.target.value)} style={control}>
           {areaIds.map((id) => (
             <option key={id} value={id}>

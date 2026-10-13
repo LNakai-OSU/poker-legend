@@ -6,6 +6,7 @@ import { isWalkable } from '../overworld/tileRenderer'
 import { characterProblems, eventProblems, gameWorld } from './contentRules'
 import {
   canonicalCharacter,
+  canonicalEvent,
   characterIdFrom,
   characterShapeProblems,
   describeEvent,
@@ -41,8 +42,15 @@ describe('the content as it stands', () => {
     for (const e of EVENTS) expect(eventProblems(clone(e), e.id, world), e.id).toEqual([])
   })
 
-  it('keeps every character the same when putting its keys in order', () => {
+  it('keeps every character and event the same when putting its keys in order', () => {
     for (const c of Object.values(CHARACTERS)) expect(sameValue(canonicalCharacter(clone(c)), clone(c))).toBe(true)
+    for (const e of EVENTS) expect(sameValue(canonicalEvent(clone(e)), clone(e))).toBe(true)
+  })
+
+  it('writes the fields of an action in the order the file does', () => {
+    const e = canonicalEvent({ ...event('poker-night'), actions: [{ lines: ['Hi.'], speaker: 'marcus', kind: 'dialogue' }] })
+    expect(Object.keys(e.actions[0])).toEqual(['kind', 'speaker', 'lines'])
+    expect(Object.keys(e)).toEqual(['id', 'about', 'trigger', 'conditions', 'actions'])
   })
 })
 
@@ -159,6 +167,19 @@ describe('an event', () => {
     expect(problems).toMatch(/table "nowhere"/)
   })
 
+  it('reports a blank line and everything else wrong at once', () => {
+    const e = { ...fresh(), about: '' }
+    e.actions = [{ kind: 'dialogue', speaker: 'deb', lines: [''] }]
+    const problems = eventProblems(e, null, world).join('\n')
+    expect(problems).toMatch(/lines\[0\] is empty/)
+    expect(problems).toMatch(/say what this event is for/)
+  })
+
+  it('still answers when the shape is too wrong to check the rules', () => {
+    const broken = { ...fresh(), trigger: null } as unknown as GameEvent
+    expect(eventProblems(broken, null, world).join('\n')).toMatch(/is not a trigger/)
+  })
+
   it('may not have dialogue with no lines', () => {
     const e = fresh()
     e.actions = [{ kind: 'dialogue', speaker: 'deb', lines: [] }]
@@ -218,12 +239,14 @@ describe('reading an event as a script', () => {
   }
 
   it('reads the first poker night the way you would tell it', () => {
-    const script = describeEvent(event('poker-night'), names)
+    const script = describeEvent(event('poker-night'), names).map((line) => (line.more ? `    ${line.text}` : line.text))
     expect(script[0]).toBe(
       'When you talk to Marcus, if you have not won the first poker night yet and it is afternoon, evening or night (once):',
     )
-    expect(script[1]).toBe('Marcus says “Marcus: You made it! Sit down, sit down.” (+2 more)')
-    expect(script[2]).toBe('then the poker night starts')
+    expect(script[1]).toBe('Marcus says “You made it! Sit down, sit down.”')
+    expect(script[2]).toBe('    “Everything on the table, winner takes the lot. That is the rule.”')
+    expect(script[3]).toBe('    “You in?”')
+    expect(script[4]).toBe('then the poker night starts')
   })
 })
 

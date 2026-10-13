@@ -3,7 +3,7 @@ import { EVENTS, eventsSharing, type GameEvent } from '../world/events'
 import { AREAS, CITIES, LESSONS, TABLES, allShopItems } from '../world/content'
 import { isWalkable } from '../overworld/tileRenderer'
 import type { AreaDef, TableDef } from '../world/types'
-import { ENDS_EVENT, TABLE_LINE_KINDS, characterShapeProblems, eventShapeProblems } from './contentModel'
+import { ENDS_EVENT, characterShapeProblems, eventShapeProblems } from './contentModel'
 
 /**
  * The content rules, applied to a character or event that is not in the game yet.
@@ -64,8 +64,25 @@ export function poisOf(world: World): Map<string, { name: string; areaId: string
  * now, and is consulted with this one swapped in.
  */
 export function characterProblems(id: string, character: CharacterDef, world: World): string[] {
-  const shape = characterShapeProblems(character, id)
-  if (shape.length > 0) return shape
+  return withShape(characterShapeProblems(character, id), () => characterRules(id, character, world))
+}
+
+/**
+ * Shape problems first, then the content rules — both, so a blank line does not
+ * hide the fact that the event also has no description. The rules assume the
+ * shape is right; when it is so wrong that they cannot run, the shape problems
+ * are what there is to say.
+ */
+function withShape(shape: string[], rules: () => string[]): string[] {
+  if (shape.length === 0) return rules()
+  try {
+    return [...shape, ...rules().filter((problem) => !shape.includes(problem))]
+  } catch {
+    return shape
+  }
+}
+
+function characterRules(id: string, character: CharacterDef, world: World): string[] {
   const problems: string[] = []
   const name = character.name || id
   const everyone = { ...world.characters, [id]: character }
@@ -165,8 +182,10 @@ export function conditionsDistinguish(a: GameEvent, b: GameEvent): boolean {
  * is not compared against its own old self.
  */
 export function eventProblems(event: GameEvent, originalId: string | null, world: World): string[] {
-  const shape = eventShapeProblems(event, event.id || 'event')
-  if (shape.length > 0) return shape
+  return withShape(eventShapeProblems(event, event.id || 'event'), () => eventRules(event, originalId, world))
+}
+
+function eventRules(event: GameEvent, originalId: string | null, world: World): string[] {
   const problems: string[] = []
   const others = world.events.filter((other) => other.id !== originalId)
 
@@ -270,9 +289,4 @@ export function eventProblems(event: GameEvent, originalId: string | null, world
     if (event.repeatable) problems.push('the first poker night cannot be played again')
   }
   return problems
-}
-
-/** Lines a character would fall back to the defaults for, for the editor to say so. */
-export function missingLineKinds(character: CharacterDef): string[] {
-  return TABLE_LINE_KINDS.filter((kind) => !character.lines[kind]?.length)
 }

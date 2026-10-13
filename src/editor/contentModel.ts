@@ -249,8 +249,45 @@ export function canonicalCharacter(character: CharacterDef): CharacterDef {
   )
 }
 
+/** The order the fields of a trigger, condition or action are written in: kind first, then what it names. */
+const PART_ORDER = [
+  'kind',
+  'speaker',
+  'lines',
+  'characterId',
+  'poiId',
+  'flag',
+  'set',
+  'period',
+  'day',
+  'amount',
+  'itemId',
+  'lessonId',
+  'eventId',
+  'done',
+  'areaId',
+  'col',
+  'row',
+  'ms',
+  'cityId',
+  'tableId',
+  'steps',
+  'days',
+  'sound',
+  'to',
+]
+
+/** An event with its keys, and its trigger's, conditions' and actions' keys, in the file's order. */
 export function canonicalEvent(event: GameEvent): GameEvent {
-  return ordered(event, ['id', 'about', 'trigger', 'conditions', 'repeatable', 'actions'] satisfies Array<keyof GameEvent>)
+  return ordered(
+    {
+      ...event,
+      trigger: ordered(event.trigger, PART_ORDER),
+      conditions: event.conditions?.map((c) => ordered(c, PART_ORDER)),
+      actions: event.actions.map((a) => ordered(a, PART_ORDER)),
+    },
+    ['id', 'about', 'trigger', 'conditions', 'repeatable', 'actions'] satisfies Array<keyof GameEvent>,
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -624,14 +661,19 @@ export function describeCondition(condition: EventCondition, names: Names): stri
   }
 }
 
+/** A line without its "Marcus: " label, when the label is just the speaker's name again. */
+function spoken(line: string, who: string): string {
+  return line.startsWith(`${who}: `) ? line.slice(who.length + 2) : line
+}
+
 /** One action as a sentence: "Marcus says “…”", "the poker night starts". */
 export function describeAction(action: EventAction, names: Names): string {
   switch (action.kind) {
     case 'dialogue': {
-      const who = action.speaker ? names.character(action.speaker) : 'A voice'
-      const first = action.lines[0] ?? ''
+      const who = action.speaker ? names.character(action.speaker) : 'a caption'
+      const first = spoken(action.lines[0] ?? '', who)
       const more = action.lines.length > 1 ? ` (+${action.lines.length - 1} more)` : ''
-      return `${who} says “${first}”${more}`
+      return action.speaker ? `${who} says “${first}”${more}` : `${who} reads “${first}”${more}`
     }
     case 'moveNpc':
       return `${names.character(action.characterId)} walks to (${action.col},${action.row})`
@@ -668,17 +710,34 @@ export function describeAction(action: EventAction, names: Names): string {
   }
 }
 
-/** The whole event read as a little script, one line per beat. */
-export function describeEvent(event: GameEvent, names: Names): string[] {
+/** One row of an event read aloud. */
+export interface ScriptLine {
+  text: string
+  /** Which action it belongs to, from 1; 0 for the opening "When…" line. */
+  step: number
+  /** A further line of the same conversation. */
+  more?: boolean
+}
+
+/** The whole event read as a little script, one row per beat and per line spoken. */
+export function describeEvent(event: GameEvent, names: Names): ScriptLine[] {
   const conditions = (event.conditions ?? []).map((c) => describeCondition(c, names))
   const opening =
     describeTrigger(event.trigger, names) +
     (conditions.length > 0 ? `, if ${conditions.join(' and ')}` : '') +
     (event.repeatable ? ' (every time)' : ' (once)') +
     ':'
-  const beats = event.actions.map((action, i) => {
-    const sentence = describeAction(action, names)
-    return `${i === 0 ? '' : 'then '}${sentence}`
+  const beats = event.actions.flatMap((action, i): ScriptLine[] => {
+    const then = i === 0 ? '' : 'then '
+    const step = i + 1
+    if (action.kind !== 'dialogue' || action.lines.length <= 1) return [{ text: `${then}${describeAction(action, names)}`, step }]
+    // A conversation reads better as the lines themselves than as "(+2 more)".
+    const who = action.speaker ? names.character(action.speaker) : 'a caption'
+    const [first, ...rest] = action.lines
+    return [
+      { text: `${then}${describeAction({ ...action, lines: [first] }, names)}`, step },
+      ...rest.map((line) => ({ text: `“${spoken(line, who)}”`, step, more: true })),
+    ]
   })
-  return [opening, ...beats]
+  return [{ text: opening, step: 0 }, ...beats]
 }

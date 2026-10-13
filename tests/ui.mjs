@@ -1567,6 +1567,334 @@ await test('a house brings its own front door, which has to lead somewhere', asy
   await page.close()
 })
 
+/**
+ * The characters and events tabs.
+ *
+ * Saving writes to the real source files, so these never save. Belt and braces:
+ * every page here has the save endpoints routed to a dead end, and each test
+ * checks nothing tried to reach them.
+ */
+async function editorPage(hash, device) {
+  const page = await newPage(null, device)
+  page.__saveAttempts = []
+  await page.route(/\/__editor\/(character|event|save)/, (route) => {
+    page.__saveAttempts.push(route.request().url())
+    return route.abort()
+  })
+  await page.goto(`${BASE}${hash}`)
+  return page
+}
+
+/** The problems shown in whichever of the two tabs is open. */
+const problemsOf = async (page) =>
+  (await page.locator('[data-testid="character-problems"]:visible, [data-testid="event-problems"]:visible').innerText()).trim()
+const problemCount = async (page) =>
+  (
+    await page
+      .locator('[data-testid="character-problem-count"]:visible, [data-testid="event-problem-count"]:visible')
+      .innerText()
+  ).trim()
+
+function assertNoSaving(page) {
+  assert(page.__saveAttempts.length === 0, `a test tried to save: ${page.__saveAttempts[0]}`)
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+}
+
+await test('the editor has tabs for maps, characters and events', async () => {
+  const page = await editorPage('#editor')
+  await page.waitForSelector('[data-testid="editor-grid"]')
+
+  await page.locator('[data-testid="tab-characters"]:visible').click()
+  await page.waitForSelector('[data-testid="character-editor"]')
+  assert((await page.evaluate(() => location.hash)).startsWith('#editor/characters'), 'the tab is not in the hash')
+  assert(
+    (await page.locator('[data-testid="character-list"] .ed-item').count()) >= 30,
+    'the characters tab does not list everybody',
+  )
+
+  await page.locator('[data-testid="tab-events"]:visible').click()
+  await page.waitForSelector('[data-testid="event-editor"]')
+  const events = await page.locator('[data-testid="event-list"] .ed-item').allInnerTexts()
+  assert(events.some((text) => text.includes('poker-night') && text.includes('Friday')), 'events are listed without what they are for')
+
+  await page.locator('[data-testid="tab-maps"]:visible').click()
+  await page.waitForSelector('[data-testid="editor-grid"]')
+  assertNoSaving(page)
+  await page.close()
+})
+
+await test('switching tabs keeps unsaved edits and who was selected', async () => {
+  const page = await editorPage('#editor/characters/deb')
+  await page.waitForSelector('[data-testid="character-detail"][data-character="deb"]')
+  await page.locator('[data-testid="character-style"]').fill('Has seen it all twice.')
+
+  await page.locator('[data-testid="character-editor"] [data-testid="tab-events"]').click()
+  await page.waitForSelector('[data-testid="event-editor"]')
+  await page.locator('[data-testid="event-marcus-reminds-you"]').click()
+  await page.waitForSelector('[data-testid="event-detail"][data-event="marcus-reminds-you"]')
+  await page.locator('[data-testid="event-about"]').fill('Marcus, out on the street before the game.')
+
+  await page.locator('[data-testid="event-editor"] [data-testid="tab-maps"]').click()
+  await page.waitForSelector('[data-testid="editor-grid"]')
+  await page.locator('[data-testid="tab-characters"]:visible').click()
+  await page.waitForSelector('[data-testid="character-detail"][data-character="deb"]')
+  assert(
+    (await page.inputValue('[data-testid="character-style"]')) === 'Has seen it all twice.',
+    'going to another tab threw away the edit to Deb',
+  )
+  await page.locator('[data-testid="tab-events"]:visible').click()
+  await page.waitForSelector('[data-testid="event-detail"][data-event="marcus-reminds-you"]')
+  assert(
+    (await page.inputValue('[data-testid="event-about"]')) === 'Marcus, out on the street before the game.',
+    'going to another tab threw away the edit to the event',
+  )
+  assertNoSaving(page)
+  await page.close()
+})
+
+await test('the characters tab finds a person and edits what they say', async () => {
+  const page = await editorPage('#editor/characters')
+  await page.waitForSelector('[data-testid="character-editor"]')
+
+  await page.locator('[data-testid="character-search"]').fill('deb')
+  await page.waitForTimeout(100)
+  const found = await page.locator('[data-testid="character-list"] .ed-item').allInnerTexts()
+  assert(found.some((text) => text.includes('Deb')), `searching for deb found ${found.join(' / ')}`)
+  assert(!found.some((text) => text.includes('Gus')), 'searching did not narrow the list')
+
+  await page.locator('[data-testid="character-deb"]').click()
+  await page.waitForSelector('[data-testid="character-detail"][data-character="deb"]')
+  assert((await page.evaluate(() => location.hash)) === '#editor/characters/deb', 'selecting somebody is not in the hash')
+  assert((await page.inputValue('[data-testid="character-name"]')) === 'Deb', 'the name field is not Deb')
+  const face = await page.locator('[data-testid="character-avatar"]').getAttribute('src')
+  assert(face?.startsWith('data:image/png'), 'no face drawn for Deb')
+
+  // Nothing changed yet: nothing to save.
+  assert(await page.locator('[data-testid="save-character"]').isDisabled(), 'Save is offered before anything changed')
+  assert((await problemCount(page)) === 'no problems', `Deb already has problems: ${await problemCount(page)}`)
+
+  // Change a line, add one, and see both take.
+  await page.locator('[data-testid="lines-greeting-0"]').fill('Deb: You are new. Sit.')
+  await page.locator('[data-testid="lines-call-add"]').click()
+  assert(/empty/.test(await problemsOf(page)), 'a blank line is not called out')
+  assert(await page.locator('[data-testid="save-character"]').isDisabled(), 'Save is offered with a blank line in it')
+  await page.locator('[data-testid="lines-call-1"]').fill('Deb: Fine. Show me.')
+  assert((await problemCount(page)) === 'no problems', `problems after filling the line: ${await problemsOf(page)}`)
+  assert(!(await page.locator('[data-testid="save-character"]').isDisabled()), 'Save is not offered after an edit')
+  assert(
+    (await page.locator('[data-testid="character-deb"] .ed-dot').count()) === 1,
+    'the list does not mark Deb as changed',
+  )
+
+  // Looking at somebody else keeps the edit; coming back finds it still there.
+  await page.locator('[data-testid="character-search"]').fill('')
+  await page.locator('[data-testid="character-gus"]').click()
+  await page.waitForSelector('[data-testid="character-detail"][data-character="gus"]')
+  await page.locator('[data-testid="character-deb"]').click()
+  await page.waitForSelector('[data-testid="character-detail"][data-character="deb"]')
+  assert(
+    (await page.inputValue('[data-testid="lines-greeting-0"]')) === 'Deb: You are new. Sit.',
+    'switching characters threw the edit away',
+  )
+
+  await page.locator('[data-testid="revert-character"]').click()
+  assert(
+    (await page.inputValue('[data-testid="lines-greeting-0"]')) === 'Deb: You are new. That is fine. Everyone is, once.',
+    'revert did not restore the line',
+  )
+  assert(await page.locator('[data-testid="save-character"]').isDisabled(), 'Save is still offered after reverting')
+  assertNoSaving(page)
+  await page.close()
+})
+
+await test('the characters tab says when somebody is scheduled somewhere impossible', async () => {
+  const page = await editorPage('#editor/characters/deb')
+  await page.waitForSelector('[data-testid="character-detail"][data-character="deb"]')
+
+  // (0,0) on Riverbend's street is a tree.
+  await page.locator('[data-testid="schedule-0-col"]').fill('0')
+  await page.locator('[data-testid="schedule-0-row"]').fill('0')
+  assert(/Deb stands in a wall in Riverbend Landing \(0,0\) in the morning/.test(await problemsOf(page)), `no wall problem: ${await problemsOf(page)}`)
+  assert(await page.locator('[data-testid="save-character"]').isDisabled(), 'Save is offered with Deb inside a tree')
+
+  // Cass the sponsor stands at (4,7).
+  await page.locator('[data-testid="schedule-0-col"]').fill('4')
+  await page.locator('[data-testid="schedule-0-row"]').fill('7')
+  assert(/Deb stands on Cass/.test(await problemsOf(page)), `no fixture problem: ${await problemsOf(page)}`)
+
+  // Two entries for the same hour.
+  await page.selectOption('[data-testid="schedule-1-period"]', 'morning')
+  assert(/two places at once in the morning/.test(await problemsOf(page)), `no clash problem: ${await problemsOf(page)}`)
+  assert(/^\d+ problems?$/.test(await problemCount(page)), `the count does not say: ${await problemCount(page)}`)
+
+  // Adding an hour adds a card, and gives it somewhere to be.
+  const before = await page.locator('[data-testid="schedule"] .ed-card').count()
+  await page.locator('[data-testid="schedule-add"]').click()
+  assert((await page.locator('[data-testid="schedule"] .ed-card').count()) === before + 1, 'no hour was added')
+  await page.locator(`[data-testid="schedule-${before}-remove"]`).click()
+  assert((await page.locator('[data-testid="schedule"] .ed-card').count()) === before, 'the hour was not removed')
+
+  // Taking Marcus out of town strands an event that waits to talk to him.
+  await page.goto(`${BASE}#editor/characters/marcus`)
+  await page.waitForSelector('[data-testid="character-detail"][data-character="marcus"]')
+  await page.locator('[data-testid="character-in-town"]').uncheck()
+  assert(/"poker-night" waits to talk to Marcus/.test(await problemsOf(page)), `no stranded event: ${await problemsOf(page)}`)
+  assertNoSaving(page)
+  await page.close()
+})
+
+await test('the characters tab starts somebody new', async () => {
+  const page = await editorPage('#editor/characters')
+  await page.waitForSelector('[data-testid="character-editor"]')
+  await page.locator('[data-testid="new-character"]').click()
+  await page.locator('[data-testid="new-character-name"]').fill('Wren Abernathy')
+  await page.locator('[data-testid="new-character-create"]').click()
+  await page.waitForSelector('[data-testid="character-detail"][data-character="wrenAbernathy"]')
+  assert((await page.inputValue('[data-testid="character-name"]')) === 'Wren Abernathy', 'the new person has no name')
+  assert((await page.locator('[data-testid="save-character"]').innerText()) === 'Create', 'a new person is saved, not created')
+
+  // Sitting at a table means having a style; going into town means being somewhere.
+  await page.locator('[data-testid="character-plays"]').check()
+  assert(/no line under their name/.test(await problemsOf(page)), `a player with no style passed: ${await problemsOf(page)}`)
+  await page.locator('[data-testid="character-style"]').fill('Counts outs on her fingers.')
+  await page.locator('[data-testid="character-in-town"]').check()
+  assert((await page.locator('[data-testid="schedule"] .ed-card').count()) === 1, 'going into town gave her no hours')
+  await page.locator('[data-testid="schedule-0-col"]').fill('0')
+  await page.locator('[data-testid="schedule-0-row"]').fill('0')
+  assert(/in a wall/.test(await problemsOf(page)), 'a new person in a wall passed')
+  assertNoSaving(page)
+  await page.close()
+})
+
+await test('the events tab reads an event as a script and reorders it', async () => {
+  const page = await editorPage('#editor/events/poker-night')
+  await page.waitForSelector('[data-testid="event-detail"][data-event="poker-night"]')
+
+  const script = await page.locator('[data-testid="script"]').innerText()
+  assert(/When you talk to Marcus/.test(script), `the script does not say when: ${script}`)
+  assert(/Marcus says “You made it! Sit down, sit down\.”/.test(script), `the script does not say who says what: ${script}`)
+  assert(/then the poker night starts/.test(script), `the script does not end at the table: ${script}`)
+  assert((await problemCount(page)) === 'no problems', `poker-night already has problems: ${await problemsOf(page)}`)
+
+  // Moving the table first leaves Marcus talking to nobody.
+  await page.locator('[data-testid="action-0-down"]').click()
+  const kinds = await page.locator('[data-testid^="action-"][data-testid$="-kind"]').evaluateAll((els) => els.map((el) => el.value))
+  assert(kinds.join(',') === 'startPokerNight,dialogue', `the steps did not move: ${kinds}`)
+  assert(/step 2 never happens/.test(await problemsOf(page)), `no warning about the dead step: ${await problemsOf(page)}`)
+  assert(await page.locator('[data-testid="save-event"]').isDisabled(), 'Save is offered for a broken event')
+
+  await page.locator('[data-testid="action-1-up"]').click()
+  assert((await problemCount(page)) === 'no problems', 'moving it back did not put things right')
+
+  // Dialogue with no lines is a problem; so is a table that does not exist.
+  for (let i = 2; i >= 0; i--) await page.locator(`[data-testid="action-0-lines-remove-${i}"]`).click()
+  assert(/has no lines/.test(await problemsOf(page)), `empty dialogue passed: ${await problemsOf(page)}`)
+  await page.locator('[data-testid="revert-event"]').click()
+
+  // The first poker night may not become repeatable.
+  await page.locator('[data-testid="event-repeatable"]').check()
+  assert(/cannot be played again/.test(await problemsOf(page)), 'a repeatable first night passed')
+  assertNoSaving(page)
+  await page.close()
+})
+
+await test('the events tab catches two events fighting over one moment', async () => {
+  const page = await editorPage('#editor/events/marcus-reminds-you')
+  await page.waitForSelector('[data-testid="event-detail"][data-event="marcus-reminds-you"]')
+  assert((await problemCount(page)) === 'no problems', 'marcus-reminds-you already has problems')
+
+  // Morning is what keeps it apart from the poker night; the afternoon overlaps.
+  await page.locator('[data-testid="condition-1-afternoon"]').click()
+  assert(/"poker-night" share a trigger/.test(await problemsOf(page)), `no clash reported: ${await problemsOf(page)}`)
+  await page.locator('[data-testid="condition-1-afternoon"]').click()
+  assert((await problemCount(page)) === 'no problems', 'taking the afternoon back out did not clear it')
+
+  // Removing the conditions altogether is a clash too.
+  await page.locator('[data-testid="condition-1-remove"]').click()
+  await page.locator('[data-testid="condition-0-remove"]').click()
+  assert(/share a trigger/.test(await problemsOf(page)), 'an unconditional rival passed')
+  assertNoSaving(page)
+  await page.close()
+})
+
+await test('the events tab builds a new event from ids that exist', async () => {
+  const page = await editorPage('#editor/events')
+  await page.waitForSelector('[data-testid="event-editor"]')
+  await page.locator('[data-testid="new-event"]').click()
+  await page.waitForSelector('[data-testid="event-detail"][data-event="new-event"]')
+  assert(/say what this event is for/.test(await problemsOf(page)), 'an undescribed event passed')
+
+  await page.locator('[data-testid="event-id"]').fill('dana-at-the-laundromat')
+  await page.locator('[data-testid="event-about"]').fill('Walking into the laundromat finds Dana folding.')
+  await page.selectOption('[data-testid="trigger-kind"]', 'enterArea')
+  const areas = await page.locator('[data-testid="trigger-area"] option').evaluateAll((els) => els.map((el) => el.value))
+  assert(areas.includes('laundromat') && areas.length > 20, `the area list is not the real areas: ${areas.length}`)
+  await page.selectOption('[data-testid="trigger-area"]', 'laundromat')
+
+  await page.selectOption('[data-testid="action-0-speaker"]', 'dana')
+  await page.locator('[data-testid="action-0-lines-0"]').fill('Dana: Dryer four. Now you know.')
+
+  // A table, picked from the tables there are.
+  await page.selectOption('[data-testid="action-add"]', 'unlockTable')
+  const tables = await page.locator('[data-testid="action-1-table"] option').evaluateAll((els) => els.map((el) => el.value))
+  assert(tables.includes('riverbend-mid'), `the table list is not the real tables: ${tables}`)
+  await page.selectOption('[data-testid="action-1-table"]', 'riverbend-mid')
+
+  // Taking money away is a negative amount, typed a key at a time.
+  await page.selectOption('[data-testid="action-add"]', 'giveCash')
+  await page.locator('[data-testid="action-2-amount"]').fill('')
+  await page.locator('[data-testid="action-2-amount"]').pressSequentially('-20')
+  assert((await page.inputValue('[data-testid="action-2-amount"]')) === '-20', 'the minus sign was lost while typing')
+
+  const script = await page.locator('[data-testid="script"]').innerText()
+  assert(/^When you walk into Basin Street Laundromat \(once\):/.test(script), `the script does not read: ${script}`)
+  assert(/then you hand over \$20/.test(script), `the script does not take the money: ${script}`)
+  assert(/Dana says “Dryer four\. Now you know\.”/.test(script), `the script lost the dialogue: ${script}`)
+  assert(/then Riverboat 2\/5 lets you sit down/.test(script), `the script lost the table: ${script}`)
+  assert((await problemCount(page)) === 'no problems', `a good new event has problems: ${await problemsOf(page)}`)
+  assert(!(await page.locator('[data-testid="save-event"]').isDisabled()), 'Create is not offered for a good event')
+  assertNoSaving(page)
+  await page.close()
+})
+
+await test('the characters and events tabs fit a phone', async () => {
+  const offTheSide = (page) =>
+    page.evaluate(() =>
+      [...document.querySelectorAll('.ed-page *')]
+        .filter((el) => el.getBoundingClientRect().right > window.innerWidth + 1)
+        .map((el) => el.getAttribute('data-testid') ?? el.className)
+        .slice(0, 3),
+    )
+  for (const hash of ['#editor/characters/vance', '#editor/events/poker-night']) {
+    const page = await editorPage(hash, devices['iPhone 13'])
+    await page.waitForSelector('.ed-detail')
+    await page.waitForTimeout(300)
+    let wide = await offTheSide(page)
+    assert(wide.length === 0, `${hash} runs off the side of a phone: ${wide.join(', ')}`)
+    if (hash.includes('events')) {
+      // A long first line makes a long one-line summary of the step, which once
+      // pushed the whole card past the edge of the screen.
+      await page
+        .locator('[data-testid="action-0-lines-0"]')
+        .fill('Marcus: You made it! Sit down, sit down, there is a chair by the window and the coffee is still hot.')
+      wide = await offTheSide(page)
+      assert(wide.length === 0, `a long line pushes ${hash} off the side of a phone: ${wide.join(', ')}`)
+    }
+    // The selected entry is in view in the list, not somewhere below it.
+    const inView = await page.evaluate(() => {
+      const list = document.querySelector('.ed-list-items')
+      const item = list?.querySelector('[aria-selected="true"]')
+      if (!list || !item) return false
+      const a = list.getBoundingClientRect()
+      const b = item.getBoundingClientRect()
+      return b.top >= a.top - 1 && b.bottom <= a.bottom + 1
+    })
+    assert(inView, `${hash}: the selected entry is scrolled out of the list`)
+    assertNoSaving(page)
+    await page.close()
+  }
+})
+
 await browser.close()
 
 const failed = results.filter((r) => !r.ok)

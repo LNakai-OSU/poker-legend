@@ -234,6 +234,15 @@ edge symmetry both ways, the ladders climbing, every id resolving, nobody
 standing in a wall, no two events fighting over a moment. They have repeatedly
 caught real mistakes before the game was ever launched.
 
+**The editor.** `npm run dev`, then `localhost:5173/#editor`. Three tabs — Maps,
+Characters, Events — show the content above and write it straight back to
+`cities.ts`, `characters.ts` and `events.ts`. Each tab checks the content rules
+as you type, and the save endpoint runs them again and refuses anything a test
+would fail. A save rewrites only the text you changed: comments and hand layout
+elsewhere in a character or event survive, and an unchanged save leaves the file
+byte for byte as it was. Git is the undo. Code changes — a new kind of trigger,
+a new rule — still go through [REQUESTS.md](REQUESTS.md).
+
 **Commands:**
 
 ```

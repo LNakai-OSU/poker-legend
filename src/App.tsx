@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { GameApp } from './game/GameApp'
-import { MapEditor } from './editor/MapEditor'
+import { Editor } from './editor/Editor'
 
 /**
- * The game, or the map editor at `#editor`.
+ * The game, or the editor at `#editor` (maps; `#editor/characters`, `#editor/events`).
  *
  * A hash rather than a button in the game: the editor is a tool for building
  * this thing, not a feature of it, and a player should never find their way into
@@ -18,8 +18,8 @@ function App() {
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
 
-  if (hash === '#editor') {
-    return <MapEditor onClose={() => (window.location.hash = '')} />
+  if (hash === '#editor' || hash.startsWith('#editor/')) {
+    return <Editor hash={hash} onClose={() => (window.location.hash = '')} />
   }
   return <GameApp />
 }
