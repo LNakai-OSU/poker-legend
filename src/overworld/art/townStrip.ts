@@ -100,6 +100,7 @@ const casinoMesa: StampArt = {
     tube(px, 1, 34, 1, 26, CYAN_NEON)
     tube(px, w - 2, 34, 1, 26, CYAN_NEON)
     // The marquee: gold edges, two rows of chasing bulbs, CASINO on white.
+    px(0, 58, w, 16, '#1a1024')
     px(4, 58, w - 8, 16, '#2a1a08')
     px(5, 59, w - 10, 14, '#f4f0e4')
     px(5, 59, w - 10, 1, GOLD)
@@ -404,7 +405,8 @@ const towerLumina: StampArt = {
   frames: 2,
   draw: (px, c) => {
     const { w, h, frame } = c
-    // Spire and crown.
+    // A roof terrace round the crown, then the spire and the crown itself.
+    flatRoof(px, -1, 0, w + 2, 5, { hi: MARBLE_WALL.hi, base: MARBLE_WALL.base, lo: MARBLE_WALL.lo }, '#8a8070')
     px(w / 2 - 1, -12, 2, 12, GOLD_DARK)
     px(w / 2 - 1, -12, 1, 12, GOLD)
     px(w / 2 - 2, -13, 4, 2, frame ? '#ff4a4a' : '#8a1a1a')

@@ -162,7 +162,8 @@ const supper: StampArt = {
   frames: 2,
   draw: (px, c) => {
     const { w, h, frame } = c
-    // A stepped deco crown with a sunburst.
+    // The flat roof behind the crown, then a stepped deco crown with a sunburst.
+    flatRoof(px, -1, 0, w + 2, 8, { hi: LIMESTONE.hi, base: LIMESTONE.base, lo: LIMESTONE.lo }, '#4a4a54')
     px(-1, 6, w + 2, 10, LIMESTONE.line)
     px(0, 7, w, 9, LIMESTONE.base)
     px(16, 0, w - 32, 8, LIMESTONE.line)

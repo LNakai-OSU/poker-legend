@@ -194,7 +194,7 @@ T##############################T
 T##############################T
 T##############################T
 T##D####D#####D#####D####D#####T
-T++oo++++++++++++++++++++++oo++T
+T++++oo++++++++++++++++++++oo++T
 T++++++++++++++++++++++++++++++T
 T++++++++++++++++++++++++++++++T
 ----++++++++++++++++++++++++----
@@ -1027,7 +1027,7 @@ const crescentHarbor: CityDef = {
       'ch-street',
       'Harbor Boulevard',
       CRESCENT_HARBOR_TOWN,
-      { col: 15, row: 4 },
+      { col: 15, row: 6 },
       '#121020',
       [
         {
@@ -1413,7 +1413,7 @@ const neonMesa: CityDef = {
       'nm-street',
       'The Mesa Strip',
       NEON_MESA_TOWN,
-      { col: 15, row: 7 },
+      { col: 15, row: 9 },
       '#1a1020',
       [
         {
@@ -1612,7 +1612,7 @@ const portoLumina: CityDef = {
       'pl-street',
       'Lumina Waterfront',
       PORTO_LUMINA_TOWN,
-      { col: 15, row: 7 },
+      { col: 15, row: 9 },
       '#141020',
       [
         {
