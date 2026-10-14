@@ -2,6 +2,7 @@ import type { AvatarLook } from '../game/avatars'
 import type { Archetype, SkillTier } from '../engine/types'
 import type { OpponentDef, TableDef } from './types'
 import type { NpcArt } from '../overworld/Npc'
+import type { NpcRole, PersonLook } from '../overworld/characterArt'
 import { TIME_PERIODS, type TimePeriod } from '../game/time'
 
 /**
@@ -77,6 +78,16 @@ export interface OverworldPresence {
   art?: NpcArt
   /** Their name plate's colour on the map. */
   color?: number
+  /**
+   * A uniform, if they wear one in the street. Without it they are in their own
+   * clothes: their `look`'s shirt, the same person you sit across from.
+   */
+  role?: NpcRole
+  /**
+   * What the street shows that a table portrait does not: trousers, shoes, a
+   * skirt. Laid over `look`; generated from their id where left out.
+   */
+  look?: Partial<PersonLook>
   /** What they say when you have nothing more specific for the hour. */
   lines: string[]
   /** Where they are through the day. An empty schedule means they are nowhere. */

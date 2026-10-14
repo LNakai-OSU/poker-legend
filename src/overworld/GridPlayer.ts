@@ -1,6 +1,7 @@
 import { Sprite } from 'pixi.js'
 import { TILE_SIZE, isWalkable, type TileGrid } from './tileRenderer'
-import { characterTextures, paletteFromColor, type CharacterPalette, type Facing } from './sprites'
+import { personFrames, type Facing, type Figure, type PersonFrames } from './characterArt'
+import { HERO_FIGURE } from './casting'
 
 export type Direction = Facing
 
@@ -11,8 +12,13 @@ export const DELTAS: Record<Direction, [number, number]> = {
   right: [1, 0],
 }
 
-/** Distance walked, in pixels, before the sprite swaps to the other step frame. */
-const STRIDE_PX = 16
+export interface GridPlayerOptions {
+  /** Who is walking. The hero unless said otherwise. */
+  figure?: Figure
+  speedPxPerSec?: number
+}
+
+const between = (low: number, high: number) => low + Math.random() * (high - low)
 
 /** LeafGreen-style grid-locked movement: input only lands between tiles, position interpolates smoothly. */
 export class GridPlayer {
@@ -24,33 +30,47 @@ export class GridPlayer {
   private targetRow: number
   moving = false
   facing: Direction = 'down'
+  /** Anchored at the feet, so a scene can draw whoever is further down the screen in front. */
   sprite: Sprite
   private speedPxPerSec: number
-  private textures: Record<Facing, ReturnType<typeof characterTextures>[Facing]>
-  private walkedPx = 0
+  private frames: PersonFrames
+  /** Steps taken, so each one leads with the other foot. */
+  private strides = 0
+  private untilBlink = between(1500, 4000)
+  private blinkLeft = 0
 
-  constructor(
-    startCol: number,
-    startRow: number,
-    color = 0xf2c14e,
-    speedPxPerSec = 220,
-    palette?: CharacterPalette,
-  ) {
+  constructor(startCol: number, startRow: number, options: GridPlayerOptions = {}) {
     this.col = startCol
     this.row = startRow
     this.targetCol = startCol
     this.targetRow = startRow
     this.pixelX = startCol * TILE_SIZE
     this.pixelY = startRow * TILE_SIZE
-    this.speedPxPerSec = speedPxPerSec
-    this.textures = characterTextures(palette ?? paletteFromColor(color))
-    this.sprite = new Sprite(this.textures.down[0])
-    this.sprite.position.set(this.pixelX, this.pixelY)
+    this.speedPxPerSec = options.speedPxPerSec ?? 220
+    this.frames = personFrames(options.figure ?? HERO_FIGURE)
+    this.sprite = new Sprite(this.frames.walk.down[0])
+    this.sprite.anchor.set(0, 1)
+    this.place()
   }
 
+  private place() {
+    this.sprite.position.set(this.pixelX, this.pixelY + TILE_SIZE)
+    this.sprite.zIndex = this.sprite.y
+  }
+
+  /**
+   * The LeafGreen walk: the first half of every step is a stride, the second
+   * half standing, and each step leads with the other foot — stand, left,
+   * stand, right.
+   */
   private refreshFrame() {
-    const frame = this.moving && Math.floor(this.walkedPx / STRIDE_PX) % 2 === 1 ? 1 : 0
-    this.sprite.texture = this.textures[this.facing][frame]
+    let frame: 0 | 1 | 2 = 0
+    if (this.moving) {
+      const remaining = Math.hypot(this.targetCol * TILE_SIZE - this.pixelX, this.targetRow * TILE_SIZE - this.pixelY)
+      if (remaining > TILE_SIZE / 2) frame = this.strides % 2 === 1 ? 1 : 2
+    }
+    this.sprite.texture =
+      frame === 0 && this.blinkLeft > 0 ? this.frames.blink[this.facing] : this.frames.walk[this.facing][frame]
   }
 
   /** Turns on the spot without stepping, for facing a door or a person. */
@@ -76,9 +96,18 @@ export class GridPlayer {
     this.targetCol = nextCol
     this.targetRow = nextRow
     this.moving = true
+    this.strides++
   }
 
   update(deltaMs: number) {
+    if (this.blinkLeft > 0) {
+      this.blinkLeft -= deltaMs
+      if (this.blinkLeft <= 0) this.untilBlink = between(2500, 6000)
+    } else if (!this.moving) {
+      this.untilBlink -= deltaMs
+      if (this.untilBlink <= 0) this.blinkLeft = 140
+    }
+
     if (!this.moving) {
       this.refreshFrame()
       return
@@ -99,9 +128,8 @@ export class GridPlayer {
     } else {
       this.pixelX += (dx / dist) * step
       this.pixelY += (dy / dist) * step
-      this.walkedPx += step
     }
-    this.sprite.position.set(this.pixelX, this.pixelY)
+    this.place()
     this.refreshFrame()
   }
 

@@ -7,8 +7,9 @@ import type { PoiAction, PoiDef } from '../world/types'
 import type { NpcArt } from './Npc'
 import { useAmbientMusic } from '../audio/SoundToggle'
 import { PERIOD_LABEL, PERIOD_LIGHT } from '../game/time'
-import { charactersIn } from '../world/characters'
+import { CHARACTERS, charactersIn } from '../world/characters'
 import { EVENTS, eventFor, type GameEvent } from '../world/events'
+import { artForPoi, figureForCharacter, figuresForPois } from './casting'
 
 interface CitySceneProps {
   state: GameState
@@ -49,24 +50,43 @@ export function CityScene({
   const landing =
     entryTile && isWalkable(area.map, entryTile.col, entryTile.row) ? entryTile : area.playerStart
 
+  // Whoever the hour puts here. A POI is part of the map and is always in it;
+  // these are people, and where they are depends on when you came. Each is
+  // drawn as themselves: the Marcus in the street is the Marcus at the table.
+  const scheduled = charactersIn(areaId, state.period).map((entry) => ({
+    ...entry,
+    figure: figureForCharacter(entry.id, entry.character),
+  }))
+  // Everybody standing at a POI, dressed for what they do and made up from
+  // their id, with nobody in the street the double of anybody else in it.
+  const figures = figuresForPois(area.pois, CHARACTERS, scheduled.map((s) => s.figure))
+  // A person on a tile you cannot walk on is behind the furniture there — the
+  // clerk at the counter, the dealer at the table — and is drawn that way.
+  const behind = (col: number, row: number) => !isWalkable(area.map, col, row)
+
   const interactables: Interactable[] = [
-    ...area.pois.map((poi) => ({
-      id: poi.id,
-      name: poi.name,
-      col: poi.col,
-      row: poi.row,
-      color: poi.color,
-      art: poi.art ?? defaultArt(poi),
-      labelled: poi.labelled,
-      lines: linesFor(state, poi),
-      onFinish:
-        poi.action.kind === 'flavor' || isLocked(state, poi)
-          ? undefined
-          : () => onAction(poi.action, poi),
-    })),
-    // Whoever the hour puts here. A POI is part of the map and is always in it;
-    // these are people, and where they are depends on when you came.
-    ...charactersIn(areaId, state.period).map(({ id, character, at }) => {
+    ...area.pois.map((poi) => {
+      const art = artForPoi(poi)
+      const role = figures.get(poi.id)?.role
+      return {
+        id: poi.id,
+        name: poi.name,
+        col: poi.col,
+        row: poi.row,
+        art,
+        figure: figures.get(poi.id),
+        behind: art === 'person' && behind(poi.col, poi.row),
+        // People at a post keep their eyes on it; everybody else looks about.
+        restless: art === 'person' && !behind(poi.col, poi.row) && (role === 'local' || role === 'tourist' || role === 'kid'),
+        labelled: poi.labelled,
+        lines: linesFor(state, poi),
+        onFinish:
+          poi.action.kind === 'flavor' || isLocked(state, poi)
+            ? undefined
+            : () => onAction(poi.action, poi),
+      }
+    }),
+    ...scheduled.map(({ id, character, at, figure }) => {
       // Somebody with something scripted to say says that instead of their
       // usual line for the hour.
       const event = onEvent ? eventFor(EVENTS, { kind: 'talkTo', characterId: id }, state) : undefined
@@ -78,6 +98,9 @@ export function CityScene({
         row: placed.row,
         color: character.overworld?.color ?? SCHEDULED_CHARACTER_COLOR,
         art: character.overworld?.art ?? ('person' as NpcArt),
+        figure,
+        behind: behind(placed.col, placed.row),
+        restless: !behind(placed.col, placed.row),
         lines: at.lines ?? character.overworld?.lines ?? [],
         onTalk: event && onEvent ? () => (onEvent(event), true) : undefined,
       }
@@ -188,14 +211,11 @@ export function CityScene({
   )
 }
 
-/** The name plate colour for somebody who is here because of the hour. */
-const SCHEDULED_CHARACTER_COLOR = 0x6ea8fe
-
-function defaultArt(poi: PoiDef): NpcArt {
-  if (poi.action.kind === 'shop') return 'counter'
-  if (poi.action.kind === 'travel') return 'sign'
-  return 'person'
-}
+/**
+ * The colour of a name over somebody who is here because of the hour — a
+ * character you know — as opposed to the white of somebody who lives here.
+ */
+const SCHEDULED_CHARACTER_COLOR = 0x8ec4ff
 
 /** A POI whose story flag has not been set yet: visible, talkable, but inert. */
 function isLocked(state: GameState, poi: PoiDef): boolean {
