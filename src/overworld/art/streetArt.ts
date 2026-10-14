@@ -4,16 +4,28 @@ import { INK, oval } from '../pixelArt'
 /** Things that stand in the street. */
 export const STREET_ART: Record<string, StampArt> = {
   'bus-shelter': {
+    bleed: { right: 2, bottom: 6 },
     draw: (px, c) => {
       const { w } = c
-      px(0, 2, w, 3, '#3a4350')
-      px(1, 5, 3, 11, '#2a3240')
-      px(w - 4, 5, 3, 11, '#2a3240')
-      px(5, 5, w - 10, 9, '#1a2230')
-      px(6, 6, w - 12, 7, '#2a3a52')
-      px(8, 7, 7, 1, '#cfe0f0')
-      px(8, 9, 5, 1, '#cfe0f0')
-      px(8, 11, 6, 1, '#cfe0f0')
+      // Back panel of glass, the route map pasted on it, a bench in front.
+      px(0, 0, w, 16, '#2a3240')
+      px(1, 3, w - 2, 12, '#8ab8d0')
+      px(1, 3, w - 2, 4, '#b8dcf0')
+      px(4, 5, 14, 8, '#f4f0e4')
+      for (const [y, len] of [[6, 10], [8, 7], [10, 9]]) px(6, y, len, 1, '#2a6ab8')
+      px(6, 6, 1, 5, '#d83a3a')
+      px(w - 12, 4, 1, 10, 'rgba(255, 255, 255, 0.6)')
+      // The canopy.
+      px(-1, 0, w + 2, 3, '#3a4350')
+      px(-1, 0, w + 2, 1, '#6a7380')
+      // Posts and the bench.
+      px(0, 3, 2, 13, '#3a4350')
+      px(w - 2, 3, 2, 13, '#3a4350')
+      px(6, 14, w - 12, 3, '#7a5234')
+      px(6, 14, w - 12, 1, '#a87a4e')
+      px(8, 17, 1, 3, '#3a3a40')
+      px(w - 9, 17, 1, 3, '#3a3a40')
+      px(0, 16, w, 4, 'rgba(10, 8, 20, 0.25)')
     },
   },
   fountain: {

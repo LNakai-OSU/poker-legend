@@ -98,6 +98,53 @@ function building(
   }
 }
 
+/** A row of slot machines, a stool in front of each: two solid rows, then the stools. */
+function slots(id: string, name: string, about: string, cols: number): StampDef {
+  return {
+    id,
+    name,
+    category: 'casino',
+    about,
+    tiles: ['F'.repeat(cols), 'F'.repeat(cols), '?'.repeat(cols)].join('\n'),
+    // On a machine, so it is played from the stool in front of it.
+    wiring: { kind: 'poi', at: { col: 1, row: 1 }, name: 'Slot Machines', action: 'slots' },
+  }
+}
+
+/** A six-seat table: felt three tiles by two, and the ring of chairs round it to stand in. */
+function table6(id: string, name: string, about: string): StampDef {
+  return {
+    id,
+    name,
+    category: 'casino',
+    about,
+    tiles: ['?????', '?FFF?', '?FFF?', '?????'].join('\n'),
+    wiring: { kind: 'poi', at: { col: 2, row: 0 }, name: 'Dealer', action: 'table' },
+  }
+}
+
+/** A heads-up table: felt two tiles by one. */
+function table4(id: string, name: string, about: string): StampDef {
+  return {
+    id,
+    name,
+    category: 'casino',
+    about,
+    tiles: ['????', '?FF?', '????'].join('\n'),
+    wiring: { kind: 'poi', at: { col: 2, row: 0 }, name: 'Dealer', action: 'table' },
+  }
+}
+
+/** Something that stands on the floor and is in the way: a pillar, a palm, a rope. */
+function fixture(id: string, name: string, about: string, tiles: string[], category: StampCategory = 'interior'): StampDef {
+  return { id, name, category, about, tiles: tiles.join('\n') }
+}
+
+/** Something hung on a back wall: it paints the wall and leaves it a wall. */
+function onWall(id: string, name: string, about: string, cols = 1): StampDef {
+  return { id, name, category: 'interior', about, tiles: '?'.repeat(cols) }
+}
+
 /**
  * Every stamp you can place.
  *
@@ -115,14 +162,26 @@ export const STAMPS: StampDef[] = [
     // Behind the table rather than on the felt, where a dealer stands.
     wiring: { kind: 'poi', at: { col: 2, row: 0 }, name: 'Dealer', action: 'table' },
   },
+  // --- Gaming floors ----------------------------------------------------------
+  slots('slot-bank', 'Slot bank', 'Four machines in red, blue and green, a stool at each.', 4),
+  slots('slot-bank-6', 'Long slot bank', 'Six machines in a row.', 6),
+  slots('slot-bank-western', 'Saloon slots', 'Red and green machines, saddle-leather stools.', 4),
+  slots('slot-bank-brass', 'Riverboat slots', 'Green, red and burgundy machines with brass trim.', 4),
+  slots('slot-bank-island', 'Island slots', 'Blue, green and red machines, cane stools.', 4),
+  slots('slot-bank-neon', 'Neon slots', 'Black cabinets with pink and cyan toppers.', 5),
   {
-    id: 'slot-bank',
-    name: 'Slot bank',
-    category: 'casino',
-    about: 'A row of machines against a wall.',
-    tiles: ['FFF', '???'].join('\n'),
-    wiring: { kind: 'poi', at: { col: 1, row: 0 }, name: 'Slot Machines', action: 'slots' },
+    ...slots('slot-bank-jackpot', 'Progressive bank', 'Six neon machines under a JACKPOT board counting up.', 6),
   },
+  slots('slot-bank-gold', 'Gold progressive', 'Ivory and burgundy machines under a JACKPOT board.', 4),
+  table6('poker-table-6', 'Poker table', 'Six seats round a green felt, a padded rail, the dealer at the top.'),
+  table6('poker-table-brass', 'Riverboat table', 'Green felt under a brass rail.'),
+  table6('poker-table-baize', 'Card-room table', 'Bottle-green baize with a gold line, mahogany rail.'),
+  table4('poker-table-baize-4', 'Card-room heads-up', 'Two seats facing across the baize.'),
+  table6('poker-table-teal', 'Island table', 'Teal felt in a cane rail.'),
+  table6('poker-table-neon', 'Strip table', 'Purple felt, a black rail edged in neon.'),
+  table4('poker-table-neon-4', 'Strip heads-up', 'Purple felt for two.'),
+  table6('poker-table-royal', 'Salon table', 'Burgundy felt, a gold rail, ivory chairs.'),
+  table4('poker-table-royal-4', 'Salon heads-up', 'Burgundy and gold for two.'),
   {
     id: 'craps-pit',
     name: 'Craps table',
@@ -132,12 +191,127 @@ export const STAMPS: StampDef[] = [
     wiring: { kind: 'poi', at: { col: 2, row: 0 }, name: 'Craps Table', action: 'craps' },
   },
   {
-    id: 'bar',
-    name: 'Bar',
-    category: 'interior',
-    about: 'A counter with bottles behind it.',
-    tiles: ['FFFFF', '?????'].join('\n'),
+    id: 'craps-table',
+    name: 'Big craps table',
+    category: 'casino',
+    about: 'A full craps tub: pass line, field, the numbers and the proposition boxes.',
+    tiles: ['?????', '?FFF?', '?FFF?', '?????'].join('\n'),
+    wiring: { kind: 'poi', at: { col: 2, row: 0 }, name: 'Craps Table', action: 'craps' },
   },
+  {
+    id: 'craps-table-neon',
+    name: 'Strip craps table',
+    category: 'casino',
+    about: 'A craps tub in purple felt.',
+    tiles: ['?????', '?FFF?', '?FFF?', '?????'].join('\n'),
+    wiring: { kind: 'poi', at: { col: 2, row: 0 }, name: 'Craps Table', action: 'craps' },
+  },
+  fixture('roulette', 'Roulette', 'The wheel at one end, the layout at the other.', ['????', '?FF?', '????'], 'casino'),
+  {
+    id: 'cashier-cage',
+    name: 'Cashier cage',
+    category: 'casino',
+    about: 'Against the back wall: the cashier behind brass bars, the counter in front.',
+    tiles: ['FFFFF', 'FFFFF'].join('\n'),
+    wiring: { kind: 'poi', at: { col: 2, row: 1 }, name: 'Cashier', action: 'flavor' },
+  },
+  fixture('bar', 'Bar', 'Back bar on the wall, the counter, stools. The bartender stands behind it.', ['FFFFF', 'FFFFF', '?????']),
+  fixture('bar-brass', 'Saloon bar', 'Brass rail, bottles in a mirror.', ['FFFFF', 'FFFFF', '?????']),
+  fixture('bar-tiki', 'Tiki bar', 'Cane and pale wood.', ['FFFFF', 'FFFFF', '?????']),
+  fixture('bar-neon', 'Neon bar', 'Black and violet.', ['FFFFF', 'FFFFF', '?????']),
+  fixture('bar-marble', 'Marble bar', 'A marble top over dark wood.', ['FFFFF', 'FFFFF', '?????']),
+  fixture('pillar-wood', 'Timber post', 'A plain wooden post.', ['F', 'F']),
+  fixture('pillar-brass', 'Brass column', 'Fluted brass.', ['F', 'F']),
+  fixture('pillar-marble', 'Marble column', 'White marble with a gold capital.', ['F', 'F']),
+  fixture('pillar-neon', 'Neon column', 'Black, ringed in neon.', ['F', 'F']),
+  fixture('pillar-bamboo', 'Bamboo post', 'A bundle of bamboo.', ['F', 'F']),
+  fixture('pillar-green', 'Green marble column', 'Green marble with a brass capital.', ['F', 'F']),
+  fixture('palm', 'Potted palm', 'Two tiles of palm in a terracotta pot.', ['F', 'F']),
+  fixture('fern', 'Fern', 'A fern in a brass pot.', ['F']),
+  fixture('velvet-rope', 'Velvet rope', 'Brass posts and a red rope.', ['FFF']),
+  fixture('light-pool', 'Pool of light', 'Light from a chandelier on the floor. You can walk through it.', ['???', '???', '???']),
+  // --- On the wall ---------------------------------------------------------------
+  onWall('window-brick', 'Window (brick view)', 'Curtains, and the wall of the next building four feet away.', 2),
+  onWall('window-sky', 'Window (sky)', 'Curtains and blue sky.', 2),
+  onWall('window-sea', 'Window (sea)', 'Curtains and the water.', 2),
+  onWall('window-garden', 'Window (garden)', 'Curtains and a garden.', 2),
+  onWall('window-night', 'Window (the Strip)', 'Curtains and the lights outside.', 2),
+  onWall('painting-landscape', 'Landscape', 'Hills in a gilt frame.', 2),
+  onWall('painting-portrait', 'Portrait', 'Somebody who owned the place once.', 2),
+  onWall('painting-ship', 'Ship painting', 'A steamer under sail.', 2),
+  onWall('painting-horse', 'Horse painting', 'A horse on a ranch.', 2),
+  onWall('painting-abstract', 'Abstract', 'Coloured squares in a black frame.', 2),
+  onWall('porthole', 'Porthole', 'Brass, with the river in it.'),
+  onWall('clock', 'Clock', 'Nearly midnight. It always is.'),
+  onWall('neon-open', 'OPEN sign', 'Red neon.', 2),
+  onWall('neon-bar', 'BAR sign', 'Cyan neon.', 2),
+  onWall('neon-vip', 'VIP sign', 'Pink neon.', 2),
+  onWall('neon-cocktails', 'COCKTAILS sign', 'Yellow neon.', 3),
+  onWall('menu-diner', 'Diner menu', 'Pie and coffee.', 2),
+  onWall('menu-grill', 'Grill menu', 'The catch, and rum.', 2),
+  onWall('prices-laundry', 'Price board', 'What a wash costs.', 2),
+  onWall('trophy-fish', 'Mounted fish', 'Over the counter of anywhere near water.', 2),
+  onWall('life-ring', 'Life ring', 'Red and white.'),
+  onWall('door-back-room', 'Unmarked door', 'A door in the wall with nothing on it.'),
+  onWall('door-staff', 'Staff door', 'Grey, with a kick plate.'),
+  onWall('door-vip', 'VIP door', 'Black, gold frame, a plate on it.'),
+  onWall('lift-doors', 'Lift doors', 'Brass doors, a dial over them.', 2),
+  onWall('radiator', 'Radiator', 'Cast iron, painted over too many times.'),
+  // --- A home ---------------------------------------------------------------------
+  fixture('bed', 'Bed', 'A single bed, head to the wall.', ['F', 'F']),
+  fixture('bed-double', 'Double bed', 'Two pillows.', ['FF', 'FF']),
+  fixture('tv', 'Television', 'On a low stand, picture on.', ['F']),
+  fixture('kitchenette', 'Kitchenette', 'A fridge, a sink, a stove, cupboards over. Against the back wall.', ['FFF', 'FFF']),
+  fixture('bookshelf', 'Bookshelf', 'Coloured spines on four shelves. Against the back wall.', ['FF', 'FF']),
+  fixture('bookshelf-dark', 'Dark bookshelf', 'Older books, darker wood.', ['FF', 'FF']),
+  fixture('table-chairs', 'Table and chairs', 'A small table with two chairs pulled up.', ['FF', '??']),
+  fixture('rug-red', 'Red rug', 'Walk on it.', ['???', '???']),
+  fixture('rug-blue', 'Blue rug', 'Walk on it.', ['???', '???']),
+  fixture('rug-green', 'Green rug', 'Walk on it.', ['???', '???']),
+  fixture('sofa', 'Sofa', 'Facing into the room.', ['FFF']),
+  fixture('sofa-leather', 'Leather sofa', 'Buttoned, brown.', ['FFF']),
+  fixture('sofa-velvet', 'Velvet sofa', 'Purple, gold feet.', ['FFF']),
+  fixture('card-table', 'Card table', 'A folding table with felt on it and folding chairs round it.', ['?????', '?FFF?', '?????']),
+  // --- Shops ----------------------------------------------------------------------
+  fixture('shelves-groceries', 'Grocery shelves', 'Floor to ceiling. Against the back wall.', ['FF', 'FF']),
+  fixture('shelves-souvenirs', 'Souvenir shelves', 'Turquoise and silver.', ['FF', 'FF']),
+  fixture('shelves-outdoor', 'Outfitter shelves', 'Boots, rope, tins.', ['FF', 'FF']),
+  fixture('shelves-shoes', 'Shoe shelves', 'Black and brown leather.', ['FF', 'FF']),
+  fixture('gondola-groceries', 'Shelf island', 'Stocked both sides.', ['FFF', 'FFF']),
+  fixture('gondola-gifts', 'Gift island', 'Things nobody needs.', ['FFF', 'FFF']),
+  fixture('cooler', 'Cooler', 'Lit glass doors full of drinks. Against the back wall.', ['FF', 'FF']),
+  fixture('counter-till', 'Counter with till', 'The clerk stands behind it. Back row on the wall.', ['FFF', 'FFF']),
+  fixture('counter-glass', 'Glass counter', 'A display case; the clerk behind it.', ['FFF', 'FFF']),
+  fixture('counter-concierge', 'Concierge desk', 'Marble and gold, a bell.', ['FFF', 'FFF']),
+  fixture('rack-suits', 'Rail of suits', 'Charcoal and navy.', ['FF']),
+  fixture('rack-linen', 'Rail of linen', 'Pastels.', ['FF']),
+  fixture('rack-outdoor', 'Rail of jackets', 'Waxed cotton.', ['FF']),
+  fixture('rack-gowns', 'Rail of gowns', 'Red, black and ivory.', ['FF']),
+  fixture('mannequin-suit', 'Dummy in a suit', 'Charcoal.', ['F', 'F']),
+  fixture('mannequin-navy', 'Dummy in navy', 'Navy.', ['F', 'F']),
+  fixture('mannequin-gown', 'Dummy in a gown', 'Red.', ['F', 'F']),
+  fixture('mirror-stand', 'Standing mirror', 'Full length.', ['F', 'F']),
+  // --- The launderette, the diner -------------------------------------------------
+  fixture('dryer-stack', 'Washers and dryers', 'Dryers stacked over washers, against the wall.', ['FFFF', 'FFFF']),
+  fixture('washer-row', 'Washers', 'Free-standing.', ['FFFF']),
+  fixture('folding-table', 'Folding table', 'A basket of laundry on it.', ['FFF']),
+  fixture('booth', 'Booth', 'Red vinyl either side of a table.', ['FF', 'FF']),
+  fixture('jukebox', 'Jukebox', 'Bubble tubes and chasing lights.', ['F', 'F']),
+  fixture('diner-counter', 'Diner counter', 'Coffee on the back wall, pie on the counter, stools in front.', ['FFFFF', 'FFFFF', '?????']),
+  // --- Showrooms ------------------------------------------------------------------
+  fixture('car-red', 'Car (red)', 'On a turntable.', ['FFF', 'FFF']),
+  fixture('car-yellow', 'Car (yellow)', 'On a turntable.', ['FFF', 'FFF']),
+  fixture('car-silver', 'Car (silver)', 'On a turntable.', ['FFF', 'FFF']),
+  fixture('speedboat', 'Speedboat', 'On its trailer.', ['FFFF', 'FFFF']),
+  // --- Clubs and dining rooms -----------------------------------------------------
+  fixture('dining-table', 'Dining table', 'White cloth, a candle, four chairs.', ['???', '?F?', '???']),
+  fixture('dining-table-cane', 'Cane dining table', 'White cloth, cane chairs.', ['???', '?F?', '???']),
+  fixture('piano', 'Grand piano', 'Lid up.', ['FFF', 'FFF']),
+  fixture('fireplace', 'Fireplace', 'Marble, the fire going, a mirror over. Against the back wall.', ['FFF', 'FFF']),
+  fixture('dance-floor', 'Dance floor', 'Squares lit in turns. Walk on it.', ['????', '????', '????']),
+  fixture('dj-booth', 'DJ booth', 'Decks and blinking lights.', ['FFF', 'FFF']),
+  fixture('cactus', 'Cactus', 'A barrel cactus in a pot.', ['F']),
+  fixture('velvet-bench', 'Velvet bench', 'Red velvet on gold feet.', ['FF']),
   {
     id: 'townhouse',
     name: 'Townhouse',

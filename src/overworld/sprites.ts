@@ -456,7 +456,11 @@ export function characterTextures(palette: CharacterPalette): Record<Facing, Tex
 // Props
 // ---------------------------------------------------------------------------
 
-export type PropKind = 'slot' | 'craps' | 'counter' | 'sign' | 'lift' | 'window'
+export type PropKind =
+  | 'slot' | 'craps' | 'counter' | 'sign' | 'lift' | 'window'
+  /** Nothing at all: a fixture whose picture is a stamp, so only the interaction stands here. */
+  | 'blank'
+  | 'note' | 'milepost' | 'gull' | 'stall' | 'billboard' | 'telescope' | 'aboard'
 
 const PROPS: Record<PropKind, Draw> = {
   // Scenery, not a person: a sash window with the brick wall four feet behind it.
@@ -516,6 +520,100 @@ const PROPS: Record<PropKind, Draw> = {
     px(4, 3, 3, 3, '#d9c46a')
     px(9, 3, 3, 3, '#d9c46a')
     px(4, 11, 8, 1, '#55556a')
+  },
+  blank: () => {},
+  // A note left on the table: a folded sheet, a pen across it, a ring from a mug.
+  note: (px) => {
+    px(4, 6, 9, 7, 'rgba(10, 8, 20, 0.3)')
+    px(3, 5, 9, 7, '#f4f0e0')
+    px(3, 5, 9, 1, '#ffffff')
+    px(11, 5, 1, 7, '#d8d0b8')
+    for (const y of [7, 9]) px(4, y, 6, 1, '#4a5a8a')
+    px(4, 11, 4, 1, '#4a5a8a')
+    px(9, 3, 1, 6, '#2a2a30')
+    px(9, 3, 1, 1, '#c83a3a')
+    px(1, 9, 3, 1, '#a87a4a')
+    px(1, 12, 3, 1, '#a87a4a')
+    px(0, 10, 1, 2, '#a87a4a')
+  },
+  // A green mile marker on two posts at the roadside.
+  milepost: (px) => {
+    px(4, 9, 2, 7, '#5a5e66')
+    px(10, 9, 2, 7, '#5a5e66')
+    px(4, 9, 1, 7, '#8a8e96')
+    px(1, 1, 14, 9, OUTLINE)
+    px(2, 2, 12, 7, '#2a7a4a')
+    px(2, 2, 12, 1, '#3a9a5e')
+    px(3, 3, 10, 5, '#2a7a4a')
+    px(3, 3, 10, 1, '#f4f4f4')
+    px(3, 7, 10, 1, '#f4f4f4')
+    px(4, 4, 3, 2, '#f4f4f4')
+    px(9, 4, 2, 2, '#f4f4f4')
+    px(4, 15, 8, 1, 'rgba(10, 8, 20, 0.3)')
+  },
+  // A gull on a mooring post, watching you go by.
+  gull: (px) => {
+    px(5, 8, 6, 8, '#5a4030')
+    px(5, 8, 2, 8, '#7a5a40')
+    px(4, 7, 8, 2, '#4a3426')
+    px(5, 3, 6, 4, '#f4f4f4')
+    px(4, 4, 2, 2, '#c8ccd4')
+    px(10, 2, 3, 3, '#f4f4f4')
+    px(12, 3, 2, 1, '#f2c84a')
+    px(11, 3, 1, 1, OUTLINE)
+    px(5, 4, 4, 1, '#8a8e96')
+    px(6, 7, 1, 1, '#f2c84a')
+    px(9, 7, 1, 1, '#f2c84a')
+  },
+  // A fruit stall under a striped awning, an honesty box on the counter.
+  stall: (px) => {
+    px(1, 1, 14, 3, '#e05a3a')
+    for (let x = 1; x < 15; x += 4) px(x + 2, 1, 2, 3, '#f4f0e0')
+    px(1, 4, 14, 1, 'rgba(10, 8, 20, 0.35)')
+    px(2, 4, 1, 6, '#6a4a2a')
+    px(13, 4, 1, 6, '#6a4a2a')
+    px(1, 9, 14, 6, '#8a5a32')
+    px(1, 9, 14, 1, '#b07a48')
+    for (const [x, c] of [[2, '#f29a2a'], [5, '#e83a2a'], [8, '#9ad83a']] as const) {
+      px(x, 7, 3, 2, c)
+      px(x, 7, 1, 1, '#ffffff')
+    }
+    px(11, 6, 3, 3, '#4a3426')
+    px(12, 6, 1, 1, OUTLINE)
+  },
+  // A billboard on its legs, its poster half painted over.
+  billboard: (px) => {
+    px(3, 10, 2, 6, '#3a3a40')
+    px(11, 10, 2, 6, '#3a3a40')
+    px(0, 1, 16, 10, OUTLINE)
+    px(1, 2, 14, 8, '#ff4fd8')
+    px(1, 2, 14, 2, '#ffb0f0')
+    px(2, 5, 7, 2, '#ffffff')
+    px(2, 8, 5, 1, '#ffffff')
+    px(10, 3, 5, 7, '#e8e4dc')
+    px(10, 3, 1, 7, '#c8c4bc')
+  },
+  // A coin-operated telescope on a post, pointed at the tower.
+  telescope: (px) => {
+    px(7, 8, 2, 7, '#5a5e66')
+    px(5, 14, 6, 2, '#3a3e46')
+    px(3, 3, 10, 5, OUTLINE)
+    px(4, 4, 8, 3, '#4a7aa8')
+    px(4, 4, 8, 1, '#7aaad8')
+    px(2, 4, 2, 2, '#2a2a30')
+    px(12, 4, 2, 2, '#2a2a30')
+    px(7, 7, 2, 1, '#f2c84a')
+  },
+  // A sandwich board on the pavement, chalked.
+  aboard: (px) => {
+    px(3, 15, 10, 1, 'rgba(10, 8, 20, 0.3)')
+    px(3, 2, 10, 13, '#5a3a24')
+    px(4, 3, 8, 11, '#2a2e2a')
+    px(5, 5, 6, 1, '#e8e8e0')
+    px(5, 7, 4, 1, '#e8e8e0')
+    px(5, 9, 5, 1, '#f2c84a')
+    px(5, 11, 3, 1, '#e8e8e0')
+    px(7, 1, 2, 2, '#5a3a24')
   },
 }
 
