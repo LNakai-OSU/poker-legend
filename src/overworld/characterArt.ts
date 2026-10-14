@@ -51,6 +51,8 @@ export interface PersonLook extends Omit<AvatarLook, 'hairStyle'> {
   shoes?: string
   /** What they wear below the waist. Trousers unless said otherwise. */
   lower?: 'trousers' | 'shorts' | 'skirt'
+  /** Short sleeves show the forearm. Long unless said otherwise. */
+  sleeves?: 'long' | 'short'
 }
 
 /**
@@ -389,16 +391,16 @@ const HEAD_UP = at(4,
   '....sSSSSSss....',
 )
 
-/** In profile, facing left: the brow leads and the ear sits back. */
+/** In profile, facing left: the brow leads, the nose sets the direction, the ear sits back. */
 const HEAD_LEFT = at(4,
   '....SSSSSSSS....',
   '...SSSSSSSSSS...',
   '...SSSSSSSSSS...',
   '..SSSSSSSSSSs...',
   '..SSSSSSSSSSs...',
-  '..SSSSSSSSSss...',
-  '...sSSSSSSSs....',
-  '....sSSSSSs.....',
+  '.SSSSSSSSSSss...',
+  '..sSSSSSSSSs....',
+  '...ssSSSSSs.....',
 )
 const EYES_LEFT = at(8,
   '...e............',
@@ -615,32 +617,30 @@ const HAIR: Record<PersonHairStyle, ViewSet> = {
     )],
   },
   bald: {
-    down: [at(3,
-      '................',
-      '...QQQ..........',
-      '..QQ............',
-      '................',
-      '................',
-      '..HH........hh..',
-      '..Hh........hh..',
+    down: [at(4,
+      '....QQQ.........',
+      '...QQ...........',
+      '...H........h...',
+      '...HH......hh...',
+      '...H........h...',
     )],
     up: [at(4,
-      '...QQQ..........',
-      '..QQ............',
+      '....QQQ.........',
+      '...QQ...........',
       '................',
-      '..H..........h..',
-      '..HHh......hhh..',
-      '..HHHHHHHHHhhh..',
-      '...hHHHHHHhh....',
+      '...H........h...',
+      '...HHh....hhh...',
+      '...HHHHHHHHhh...',
+      '....hHHHHHhh....',
     )],
     left: [at(4,
-      '...QQ...........',
-      '..Q.............',
-      '................',
-      '..........HHhh..',
-      '.........HHhhh..',
+      '....QQ..........',
+      '...Q............',
+      '..........Hh....',
       '.........HHhh...',
-      '.........hhh....',
+      '........sHHhh...',
+      '........SHhh....',
+      '.........hh.....',
     )],
   },
   bob: {
@@ -1166,8 +1166,23 @@ function pick<T>(list: T[], seed: string): T {
 const BLACK = '#25252e'
 const WHITE_SHIRT = '#ececf2'
 
+/**
+ * Necklines for everyday clothes, so a street of T-shirts is a street of
+ * different shirts: a crew neck, a V, a collar, or nothing at all.
+ */
+const NECKLINES: Layer[][] = [
+  [at(13, '.......SS.......')],
+  [at(13, '......sSSs......', '.......SS.......')],
+  [at(13, '.....VU..Uu.....')],
+  [],
+]
+
 const OUTFITS: Record<NpcRole, (look: PersonLook) => Outfit> = {
-  local: () => ({ colors: {} }),
+  local: (look) => ({
+    colors: {},
+    shortSleeves: look.sleeves === 'short',
+    over: { down: pick(NECKLINES, look.shirt + look.skin + look.hairStyle) },
+  }),
 
   dealer: () => ({
     colors: { top: BLACK, sleeve: WHITE_SHIRT, under: WHITE_SHIRT, trim: '#cc2a3e', legs: BLACK, shoe: '#1c1c24', metal: '#d4d4dc' },
@@ -1392,9 +1407,10 @@ const OUTFITS: Record<NpcRole, (look: PersonLook) => Outfit> = {
 
   kid: (look) => ({
     colors: {},
-    shortSleeves: true,
+    shortSleeves: look.sleeves !== 'long',
     lower: look.lower ?? 'shorts',
     small: true,
+    over: { down: [NECKLINES[0][0]] },
   }),
 
   player: () => ({
@@ -1642,7 +1658,7 @@ const frameCache = new Map<string, PersonFrames>()
 
 export function figureKey(figure: Figure): string {
   const l = figure.look
-  return [figure.role, l.skin, l.hair, l.hairStyle, l.shirt, l.accessory, l.trousers, l.shoes, l.lower].join('|')
+  return [figure.role, l.skin, l.hair, l.hairStyle, l.shirt, l.accessory, l.trousers, l.shoes, l.lower, l.sleeves].join('|')
 }
 
 /**

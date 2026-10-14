@@ -188,26 +188,32 @@ export function lookFromId(id: string, name = '', role: NpcRole = 'local'): Pers
   const shoes = choose(SHOES)
   const accessory = choose(ACCESSORIES)
   const skirt = feminine && next() < 0.5
+  const sleeves = next() < 0.4 ? 'short' : 'long'
   return {
     skin,
     hair,
     hairStyle,
     shirt,
-    // A cap on a bald man shows nothing of the baldness; let him keep it bare.
+    // A visor on a bald head shows nothing of the baldness; let him keep it bare.
     accessory: hairStyle === 'bald' && accessory === 'visor' ? 'none' : accessory,
     trousers,
     shoes,
     lower: skirt ? 'skirt' : 'trousers',
+    sleeves,
   }
 }
 
-/** Legs and shoes for a character whose table look stops at the collar. */
+/** Legs, shoes and sleeves for a character whose table look stops at the collar. */
 function dressed(id: string, look: PersonLook): PersonLook {
   const next = seeded(`${id}:legs`)
+  const trousers = TROUSERS[Math.floor(next() * TROUSERS.length)]
+  const shoes = SHOES[Math.floor(next() * (SHOES.length - 1))]
+  const sleeves = next() < 0.4 ? 'short' : 'long'
   return {
     ...look,
-    trousers: look.trousers ?? TROUSERS[Math.floor(next() * TROUSERS.length)],
-    shoes: look.shoes ?? SHOES[Math.floor(next() * (SHOES.length - 1))],
+    trousers: look.trousers ?? trousers,
+    shoes: look.shoes ?? shoes,
+    sleeves: look.sleeves ?? sleeves,
   }
 }
 
