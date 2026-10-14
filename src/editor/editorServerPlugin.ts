@@ -5,6 +5,7 @@ import type { Plugin, ViteDevServer } from 'vite'
 import ts from 'typescript'
 import { PatchError, applyEdit, areasSharing, mapConstantOf, type MapEdit } from './patchSource.js'
 import { PatchError as ContentPatchError, saveCharacter, saveEvent, type EntryEdit } from './patchContent.js'
+import { TILE_VOCABULARY } from '../overworld/tiles.js'
 
 /**
  * Lets the editor write back to `cities.ts`, `characters.ts` and `events.ts`.
@@ -165,7 +166,10 @@ function badSketch(sketch: string): string | null {
   const width = rows[0].length
   const ragged = rows.findIndex((row) => row.length !== width)
   if (ragged !== -1) return `row ${ragged} is ${rows[ragged].length} wide, expected ${width}`
-  const known = new Set('.#F,~=-"DT:*+o')
+  // Read from the vocabulary rather than listed here, so a tile added to the
+  // game can be saved from the editor the moment it exists. A list kept by hand
+  // would quietly refuse every map that used the new tile.
+  const known = new Set(TILE_VOCABULARY.map((entry) => entry.char))
   for (const row of rows) {
     for (const char of row) {
       if (!known.has(char)) return `"${char}" is not a tile`
