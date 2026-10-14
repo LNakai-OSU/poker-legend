@@ -262,7 +262,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
         { period: 'morning', areaId: 'laundromat', col: 8, row: 4, lines: [
           'Dana: Dryer four is the only one that works. Now you know.',
         ] },
-        { period: 'afternoon', areaId: 'seventh', col: 12, row: 9, lines: [
+        { period: 'afternoon', areaId: 'seventh', col: 12, row: 11, lines: [
           'Dana: You played Tuesday. You raised the river with nothing.',
           'Dana: I watch. That is all. It costs nothing to watch.',
         ] },
@@ -288,13 +288,13 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     overworld: {
       lines: ['Ray: I am due. I can feel it.'],
       schedule: [
-        { period: 'afternoon', areaId: 'sc-street', col: 18, row: 9, lines: [
+        { period: 'afternoon', areaId: 'sc-street', col: 18, row: 7, lines: [
           'Ray: Heading in. You heading in?',
         ] },
-        { period: 'evening', areaId: 'sc-street', col: 18, row: 9, lines: [
+        { period: 'evening', areaId: 'sc-street', col: 18, row: 7, lines: [
           'Ray: Down a bit. It is early.',
         ] },
-        { period: 'night', areaId: 'sc-street', col: 18, row: 9, lines: [
+        { period: 'night', areaId: 'sc-street', col: 18, row: 7, lines: [
           'Ray: Down a lot. It is late.',
           'Ray: Tomorrow, though. Tomorrow I am due.',
         ] },
@@ -317,10 +317,10 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     overworld: {
       lines: ['Sully: Working.'],
       schedule: [
-        { period: 'morning', areaId: 'sc-street', col: 11, row: 14, lines: [
+        { period: 'morning', areaId: 'sc-street', col: 12, row: 13, lines: [
           'Sully: In early. Out early. That is the whole trick.',
         ] },
-        { period: 'afternoon', areaId: 'sc-street', col: 11, row: 14, lines: [
+        { period: 'afternoon', areaId: 'sc-street', col: 12, row: 13, lines: [
           'Sully: Up forty. I will take forty.',
         ] },
       ],

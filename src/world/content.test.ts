@@ -18,7 +18,8 @@ import {
   findArea,
   findItem,
 } from './content'
-import { DOOR, isWalkable, parseMap } from '../overworld/tileRenderer'
+import { CHAR_FOR_TILE, DOOR, ROAD, WALL, isWalkable, parseMap } from '../overworld/tiles'
+import { KEEP, STAMP_BY_ID, stampSize } from './stamps'
 import { CHARACTERS, charactersIn, periodsAway, scheduleConflicts, seatsOf } from './characters'
 import { TIME_PERIODS } from '../game/time'
 
@@ -365,6 +366,94 @@ describe('city content', () => {
       const street = city.areas[city.entryAreaId]
       const people = street.pois.filter((p) => (p.art ?? 'person') === 'person')
       expect(people.length, `${city.name}: nobody is out on ${street.name}`).toBeGreaterThan(0)
+    }
+  })
+})
+
+describe('objects on the map', () => {
+  const areas = Object.values(AREAS).map(({ area }) => area)
+
+  it('stands every object on the tiles it lays down', () => {
+    // The art and the collision are two descriptions of one object. A house
+    // drawn over tiles that are not its walls is a house you can walk through,
+    // or a wall in the open with a picture of pavement on it.
+    for (const area of areas) {
+      for (const placed of area.stamps ?? []) {
+        const stamp = STAMP_BY_ID[placed.stampId]
+        expect(stamp, `${area.id}: "${placed.stampId}" is not a stamp`).toBeDefined()
+        const { cols, rows } = stampSize(stamp)
+        expect(
+          placed.col >= 0 && placed.row >= 0 && placed.col + cols <= area.map[0].length && placed.row + rows <= area.map.length,
+          `${area.id}: ${placed.stampId} at (${placed.col},${placed.row}) hangs off the map`,
+        ).toBe(true)
+        stamp.tiles.split('\n').forEach((line, r) => {
+          for (let c = 0; c < line.length; c++) {
+            if (line[c] === KEEP) continue
+            const under = CHAR_FOR_TILE[area.map[placed.row + r][placed.col + c]]
+            expect(
+              under,
+              `${area.id}: ${placed.stampId} at (${placed.col},${placed.row}) expects "${line[c]}" at (${placed.col + c},${placed.row + r})`,
+            ).toBe(line[c])
+          }
+        })
+      }
+    }
+  })
+
+  it('puts a doorway only where there is a way through', () => {
+    // A door tile with no exit on it is walkable floor drawn as a door: you
+    // stand in it and nothing happens. A door that stays shut is wall.
+    for (const area of areas) {
+      area.map.forEach((row, r) =>
+        row.forEach((tile, c) => {
+          if (tile !== DOOR) return
+          expect(
+            area.exits.some((exit) => exit.col === c && exit.row === r),
+            `${area.id}: the doorway at (${c},${r}) leads nowhere`,
+          ).toBe(true)
+        }),
+      )
+    }
+  })
+
+  it('draws every wall on a street as part of a building', () => {
+    // Every building used to be a block of bare brick with a door punched in
+    // it. On a street, a wall is somebody's house, and has to be drawn as one.
+    for (const area of areas) {
+      if (!area.edges) continue
+      const covered = new Set<string>()
+      for (const placed of area.stamps ?? []) {
+        STAMP_BY_ID[placed.stampId]?.tiles.split('\n').forEach((line, r) => {
+          for (let c = 0; c < line.length; c++) {
+            if (line[c] !== KEEP) covered.add(`${placed.col + c},${placed.row + r}`)
+          }
+        })
+      }
+      area.map.forEach((row, r) =>
+        row.forEach((tile, c) => {
+          if (tile !== WALL && tile !== DOOR) return
+          expect(covered.has(`${c},${r}`), `${area.id}: bare wall at (${c},${r}) belongs to no building`).toBe(true)
+        }),
+      )
+    }
+  })
+
+  it('stands nobody in the road', () => {
+    // Ray spent his evenings in the middle of the highway outside the casino.
+    for (const [id, character] of Object.entries(CHARACTERS)) {
+      for (const entry of character.overworld?.schedule ?? []) {
+        const area = findArea(entry.areaId)?.area
+        if (!area) continue
+        expect(
+          area.map[entry.row]?.[entry.col],
+          `${id} stands in the road in ${area.name} (${entry.col},${entry.row}) in the ${entry.period}`,
+        ).not.toBe(ROAD)
+      }
+    }
+    for (const area of areas) {
+      for (const poi of area.pois) {
+        expect(area.map[poi.row]?.[poi.col], `${poi.name} stands in the road in ${area.name}`).not.toBe(ROAD)
+      }
     }
   })
 })

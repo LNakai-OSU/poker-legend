@@ -68,6 +68,37 @@ export function stampSize(stamp: StampDef): { cols: number; rows: number } {
 }
 
 /**
+ * The footprint of a building: solid wall, with a doorway in the bottom row at
+ * `door` (counted from the left) if it has one you can go through. A building
+ * whose door stays shut has its door drawn by its art and no `D` at all, so
+ * nobody can walk onto a doorway that leads nowhere.
+ */
+function walls(cols: number, rows: number, door?: number): string {
+  const solid = '#'.repeat(cols)
+  const front = door === undefined ? solid : solid.slice(0, door) + 'D' + solid.slice(door + 1)
+  return [...Array(rows - 1).fill(solid), front].join('\n')
+}
+
+/** A building of the town, with or without a door that opens. */
+function building(
+  id: string,
+  name: string,
+  about: string,
+  cols: number,
+  rows: number,
+  door?: { col: number; label: string },
+): StampDef {
+  return {
+    id,
+    name,
+    category: 'building',
+    about,
+    tiles: walls(cols, rows, door?.col),
+    wiring: door ? { kind: 'exit', at: { col: door.col, row: rows - 1 }, label: door.label } : undefined,
+  }
+}
+
+/**
  * Every stamp you can place.
  *
  * Deliberately a short list of things this game actually contains. A library of
@@ -123,6 +154,68 @@ export const STAMPS: StampDef[] = [
     tiles: ['######', '######', '######', '###D##'].join('\n'),
     wiring: { kind: 'exit', at: { col: 3, row: 3 }, label: 'Shop' },
   },
+  // --- Basin ---------------------------------------------------------------
+  building('bakery-basin', 'Bakery, flats over', 'Your building: the bakery downstairs and your door beside it.', 7, 4, { col: 4, label: 'Home' }),
+  building('house-basin-a', 'Basin terrace house', 'Red brick under red shingle, a window box, a door that stays shut.', 5, 4),
+  building('pawn-basin', 'Pawnbroker', 'Three gold balls and a grille over the window.', 5, 4),
+  building('tenement-basin', 'Walk-up', 'Three floors, a fire escape and a water tank on the roof.', 5, 4),
+  building('checks-basin', 'Checks Cashed', 'A yellow sign, barred windows, OPEN buzzing in the glass.', 6, 4),
+  building('house-basin-b', 'Clapboard house', 'Pale blue boards, a slate roof with a dormer in it.', 5, 4),
+  building('bingo-basin', 'Bingo hall', 'A long low hall with a marquee that never stops chasing.', 11, 4),
+  building('patels', "Patel's", 'The corner shop: green awning, fruit out front, ice by the door.', 6, 4, { col: 3, label: "Patel's" }),
+  building('barber-seventh', 'Barber', 'The pole turning, a chair in the window.', 5, 4),
+  building('laundromat', 'Laundromat', 'A row of washers behind the glass and steam off the roof.', 6, 4, { col: 2, label: 'Laundromat' }),
+  building('hotel-seventh', 'Cheap hotel', 'Its name down the corner in red neon.', 5, 4),
+  building('diner-blueplate', 'The Blue Plate', 'A stainless diner with its name on the roof.', 7, 3, { col: 3, label: 'The Blue Plate' }),
+  building('donuts-seventh', 'Doughnut shop', 'A giant doughnut on the roof.', 6, 3),
+  building('garage-seventh', 'Auto repair', 'Two bays, tyres stacked by the office.', 9, 3),
+  building('house-eastgate-a', 'Porch house', 'Cream boards, green shutters, a porch over the door.', 5, 4),
+  building('house-marcus', "Marcus's house", 'Gable end to the street, porch light on, a note on the door.', 5, 4, { col: 2, label: "Marcus's" }),
+  building('house-eastgate-b', 'Bay-window house', 'Yellow brick, a dish on the wall.', 5, 4),
+  building('cottage-eastgate', 'Cottage', 'More roof than house.', 4, 3),
+  building('lockup-eastgate', 'Lock-up garages', 'Two roll-up doors, one of them tagged.', 4, 3),
+  // --- Silver Creek ----------------------------------------------------------
+  building('casino-silvercreek', 'Silver Creek Casino', 'A Western false front, its name in lights, a red carpet down to the forecourt.', 13, 5, { col: 6, label: 'Casino' }),
+  building('hotel-silvercreek-w', 'Hotel wing', 'Pueblo adobe with a shaded portal; the hotel side.', 7, 4),
+  building('hotel-silvercreek-e', 'Buffet wing', 'Pueblo adobe with a shaded portal; the buffet side.', 7, 4),
+  building('giftshop-silvercreek', 'Trading post', 'GIFTS on a timber false front, a porch, a cactus in a pot.', 5, 3, { col: 2, label: 'Gift Shop' }),
+  building('motel-silvercreek', 'Motel office', 'A tall sign buzzing VACANCY.', 5, 3),
+  // --- Riverbend -------------------------------------------------------------
+  {
+    id: 'riverboat',
+    name: 'Riverboat',
+    category: 'building',
+    about: 'A stern-wheeler moored at the quay, its gangway down to the boards. Put it on the water.',
+    tiles: ['??????##????', '??#######???', '?#########??', '?#########??', '???????D????'].join('\n'),
+    wiring: { kind: 'exit', at: { col: 7, row: 4 }, label: 'Riverboat' },
+  },
+  building('diner-riverbend', 'The Landing Diner', 'Blue clapboard, a tin porch, EAT pointing at the door.', 6, 3, { col: 2, label: 'Diner' }),
+  building('outfitters-riverbend', 'Dockside Outfitters', 'Barn-red boards, canoes on end against the wall.', 6, 3, { col: 3, label: 'Outfitters' }),
+  // --- Crescent Harbor -------------------------------------------------------
+  building('club-harbor', 'The Harbour Room', 'Oxblood brick, brass lamps, black railings and no name on the door.', 5, 5, { col: 2, label: 'The Harbour Room' }),
+  building('supper-harbor', 'Supper club', 'Art deco limestone with a blade sign and a marquee in bulbs.', 5, 5, { col: 2, label: 'Supper Club' }),
+  building('cardroom-harbor', 'Harbor Card Room', 'Stone, a mansard of dormers, a portico with its name on the frieze.', 7, 5, { col: 3, label: 'Card Room' }),
+  building('menswear-harbor', 'Tailor', 'A narrow green shopfront with two suits in the window.', 5, 5, { col: 2, label: 'Menswear' }),
+  building('autorow-harbor', 'Auto Row', 'A sawtooth showroom with cars behind the glass.', 8, 5, { col: 2, label: 'Auto Row' }),
+  // --- Palm Cay --------------------------------------------------------------
+  building('marina-palmcay', 'Marina Motors', 'A white boathouse with a speedboat in the bay.', 6, 4, { col: 3, label: 'Marina Motors' }),
+  building('casino-palmcay', 'The Cay Room', 'Pink render, a Mission gable, an arcade, torches at the door.', 9, 5, { col: 4, label: 'Cay Room' }),
+  building('hotel-palmcay', 'Resort hotel', 'Lemon render and striped balcony awnings.', 8, 4),
+  building('boutique-palmcay', 'Cay Boutique', 'Mint render and a sun hat in the window.', 5, 3, { col: 2, label: 'Boutique' }),
+  building('grill-palmcay', 'Shoreline Grill', 'A thatched shack with a surfboard for a sign.', 5, 3, { col: 2, label: 'Shoreline Grill' }),
+  // --- Neon Mesa -------------------------------------------------------------
+  building('casino-mesa', 'Mesa Casino', 'MESA in pink neon the width of the building, a marquee, a red carpet.', 11, 6, { col: 5, label: 'Mesa Casino' }),
+  building('luxury-mesa', 'Mesa Luxury', 'Black glass ruled in gold, a watch spot-lit in the window.', 5, 6, { col: 2, label: 'Mesa Luxury' }),
+  building('motors-mesa', 'Mesa Motors', 'Parking decks over a showroom with a car on a turntable.', 7, 6, { col: 3, label: 'Mesa Motors' }),
+  building('club-mesa', 'Ultraviolet', 'Black, UV neon, searchlights, a rope to queue behind.', 7, 6, { col: 3, label: 'Ultraviolet' }),
+  building('tower-mesa-a', 'Aria tower', 'A hotel tower across the Strip, helipad on the roof.', 10, 4),
+  building('garage-mesa', 'Parking garage', 'Decks of cars under a WIN BIG billboard.', 10, 4),
+  building('tower-mesa-b', 'Desert Rose tower', 'A rose-gold tower across the Strip.', 10, 4),
+  // --- Porto Lumina ----------------------------------------------------------
+  building('tower-lumina', 'Penthouse tower', 'Marble and glass, a lit crown, the lift lobby at its foot.', 6, 6, { col: 2, label: 'Penthouse Lift' }),
+  building('casino-lumina', 'Casino Lumina', 'A verdigris dome, six columns, marble steps to the water.', 11, 6, { col: 5, label: 'Casino' }),
+  building('atelier-lumina', 'Lumina Atelier', 'A mansard, iron balconies, ATELIER in gold on black lacquer.', 7, 6, { col: 3, label: 'Atelier' }),
+  building('hotel-lumina', 'Grand Hotel', 'An arcade of arches the length of the block.', 26, 3),
   {
     id: 'bus-shelter',
     name: 'Bus shelter',

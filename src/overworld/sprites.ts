@@ -1,5 +1,6 @@
 import { Texture } from 'pixi.js'
-import { CARPET, DOOR, FLOOR, FLOWER, FURNITURE, GRASS, PLAZA, PROP, ROAD, SAND, SIDEWALK, TILE_SIZE, TREE, WALL, WATER } from './tiles'
+import { FLOOR, FLOWER, FURNITURE, GRASS, PLAZA, PROP, ROAD, SAND, SIDEWALK, TILE_SIZE, TREE, WALL, WATER } from './tiles'
+import { CARPET_BORDERS, INTERIOR_TILES, WALL_TOP_COLORS } from './interiorTiles'
 
 /**
  * Sprites are authored on a 16x16 grid and blown up to the tile size with
@@ -55,19 +56,6 @@ const WALL_TILE: Draw = (px) => {
   px(12, 8, 1, 7, '#0d0d12')
 }
 
-const CARPET_TILE: Draw = (px) => {
-  px(0, 0, 16, 16, '#3a2036')
-  // Casino-carpet diamond motif.
-  px(7, 2, 2, 2, '#4d2a47')
-  px(5, 4, 6, 2, '#4d2a47')
-  px(3, 6, 10, 2, '#552f4f')
-  px(5, 8, 6, 2, '#4d2a47')
-  px(7, 10, 2, 2, '#4d2a47')
-  px(0, 13, 16, 1, '#472742')
-  px(1, 14, 3, 1, '#472742')
-  px(12, 14, 3, 1, '#472742')
-}
-
 const WATER_TILE: Draw = (px) => {
   px(0, 0, 16, 16, '#16344a')
   px(0, 3, 16, 1, '#1d4260')
@@ -85,14 +73,20 @@ const ROAD_TILE: Draw = (px) => {
   for (const [x, y] of [[1, 3], [12, 5], [6, 12], [14, 11]]) px(x, y, 1, 1, '#33333a')
 }
 
-/** A generic counter/table surface; POI art sits on top of it. */
+/**
+ * Something solid standing on the floor.
+ *
+ * Every piece of furniture in the game is a stamp drawn over these tiles, so on
+ * its own this only shows in the editor — and it is drawn as a low dark plinth
+ * rather than a crate, so that a tile nobody has put an object on yet reads as
+ * "something goes here" instead of as a box.
+ */
 const FURNITURE_TILE: Draw = (px) => {
-  px(0, 0, 16, 16, '#4a3a2a')
-  px(0, 0, 16, 2, '#5c4836')
-  px(0, 14, 16, 2, '#3a2d20')
-  px(0, 0, 1, 16, '#5c4836')
-  px(15, 0, 1, 16, '#3a2d20')
-  for (const y of [4, 9]) px(1, y, 14, 1, '#413224')
+  px(1, 3, 14, 12, 'rgba(10, 8, 20, 0.25)')
+  px(1, 2, 14, 11, '#4a3e36')
+  px(1, 2, 14, 1, '#6a5a4e')
+  px(1, 12, 14, 1, '#2e2620')
+  px(3, 5, 10, 5, '#54473e')
 }
 
 const SIDEWALK_TILE: Draw = (px) => {
@@ -110,15 +104,6 @@ const GRASS_TILE: Draw = (px) => {
   for (const [x, y] of [[2, 3], [7, 2], [12, 5], [4, 9], [10, 11], [14, 8], [6, 13]]) {
     px(x, y, 1, 2, '#2f5237')
   }
-}
-
-const DOOR_TILE: Draw = (px) => {
-  px(0, 0, 16, 16, '#2a2028')
-  px(2, 1, 12, 15, '#6b4a2f')
-  px(3, 2, 10, 13, '#7d5836')
-  px(3, 2, 10, 1, '#8f6540')
-  px(11, 8, 2, 2, '#d9c46a') // handle
-  px(2, 0, 12, 1, '#4a3626')
 }
 
 /** A full, round tree — what an open map is fenced with instead of walls. */
@@ -214,6 +199,8 @@ export const TILE_THEMES: Record<string, TileTheme> = {
 }
 
 function recolor(hex: string, theme: TileTheme): string {
+  // Translucent shading is a shadow, not a colour of the town.
+  if (!/^#[0-9a-f]{6}$/i.test(hex)) return hex
   const n = parseInt(hex.slice(1), 16)
   const channel = (value: number, factor: number) =>
     Math.max(0, Math.min(255, Math.round(value * factor + theme.lift)))
@@ -228,19 +215,15 @@ function themed(draw: Draw, theme: TileTheme): Draw {
   return (px) => draw((x, y, w, h, color) => px(x, y, w, h, recolor(color, theme)))
 }
 
-const tileCaches = new Map<string, Record<number, Texture>>()
-
-/** Every tile and the drawing for it, in one place so nothing can be forgotten. */
+/** Every outdoor tile and the drawing for it, in one place so nothing can be forgotten. */
 const TILE_DRAWINGS: Record<number, Draw> = {
   [FLOOR]: FLOOR_TILE,
   [WALL]: WALL_TILE,
   [FURNITURE]: FURNITURE_TILE,
-  [CARPET]: CARPET_TILE,
   [WATER]: WATER_TILE,
   [ROAD]: ROAD_TILE,
   [SIDEWALK]: SIDEWALK_TILE,
   [GRASS]: GRASS_TILE,
-  [DOOR]: DOOR_TILE,
   [TREE]: TREE_TILE,
   [SAND]: SAND_TILE,
   [FLOWER]: FLOWER_TILE,
@@ -248,16 +231,49 @@ const TILE_DRAWINGS: Record<number, Draw> = {
   [PROP]: PROP_TILE,
 }
 
-export function tileTextures(themeId = 'default'): Record<number, Texture> {
-  const cached = tileCaches.get(themeId)
+/**
+ * Each tile's pictures and which one to use where.
+ *
+ * Interior tiles carry their own palettes and are never put through a town's
+ * colour filter: a marble floor is marble in any town, and a room's identity
+ * comes from which wall and floor it is built from, not from a tint. The town
+ * filter is for the street — grass, stone, water — where a colour of light is
+ * what it is for.
+ */
+function variantsFor(tile: number): { draws: Draw[]; themed: boolean } {
+  const interior = INTERIOR_TILES[tile]
+  if (interior) return { draws: interior.draws, themed: false }
+  return { draws: [TILE_DRAWINGS[tile] ?? FLOOR_TILE], themed: true }
+}
+
+const ALL_TILES = [...new Set([...Object.keys(TILE_DRAWINGS), ...Object.keys(INTERIOR_TILES)].map(Number))]
+
+/** Which picture of a tile to draw at a position. */
+export function tileVariant(tile: number, col: number, row: number): number {
+  const interior = INTERIOR_TILES[tile]
+  return interior ? interior.pick(col, row) % interior.draws.length : 0
+}
+
+const variantCaches = new Map<string, Record<number, Texture[]>>()
+
+/** Every picture of every tile, in a town's colours. */
+export function tileVariantTextures(themeId = 'default'): Record<number, Texture[]> {
+  const cached = variantCaches.get(themeId)
   if (cached) return cached
   const theme = TILE_THEMES[themeId] ?? TILE_THEMES.default
-  const textures: Record<number, Texture> = {}
-  for (const [tile, draw] of Object.entries(TILE_DRAWINGS)) {
-    textures[Number(tile)] = makeTexture(themed(draw, theme))
+  const textures: Record<number, Texture[]> = {}
+  for (const tile of ALL_TILES) {
+    const { draws, themed: inTownColours } = variantsFor(tile)
+    textures[tile] = draws.map((draw) => makeTexture(inTownColours ? themed(draw, theme) : draw))
   }
-  tileCaches.set(themeId, textures)
+  variantCaches.set(themeId, textures)
   return textures
+}
+
+/** The first picture of every tile, for callers that only need one. */
+export function tileTextures(themeId = 'default'): Record<number, Texture> {
+  const variants = tileVariantTextures(themeId)
+  return Object.fromEntries(Object.entries(variants).map(([tile, list]) => [tile, list[0]]))
 }
 
 const tileCanvasCaches = new Map<string, Record<number, HTMLCanvasElement>>()
@@ -274,11 +290,69 @@ export function tileCanvases(themeId = 'default'): Record<number, HTMLCanvasElem
   if (cached) return cached
   const theme = TILE_THEMES[themeId] ?? TILE_THEMES.default
   const canvases: Record<number, HTMLCanvasElement> = {}
-  for (const [tile, draw] of Object.entries(TILE_DRAWINGS)) {
-    canvases[Number(tile)] = makeCanvas(themed(draw, theme))
+  for (const tile of ALL_TILES) {
+    const { draws, themed: inTownColours } = variantsFor(tile)
+    canvases[tile] = makeCanvas(inTownColours ? themed(draws[0], theme) : draws[0])
   }
   tileCanvasCaches.set(themeId, canvases)
   return canvases
+}
+
+// ---------------------------------------------------------------------------
+// Where one tile meets another
+// ---------------------------------------------------------------------------
+
+/** A side of a tile. */
+export type Side = 'n' | 'e' | 's' | 'w'
+
+/** A band `thickness` wide along one side of a tile, `inset` in from the edge. */
+function band(px: Parameters<Draw>[0], side: Side, inset: number, thickness: number, color: string) {
+  if (side === 'n') px(0, inset, 16, thickness, color)
+  if (side === 's') px(0, 16 - inset - thickness, 16, thickness, color)
+  if (side === 'w') px(inset, 0, thickness, 16, color)
+  if (side === 'e') px(16 - inset - thickness, 0, thickness, 16, color)
+}
+
+/**
+ * The pieces laid over a tile where it meets something else.
+ *
+ * - `lip`: the rounded edge of a wall top, on the side that faces the room.
+ * - `shade`: the shadow a wall throws on the floor at its foot. Light comes from
+ *   the top-left, so walls shade the floor below and to the right of them.
+ * - `border-<carpet>`: the bound edge of a carpet, where it stops at a wall or
+ *   meets a different floor. Furniture standing on a carpet does not stop it.
+ */
+const EDGE_DRAWINGS: Record<string, Draw> = {}
+for (const side of ['n', 'e', 's', 'w'] as Side[]) {
+  EDGE_DRAWINGS[`lip-${side}`] = (px) => {
+    band(px, side, 0, 1, WALL_TOP_COLORS.lip)
+    band(px, side, 1, 1, WALL_TOP_COLORS.lipInner)
+  }
+  EDGE_DRAWINGS[`shade-${side}`] = (px) => {
+    band(px, side, 0, 1, 'rgba(14, 8, 24, 0.42)')
+    band(px, side, 1, 1, 'rgba(14, 8, 24, 0.26)')
+    band(px, side, 2, 1, 'rgba(14, 8, 24, 0.12)')
+  }
+  for (const [carpet, [outer, inner, shade]] of Object.entries(CARPET_BORDERS)) {
+    EDGE_DRAWINGS[`border-${carpet}-${side}`] = (px) => {
+      band(px, side, 0, 1, outer)
+      band(px, side, 1, 1, inner)
+      band(px, side, 2, 1, shade)
+    }
+  }
+}
+
+const edgeCache = new Map<string, Texture>()
+
+/** One edge piece, by the key `EDGE_DRAWINGS` files it under. */
+export function edgeTexture(key: string): Texture | null {
+  const cached = edgeCache.get(key)
+  if (cached) return cached
+  const draw = EDGE_DRAWINGS[key]
+  if (!draw) return null
+  const texture = makeTexture(draw)
+  edgeCache.set(key, texture)
+  return texture
 }
 
 // ---------------------------------------------------------------------------
