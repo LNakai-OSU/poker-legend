@@ -78,7 +78,12 @@ deb: {
 ```
 
 - `seat` is omitted for people who never play.
-- `overworld` is omitted for people who only ever sit at a table.
+- `overworld` is omitted for people who only ever sit at a table. Its optional
+  `role` puts them in a uniform in the street, and `look` adds what a table
+  portrait never shows (`trousers`, `shoes`, `lower: 'skirt'`, `sleeves`).
+- A point of interest on a map can say who stands there the same way:
+  `role: 'bartender'`, `look: { hairStyle: 'bun' }`. Without them, the role
+  comes from what the POI does and the look is made up from its id.
 - **A persona is the same person somewhere else** — Vance one on one, Kit at the
   second table she finds you at. It is not a second character. Only the fields
   that change are written.
@@ -210,8 +215,12 @@ odds, position, hand reading. They are teaching, not flavour.
 
 - **Overworld:** original pixel art in the spirit of LeafGreen. Every sprite and
   tile is **drawn at runtime from code** — there are no art assets in this
-  repo. 16×16 drawings scaled to a 32px tile with nearest-neighbour filtering.
-  A character's palette comes from their content data.
+  repo. Drawings on a 16-unit grid scaled to a 32px tile with nearest-neighbour
+  filtering. People are a tile wide and a tile and a half tall, drawn from their
+  content: a character from their `look`, so the person in the street is the
+  person at the table; a stranger from their id; their clothes from their
+  `role` (dealer, officer, clerk…). Nobody wears a floating name — it shows when
+  you are standing next to them.
 - **Table:** a different visual language — an oval felt, opponents round the
   rim, you at the rail, chips as physical stacks. Avatars carry an *expression*
   driven by what is happening in the hand.

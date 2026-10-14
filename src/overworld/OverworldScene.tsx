@@ -432,6 +432,14 @@ export function OverworldScene({
 
         const adjacent = talkingRef.current ? undefined : findAdjacent()
         for (const npc of npcs) npc.label.visible = npc === adjacent && npc.config.labelled !== false
+        if (adjacent) {
+          // Standing right behind somebody, your head is where their name would
+          // go; lift it over both of you.
+          const anchor = adjacent.captionAnchor()
+          const behindThem = player.col === adjacent.config.col && player.row === adjacent.config.row - 1
+          const playerTop = player.pixelY - PERSON_RISE * 2 + 4
+          adjacent.label.position.set(anchor.x, (behindThem ? Math.min(anchor.y, playerTop) : anchor.y) - 1)
+        }
         setPrompt(adjacent ? adjacent.config.name : null)
       })
     })()
