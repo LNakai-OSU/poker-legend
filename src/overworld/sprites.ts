@@ -284,99 +284,11 @@ export function tileCanvases(themeId = 'default'): Record<number, HTMLCanvasElem
 // ---------------------------------------------------------------------------
 // Characters
 // ---------------------------------------------------------------------------
-
-export type Facing = 'down' | 'up' | 'left' | 'right'
-
-export interface CharacterPalette {
-  cloth: string
-  clothShade: string
-  hair: string
-  skin: string
-}
-
-/** Turns a POI's accent colour into a full character palette. */
-export function paletteFromColor(color: number): CharacterPalette {
-  const r = (color >> 16) & 0xff
-  const g = (color >> 8) & 0xff
-  const b = color & 0xff
-  const shade = (c: number) => Math.max(0, Math.round(c * 0.65))
-  const hex = (rr: number, gg: number, bb: number) =>
-    `#${rr.toString(16).padStart(2, '0')}${gg.toString(16).padStart(2, '0')}${bb.toString(16).padStart(2, '0')}`
-  return {
-    cloth: hex(r, g, b),
-    clothShade: hex(shade(r), shade(g), shade(b)),
-    hair: '#2b2118',
-    skin: '#d9a07a',
-  }
-}
+//
+// People are drawn in characterArt.ts: 16x24 figures built from layered pixel
+// maps, which outgrew this file's one-rectangle-per-part approach.
 
 const OUTLINE = '#15151c'
-
-function drawCharacter(
-  px: (x: number, y: number, w: number, h: number, color: string) => void,
-  palette: CharacterPalette,
-  facing: Facing,
-  stepped: boolean,
-) {
-  const { cloth, clothShade, hair, skin } = palette
-
-  // Head block with a dark outline behind it.
-  px(3, 1, 10, 8, OUTLINE)
-  px(4, 2, 8, 6, skin)
-
-  if (facing === 'up') {
-    px(4, 2, 8, 5, hair) // back of the head
-  } else if (facing === 'down') {
-    px(4, 2, 8, 2, hair)
-    px(4, 4, 1, 2, hair)
-    px(11, 4, 1, 2, hair)
-    px(6, 5, 1, 1, OUTLINE) // eyes
-    px(9, 5, 1, 1, OUTLINE)
-  } else {
-    px(4, 2, 8, 2, hair)
-    const eyeX = facing === 'left' ? 5 : 10
-    const hairX = facing === 'left' ? 10 : 4
-    px(hairX, 4, 2, 2, hair)
-    px(eyeX, 5, 1, 1, OUTLINE)
-  }
-
-  // Torso.
-  px(3, 8, 10, 6, OUTLINE)
-  px(4, 9, 8, 4, cloth)
-  px(4, 11, 8, 1, clothShade)
-  // Arms.
-  px(3, 9, 1, 3, clothShade)
-  px(12, 9, 1, 3, clothShade)
-
-  // Legs — the only thing that changes between walk frames.
-  if (stepped) {
-    px(4, 13, 3, 3, OUTLINE)
-    px(9, 13, 3, 2, OUTLINE)
-  } else {
-    px(4, 13, 3, 2, OUTLINE)
-    px(9, 13, 3, 3, OUTLINE)
-  }
-}
-
-const characterCache = new Map<string, Record<Facing, Texture[]>>()
-
-export function characterTextures(palette: CharacterPalette): Record<Facing, Texture[]> {
-  const key = `${palette.cloth}|${palette.hair}|${palette.skin}`
-  const cached = characterCache.get(key)
-  if (cached) return cached
-
-  const build = (facing: Facing) =>
-    [false, true].map((stepped) => makeTexture((px) => drawCharacter(px, palette, facing, stepped)))
-
-  const set: Record<Facing, Texture[]> = {
-    down: build('down'),
-    up: build('up'),
-    left: build('left'),
-    right: build('right'),
-  }
-  characterCache.set(key, set)
-  return set
-}
 
 // ---------------------------------------------------------------------------
 // Props

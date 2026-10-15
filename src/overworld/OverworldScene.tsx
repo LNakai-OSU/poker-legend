@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Application } from 'pixi.js'
+import { Application, Container, Sprite, Text } from 'pixi.js'
 import { buildStampLayer, buildTileLayer, isWalkable, TILE_SIZE, type TileGrid } from './tileRenderer'
 import type { PlacedStamp } from '../world/stamps'
 import { DELTAS, GridPlayer, type Direction } from './GridPlayer'
 import { Npc, type NpcConfig } from './Npc'
+import { COLLECTOR_FIGURE, HERO_FIGURE } from './casting'
+import { alertBubbleTexture } from './objectArt'
+import { PERSON_RISE } from './characterArt'
 import { DialogueBox } from '../game/DialogueBox'
 import { TouchControls, useIsTouchDevice } from './TouchControls'
 import { cameraOffset } from './camera'
@@ -190,50 +193,61 @@ export function OverworldScene({
       const world = buildTileLayer(map, theme)
       // Objects over the tiles, under everybody who walks about on them.
       world.addChild(buildStampLayer(stamps ?? []))
-      const player = new GridPlayer(playerStart.col, playerStart.row)
+      // Everybody who stands on the map, drawn back to front. People are a tile
+      // and a half tall, so a head overlaps the tile behind it, and whoever is
+      // further down the screen is in front: sorting by where the feet are is
+      // what makes walking behind someone look like walking behind them.
+      const actors = new Container()
+      actors.sortableChildren = true
+      // Door signs are fixed to the buildings, so people walk in front of them.
+      const signs = new Container()
+      // Captions go over everybody, so a name is never hidden behind a head.
+      const overlay = new Container()
+      world.addChild(signs, actors, overlay)
+
+      const player = new GridPlayer(playerStart.col, playerStart.row, { figure: HERO_FIGURE })
       const npcs = interactables.map((cfg) => new Npc(cfg))
-      // The whole world is scaled up, which would blow the name plates up with
-      // it; counter-scale them so they stay a readable caption size.
+      actors.addChild(player.sprite, ...npcs.map((n) => n.sprite))
+      // Names are not hung over everybody all the time — a street of floating
+      // captions reads as a debug view. A name shows over whoever you are
+      // standing next to, which is the person "E" would talk to.
+      // The whole world is scaled up, which would blow the captions up with it;
+      // counter-scale them so they stay a readable size.
       for (const npc of npcs) {
         npc.label.scale.set(1 / zoom)
-        npc.label.position.set(TILE_SIZE / 2, -1)
+        const anchor = npc.captionAnchor()
+        npc.label.position.set(anchor.x, anchor.y - 1)
+        overlay.addChild(npc.label)
       }
       // Signs over the doors. Every exit already carried a label in the content —
       // "Card Room", "Menswear", "Auto Row" — and none of it was ever drawn, so a
       // boulevard was six identical brown rectangles and the only way to find out
-      // which was which was to walk into each one.
-      const doorSigns = exits.map((exit) => {
-        const sign = new Npc({
-          id: `sign-${exit.col}-${exit.row}`,
-          name: exit.label,
-          col: exit.col,
-          row: exit.row,
+      // which was which was to walk into each one. Signposts, so always shown.
+      for (const exit of exits) {
+        const sign = new Text({
+          text: exit.label,
+          style: {
+            fill: '#f0d9a0',
+            fontSize: 10,
+            fontFamily: 'monospace',
+            stroke: { color: '#0c0c14', width: 3, join: 'round' },
+          },
         })
-        // The label only; the doorway itself is already drawn by the tile layer.
-        sign.sprite.removeChildren()
-        sign.label.scale.set(1 / zoom)
-        sign.label.position.set(TILE_SIZE / 2, -1)
-        sign.label.style.fill = '#f0d9a0'
-        sign.sprite.addChild(sign.label)
-        return sign
-      })
-
-      world.addChild(player.sprite, ...npcs.map((n) => n.sprite), ...doorSigns.map((s) => s.sprite))
+        sign.anchor.set(0.5, 1)
+        sign.scale.set(1 / zoom)
+        sign.position.set(exit.col * TILE_SIZE + TILE_SIZE / 2, exit.row * TILE_SIZE - 1)
+        signs.addChild(sign)
+      }
 
       let hunter: GridPlayer | null = null
-      let hunterLabel: Npc | null = null
+      let alert: Sprite | null = null
       if (chaser) {
-        hunter = new GridPlayer(chaser.col, chaser.row, chaser.color ?? 0xe05a5a, 150)
-        hunterLabel = new Npc({
-          id: 'chaser-label',
-          name: chaser.name,
-          col: chaser.col,
-          row: chaser.row,
-          color: chaser.color ?? 0xe05a5a,
-        })
-        // The label rides along with the pursuer; the body is the GridPlayer.
-        hunterLabel.sprite.visible = true
-        world.addChild(hunter.sprite, hunterLabel.sprite)
+        hunter = new GridPlayer(chaser.col, chaser.row, { figure: COLLECTOR_FIGURE, speedPxPerSec: 150 })
+        actors.addChild(hunter.sprite)
+        // A "!" over his head instead of a name: he has seen you.
+        alert = new Sprite(alertBubbleTexture())
+        alert.anchor.set(0.5, 1)
+        overlay.addChild(alert)
       }
       instance.stage.addChild(world)
 
@@ -298,6 +312,18 @@ export function OverworldScene({
         player.tryMove(direction, map, isOccupied)
       }
 
+      /**
+       * Somebody you speak to turns to look at you, and you at them — the
+       * LeafGreen courtesy. Drawing only: who you can talk to is still decided by
+       * standing next to them, exactly as before.
+       */
+      const meet = (npc: Npc, forMs?: number) => {
+        npc.attend(player.col, player.row, forMs)
+        const dc = npc.config.col - player.col
+        const dr = npc.config.row - player.row
+        player.face(dc > 0 ? 'right' : dc < 0 ? 'left' : dr > 0 ? 'down' : 'up')
+      }
+
       const tryInteract = () => {
         if (talkingRef.current) return
         const adjacent = findAdjacent()
@@ -305,7 +331,11 @@ export function OverworldScene({
         const interactable = interactablesRef.current.find((i) => i.id === adjacent.config.id)
         // A scripted event gets first refusal: it runs its own conversation,
         // because it has more to say than a text box and a callback.
-        if (interactable?.onTalk?.()) return
+        if (interactable?.onTalk?.()) {
+          meet(adjacent, 6000)
+          return
+        }
+        meet(adjacent)
         setTalkingId(adjacent.config.id)
       }
       interactRef.current = tryInteract
@@ -323,16 +353,18 @@ export function OverworldScene({
       let caught = false
       let elapsed = 0
       const stepMs = chaser?.stepMs ?? 430
-      // People breathe; props don't. Each NPC bobs on its own phase so a row
-      // of them doesn't move in lockstep.
-      const idlers = npcs
-        .filter((n) => (n.config.art ?? 'person') === 'person')
-        .map((n, i) => ({ npc: n, baseY: n.sprite.y, phase: i * 1.7 }))
+      // Whoever was being talked to last frame, so they can be let go of when
+      // the text box closes.
+      let wasTalkingTo: string | null = null
 
       instance.ticker.add((ticker) => {
         elapsed += ticker.deltaMS
-        for (const idler of idlers) {
-          idler.npc.sprite.y = idler.baseY + Math.sin(elapsed / 620 + idler.phase) * 1.4
+        // Idle life: a blink, a glance up the street. Whole frames, never a
+        // sub-pixel drift — the art is on a grid and stays on it.
+        for (const npc of npcs) npc.update(ticker.deltaMS)
+        if (wasTalkingTo !== talkingRef.current) {
+          npcs.find((n) => n.config.id === wasTalkingTo)?.release()
+          wasTalkingTo = talkingRef.current
         }
 
         if (talkingRef.current) {
@@ -362,15 +394,21 @@ export function OverworldScene({
           if (sinceHunterStep >= stepMs && !hunter.moving) {
             sinceHunterStep = 0
             stepToward(hunter, player.col, player.row, map)
-            if (hunterLabel) hunterLabel.sprite.position.set(hunter.pixelX, hunter.pixelY)
           }
           hunter.update(ticker.deltaMS)
-          if (hunterLabel) hunterLabel.sprite.position.set(hunter.pixelX, hunter.pixelY)
 
           if (hunter.col === player.col && hunter.row === player.row) {
             caught = true
             onCaughtRef.current?.()
           }
+        }
+        if (hunter && alert) {
+          // Over his hat, bobbing a whole art pixel at a time.
+          const bob = Math.floor(elapsed / 260) % 2 === 0 ? 0 : 2
+          alert.position.set(
+            Math.round(hunter.pixelX + TILE_SIZE / 2),
+            Math.round(hunter.pixelY - PERSON_RISE * 2 - bob),
+          )
         }
 
         centerCamera()
@@ -392,12 +430,17 @@ export function OverworldScene({
             : { col: player.col, row: player.row },
         )
 
-        if (talkingRef.current) {
-          setPrompt(null)
-        } else {
-          const adjacent = findAdjacent()
-          setPrompt(adjacent ? adjacent.config.name : null)
+        const adjacent = talkingRef.current ? undefined : findAdjacent()
+        for (const npc of npcs) npc.label.visible = npc === adjacent && npc.config.labelled !== false
+        if (adjacent) {
+          // Standing right behind somebody, your head is where their name would
+          // go; lift it over both of you.
+          const anchor = adjacent.captionAnchor()
+          const behindThem = player.col === adjacent.config.col && player.row === adjacent.config.row - 1
+          const playerTop = player.pixelY - PERSON_RISE * 2 + 4
+          adjacent.label.position.set(anchor.x, (behindThem ? Math.min(anchor.y, playerTop) : anchor.y) - 1)
         }
+        setPrompt(adjacent ? adjacent.config.name : null)
       })
     })()
 

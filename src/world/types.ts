@@ -1,5 +1,6 @@
 import type { TileGrid } from '../overworld/tileRenderer'
 import type { NpcArt } from '../overworld/Npc'
+import type { NpcRole, PersonLook } from '../overworld/characterArt'
 import type { Archetype, SkillTier } from '../engine/types'
 import type { CityId } from '../game/state'
 import type { PlacedStamp } from './stamps'
@@ -138,7 +139,21 @@ export interface PoiDef {
   action: PoiAction
   /** Overrides the sprite chosen from the action kind (people by default). */
   art?: NpcArt
-  /** Scenery sets this false so no name plate floats over it. */
+  /**
+   * What a person here is dressed as: a dealer's waistcoat, a police cap.
+   *
+   * Defaults from the action — whoever seats you at a table is a dealer, whoever
+   * sells you something wears an apron — and then from the name, so a "Patrol
+   * Officer" is in uniform. Set it whenever the job is not obvious from either.
+   * See `roleForPoi`.
+   */
+  role?: NpcRole
+  /**
+   * How they look, over the stranger made up from their id: a fixed shirt
+   * colour, a hairstyle, a skirt. Anything left out stays as generated.
+   */
+  look?: Partial<PersonLook>
+  /** Scenery sets this false so no name plate shows over it. */
   labelled?: boolean
   /**
    * Other things this person might say, chosen by the day.

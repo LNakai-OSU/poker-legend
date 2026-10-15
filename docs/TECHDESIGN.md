@@ -112,9 +112,14 @@ is what produces the chunky GBA-era look without shipping any assets.
 
 - Tiles (floor, wall, furniture, carpet, water, road) are patterned rather than
   flat, so large rooms don't read as blocks of colour.
-- Characters are a single drawing routine with a swappable palette, generated
-  per facing (4) and walk frame (2). A POI's accent colour becomes its
-  character palette, so NPC art is derived from content data.
+- People (`src/overworld/characterArt.ts`) are 16x24: a tile wide, standing on
+  their tile with the head over the one behind. Each is composed from layered
+  pixel maps — anatomy, hairstyle, hat, face accessory, role outfit — with
+  three tones per material and an outline computed in the material's own dark
+  shade. Four facings, a three-frame walk and a blink. `casting.ts` decides who
+  looks like what: characters from their `look`, strangers from their id, a
+  role from the POI's action, name, or explicit `role`. The scene draws
+  everybody y-sorted by their feet.
 - Props (slot machine, craps table, shop counter, sign, lift) are chosen from
   the POI's `art` field, defaulting by action kind.
 
@@ -138,8 +143,9 @@ feel like one place rather than six unrelated sketches. Locals with a line or
 two stand on every street; the content tests enforce that.
 
 People and props occupy their tile, so you cannot walk through a crowd. The
-camera is zoomed 2x with NPC name plates counter-scaled, because at 1x the map
-sat as a small island in a large window.
+camera is zoomed 2x with captions counter-scaled, because at 1x the map sat as
+a small island in a large window. A person's name shows only while you stand
+next to them.
 
 Door and area invariants are covered by tests: every door must be steppable,
 land somewhere walkable, never land on another door, and every area must be
