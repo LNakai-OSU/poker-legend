@@ -1,5 +1,5 @@
 import type { AvatarLook, Expression } from './avatars'
-import { hashString, luminance, mix, shade } from './pixel/color'
+import { dither, hashString, luminance, mix, shade } from './pixel/color'
 import { Raster, pack } from './pixel/raster'
 
 /**
@@ -192,13 +192,14 @@ export function drawPortrait(look: AvatarLook, expression: Expression, seed: str
   for (const [y, [a, b]] of rows) {
     for (let x = a; x <= b; x++) {
       let c = skin
-      if (x >= b - 2 || y >= 30) c = skinShade
-      if (x <= a + 2 && y >= 13 && y <= 22) c = skinLit
+      if (x >= b - 1 || y >= 30) c = skinShade
+      if (x === a + 1 && y >= 14 && y <= 21) c = skinLit
       r.put(x, y, c)
     }
   }
   // Cheek highlight and the shadow the nose and jaw throw.
-  r.rect(15, 23, 3, 2, skinLit)
+  r.rect(15, 23, 2, 1, skinLit)
+  r.rect(16, 11, 4, 1, skinLit)
   for (const [y, [, b]] of rows) if (y >= 27) r.put(b - 1, y, skinShade)
 
   // Ears.
@@ -221,7 +222,9 @@ export function drawPortrait(look: AvatarLook, expression: Expression, seed: str
   drawMouth(r, expression, t, line)
 
   if (t.freckles) for (const [x, y] of [[16, 24], [18, 25], [29, 24], [31, 25], [17, 26]]) r.put(x, y, shade(skin, 0.82))
-  if (expression === 'won' || expression === 'lip-twitch') {
+  // Only a win colours the cheeks: a tell must show the cue it names and
+  // nothing else, or the face would give away what the text is careful not to.
+  if (expression === 'won') {
     r.rect(15, 25, 2, 1, BLUSH)
     r.rect(31, 25, 2, 1, BLUSH)
   }
@@ -516,6 +519,31 @@ function drawAccessory(r: Raster, look: AvatarLook) {
 }
 
 const cache = new Map<string, string>()
+
+/**
+ * What a face is photographed against: the room's colour, lit from the top left
+ * and dithered darker towards the bottom right, the way a trainer card photo is.
+ */
+export function portraitBackdropUrl(color: string): string {
+  const key = `backdrop|${color}`
+  const hit = cache.get(key)
+  if (hit) return hit
+  const r = new Raster(PORTRAIT_SIZE, PORTRAIT_SIZE)
+  const lit = mix(color, '#ffffff', 0.28)
+  const dark = shade(color, 0.78)
+  for (let y = 0; y < PORTRAIT_SIZE; y++) {
+    for (let x = 0; x < PORTRAIT_SIZE; x++) {
+      const t = (x + y * 1.4) / (PORTRAIT_SIZE * 2.4)
+      let c = color
+      if (t < 0.3) c = dither(x, y, (0.3 - t) / 0.3) ? lit : color
+      else if (t > 0.62) c = dither(x, y, (t - 0.62) / 0.38) ? dark : color
+      r.put(x, y, c)
+    }
+  }
+  const url = r.toDataURL()
+  cache.set(key, url)
+  return url
+}
 
 /** A portrait as a data URL at its native 48x48, cached per face and expression. */
 export function portraitUrl(look: AvatarLook, expression: Expression, seed: string): string {

@@ -90,6 +90,35 @@ export function chipStackUrl(chips: Denomination[]): { url: string; w: number; h
   return entry
 }
 
+/** One chip seen from straight above, with its edge spots: the raise slider's thumb. */
+export function chipTopUrl(face = '#2e9450', spot = '#f2f2f6'): string {
+  const key = `top|${face}|${spot}`
+  const hit = cache.get(key)
+  if (hit) return hit.url
+  const raster = new Raster(11, 11)
+  raster.sprite(
+    [
+      '...ooooo...',
+      '..osfffso..',
+      '.offllfffo.',
+      'osflliiffso',
+      'offliiiiffo',
+      'ofiiiiiiifo',
+      'offiiiiiffo',
+      'osffiiiffso',
+      '.offfffffo.',
+      '..osfffso..',
+      '...ooooo...',
+    ],
+    0,
+    0,
+    { o: OUTLINE, f: face, l: shade(face, 1.3), i: shade(face, 0.82), s: spot },
+  )
+  const url = raster.toDataURL()
+  cache.set(key, { url, w: 11, h: 11 })
+  return url
+}
+
 /** The dealer button: a white puck with a D on it. */
 export function dealerButtonUrl(): string {
   const key = 'dealer'

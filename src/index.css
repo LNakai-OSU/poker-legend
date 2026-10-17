@@ -39,23 +39,26 @@ button {
    physical cue its own rhythm so they read as behaviour rather than text.
    --------------------------------------------------------------------------- */
 
+/* Pixel art moves in steps, the way a GBA sprite does, not in smooth tweens:
+   a card is dealt in four hops and turned over by squashing it flat. */
 @keyframes card-deal {
-  from { opacity: 0; transform: translateY(-20px) rotate(-8deg) scale(0.92); }
+  from { opacity: 0; transform: translateY(-16px); }
   to   { opacity: 1; transform: none; }
 }
-.card-deal { animation: card-deal 260ms cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+.card-deal { animation: card-deal 240ms steps(4, end) both; }
 
 @keyframes card-flip {
-  from { transform: rotateY(90deg) scale(0.9); opacity: 0; }
-  to   { transform: none; opacity: 1; }
+  from { transform: scaleX(0); }
+  to   { transform: none; }
 }
-.card-flip { animation: card-flip 320ms ease-out both; }
+.card-flip { animation: card-flip 280ms steps(4, end) both; }
 
+/* The winner's plate flashes its frame, like a GBA selection box. */
 @keyframes seat-win {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(58, 157, 92, 0); }
-  50%      { box-shadow: 0 0 0 6px rgba(58, 157, 92, 0.45); }
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0; }
 }
-.seat-win { animation: seat-win 900ms ease-in-out 2; }
+.seat-win { animation: seat-win 400ms steps(1, end) 5 both; }
 
 @keyframes fade-in {
   from { opacity: 0; }
@@ -63,11 +66,12 @@ button {
 }
 .scene-fade { animation: fade-in 220ms ease-out both; }
 
+/* The pot line flashes when chips go in. */
 @keyframes pot-bump {
-  0%, 100% { transform: scale(1); }
-  40%      { transform: scale(1.18); }
+  0%   { filter: brightness(1.45); }
+  100% { filter: none; }
 }
-.pot-bump { animation: pot-bump 320ms ease-out; display: inline-block; }
+.pot-bump { animation: pot-bump 300ms steps(3, end); }
 
 /* Each tell moves the way the cue it describes would. */
 @keyframes tell-twitch {
@@ -120,34 +124,60 @@ button {
   }
 }
 
-/* Table talk: a small bubble above a seat. */
-.speech-bubble {
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  margin-bottom: 6px;
-  white-space: nowrap;
-  max-width: 220px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  background: #f4f4f8;
-  color: #16161e;
-  border-radius: 10px;
-  padding: 4px 9px;
-  font-size: 11px;
-  z-index: 3;
-  animation: fade-in 160ms ease-out both;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+/* The arrow over whoever is thinking bobs a pixel or two, as GBA cursors do. */
+@keyframes acting-cursor {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(25%); }
 }
-.speech-bubble::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 5px solid transparent;
-  border-top-color: #f4f4f8;
+.acting-cursor { animation: acting-cursor 700ms steps(2, jump-none) infinite; }
+
+/* Table talk: a white box over the speaker, placed by the table layout. */
+.speech-bubble { animation: fade-in 120ms steps(2, end) both; }
+
+/* The betting menu's buttons: a pointing cursor on the one you are on, as in
+   every GBA menu, and a one-pixel press. */
+.px-btn .px-cursor { visibility: hidden; }
+.px-btn:hover .px-cursor,
+.px-btn:focus-visible .px-cursor { visibility: visible; }
+.px-btn:focus-visible { outline: none; filter: brightness(1.15); }
+.px-btn:active > * { transform: translateY(var(--press, 2px)); }
+
+/* The raise slider: a dark groove with a chip to drag along it. */
+.px-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  margin: 0;
+  cursor: pointer;
+  image-rendering: pixelated;
+}
+.px-slider::-webkit-slider-runnable-track {
+  height: calc(var(--px) * 4);
+  background: #283040;
+  box-shadow: 0 0 0 var(--px) #141418, inset 0 var(--px) 0 #10141c;
+}
+.px-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: calc(var(--px) * 11);
+  height: calc(var(--px) * 11);
+  margin-top: calc(var(--px) * -3.5);
+  border: none;
+  background: var(--thumb) center / 100% 100% no-repeat;
+  image-rendering: pixelated;
+}
+.px-slider::-moz-range-track {
+  height: calc(var(--px) * 4);
+  background: #283040;
+  box-shadow: 0 0 0 var(--px) #141418;
+}
+.px-slider::-moz-range-thumb {
+  width: calc(var(--px) * 11);
+  height: calc(var(--px) * 11);
+  border: none;
+  border-radius: 0;
+  background: var(--thumb) center / 100% 100% no-repeat;
+  image-rendering: pixelated;
 }
 
 /* Bets sliding into the middle when a street closes. */
@@ -156,14 +186,15 @@ button {
 }
 .chips-to-pot { animation: chips-in 420ms ease-in both; }
 
-/* Key moments in a hand: rises in, holds, fades out without being dismissed. */
+/* Key moments in a hand: the box opens from its middle line, as a GBA text box
+   does, holds, and closes again without being dismissed. */
 @keyframes announce {
-  0%   { opacity: 0; transform: translate(-50%, calc(-50% + 10px)); }
-  12%  { opacity: 1; transform: translate(-50%, -50%); }
-  82%  { opacity: 1; transform: translate(-50%, -50%); }
-  100% { opacity: 0; transform: translate(-50%, calc(-50% - 6px)); }
+  0%   { clip-path: inset(50% 0 50% 0); }
+  8%   { clip-path: inset(0 0 0 0); }
+  88%  { clip-path: inset(0 0 0 0); }
+  100% { clip-path: inset(50% 0 50% 0); }
 }
-.announcement { animation: announce 2600ms ease-out both; }
+.announcement { animation: announce 2600ms steps(24, end) both; }
 
 /* The thin line that fills while the next hand is being dealt. */
 @keyframes deal-countdown {
@@ -194,14 +225,4 @@ button {
   .announcement { animation-duration: 2600ms; animation-name: none; opacity: 1; }
   .deal-countdown { animation: none; transform: scaleX(1); }
   .bus-scroll-far, .bus-scroll-near, .bus-bob { animation: none; }
-}
-
-/*
- * The line of flavour under a player's name is the tallest thing in a seat, and
- * on a crowded table it is what pushes the far seats down onto the pot. On a
- * screen with no room to spare it goes, and the seat keeps the parts that are
- * actually load-bearing: who they are, what they have, and what they have bet.
- */
-@media (max-height: 680px), (max-width: 520px) {
-  .seat-style { display: none; }
 }

@@ -1,17 +1,24 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { TexasHoldEmTable, type HandResult } from '../engine/table'
 import { decideAiAction, estimateEquity, inferredRangePercentile } from '../engine/ai'
 import { bestHand, HAND_CATEGORY_NAMES } from '../engine/handRank'
 import { defaultRng } from '../engine/rng'
 import type { PlayerConfig } from '../engine/types'
 import type { OpponentDef, TableDef } from '../world/types'
-import { PokerTableView, handTakings, potWinnerIds, type SeatSpeech } from './PokerTableView'
+import { PokerTableView, ShowdownSummary, handTakings, potWinnerIds, type SeatSpeech } from './PokerTableView'
 import type { Announcement } from './HandAnnouncer'
 import { personalityFor, seatsOf } from '../world/characters'
 import type { GameState } from './state'
 import { tableAccess, tellClarity } from './progression'
 import { playSound } from '../audio/audio'
 import { useAmbientMusic } from '../audio/SoundToggle'
+import { TableStage } from './TableStage'
+import { DOCK, buttonHeight, buttonWidth, type SceneLayout, type SceneNeeds } from './tableLayout'
+import { themeFor, type TableTheme } from './tableThemes'
+import { Countdown, Panel, PxButton, PxLine } from './pixel/ui'
+import { PixelText } from './pixel/PixelText'
+import { INK } from './pixel/ink'
+import { chipTopUrl } from './pixel/chips'
 
 export interface SessionResult {
   chipsCashedOut: number
@@ -519,349 +526,354 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
   // --- End-of-session panel -------------------------------------------------
   // Winning, busting and the finale all used to replace the whole table with a
   // full-screen overlay, which hid the one hand the player most wants to read:
-  // the showdown that just ended their session. These render as a panel *below*
-  // the table instead, so the board and every revealed hand stay on screen.
+  // the showdown that just ended their session. These render in the betting
+  // menu under the table instead, so the board and every revealed hand stay on
+  // screen.
   const canRebuy = state.cash >= table.buyIn
   const rebuyWarning = tableAccess(state, table).bankrollWarning
-  const outcome: ReactNode = (() => {
-    // Nothing is offered until the hand that caused it has been seen.
-    if (!resultSettled) return null
-    if (isFinale && opponentsBusted) {
-      return (
-        <EndPanel testId="finale-won" title="You take the last pot.">
-          <p>Nadia pushes her chair back, looks at you for a long moment, and offers her hand.</p>
-          <button style={buttonStyle} onClick={() => leaveWith(you.stack, true)}>Take the room</button>
-        </EndPanel>
-      )
+  // Nothing is offered until the hand that caused it has been seen.
+  const ending: 'finale-won' | 'finale-lost' | 'busted' | null = !resultSettled
+    ? null
+    : isFinale && opponentsBusted
+      ? 'finale-won'
+      : isFinale && youBusted
+        ? 'finale-lost'
+        : youBusted
+          ? 'busted'
+          : null
+
+  const theme = themeFor(table)
+  const lessons = state.lessonIds
+  const needs = useMemo<SceneNeeds>(() => {
+    const sample = (table.buyIn * 4).toLocaleString()
+    return {
+      kind: 'cash',
+      opponents: seats.length,
+      sampleAmount: sample,
+      // The most the menu ever has to say over its buttons, so it never grows.
+      infoTexts: [
+        ...(lessons.includes('hand-reading') ? ['Three of a kind · ~100% to win'] : []),
+        ...(lessons.includes('pot-odds') ? [`Calling ${sample} into ${sample} — you need 50% to break even`] : []),
+      ],
+      title: `${table.name} · $${table.smallBlind}/$${table.bigBlind}`,
+      subtitle: `Wallet: $${state.cash.toLocaleString()}`,
     }
-    if (isFinale && youBusted) {
-      return (
-        <EndPanel testId="finale-lost" title="She has them all.">
-          <p>Nadia stacks your last chips without ceremony. The penthouse stays hers.</p>
-          <p style={{ color: '#f2c14e' }}>
-            The ${table.buyIn.toLocaleString()} you put up is hers. That was the bet.
-          </p>
-          <button style={buttonStyle} onClick={() => leaveWith(0, false)}>Leave the room</button>
-        </EndPanel>
-      )
-    }
-    if (youBusted) {
-      return (
-        <EndPanel testId="busted" title="That was your last chip at this table.">
-          <p>Wallet: ${state.cash.toLocaleString()}</p>
-          {/* Buying back in is buying in again, so the bankroll lesson applies here too. */}
-          {canRebuy && rebuyWarning && (
-            <p data-testid="rebuy-bankroll-warning" style={{ color: '#f2c14e', maxWidth: 420 }}>
-              Bankroll warning: {rebuyWarning}
-            </p>
-          )}
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
-            {canRebuy && (
-              <button
-                style={buttonStyle}
-                onClick={() => {
-                  engine.rebuy('you', table.buyIn)
-                  rebuyOpponents()
-                  engine.startNewHand()
-                  onRebuy(table.buyIn)
-                  rerender()
-                }}
-              >
-                Rebuy (${table.buyIn.toLocaleString()})
-              </button>
-            )}
-            <button style={buttonStyle} onClick={() => leaveWith(0)}>Leave table</button>
-          </div>
-        </EndPanel>
-      )
-    }
-    return null
-  })()
+  }, [table, seats.length, lessons, state.cash])
 
-  return (
-    <div style={{
-        width: '100%',
-        minHeight: '100vh',
-        background: 'radial-gradient(ellipse at 50% 30%, #16283a 0%, #0d1420 70%)',
-        color: '#e8e8f0',
-        fontFamily: 'monospace',
-        // Vertical padding tracks the window's height, not its width: on a short
-        // laptop window the fixed padding was part of what pushed the betting
-        // buttons off the bottom of the screen.
-        padding: 'clamp(6px, 1.6vh, 20px) clamp(10px, 3vw, 20px)',
-        boxSizing: 'border-box',
-        overflowX: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        gap: 'clamp(4px, 1.2vh, 10px)',
-      }}>
-      <div style={{ textAlign: 'center', marginBottom: 12 }}>
-        <div>{table.name} &middot; ${table.smallBlind}/${table.bigBlind}</div>
-        <div>Wallet: ${state.cash.toLocaleString()}</div>
-      </div>
+  const actingName = players.find((p) => p.id === publicState.actingPlayerId)?.name
 
-      <PokerTableView
-        state={publicState}
-        lastResult={lastResult}
-        players={players}
-        yourHole={yourHole}
-        insights={insights}
-        personas={personas}
-        speech={speech}
-        announcement={announcement}
-      />
+  const dock = (layout: SceneLayout) => {
+    const P = layout.scale
+    const one = buttonHeight(1, P, layout.coarse)
+    const two = buttonHeight(2, P, layout.coarse)
+    const plan = layout.dockPlan
+    const row = { display: 'flex', flexWrap: 'wrap' as const, justifyContent: 'center', alignItems: 'center', gap: DOCK.gap * P }
 
-      {(potOdds || handRead) && (
-        <div style={{ textAlign: 'center', marginBottom: 12, color: '#8ad4ff', fontSize: 13 }}>
-          {handRead && (
-            <div data-testid="hand-read">
-              {handRead.made} &middot; ~{Math.round(handRead.equity * 100)}% to win
-            </div>
-          )}
-          {potOdds && (
-            <div data-testid="pot-odds">
-              Calling {potOdds.toCall} into {publicState.pot} &mdash; you need{' '}
-              {Math.round(potOdds.breakEven * 100)}% to break even
-            </div>
-          )}
-        </div>
-      )}
-
-      {outcome}
-
-      {/* Between hands: a thin bar that says the next hand is coming, rather than
-          a panel that stops play until it is dismissed. The countdown line fills
-          while it waits, so the delay is visible instead of just felt. */}
-      {!publicState.handInProgress && outcome === null && (
-        <div
-          data-testid="hand-over-bar"
-          style={{
-            position: 'sticky',
-            bottom: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 10,
-            flexWrap: 'wrap',
-            padding: '8px 12px calc(8px + env(safe-area-inset-bottom))',
-            borderRadius: 8,
-            background: 'rgba(10,16,24,0.92)',
-            border: '1px solid #223047',
-            fontSize: 12,
-            color: '#9aa4b8',
-          }}
-        >
-          {canPlayOn && !holding && (
+    let body: ReactNode
+    if (ending) {
+      body = (
+        <EndPanel P={P} theme={theme} ending={ending}>
+          {ending === 'finale-won' && (
             <>
-              <span data-testid="auto-deal-status">Next hand</span>
-              <span
-                style={{
-                  position: 'relative',
-                  width: 90,
-                  height: 3,
-                  borderRadius: 2,
-                  background: '#223047',
-                  overflow: 'hidden',
-                }}
-              >
-                <span
-                  key={lastResult?.handNumber}
-                  className="deal-countdown"
-                  style={{
-                    position: 'absolute',
-                    inset: 0,
-                    background: '#f2c14e',
-                    animationDuration: `${AUTO_DEAL_MS}ms`,
+              <PxLine scale={P} wrap align="center" text="Nadia pushes her chair back, looks at you for a long moment, and offers her hand." />
+              <PxButton lines={['Take the room']} scale={P} role="raise" height={one} onClick={() => leaveWith(you.stack, true)} />
+            </>
+          )}
+          {ending === 'finale-lost' && (
+            <>
+              <PxLine scale={P} wrap align="center" text="Nadia stacks your last chips without ceremony. The penthouse stays hers." />
+              <PxLine scale={P} wrap align="center" ink={STAKE_INK} text={`The $${table.buyIn.toLocaleString()} you put up is hers. That was the bet.`} />
+              <PxButton lines={['Leave the room']} scale={P} role="plain" height={one} onClick={() => leaveWith(0, false)} />
+            </>
+          )}
+          {ending === 'busted' && (
+            <>
+              <PxLine scale={P} align="center" text={`Wallet: $${state.cash.toLocaleString()}`} />
+              {/* Buying back in is buying in again, so the bankroll lesson applies here too. */}
+              {canRebuy && rebuyWarning && (
+                <PxLine scale={P} wrap align="center" ink={STAKE_INK} testId="rebuy-bankroll-warning" text={`Bankroll warning: ${rebuyWarning}`} />
+              )}
+              <div style={row}>
+                {canRebuy && (
+                  <PxButton
+                    lines={[`Rebuy ($${table.buyIn.toLocaleString()})`]}
+                    scale={P}
+                    role="raise"
+                    height={one}
+                    onClick={() => {
+                      engine.rebuy('you', table.buyIn)
+                      rebuyOpponents()
+                      engine.startNewHand()
+                      onRebuy(table.buyIn)
+                      rerender()
+                    }}
+                  />
+                )}
+                <PxButton lines={['Leave table']} scale={P} role="plain" height={one} onClick={() => leaveWith(0)} />
+              </div>
+            </>
+          )}
+        </EndPanel>
+      )
+    } else if (!publicState.handInProgress) {
+      // Between hands: who won, and a bar that says the next hand is coming,
+      // rather than a panel that stops play until it is dismissed. The
+      // countdown fills while it waits, so the delay is visible instead of felt.
+      body = (
+        <>
+          {handOver && lastResult && <ShowdownSummary result={lastResult} players={players} scale={P} />}
+          <div data-testid="hand-over-bar" style={{ ...row, marginTop: DOCK.gap * P }}>
+            {canPlayOn && !holding && (
+              <>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 * P }}>
+                  <span data-testid="auto-deal-status">
+                    <PixelText text="Next hand" scale={P} ink={INK.dark} />
+                  </span>
+                  <Countdown scale={P} durationMs={AUTO_DEAL_MS} runKey={lastResult?.handNumber} />
+                </span>
+                <PxButton lines={['Deal now (space)']} scale={P} role="primary" height={one} onClick={dealNextHand} />
+                <PxButton lines={['Hold']} scale={P} role="plain" height={one} onClick={() => setHolding(true)} />
+              </>
+            )}
+            {canPlayOn && holding && (
+              <>
+                <span data-testid="auto-deal-status">
+                  <PixelText text="Holding" scale={P} ink={INK.dark} />
+                </span>
+                <PxButton
+                  lines={['Next hand (space)']}
+                  scale={P}
+                  role="primary"
+                  height={one}
+                  onClick={() => {
+                    setHolding(false)
+                    dealNextHand()
                   }}
                 />
-              </span>
-              <button style={smallButtonStyle} onClick={dealNextHand}>
-                Deal now (space)
-              </button>
-              <button style={smallButtonStyle} onClick={() => setHolding(true)}>
-                Hold
-              </button>
-            </>
+              </>
+            )}
+            {!isFinale && (
+              <PxButton lines={[`Leave table ($${you.stack.toLocaleString()})`]} scale={P} role="plain" height={one} onClick={() => leaveWith(you.stack)} />
+            )}
+          </div>
+        </>
+      )
+    } else {
+      const info = (
+        <>
+          {handRead && (
+            <PxLine
+              scale={P}
+              wrap
+              align="center"
+              ink={INFO_INK}
+              testId="hand-read"
+              text={`${handRead.made} · ~${Math.round(handRead.equity * 100)}% to win`}
+            />
           )}
-          {canPlayOn && holding && (
-            <>
-              <span data-testid="auto-deal-status">Holding</span>
-              <button
-                style={smallButtonStyle}
-                onClick={() => {
-                  setHolding(false)
-                  dealNextHand()
+          {potOdds && (
+            <PxLine
+              scale={P}
+              wrap
+              align="center"
+              ink={INFO_INK}
+              testId="pot-odds"
+              text={`Calling ${potOdds.toCall} into ${publicState.pot} — you need ${Math.round(potOdds.breakEven * 100)}% to break even`}
+            />
+          )}
+        </>
+      )
+      if (!canAct) {
+        body = (
+          <>
+            <PxLine scale={P} align="center" text={actingName ? `${actingName} to act…` : 'Dealing…'} ink={INK.dark} />
+            {info}
+          </>
+        )
+      } else {
+        const raiseOpen = legalActions.some((a) => a.type === 'raise')
+        const sliderValue = Math.min(Math.max(sliderTo, publicState.minRaiseTo), allInTo)
+        const raiseLabel = `Raise to ${sliderValue.toLocaleString()}`
+        body = (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: DOCK.gap * P }}>
+            {info}
+            <div style={row}>
+              {legalActions.some((a) => a.type === 'fold') && (
+                <PxButton lines={['Fold']} scale={P} role="fold" height={one} onClick={() => act('fold')} />
+              )}
+              {legalActions.some((a) => a.type === 'check') && (
+                <PxButton lines={['Check']} scale={P} role="primary" height={one} onClick={() => act('check')} />
+              )}
+              {legalActions.some((a) => a.type === 'call') && (
+                <PxButton lines={[`Call ${toCall}`]} scale={P} role="primary" height={one} onClick={() => act('call')} />
+              )}
+              {raiseOpen && publicState.minRaiseTo < allInTo && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: DOCK.gap * P,
+                    flex: plan.raiseJoinsPrimary ? `1 1 ${(DOCK.sliderMinW + DOCK.gap + buttonWidth([raiseLabel])) * P}px` : '1 1 100%',
+                  }}
+                >
+                  <input
+                    data-testid="raise-slider"
+                    type="range"
+                    aria-label="Raise amount"
+                    className="px-slider"
+                    min={publicState.minRaiseTo}
+                    max={allInTo}
+                    value={sliderValue}
+                    onChange={(e) => setSliderTo(Number(e.target.value))}
+                    style={
+                      {
+                        flex: 1,
+                        minWidth: DOCK.sliderMinW * P,
+                        height: one * P,
+                        '--px': `${P}px`,
+                        '--thumb': `url(${chipTopUrl()})`,
+                      } as CSSProperties
+                    }
+                  />
+                  <PxButton
+                    lines={[raiseLabel]}
+                    scale={P}
+                    role="raise"
+                    height={one}
+                    testId="raise-slider-go"
+                    onClick={() => raiseTo(sliderValue)}
+                  />
+                </div>
+              )}
+            </div>
+            {raiseOpen && (
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: `repeat(${plan.sizingCols}, ${plan.sizingCellW * P}px)`,
+                  justifyContent: 'center',
+                  gap: DOCK.gap * P,
                 }}
               >
-                Next hand (space)
-              </button>
-            </>
-          )}
-          {!isFinale && (
-            <button style={smallButtonStyle} onClick={() => leaveWith(you.stack)}>
-              Leave table (${you.stack.toLocaleString()})
-            </button>
-          )}
-        </div>
-      )}
+                {publicState.minRaiseTo < allInTo && (
+                  <PxButton
+                    lines={['Min raise', `to ${publicState.minRaiseTo.toLocaleString()}`]}
+                    scale={P}
+                    role="raise"
+                    width={plan.sizingCellW}
+                    height={two}
+                    testId="raise-min"
+                    onClick={() => raiseTo(publicState.minRaiseTo)}
+                  />
+                )}
+                {raisePresets.map((preset) => (
+                  // The first line names the sizing, the second is the total it
+                  // raises you to. Printing the total *as* the label read "Pot
+                  // 300" when the pot was 150.
+                  <PxButton
+                    key={preset.key}
+                    lines={[preset.label, `to ${preset.to.toLocaleString()}`]}
+                    scale={P}
+                    role="raise"
+                    width={plan.sizingCellW}
+                    height={two}
+                    testId={`raise-${preset.key}`}
+                    onClick={() => raiseTo(preset.to)}
+                  />
+                ))}
+                <PxButton
+                  lines={['All in', `to ${allInTo.toLocaleString()}`]}
+                  scale={P}
+                  role="allin"
+                  width={plan.sizingCellW}
+                  height={two}
+                  testId="raise-all-in"
+                  onClick={() => raiseTo(allInTo)}
+                />
+              </div>
+            )}
+          </div>
+        )
+      }
+    }
 
-      {publicState.handInProgress && canAct && (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
-          {legalActions.some((a) => a.type === 'fold') && (
-            <button style={foldButtonStyle} onClick={() => act('fold')}>Fold</button>
-          )}
-          {legalActions.some((a) => a.type === 'check') && (
-            <button style={primaryButtonStyle} onClick={() => act('check')}>Check</button>
-          )}
-          {legalActions.some((a) => a.type === 'call') && (
-            <button style={primaryButtonStyle} onClick={() => act('call')}>Call {toCall}</button>
-          )}
-          {legalActions.some((a) => a.type === 'raise') && publicState.minRaiseTo < allInTo && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                width: '100%',
-                maxWidth: 420,
-                justifyContent: 'center',
-              }}
-            >
-              <input
-                data-testid="raise-slider"
-                type="range"
-                aria-label="Raise amount"
-                min={publicState.minRaiseTo}
-                max={allInTo}
-                value={Math.min(Math.max(sliderTo, publicState.minRaiseTo), allInTo)}
-                onChange={(e) => setSliderTo(Number(e.target.value))}
-                style={{ flex: 1 }}
-              />
-              <button
-                style={buttonStyle}
-                data-testid="raise-slider-go"
-                onClick={() => raiseTo(Math.min(Math.max(sliderTo, publicState.minRaiseTo), allInTo))}
-              >
-                Raise to {Math.min(Math.max(sliderTo, publicState.minRaiseTo), allInTo).toLocaleString()}
-              </button>
-            </div>
-          )}
-          {legalActions.some((a) => a.type === 'raise') && (
-            <>
-              {publicState.minRaiseTo < allInTo && (
-                <button style={sizingButtonStyle} data-testid="raise-min" onClick={() => raiseTo(publicState.minRaiseTo)}>
-                  <SizingLabel label="Min raise" to={publicState.minRaiseTo} />
-                </button>
-              )}
-              {raisePresets.map((preset) => (
-                <button
-                  key={preset.key}
-                  style={sizingButtonStyle}
-                  data-testid={`raise-${preset.key}`}
-                  onClick={() => raiseTo(preset.to)}
-                >
-                  {/* The first line names the sizing, the second is the total it
-                      raises you to. Printing the total *as* the label read
-                      "Pot 300" when the pot was 150. */}
-                  <SizingLabel label={preset.label} to={preset.to} />
-                </button>
-              ))}
-              <button style={allInButtonStyle} data-testid="raise-all-in" onClick={() => raiseTo(allInTo)}>
-                <SizingLabel label="All in" to={allInTo} />
-              </button>
-            </>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
+    return (
+      <Panel
+        theme={theme}
+        scale={P}
+        testId="dock"
+        style={{
+          minHeight: layout.dock.h * P,
+          padding: 3 * P,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          gap: DOCK.gap * P,
+        }}
+      >
+        {body}
+      </Panel>
+    )
+  }
 
-/** Two lines: what the sizing is, and the total it raises you to. */
-function SizingLabel({ label, to }: { label: string; to: number }) {
   return (
-    <span style={{ display: 'inline-flex', flexDirection: 'column', lineHeight: 1.25 }}>
-      <span>{label}</span>
-      <span style={{ fontSize: '0.85em', opacity: 0.75 }}>to {to.toLocaleString()}</span>
-    </span>
+    <TableStage
+      theme={theme}
+      needs={needs}
+      felt={(layout) => (
+        <PokerTableView
+          state={publicState}
+          lastResult={lastResult}
+          yourHole={yourHole}
+          insights={insights}
+          personas={personas}
+          speech={speech}
+          announcement={announcement}
+          layout={layout}
+          theme={theme}
+        />
+      )}
+      dock={dock}
+    />
   )
 }
+
+/** Information over the betting buttons: odds and reads the lessons paid for. */
+const INFO_INK = { color: '#2a5a9a', shadow: '#c8d8f0' }
+/** Money that is about to change hands. */
+const STAKE_INK = { color: '#8a5a10', shadow: '#ecd8b0' }
 
 /**
- * How a session ends. Deliberately a panel and not a full-screen overlay: the
- * hand that ended it is still on the table above, and covering it up hid the one
- * showdown the player most needs to see.
+ * How a session ends. Deliberately in the betting menu and not a full-screen
+ * overlay: the hand that ended it is still on the table above, and covering it
+ * up hid the one showdown the player most needs to see.
  */
-function EndPanel({ testId, title, children }: { testId: string; title: string; children: ReactNode }) {
+function EndPanel({
+  P,
+  theme,
+  ending,
+  children,
+}: {
+  P: number
+  theme: TableTheme
+  ending: 'finale-won' | 'finale-lost' | 'busted'
+  children: ReactNode
+}) {
+  const title =
+    ending === 'finale-won'
+      ? 'You take the last pot.'
+      : ending === 'finale-lost'
+        ? 'She has them all.'
+        : 'That was your last chip at this table.'
   return (
     <div
-      data-testid={testId}
-      style={{
-        maxWidth: 680,
-        margin: '0 auto 12px',
-        padding: 'clamp(12px, 3vw, 20px)',
-        borderRadius: 10,
-        border: '1px solid #4a4a66',
-        background: 'rgba(5,5,10,0.92)',
-        textAlign: 'center',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: 8,
-      }}
+      data-testid={ending}
+      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 * P, textAlign: 'center' }}
     >
-      <h2 style={{ margin: 0, fontSize: 'clamp(15px, 4vw, 20px)' }}>{title}</h2>
+      <h2 style={{ margin: 0, lineHeight: 0 }}>
+        <PixelText text={title} scale={P} ink={{ color: theme.ui.outline, shadow: theme.ui.band }} />
+      </h2>
       {children}
     </div>
   )
 }
-
-const buttonStyle = {
-  background: '#3a9d5c', color: '#fff', border: 'none', borderRadius: 4,
-  padding: '8px 16px', fontFamily: 'monospace', cursor: 'pointer', fontSize: 14,
-} as const
-
-/**
- * Folding is not the same kind of act as calling, and all-in is not the same kind
- * of act as either. They used to be ten buttons of identical green stacked on a
- * phone, with Fold carrying exactly the visual weight of All in — which is how
- * people shove their stack in by accident.
- */
-const foldButtonStyle = {
-  ...buttonStyle,
-  background: 'transparent',
-  border: '1px solid #4a5160',
-  color: '#b8c0cc',
-} as const
-
-/** Check and Call: the ordinary thing to do, and the one to make easiest to hit. */
-const primaryButtonStyle = {
-  ...buttonStyle,
-  background: '#2f6ea8',
-} as const
-
-/** Committing everything is red, and says so. */
-const allInButtonStyle = {
-  ...buttonStyle,
-  background: '#a33636',
-  border: '1px solid #c95c5c',
-} as const
-
-/** For the between-hands bar, which should read as a status line, not a prompt. */
-const smallButtonStyle = {
-  ...buttonStyle,
-  background: 'transparent',
-  border: '1px solid #35507a',
-  color: '#bcc8da',
-  padding: '4px 10px',
-  fontSize: 12,
-} as const
-
-/** Tighter, since up to seven sizing buttons have to wrap sanely at 390px. */
-const sizingButtonStyle = {
-  ...buttonStyle,
-  background: '#2f7d4a',
-  padding: 'clamp(6px, 2vw, 8px) clamp(8px, 3vw, 14px)',
-  fontSize: 'clamp(12px, 3.4vw, 14px)',
-} as const

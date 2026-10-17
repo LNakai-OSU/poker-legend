@@ -846,7 +846,11 @@ await test('a bet never covers a card or the pot', async () => {
       const chips = [...document.querySelectorAll('[data-testid^="bet-"]')]
         .map((el) => ({ el, r: el.getBoundingClientRect() }))
         .filter((c) => c.r.width > 0)
-      const cards = [...document.querySelectorAll('[data-facedown], [style*="linear-gradient(170deg"]')]
+      // Every card on the table, face up or face down, by the attribute each one
+      // carries rather than by how it happens to be drawn: this used to match face-up
+      // cards by their CSS gradient, which silently stopped matching anything the
+      // day cards became pixel art.
+      const cards = [...document.querySelectorAll('[data-card]')]
         .map((el) => ({ el, r: el.getBoundingClientRect() }))
       let area = 0
       for (const c of chips) {
@@ -883,6 +887,87 @@ await test('a bet never covers a card or the pot', async () => {
   assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
   await page.close()
 })
+
+/**
+ * Nothing on the table sits on the board.
+ *
+ * Your own plate used to be laid over the community-card slots at the start of a
+ * hand ("You D 100" written across the flop), and at a showdown the board was
+ * drawn over the top of your plate instead. Checked by asking the browser what is
+ * actually on top at points inside every slot — a z-index comparison cannot see
+ * that — and, for the things that let clicks through (a speech bubble, an
+ * announcement), by their boxes, since a hit test looks straight through them.
+ */
+for (const [label, viewport, device] of [
+  ['laptop', { width: 1100, height: 800 }, null],
+  ['short laptop', { width: 1366, height: 500 }, null],
+  ['phone', null, { ...devices['iPhone 13'], viewport: { width: 390, height: 844 }, screen: { width: 390, height: 844 } }],
+  ['phone in Safari', null, devices['iPhone 13']],
+]) {
+  await test(`nothing covers the board on a ${label}`, async () => {
+    const page = await newPage(
+      baseSave({ cityId: 'riverbend', cash: 50000, lessonIds: ['tells', 'pot-odds', 'position'] }),
+      device,
+    )
+    if (viewport) await page.setViewportSize(viewport)
+    await page.goto(BASE)
+    await page.waitForSelector('canvas')
+    await page.waitForTimeout(400)
+    await enterDoor(page, 'Riverboat')
+    await talkTo(page, 'Dealer')
+    assert(await page.locator('[data-testid="pot-value"]').isVisible(), 'never reached the table')
+
+    let worst = null
+    let showdowns = 0
+    for (let i = 0; i < 36; i++) {
+      const seen = await page.evaluate(() => {
+        const board = document.querySelector('[data-testid="board"]')
+        if (!board) return { problem: 'there is no board' }
+        const name = (el) =>
+          el ? el.closest('[data-testid]')?.dataset.testid ?? el.tagName.toLowerCase() : 'nothing'
+        for (const slot of board.children) {
+          const r = slot.getBoundingClientRect()
+          for (const [fx, fy] of [[0.12, 0.1], [0.88, 0.1], [0.5, 0.5], [0.12, 0.9], [0.88, 0.9]]) {
+            const x = r.left + r.width * fx
+            const y = r.top + r.height * fy
+            const top = document.elementFromPoint(x, y)
+            if (!top || !board.contains(top)) {
+              return { problem: `the board at (${Math.round(x)},${Math.round(y)}) is covered by ${name(top)}` }
+            }
+          }
+        }
+        const b = board.getBoundingClientRect()
+        const others = document.querySelectorAll(
+          '[data-testid^="seat-"], [data-testid="hero-cards"], [data-testid^="bet-"], [data-testid^="won-"], [data-testid^="speech-"], [data-testid="announcement"], [data-testid="pot-value"]',
+        )
+        for (const el of others) {
+          const r = el.getBoundingClientRect()
+          if (r.width === 0 || r.height === 0) continue
+          if (r.left < b.right && b.left < r.right && r.top < b.bottom && b.top < r.bottom) {
+            return {
+              problem: `${el.dataset.testid} (${Math.round(r.left)},${Math.round(r.top)} ${Math.round(r.width)}x${Math.round(r.height)}) overlaps the board (${Math.round(b.left)},${Math.round(b.top)} ${Math.round(b.width)}x${Math.round(b.height)})`,
+            }
+          }
+        }
+        return { problem: null, showdown: !!document.querySelector('[data-testid="showdown-summary"]') }
+      })
+      worst = worst ?? seen.problem
+      if (seen.showdown) showdowns++
+      for (const label of ['Check', /^Call/, 'Deal now', 'Next hand', 'Fold']) {
+        const btn = page.locator('button', { hasText: label })
+        if (await btn.first().isVisible().catch(() => false)) {
+          await btn.first().click()
+          break
+        }
+      }
+      await page.waitForTimeout(220)
+    }
+    assert(worst === null, worst)
+    assert(showdowns > 0, 'never saw the end of a hand, so the showdown layout went unchecked')
+    assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+    await page.close()
+  })
+}
 
 /**
  * The table and the bus have to fit the window they are in.

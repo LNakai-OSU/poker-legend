@@ -67,3 +67,16 @@ export function tellText(name: string, tell: TellSignal): string {
   const flavor = options[phrasingIndex(tell.playerId, tell.kind, options.length)]
   return `${name}${flavor}`
 }
+
+/**
+ * The same cue without the name, for writing under the seat it belongs to:
+ * "Mack's lip twitches" under Mack's own face is "Lip twitches". The seat says
+ * who; dropping the name is the difference between fitting in two lines of a
+ * six-handed seat and running into the next player's cards.
+ */
+export function tellCue(tell: TellSignal): string {
+  const options = TELL_FLAVOR_TEXT[tell.kind]
+  const flavor = options[phrasingIndex(tell.playerId, tell.kind, options.length)]
+  const bare = flavor.startsWith("'s ") ? flavor.slice(3) : flavor.trimStart()
+  return bare.charAt(0).toUpperCase() + bare.slice(1)
+}
