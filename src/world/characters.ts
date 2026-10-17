@@ -266,7 +266,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
           'Dana: You played Tuesday. You raised the river with nothing.',
           'Dana: I watch. That is all. It costs nothing to watch.',
         ] },
-        { period: 'evening', areaId: 'diner', col: 13, row: 1, lines: [
+        { period: 'evening', areaId: 'diner', col: 12, row: 5, lines: [
           'Dana: Coffee. Corner booth. Back to the wall.',
         ] },
       ],

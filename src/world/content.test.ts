@@ -18,7 +18,7 @@ import {
   findArea,
   findItem,
 } from './content'
-import { CHAR_FOR_TILE, DOOR, ROAD, WALL, isWalkable, parseMap } from '../overworld/tiles'
+import { CHAR_FOR_TILE, DOOR, FURNITURE, ROAD, WALL, isWalkable, parseMap } from '../overworld/tiles'
 import { KEEP, STAMP_BY_ID, stampSize } from './stamps'
 import { CHARACTERS, charactersIn, periodsAway, scheduleConflicts, seatsOf } from './characters'
 import { TIME_PERIODS } from '../game/time'
@@ -438,6 +438,28 @@ describe('objects on the map', () => {
     }
   })
 
+  it('draws every piece of furniture as an object', () => {
+    // Furniture tiles were drawn as brown crates, so a poker table was four
+    // crates and a bar was five. Anything solid on a floor is now an object
+    // stamped there; a furniture tile nothing stands on would be a crate again.
+    for (const area of areas) {
+      const covered = new Set<string>()
+      for (const placed of area.stamps ?? []) {
+        STAMP_BY_ID[placed.stampId]?.tiles.split('\n').forEach((line, r) => {
+          for (let c = 0; c < line.length; c++) {
+            if (line[c] !== KEEP) covered.add(`${placed.col + c},${placed.row + r}`)
+          }
+        })
+      }
+      area.map.forEach((row, r) =>
+        row.forEach((tile, c) => {
+          if (tile !== FURNITURE) return
+          expect(covered.has(`${c},${r}`), `${area.id}: furniture at (${c},${r}) is not any object`).toBe(true)
+        }),
+      )
+    }
+  })
+
   it('stands nobody in the road', () => {
     // Ray spent his evenings in the middle of the highway outside the casino.
     for (const [id, character] of Object.entries(CHARACTERS)) {
@@ -518,15 +540,16 @@ describe('the town is a place, not a palette swap', () => {
     expect(new Set(themes).size, 'two cities share a palette').toBe(cities.length)
   })
 
-  it('does not draw two casinos as the same room', () => {
+  it('does not draw two rooms as the same room', () => {
     // Two cities' casino floors were pixel-for-pixel identical, down to the tile
-    // each dealer stood on, so climbing the ladder changed a number rather than
-    // taking you anywhere.
+    // each dealer stood on, and eleven shops were one map with a different
+    // tint — so climbing the ladder changed a number rather than taking you
+    // anywhere. Every room and street is its own map. (The open road between
+    // towns is still one stretch of highway, and is not a room.)
     const signatures = new Map<string, string[]>()
     for (const city of cities) {
       for (const area of allAreas(city)) {
-        // Casino floors are the carpeted rooms.
-        if (!area.map.some((row) => row.includes(3))) continue
+        if (area.id.startsWith('road-')) continue
         const signature = area.map.map((row) => row.join('')).join('/')
         signatures.set(signature, [...(signatures.get(signature) ?? []), `${city.name}/${area.name}`])
       }
@@ -536,6 +559,19 @@ describe('the town is a place, not a palette swap', () => {
       shared,
       `these rooms are the identical tilemap: ${shared.map((r) => r.join(' = ')).join('; ')}`,
     ).toHaveLength(0)
+  })
+
+  it('builds no room out of street brick', () => {
+    // Every interior used to be framed in the exterior wall, so a launderette
+    // and a marble casino were the same dark box. A room has a wall top round
+    // it and a back wall of its own.
+    for (const city of cities) {
+      for (const area of allAreas(city)) {
+        if (area.edges) continue
+        const brick = area.map.some((row) => row.includes(WALL))
+        expect(brick, `${city.name}/${area.name} is walled in street brick`).toBe(false)
+      }
+    }
   })
 })
 
