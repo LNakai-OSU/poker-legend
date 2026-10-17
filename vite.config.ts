@@ -1,5 +1,5 @@
 // From vitest/config rather than vite, which is what types the `test` block.
-import { defineConfig } from 'vitest/config'
+import { configDefaults, defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import { editorServer } from './src/editor/editorServerPlugin.js'
 
@@ -10,6 +10,8 @@ export default defineConfig({
   // The map editor's save endpoint. `apply: 'serve'` inside it means it exists
   // in dev and never in a build, so nothing shipped can reach it.
   plugins: [react(), editorServer()],
+  // Agents' worktrees live under .claude/; their edits are not this app's.
+  server: { watch: { ignored: ['**/.claude/**'] } },
   test: {
     /*
      * Several of these tests are simulations: thousands of hands, each running a
@@ -21,5 +23,12 @@ export default defineConfig({
      * find out the machine was simply busy.
      */
     testTimeout: 180_000,
+    /*
+     * Agents work in git worktrees under .claude/worktrees, inside this
+     * directory. Without this, a test run here also runs every agent's copy of
+     * the suite — half-finished work included — and reports their failures as
+     * this checkout's, five times slower.
+     */
+    exclude: [...configDefaults.exclude, '.claude/**'],
   },
 })
