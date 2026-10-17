@@ -137,10 +137,22 @@ street are solid blocks with a door tile in the facade; stepping onto the door
 moves you to another area and places you at its far side. `GameState.areaId`
 tracks where you are, and travelling always drops you on the arrival street.
 
-Streets are built from a few shared templates (STREET, BOULEVARD, PROMENADE)
-and interiors from others (CASINO_FLOOR, SHOP_ROOM, DINING_ROOM), so the towns
-feel like one place rather than six unrelated sketches. Locals with a line or
-two stand on every street; the content tests enforce that.
+Every street and every room has a map of its own; only the stretches of road
+between towns still share one. Interiors are framed the same way everywhere — a
+wall top (`^`) round the edge, a back wall face in the room's own material, a
+floor that says what kind of place it is — so the towns read as one game
+without any two rooms being the same room. Locals with a line or two stand on
+every street; the content tests enforce that.
+
+Anything bigger than a tile is a **stamp** (`src/world/stamps.ts`): a building,
+a slot bank, a poker table, a bed. A stamp writes its tiles into the map and is
+listed in `AREA_STAMPS`; its art (`src/overworld/art/`) is drawn as one picture
+over the tiles and under the people, can spill past its footprint (eaves, red
+carpets), animate (marquee bulbs, neon), and carry a front drawn over the people
+standing behind it (counters, the cashier's bars). The content tests check that
+every stamp stands on the tiles it lays down, that every wall on a street
+belongs to a building and every furniture tile to an object, and that every
+door tile leads somewhere.
 
 People and props occupy their tile, so you cannot walk through a crowd. The
 camera is zoomed 2x with captions counter-scaled, because at 1x the map sat as

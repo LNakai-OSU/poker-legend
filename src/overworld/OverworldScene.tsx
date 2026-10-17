@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Application, Container, Sprite, Text } from 'pixi.js'
-import { buildStampLayer, buildTileLayer, isWalkable, TILE_SIZE, type TileGrid } from './tileRenderer'
+import { buildStampLayer, buildTileLayer, isWalkable, OVER_PEOPLE, TILE_SIZE, type TileGrid } from './tileRenderer'
 import type { PlacedStamp } from '../world/stamps'
 import { DELTAS, GridPlayer, type Direction } from './GridPlayer'
 import { Npc, type NpcConfig } from './Npc'
@@ -203,6 +203,13 @@ export function OverworldScene({
       const signs = new Container()
       // Captions go over everybody, so a name is never hidden behind a head.
       const overlay = new Container()
+      // The stamp layer above puts the fronts of counters and cages over the
+      // people at OVER_PEOPLE, which makes this container sort by zIndex. Left
+      // at the default, the captions would sort *under* those fronts, so a
+      // clerk's name could vanish behind their own counter. Order, bottom up:
+      // tiles, objects, signs, people, the fronts of objects, captions.
+      world.sortableChildren = true
+      overlay.zIndex = OVER_PEOPLE + 1
       world.addChild(signs, actors, overlay)
 
       const player = new GridPlayer(playerStart.col, playerStart.row, { figure: HERO_FIGURE })

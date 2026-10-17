@@ -1479,11 +1479,12 @@ await test('the map editor offers to save, and warns about a shared map', async 
   await page.waitForTimeout(200)
   assert(!(await page.locator('[data-testid="save"]').isDisabled()), 'Save is not offered after painting')
 
-  // Eleven shops are drawn from one map, and the editor has to say so.
-  await page.selectOption('select', 'bodega')
+  // Every room has a map of its own now, but the six stretches of road between
+  // the towns are still drawn from one, and the editor has to say so.
+  await page.selectOption('select', 'road-mesa')
   await page.waitForTimeout(600)
   const warning = page.locator('[data-testid="shared-warning"]')
-  assert(await warning.isVisible(), 'no warning that this room is ten other rooms')
+  assert(await warning.isVisible(), 'no warning that this road is five other roads')
   assert(
     await page.locator('[data-testid="save-split"]').isVisible(),
     'no way to give this area a map of its own',
