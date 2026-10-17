@@ -53,7 +53,10 @@ async function newPage(save, device) {
   const context = device ? await browser.newContext({ ...device }) : null
   const page = context ? await context.newPage() : await browser.newPage({ viewport: { width: 1100, height: 800 } })
   openPages.push(page)
-  page.setDefaultTimeout(5000)
+  // Generous, because the failure this guards against is a machine busy with
+  // other work, not a slow game: at 5s, a loaded machine turned a correct page
+  // load into a TimeoutError and a real pass into five false failures.
+  page.setDefaultTimeout(15000)
   const errors = []
   page.on('pageerror', (e) => errors.push(String(e)))
   page.on('console', (m) => {
@@ -143,9 +146,13 @@ function routeTo(grid, from, to) {
 
 /** Walks to a tile, verifying each step, since synthetic keys can be dropped. */
 async function moveTo(page, col, row, budget = 60) {
-  const grid = await gridOf(page)
+  // Wait for the scene to publish a grid and a position that agree. Asked too
+  // early, the grid is a single empty row, no route exists, and this used to
+  // return false without the player taking a step — which read as a map you
+  // could not walk, on a machine that was only busy.
+  const grid = await settle(page)
   const startedIn = await areaNameOf(page)
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < 5; attempt++) {
     // Stop the moment the ground changes. A doubled keypress at the edge of a map
     // carries the player onto the next one, and from there this route and this
     // grid describe somewhere the player is no longer standing — so retrying
@@ -227,10 +234,14 @@ async function enterDoor(page, label) {
   for (const [col, row, into] of frontages) {
     if (!(await moveTo(page, col, row, 80))) continue
     await step(page, into)
-    await page.waitForTimeout(500)
-    // The area changed if the doors on offer are no longer these ones.
-    const now = await exitsOf(page)
-    if (now.length === 0 || !now.some((e) => e.label === label && e.col === door.col)) return true
+    // Polled rather than slept: a door is a scene change, and on a busy machine
+    // it can take longer than any fixed wait. The area changed if the doors on
+    // offer are no longer these ones.
+    for (let waited = 0; waited < 5000; waited += 150) {
+      const now = await exitsOf(page)
+      if (now.length === 0 || !now.some((e) => e.label === label && e.col === door.col)) return true
+      await page.waitForTimeout(150)
+    }
   }
   const at = await posOf(page)
   throw new Error(`could not go through "${label}"; stopped at (${at?.col},${at?.row})`)
@@ -252,7 +263,7 @@ async function enterDoor(page, label) {
  * player at a wall, every edge tile fails to be reached, and the crossing reads
  * as "could not walk east out of X" — in a world that is perfectly walkable.
  */
-async function settle(page, budget = 2000) {
+async function settle(page, budget = 10000) {
   for (let waited = 0; waited <= budget; waited += 100) {
     const [grid, at] = await Promise.all([gridOf(page), posOf(page)])
     if (grid.length > 0 && at && !Number.isNaN(at.col) && grid[at.row]?.[at.col] && grid[at.row][at.col] !== '#') {
