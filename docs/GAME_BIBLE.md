@@ -101,11 +101,23 @@ The map itself is an ASCII grid parsed by `parseMap`. It is diffable, reviewable
 and editable by hand:
 
 ```
-##################
-#,,,,,,,,,,,,,,,,#
-#,FFFF,,,,,,FFFF,#
-########D#########
+^^^^^^^^^^^^^^^^^^
+^FFFFwwwwwwwwFFFF^
+^FFFF,,,,,,,,FFFF^
+^,,,,,,,,,,,,,,,,^
+^^^^^^^^D^^^^^^^^^
 ```
+
+A room is a wall top (`^`) round the edge, a back wall face along the top in
+the room's own material (`w` panelling here), and a floor (`,` carpet). Every
+character is listed in `TILE_VOCABULARY` in `src/overworld/tiles.ts`.
+
+Anything bigger than a tile — a house, a slot bank, a poker table, a bed — is a
+**stamp** listed in `AREA_STAMPS` at the bottom of `cities.ts`. A stamp lays its
+own tiles into the map (the `FFFF` above is a slot bank) and is drawn as one
+object over them. A wall on a street must belong to a building, a furniture tile
+must belong to an object, and a door tile must lead somewhere; the content tests
+fail otherwise.
 
 ### Events — `src/world/events.ts`
 

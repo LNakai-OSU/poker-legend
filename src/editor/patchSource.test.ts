@@ -16,20 +16,20 @@ import { parseMap, toSketch } from '../overworld/tileRenderer'
  * it handles the shapes I thought to write down; the real file is the only thing
  * that proves it handles the shapes that are actually in there — two quoting
  * styles for names, POIs written both as `local(...)` calls and as object
- * literals, and seventeen areas drawn from a map somebody else is also using.
+ * literals, and six stretches of road drawn from one map they all share.
  */
 const SOURCE = readFileSync(new URL('../world/cities.ts', import.meta.url), 'utf8')
 
 describe('finding things in the source', () => {
   it('knows which map an area is drawn from', () => {
-    expect(mapConstantOf(SOURCE, 'bodega')).toBe('SHOP_ROOM')
+    expect(mapConstantOf(SOURCE, 'road-mesa')).toBe('HIGHWAY')
     expect(mapConstantOf(SOURCE, 'basin')).toMatch(/^[A-Z][A-Z0-9_]*$/)
   })
 
   it('knows who else is drawn from the same map', () => {
-    const sharing = areasSharing(SOURCE, 'SHOP_ROOM')
-    expect(sharing).toContain('bodega')
-    expect(sharing).toContain('laundromat')
+    const sharing = areasSharing(SOURCE, 'HIGHWAY')
+    expect(sharing).toContain('road-mesa')
+    expect(sharing).toContain('road-riverbend')
     expect(sharing.length).toBeGreaterThan(2)
   })
 
@@ -49,15 +49,15 @@ describe('redrawing a map', () => {
   const SKETCH = ['#####', '#...#', '#.D.#', '#####'].join('\n')
 
   it('replaces the map an area is drawn from', () => {
-    const { source, notes } = applyEdit(SOURCE, { areaId: 'bodega', sketch: SKETCH })
-    expect(source).toContain(`const SHOP_ROOM = parseMap(\`\n${SKETCH}\n\`)`)
-    expect(notes.join(' ')).toContain('laundromat')
+    const { source, notes } = applyEdit(SOURCE, { areaId: 'road-mesa', sketch: SKETCH })
+    expect(source).toContain(`const HIGHWAY = parseMap(\`\n${SKETCH}\n\`)`)
+    expect(notes.join(' ')).toContain('road-riverbend')
   })
 
   it('says out loud who else it just redrew', () => {
-    // Eleven shops are the same room. Changing one changes all of them, and the
-    // only unacceptable version of that is the one that happens quietly.
-    const { notes } = applyEdit(SOURCE, { areaId: 'bodega', sketch: SKETCH })
+    // Six stretches of road are the same map. Changing one changes all of them,
+    // and the only unacceptable version of that is the one that happens quietly.
+    const { notes } = applyEdit(SOURCE, { areaId: 'road-mesa', sketch: SKETCH })
     expect(notes[0]).toMatch(/also/)
   })
 
@@ -69,16 +69,16 @@ describe('redrawing a map', () => {
   })
 
   it('splits a shared map into one of its own, leaving the others alone', () => {
-    const { source, notes } = applyEdit(SOURCE, { areaId: 'bodega', sketch: SKETCH, split: true })
-    expect(source).toContain(`const BODEGA_MAP = parseMap(\`\n${SKETCH}\n\`)`)
+    const { source, notes } = applyEdit(SOURCE, { areaId: 'road-mesa', sketch: SKETCH, split: true })
+    expect(source).toContain(`const ROAD_MESA_MAP = parseMap(\`\n${SKETCH}\n\`)`)
     // The shared one is untouched, and everybody else still uses it.
-    const sharedBefore = /const SHOP_ROOM = parseMap\(`\n([\s\S]*?)\n`\)/.exec(SOURCE)![1]
-    const sharedAfter = /const SHOP_ROOM = parseMap\(`\n([\s\S]*?)\n`\)/.exec(source)![1]
+    const sharedBefore = /const HIGHWAY = parseMap\(`\n?([\s\S]*?)\n?`\)/.exec(SOURCE)![1]
+    const sharedAfter = /const HIGHWAY = parseMap\(`\n?([\s\S]*?)\n?`\)/.exec(source)![1]
     expect(sharedAfter).toBe(sharedBefore)
-    expect(areasSharing(source, 'SHOP_ROOM')).not.toContain('bodega')
-    expect(areasSharing(source, 'SHOP_ROOM')).toContain('laundromat')
-    expect(areasSharing(source, 'BODEGA_MAP')).toEqual(['bodega'])
-    expect(notes.join(' ')).toContain('BODEGA_MAP')
+    expect(areasSharing(source, 'HIGHWAY')).not.toContain('road-mesa')
+    expect(areasSharing(source, 'HIGHWAY')).toContain('road-riverbend')
+    expect(areasSharing(source, 'ROAD_MESA_MAP')).toEqual(['road-mesa'])
+    expect(notes.join(' ')).toContain('ROAD_MESA_MAP')
   })
 
   it('writes a map that parses back to what was painted', () => {

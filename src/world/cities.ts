@@ -686,8 +686,8 @@ TTTTTTTTTTTTTTTTTTTTTTTTTTTT
  */
 const DEPOT_LOT = parseMap(`
 TTTTTTTT++++TTTTTTTTTT
-T::::::,++++,::::::::T
-T::+++++++++++++o:::.T
+T::###:++++++::::::::T
+T::+++++++++++++o::::T
 T::+oo+++++++++++::::T
 T::++++++++++++++::::T
 ----++++++++++++++---T
@@ -2399,6 +2399,9 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'house-eastgate-b', col: 16, row: 0 },
     { stampId: 'cottage-eastgate', col: 1, row: 10 },
     { stampId: 'lockup-eastgate', col: 17, row: 10 },
+  ],
+  depot: [
+    { stampId: 'bus-shelter', col: 3, row: 1 },
   ],
   'sc-street': [
     { stampId: 'hotel-silvercreek-w', col: 3, row: 1 },
