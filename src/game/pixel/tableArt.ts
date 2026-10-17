@@ -223,7 +223,7 @@ const EMBLEMS: Record<Exclude<Emblem, 'none'>, string[]> = {
   star: E('.....#..... ....###.... ....###.... ########### .#########. ..#######.. ..###.###.. .##.....##. ##.......##'),
   sunburst: E('#....#....# .#...#...#. ..#..#..#.. ...#####... ..#######.. ###########'),
   crown: E('#....#....# ##..###..## ###.###.### ########### ########### .#########. .#########.'),
-  laurel: E('.#.......#. ##.......## #.#.....#.# ##.......## .##.....##. ..##...##.. ...#####...'),
+  laurel: E('.+.........+. ##.........## .#+.......+#. ##.........## .##.......##. ##+.......+## .##.......##. ..##.....##.. ...##...##... ....#####....'),
 }
 
 function drawEmblems(
@@ -239,21 +239,34 @@ function drawEmblems(
   const eh = rows.length * 2
   const ink = mix(t.felt, t.line, 0.55)
   const hi = mix(t.felt, '#ffffff', 0.12)
-  // Candidate spots: inside each end of the betting line, then the middle.
-  const spots = [
-    { x: Math.round(g.cx - g.la * 0.78 - ew / 2), y: Math.round(g.cy - eh / 2) },
-    { x: Math.round(g.cx + g.la * 0.78 - ew / 2), y: Math.round(g.cy - eh / 2) },
-    { x: Math.round(g.cx - ew / 2), y: Math.round(g.cy - eh / 2) },
+  const shadow = mix(t.felt, '#000000', 0.18)
+  const at = (x: number, y: number) => ({ x: Math.round(x - ew / 2), y: Math.round(y - eh / 2), w: ew, h: eh })
+  // The house prints its mark in pairs, one at each end of the cloth, wherever
+  // a pair of spots is clear of every seat and card; failing that, once in the
+  // middle.
+  const pairs = [
+    [at(g.cx - g.la * 0.78, g.cy), at(g.cx + g.la * 0.78, g.cy)],
+    [at(g.cx - g.fa * 0.56, g.cy + g.fb * 0.46), at(g.cx + g.fa * 0.56, g.cy + g.fb * 0.46)],
+    [at(g.cx - g.fa * 0.6, g.cy - g.fb * 0.4), at(g.cx + g.fa * 0.6, g.cy - g.fb * 0.4)],
+    [at(g.cx, g.cy + g.fb * 0.55)],
+    [at(g.cx, g.cy)],
   ]
-  for (const spot of spots) {
-    const rect = { x: spot.x, y: spot.y, w: ew, h: eh }
-    if (occupied.some((o) => overlaps(o, rect, 3))) continue
+  const clear = (rect: Rect) => !occupied.some((o) => overlaps(o, rect, 4))
+  const chosen = pairs.find((pair) => pair.every(clear))
+  for (const spot of chosen ?? []) {
     rows.forEach((row, yy) => {
       for (let xx = 0; xx < row.length; xx++) {
         const c = row[xx]
         if (c === '.' || c === ' ') continue
-        const ink2 = c === '+' ? hi : ink
-        r.rect(spot.x + xx * 2, spot.y + yy * 2, 2, 2, ink2)
+        // A pixel of shadow down and right, as if printed slightly into the nap.
+        r.rect(spot.x + xx * 2 + 1, spot.y + yy * 2 + 1, 2, 2, shadow)
+      }
+    })
+    rows.forEach((row, yy) => {
+      for (let xx = 0; xx < row.length; xx++) {
+        const c = row[xx]
+        if (c === '.' || c === ' ') continue
+        r.rect(spot.x + xx * 2, spot.y + yy * 2, 2, 2, c === '+' ? hi : ink)
       }
     })
   }
@@ -324,26 +337,61 @@ function drawKitchenProps(r: Raster, w: number, topH: number, occupied: Rect[]) 
   const props: { rows: string[]; palette: Record<string, string> }[] = [
     {
       // A bowl of pretzels.
-      rows: E('..oooooooo.. .oppbppbppo. ossppbpppsso osssssssssso .ossssssssso. ..oooooooo..'),
-      palette: { o: '#3a2a1a', p: '#c88a40', b: '#e8b060', s: '#d8d8e0' },
+      rows: [
+        '....oooooooooooooo....',
+        '..oolpbppbpppbppbloo..',
+        '.olppbpppbppbpppbpplo.',
+        'olbppppbpppbppppbppblo',
+        'olppbpppbpppbpppbppplo',
+        'oowwwwwwwwwwwwwwwwwwoo',
+        '.osssssssssssssssssdo.',
+        '..osssssssssssssssdo..',
+        '...oossssssssssssoo...',
+        '.....oooooooooooo.....',
+      ],
+      palette: { o: '#2a2018', l: '#e8f0f8', w: '#c8d8e8', p: '#c88a40', b: '#8a5420', s: '#5a88c8', d: '#3a5a98' },
     },
     {
-      // Two beer bottles.
-      rows: E('.o....o. .g....g. .g....g. ogg..ogg ogwg.ogw oggg.ogg oggg.ogg ollg.oll oggg.ogg .ooo..oo'),
-      palette: { o: '#1a1a12', g: '#3a6a28', w: '#c8e8a0', l: '#e8d090' },
+      // Two bottles of beer, one already empty.
+      rows: [
+        '..oo.....oo..',
+        '..cc.....cc..',
+        '..oo.....oo..',
+        '..gg.....gg..',
+        '.oggo...oggo.',
+        'oggwgo.oggwgo',
+        'oggwgo.oggwgo',
+        'oggggo.oggggo',
+        'olllgo.olllgo',
+        'olrlgo.olrlgo',
+        'olllgo.olllgo',
+        'oggggo.oggggo',
+        'oggggo.oggggo',
+        '.oooo...oooo.',
+      ],
+      palette: { o: '#14140c', c: '#d8b040', g: '#3a6a28', w: '#a8d888', l: '#f0e0b0', r: '#c83828' },
     },
     {
-      // A mug of coffee gone cold.
-      rows: E('.oooooo.. ocddddcoo occccccoo ommmmmmo.o ommmmmmoo. ommmmmmo.. .oooooo...'),
-      palette: { o: '#2a1a14', c: '#5a3018', d: '#6a3a20', m: '#e8e0d0' },
+      // A mug of coffee gone cold, and a spoon.
+      rows: [
+        '.oooooooooo...',
+        'ocdddddddddo..',
+        'ommmmmmmmmmooo',
+        'omhmmmmmmmmo.o',
+        'omhmmmmmmmmo.o',
+        'ommmmmmmmmmooo',
+        'ommmmmmmmmmo..',
+        '.oooooooooo...',
+      ],
+      palette: { o: '#2a1a14', c: '#5a3018', d: '#7a4a28', m: '#e86a4a', h: '#f8a888' },
     },
   ]
   const spots = [
-    { x: 10, y: topH - 24 },
-    { x: w - 22, y: topH - 26 },
-    { x: Math.round(w / 2) - 5, y: 10 },
-    { x: 12, y: 12 },
-    { x: w - 24, y: 12 },
+    { x: 12, y: topH - 30 },
+    { x: w - 26, y: topH - 32 },
+    { x: Math.round(w / 2) - 7, y: 12 },
+    { x: 14, y: 14 },
+    { x: w - 28, y: 14 },
   ]
   let next = 0
   for (const spot of spots) {

@@ -275,6 +275,30 @@ export function drawText(
 }
 
 /**
+ * Splits any word too wide for a line into hyphenated pieces, so that a long
+ * word in a narrow seat wraps instead of running off both sides of it.
+ */
+export function fitWords(text: string, maxWidth: number): string {
+  return text
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => {
+      if (measureText(word) <= maxWidth) return word
+      const pieces: string[] = []
+      let piece = ''
+      for (const ch of word) {
+        if (piece && measureText(`${piece}${ch}-`) > maxWidth) {
+          pieces.push(`${piece}-`)
+          piece = ch
+        } else piece += ch
+      }
+      if (piece) pieces.push(piece)
+      return pieces.join(' ')
+    })
+    .join(' ')
+}
+
+/**
  * Breaks text into lines no wider than `maxWidth` art pixels, at spaces.
  * A single word wider than the line is left whole rather than split mid-word.
  */

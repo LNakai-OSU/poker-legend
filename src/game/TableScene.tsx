@@ -19,6 +19,7 @@ import { Countdown, Panel, PxButton, PxLine } from './pixel/ui'
 import { PixelText } from './pixel/PixelText'
 import { INK } from './pixel/ink'
 import { chipTopUrl } from './pixel/chips'
+import { describeAction, LOG_LINES } from './actionLog'
 
 export interface SessionResult {
   chipsCashedOut: number
@@ -142,6 +143,9 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
   )
   const [tick, setTick] = useState(0)
   const [speech, setSpeech] = useState<SeatSpeech | null>(null)
+  /** The last few things anybody did this hand, narrated in the betting menu. */
+  const [log, setLog] = useState<string[]>([])
+  const note = (line: string) => setLog((lines) => [...lines.slice(1 - LOG_LINES), line])
   const [sliderTo, setSliderTo] = useState(0)
   const speechTimer = useRef<number | null>(null)
   const rerender = () => setTick((t) => t + 1)
@@ -303,6 +307,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
   const dealNextHand = () => {
     rebuyOpponents()
     engine.startNewHand()
+    setLog([])
     playSound('deal')
     rerender()
   }
@@ -379,6 +384,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
         else if (action.type === 'call') say(actingPlayer.id, 'call')
         else if (action.type === 'check') say(actingPlayer.id, 'check')
         else if (action.type === 'fold') say(actingPlayer.id, 'fold')
+        note(describeAction(actingPlayer.name, action, ctx))
         engine.submitAction(actingPlayer.id, action)
       }
       aiBusyRef.current = false
@@ -506,11 +512,13 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
 
   const act = (type: 'fold' | 'check' | 'call') => {
     playSound(type === 'call' ? 'chip' : type)
+    note(describeAction('You', { type }, { toCall, allInTo }))
     engine.submitAction('you', { type })
     rerender()
   }
   const raiseTo = (to: number) => {
     playSound('chip')
+    note(describeAction('You', { type: 'raise', to }, { toCall, allInTo }))
     engine.submitAction('you', { type: 'raise', to })
     rerender()
   }
@@ -686,7 +694,12 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
       if (!canAct) {
         body = (
           <>
-            <PxLine scale={P} align="center" text={actingName ? `${actingName} to act…` : 'Dealing…'} ink={INK.dark} />
+            <div data-testid="action-log">
+              {log.map((line, i) => (
+                <PxLine key={`${i}-${line}`} scale={P} text={line} ink={i === log.length - 1 ? INK.dark : LOG_INK} />
+              ))}
+            </div>
+            <PxLine scale={P} align="center" text={actingName ? `${actingName} to act…` : 'Dealing…'} ink={INFO_INK} />
             {info}
           </>
         )
@@ -840,6 +853,8 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
 
 /** Information over the betting buttons: odds and reads the lessons paid for. */
 const INFO_INK = { color: '#2a5a9a', shadow: '#c8d8f0' }
+/** Older lines of narration, faded back. */
+const LOG_INK = { color: '#8a8a98', shadow: '#dcdce4' }
 /** Money that is about to change hands. */
 const STAKE_INK = { color: '#8a5a10', shadow: '#ecd8b0' }
 

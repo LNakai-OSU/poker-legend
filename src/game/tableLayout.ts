@@ -251,7 +251,10 @@ function sizingLabels(kind: DockNeeds['kind'], amount: string): string[][] {
 export function planDock(innerW: number, needs: DockNeeds): DockPlan {
   const labels = sizingLabels(needs.kind, needs.sampleAmount)
   const cellW = Math.max(...labels.map(buttonWidth))
-  const sizingCols = Math.max(1, Math.min(labels.length, Math.floor((innerW + DOCK.gap) / (cellW + DOCK.gap))))
+  // As many to a row as fit, then evened out, so seven buttons on two rows are
+  // four and three rather than six and an orphan.
+  const fit = Math.max(1, Math.min(labels.length, Math.floor((innerW + DOCK.gap) / (cellW + DOCK.gap))))
+  const sizingCols = Math.ceil(labels.length / Math.ceil(labels.length / fit))
   const primaryW = buttonWidth(['Fold']) + DOCK.gap + buttonWidth([`Call ${needs.sampleAmount}`])
   const raiseW = DOCK.sliderMinW + DOCK.gap + buttonWidth([`Raise to ${needs.sampleAmount}`])
   return {
@@ -351,7 +354,7 @@ function sceneAt(scale: number, view: Viewport, needs: SceneNeeds): { layout: Sc
 
   // Spare height goes first to the table, a little, and the rest to the room
   // above it: the wall behind the table is where each venue looks like itself.
-  const comfortable = Math.max(feltMin, Math.min(feltMin + 20, Math.round(feltW * 0.72)))
+  const comfortable = Math.max(feltMin, Math.min(feltMin + 8, Math.round(feltW * 0.72)))
   const feltH = Math.max(feltMin, Math.min(available, comfortable))
   const spare = Math.max(0, available - feltH)
   const feltY = PAD + headerH + 6 + spare

@@ -282,6 +282,31 @@ function brassLamp(r: Raster, x: number, y: number, brass: string, light: string
   r.box(x - 2, y - 1, 9, 8, shade(brass, 0.55))
 }
 
+/** An oil lantern on a wall bracket: tin cap, a glass chimney with a flame, and its glow. */
+function lantern(r: Raster, x: number, y: number, tin: string, flame: string) {
+  glow(r, x + 3, y + 7, 20, 16, flame, 0.6)
+  r.sprite(
+    [
+      '..ooo..',
+      '...o...',
+      '.ooooo.',
+      'ogggggo',
+      'ogfffgo',
+      'ogfWfgo',
+      'ogfWfgo',
+      'oggfggo',
+      '.ooooo.',
+      '..ooo..',
+    ],
+    x,
+    y,
+    { o: tin, g: mix(flame, '#ffffff', 0.35), f: flame, W: '#fffbe8' },
+  )
+  // The bracket into the wall.
+  r.hline(x + 7, y + 1, 3, tin)
+  r.vline(x + 9, y + 1, 4, tin)
+}
+
 function porthole(r: Raster, cx: number, cy: number, rad: number, brass: string, view: (r: Raster, glass: Rect) => void) {
   const glassR = rad - 3
   const glass = { x: cx - glassR, y: cy - glassR, w: glassR * 2, h: glassR * 2 }
@@ -332,6 +357,70 @@ function neonText(r: Raster, text: string, x: number, y: number, color: string) 
     drawText(r, text, x + dx, y + dy, glowInk)
   }
   drawText(r, text, x, y, mix(color, '#ffffff', 0.45))
+}
+
+/**
+ * A crystal chandelier hanging from (cx, top): a gold frame of curved arms,
+ * candle bulbs along the top of each tier, crystals hanging under them, and
+ * the light it throws.
+ */
+function chandelier(r: Raster, cx: number, top: number, drop: number) {
+  const gold = '#f0c850'
+  const goldDark = '#a07820'
+  const crystal = '#e0f0ff'
+  const y = top + drop
+  glow(r, cx, y + 6, 54, 30, '#fff4c0', 0.6)
+  r.vline(cx, 0, y - 6, goldDark)
+  r.vline(cx + 1, 0, y - 6, gold)
+  // The body: a gilt urn.
+  r.sprite(['.gGg.', 'gGGGg', 'gGGGg', '.gGg.', '..g..'], cx - 2, y - 7, { g: goldDark, G: gold })
+  const tiers = [
+    { w: 34, dy: 0 },
+    { w: 22, dy: 6 },
+  ]
+  for (const tier of tiers) {
+    const half = tier.w / 2
+    const ty = y + tier.dy
+    // A curved arm: dips in the middle, rises at the tips.
+    for (let i = -half; i <= half; i++) {
+      const sag = Math.round(2 - ((i / half) ** 2) * 3)
+      r.put(cx + i, ty + sag, gold)
+      r.put(cx + i, ty + sag + 1, goldDark)
+    }
+    for (let i = -half; i <= half; i += 6) {
+      const sag = Math.round(2 - ((i / half) ** 2) * 3)
+      // Candle bulb above, crystal drop below.
+      r.rect(cx + i, ty + sag - 3, 1, 3, '#f8f8f0')
+      r.put(cx + i, ty + sag - 4, '#fff8c0')
+      r.put(cx + i, ty + sag - 5, '#fffbe8')
+      r.vline(cx + i, ty + sag + 2, 3, crystal)
+      r.put(cx + i, ty + sag + 5, '#ffffff')
+    }
+  }
+  r.sprite(['.c.', 'cWc', '.c.', '.c.'], cx - 1, y + 10, { c: crystal, W: '#ffffff' })
+}
+
+/** Neon lettering two art pixels to the font pixel, for a sign meant to be read across a room. */
+function bigNeon(r: Raster, text: string, x: number, y: number, color: string) {
+  const w = measureText(text)
+  const glyphs = new Raster(w + 2, 12)
+  drawText(glyphs, text, 0, 0, color)
+  const glowInk = mix(color, '#000000', 0.5)
+  const tube = mix(color, '#ffffff', 0.5)
+  glow(r, x + w, y + 7, w + 12, 14, color, 0.55)
+  for (let gy = 0; gy < glyphs.height; gy++) {
+    for (let gx = 0; gx < glyphs.width; gx++) {
+      if (glyphs.isClear(gx, gy)) continue
+      r.rect(x + gx * 2 - 1, y + gy * 2 - 1, 4, 4, glowInk)
+    }
+  }
+  for (let gy = 0; gy < glyphs.height; gy++) {
+    for (let gx = 0; gx < glyphs.width; gx++) {
+      if (glyphs.isClear(gx, gy)) continue
+      r.rect(x + gx * 2, y + gy * 2, 2, 2, color)
+      r.put(x + gx * 2, y + gy * 2, tube)
+    }
+  }
 }
 
 function picture(r: Raster, x: number, y: number, w: number, h: number, frame: string, paint: (r: Raster, canvas: Rect) => void) {
@@ -422,14 +511,27 @@ const ROOMS: Record<TableThemeId, Painter> = {
     for (const [mx, my, c] of [[4, 6, '#e84848'], [10, 9, '#48a8e8'], [6, 14, '#f8d048']] as const) r.rect(fx + mx, fy + my, 3, 3, c)
     r.rect(fx + 3, fy + 18, 8, 10, '#f8f8f8')
     r.box(fx + 3, fy + 18, 8, 10, '#c8c8d0')
-    // A clock.
+    // A clock, nearly midnight, and a calendar with the days crossed off.
     const clockX = Math.round(g.felt.x + g.felt.w * 0.3)
-    const clockY = wall.ceiling + cupH + Math.max(8, Math.round((wall.room - cupH) / 2))
-    if (clockY + 6 < g.felt.y + 10) {
-      r.ellipse(clockX - 6, clockY - 6, 13, 13, '#4a3020')
-      r.ellipse(clockX - 5, clockY - 5, 11, 11, '#f8f4e8')
+    const clockY = wall.ceiling + cupH + Math.max(10, Math.round((wall.room - cupH) / 2))
+    if (clockY + 8 < g.felt.y + 14) {
+      r.ellipse(clockX - 8, clockY - 8, 17, 17, '#4a3020')
+      r.ellipse(clockX - 7, clockY - 7, 15, 15, '#c89848')
+      r.ellipse(clockX - 6, clockY - 6, 13, 13, '#f8f4e8')
+      for (const [dx, dy] of [[0, -5], [5, 0], [0, 5], [-5, 0]]) r.put(clockX + dx, clockY + dy, '#4a3020')
       r.vline(clockX, clockY - 4, 4, '#202020')
-      r.hline(clockX, clockY, 3, '#202020')
+      r.put(clockX - 1, clockY - 3, '#202020')
+      r.hline(clockX, clockY, 1, '#c82828')
+      const calX = clockX + 30
+      const calY = clockY - 9
+      r.rect(calX, calY, 16, 18, '#f8f8f0')
+      r.box(calX, calY, 16, 18, '#8a8070')
+      r.rect(calX + 1, calY + 1, 14, 4, '#c83838')
+      for (let k = 0; k < 12; k++) {
+        const kx = calX + 2 + (k % 4) * 3
+        const ky = calY + 7 + Math.floor(k / 4) * 3
+        r.rect(kx, ky, 2, 2, k < 9 ? '#c83838' : '#b8b0a0')
+      }
     }
     // Lino: red and cream squares.
     checker(r, { x: 0, y: wall.floor, w: g.w, h: g.h - wall.floor }, '#e8e0cc', '#b84a3a', 10, '#9a8a78')
@@ -451,26 +553,31 @@ const ROOMS: Record<TableThemeId, Painter> = {
     planks(r, { x: 0, y: 0, w: g.w, h: wall.floor }, { base: '#7a4e2c', light: '#94643a', dark: '#4a2c16', size: 9, vertical: true })
     r.rect(0, 0, g.w, wall.ceiling, '#3a2212')
     r.hline(0, wall.ceiling, g.w, '#c89050')
-    // A rail of horseshoes and posters along the wall.
-    along(g, 70, 18, (x) => {
-      const ph = Math.min(26, Math.max(12, wall.room - 8))
+    // Wanted posters along the wall, curling at the corners, a face and a price.
+    along(g, 76, 18, (x) => {
+      const ph = Math.min(32, Math.max(14, wall.room - 6))
+      const pw = 28
       const py = wall.hang - Math.floor(ph / 2)
-      r.rect(x, py, 18, ph, '#e8d8a8')
-      r.box(x, py, 18, ph, '#a88858')
-      r.rect(x + 2, py + 2, 14, 3, '#5a3418')
-      drawText(r, 'WANTED', x + 1, py - 9 < 0 ? py + 1 : py + 1, '#5a2a10')
-      if (ph > 16) {
-        // A sketched face.
-        r.rect(x + 6, py + 9, 6, 6, '#c8a878')
-        r.box(x + 6, py + 9, 6, 6, '#6a4a28')
-        r.hline(x + 4, py + ph - 4, 10, '#8a6a40')
+      r.rect(x, py, pw, ph, '#ecdcae')
+      r.box(x, py, pw, ph, '#b89860')
+      r.put(x + pw - 1, py + ph - 1, '#c8b080')
+      r.put(x + pw - 2, py + ph - 1, '#d8c890')
+      r.rect(x + 2, py + 2, pw - 4, 2, '#8a2a18')
+      if (ph >= 24) {
+        // A sketched face over the bounty.
+        r.rect(x + 10, py + 6, 8, 9, '#d8b888')
+        r.box(x + 10, py + 6, 8, 9, '#6a4a28')
+        r.rect(x + 10, py + 6, 8, 3, '#5a3a20')
+        r.put(x + 12, py + 10, '#3a2412')
+        r.put(x + 15, py + 10, '#3a2412')
+        r.hline(x + 12, py + 13, 4, '#6a4a28')
+        drawText(r, '$500', x + 3, py + ph - 10, '#5a2a10')
+      } else {
+        drawText(r, '$500', x + 3, py + Math.max(5, ph - 10), '#5a2a10')
       }
-      r.put(x + 9, py, '#303030')
+      r.put(x + Math.floor(pw / 2), py + 1, '#303030')
     })
-    along(g, 70, 53, (x) => {
-      // Oil lamp on a bracket, and its warm light.
-      brassLamp(r, x, wall.hang - 5, '#a87830', '#f8c060')
-    })
+    along(g, 76, 56, (x) => lantern(r, x, wall.hang - 7, '#4a3a2a', '#f8c860'))
     // A longhorn skull over the middle of the table.
     const sx = Math.round(g.felt.x + g.felt.w / 2)
     const sy = Math.max(wall.ceiling + 4, g.felt.y - 22)
@@ -558,24 +665,29 @@ const ROOMS: Record<TableThemeId, Painter> = {
     // Pipes along the ceiling.
     r.rect(0, wall.ceiling + 3, g.w, 3, '#5a5a58')
     r.hline(0, wall.ceiling + 3, g.w, '#8a8a88')
-    // Stacked crates at the ends of the room.
-    for (const cx of [Math.max(0, g.felt.x - 38), Math.min(g.w - 30, g.felt.x + g.felt.w + 8)]) {
+    // Stacked crates at the ends of the room, stencilled.
+    for (const cx of [Math.min(g.w - 36, g.felt.x + g.felt.w + 6)]) {
       for (let k = 0; k < 2; k++) {
-        const cy = wall.floor - 18 - k * 18
-        r.rect(cx, cy, 28, 18, '#8a6a40')
-        r.box(cx, cy, 28, 18, '#4a3418')
-        r.hline(cx + 1, cy + 6, 26, '#6a4a28')
-        r.hline(cx + 1, cy + 12, 26, '#6a4a28')
-        drawText(r, k === 0 ? 'FRAGILE' : 'NO 7', cx + 2, cy + 2, '#3a2410')
+        const cy = wall.floor - 20 - k * 20
+        r.rect(cx, cy, 32, 20, '#8a6a40')
+        r.box(cx, cy, 32, 20, '#4a3418')
+        r.hline(cx + 1, cy + 1, 30, '#a8844e')
+        r.vline(cx + 3, cy + 1, 18, '#6a4a28')
+        r.vline(cx + 28, cy + 1, 18, '#6a4a28')
+        drawText(r, k === 0 ? 'RUM' : 'NO 7', cx + 7, cy + 6, '#3a2410')
       }
     }
-    // The door, with its slot.
-    const dx = Math.round(g.felt.x + g.felt.w * 0.78)
-    const dh = Math.min(48, wall.floor - wall.ceiling - 8)
-    r.rect(dx, wall.floor - dh, 26, dh, '#3a3a40')
+    // The door you came in by, with the slot they look through first.
+    const dh = Math.min(52, wall.floor - wall.ceiling - 10)
+    const dx = Math.max(4, g.felt.x - 34)
+    r.rect(dx - 2, wall.floor - dh - 2, 30, dh + 2, '#2a2a2e')
+    r.rect(dx, wall.floor - dh, 26, dh, '#4a4a52')
     r.box(dx, wall.floor - dh, 26, dh, '#1a1a1e')
+    r.vline(dx + 1, wall.floor - dh + 1, dh - 2, '#5e5e68')
     r.rect(dx + 7, wall.floor - dh + 8, 12, 3, '#0a0a0c')
+    r.hline(dx + 7, wall.floor - dh + 8, 12, '#f0d890')
     r.rect(dx + 20, wall.floor - Math.round(dh / 2), 2, 4, '#c8b060')
+    for (const ry of [wall.floor - dh + 4, wall.floor - 8]) r.rect(dx + 2, ry, 4, 2, '#2a2a2e')
     // A smoky haze over everything, and the one lamp.
     r.each(0, wall.ceiling, g.w, wall.floor - wall.ceiling, (x, y) => (dither(x, y, 0.1) && hash2(x >> 3, y >> 3, 8) < 0.5 ? '#7a6a60' : null))
     const lx = Math.round(g.felt.x + g.felt.w / 2)
@@ -652,17 +764,54 @@ const ROOMS: Record<TableThemeId, Painter> = {
     r.each(0, wall.floor - 8, g.w, 6, (x, y) => (Math.abs(((x % 16) - 8) / 2) - (y - (wall.floor - 8)) === 0 ? '#48e8f8' : null))
     r.hline(0, wall.floor - 12, g.w, '#f048c8')
     r.hline(0, wall.floor - 11, g.w, '#601848')
-    // Signs: POKER in pink over the middle, stars and sevens along the wall.
-    const sign = 'POKER'
-    const sw = measureText(sign)
-    const sy = Math.max(wall.ceiling + 4, wall.hang - 4)
-    along(g, 110, 30, (x) => {
-      if (Math.abs(x - g.w / 2) < 60) return
-      neonText(r, '777', x, sy, '#f8e048')
+    // A bank of slot machines along the wall, their screens lit.
+    along(g, 22, 3, (x) => {
+      const top = wall.floor - 30
+      r.rect(x, top, 18, 30, '#2a1a3a')
+      r.box(x, top, 18, 30, '#08040c')
+      r.rect(x + 2, top + 2, 14, 5, '#f048c8')
+      r.hline(x + 3, top + 3, 12, '#f8a8e8')
+      r.rect(x + 3, top + 9, 12, 7, '#100818')
+      for (let k = 0; k < 3; k++) r.rect(x + 4 + k * 4, top + 10, 3, 5, ['#f8f0f0', '#f8e048', '#f8f0f0'][k])
+      r.put(x + 5, top + 12, '#e83030')
+      r.put(x + 9, top + 12, '#e83030')
+      r.put(x + 13, top + 12, '#e83030')
+      r.rect(x + 4, top + 19, 10, 2, '#48e8f8')
+      r.rect(x + 3, top + 24, 12, 3, '#08040c')
+      glow(r, x + 9, top + 12, 12, 10, '#c870f8', 0.3)
     })
-    neonText(r, sign, Math.round(g.w / 2 - sw / 2), sy, '#f048c8')
-    along(g, 110, 85, (x) => {
-      if (Math.abs(x - g.w / 2) < 50) return
+    // Neon cacti — this is the desert, however much the room pretends not to be.
+    const cactus = (cx: number, cy: number) => {
+      const ink = '#68f888'
+      const tube = (x0: number, y0: number, x1: number, y1: number) => {
+        const steps = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0))
+        for (let s = 0; s <= steps; s++) r.put(Math.round(x0 + ((x1 - x0) * s) / steps), Math.round(y0 + ((y1 - y0) * s) / steps), ink)
+      }
+      tube(cx, cy - 12, cx, cy + 10)
+      tube(cx + 4, cy - 12, cx + 4, cy + 10)
+      tube(cx, cy - 12, cx + 4, cy - 12)
+      tube(cx - 6, cy - 6, cx - 6, cy + 1)
+      tube(cx - 6, cy + 1, cx, cy + 1)
+      tube(cx + 10, cy - 9, cx + 10, cy - 1)
+      tube(cx + 10, cy - 1, cx + 4, cy - 1)
+      glow(r, cx + 2, cy, 14, 16, '#48f878', 0.45)
+    }
+    // Signs: POKER in pink over the middle; sevens, stars and cacti in turn
+    // along the rest of the wall, outward from it.
+    const sign = 'POKER'
+    const sw = measureText(sign) * 2
+    const sy = Math.max(wall.ceiling + 4, wall.hang - 7)
+    for (let k = 1; k * 56 < g.w / 2 + 40; k++) {
+      for (const side of [-1, 1]) {
+        const x = Math.round(g.w / 2 + side * (44 + k * 56))
+        const kind = k % 3
+        if (kind === 1) neonText(r, '777', x - 8, sy + 2, '#f8e048')
+        else if (kind === 0) cactus(x - 2, wall.hang)
+      }
+    }
+    bigNeon(r, sign, Math.round(g.w / 2 - sw / 2), sy, '#f048c8')
+    along(g, 168, Math.round(g.w / 2) % 168 + 112, (x) => {
+      if (Math.abs(x - g.w / 2) < 60) return
       // A neon star.
       const pts = [[0, -5], [1, -2], [5, -2], [2, 1], [3, 5], [0, 3], [-3, 5], [-2, 1], [-5, -2], [-1, -2]]
       for (let i = 0; i < pts.length; i++) {
@@ -761,23 +910,20 @@ const ROOMS: Record<TableThemeId, Painter> = {
       curtain(r, { x: x - 8, y: top - 2, w: 7, h: h + 6 }, '#8a1020', '#b82838', '#4a0810')
       curtain(r, { x: x + winW + 1, y: top - 2, w: 7, h: h + 6 }, '#8a1020', '#b82838', '#4a0810')
     })
-    // The chandelier over the table.
-    const cx = Math.round(g.felt.x + g.felt.w / 2)
-    const cy = Math.max(wall.ceiling + 6, Math.min(g.felt.y - 18, wall.ceiling + 20))
-    r.vline(cx, 0, cy, '#a07820')
-    glow(r, cx, cy + 4, 46, 26, '#fff4c0', 0.55)
-    for (let tier = 0; tier < 3; tier++) {
-      const tw = 28 - tier * 8
-      const ty = cy + tier * 5 - 4
-      r.hline(cx - tw / 2, ty + 4, tw, '#f0c850')
-      for (let i = 0; i <= tw; i += 4) {
-        r.vline(cx - tw / 2 + i, ty + 5, 3, '#e8f0f8')
-        r.put(cx - tw / 2 + i, ty + 8, '#ffffff')
-        r.put(cx - tw / 2 + i, ty + 3, '#fff8c0')
-      }
-    }
-    carpet(r, { x: 0, y: wall.floor, w: g.w, h: g.h - wall.floor }, '#7a1020', '#a01830', '#f0c850', 'scroll')
-    r.hline(0, wall.floor + 3, g.w, '#f0c850')
+    // Chandeliers down the room, the light pooling under each.
+    along(g, 150, Math.round(g.w / 2) % 150, (x) => chandelier(r, x, wall.ceiling + 2, Math.max(10, Math.min(24, wall.room - 8))))
+    // A royal carpet: crimson, a gold lozenge repeat, and a border.
+    r.each(0, wall.floor, g.w, g.h - wall.floor, (x, y) => {
+      const u = x % 20
+      const v = (y - wall.floor) % 14
+      const d = Math.abs(u - 10) / 10 + Math.abs(v - 7) / 7
+      if (d > 0.86 && d < 1.0) return '#c89838'
+      if (d < 0.16) return '#f0c850'
+      if (d > 0.4 && d < 0.5) return '#9a1828'
+      return '#7a1020'
+    })
+    r.rect(0, wall.floor + 2, g.w, 3, '#f0c850')
+    r.hline(0, wall.floor + 5, g.w, '#8a6418')
     skirting(r, wall.floor, g.w, '#3a1a10')
   },
 }

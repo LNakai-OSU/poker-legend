@@ -12,6 +12,7 @@ import { TABLE_THEMES } from './tableThemes'
 import { Countdown, Panel, PxButton, PxLine } from './pixel/ui'
 import { PixelText } from './pixel/PixelText'
 import { INK } from './pixel/ink'
+import { describeAction, LOG_LINES } from './actionLog'
 
 /**
  * Marcus's kitchen table: the first hand of poker the player ever sees, and the
@@ -75,6 +76,9 @@ interface PokerNightSceneProps {
 export function PokerNightScene({ onWin, onLeave }: PokerNightSceneProps) {
   const tableRef = useRef(createTable())
   const [tick, setTick] = useState(0)
+  /** The last few things anybody did this hand, narrated in the betting menu. */
+  const [log, setLog] = useState<string[]>([])
+  const note = (line: string) => setLog((lines) => [...lines.slice(1 - LOG_LINES), line])
   const rerender = () => setTick((t) => t + 1)
   const aiBusyRef = useRef(false)
 
@@ -111,6 +115,7 @@ export function PokerNightScene({ onWin, onLeave }: PokerNightSceneProps) {
     const current = levelFor(Math.max(1, state.handNumber))
     table.setBlinds(level.small, level.big)
     table.startNewHand()
+    setLog([])
     playSound('deal')
     if (level.index !== current.index || next === 1) {
       announce({
@@ -147,6 +152,7 @@ export function PokerNightScene({ onWin, onLeave }: PokerNightSceneProps) {
       if (ctx) {
         const action = decideAiAction(ctx, defaultRng)
         playSound(action.type === 'fold' ? 'fold' : action.type === 'check' ? 'check' : 'chip')
+        note(describeAction(actingPlayer.name, action, ctx))
         table.submitAction(actingPlayer.id, action)
       }
       aiBusyRef.current = false
@@ -187,11 +193,13 @@ export function PokerNightScene({ onWin, onLeave }: PokerNightSceneProps) {
 
   const act = (type: 'fold' | 'check' | 'call') => {
     playSound(type === 'call' ? 'chip' : type)
+    note(describeAction('You', { type }, { toCall, allInTo }))
     table.submitAction('you', { type })
     rerender()
   }
   const raiseTo = (to: number) => {
     playSound('chip')
+    note(describeAction('You', { type: 'raise', to }, { toCall, allInTo }))
     table.submitAction('you', { type: 'raise', to })
     rerender()
   }
@@ -388,12 +396,27 @@ export function PokerNightScene({ onWin, onLeave }: PokerNightSceneProps) {
               )}
             </>
           )}
-          {state.handInProgress && !canAct && !coaching && (
-            <PxLine
-              scale={P}
-              align="center"
-              text={`${PLAYERS.find((p) => p.id === state.actingPlayerId)?.name ?? 'The dealer'} to act…`}
-            />
+          {state.handInProgress && !canAct && (
+            <>
+              {!coaching && (
+                <div data-testid="action-log">
+                  {log.map((line, i) => (
+                    <PxLine
+                      key={`${i}-${line}`}
+                      scale={P}
+                      text={line}
+                      ink={i === log.length - 1 ? INK.dark : { color: '#8a8a98', shadow: '#dcdce4' }}
+                    />
+                  ))}
+                </div>
+              )}
+              <PxLine
+                scale={P}
+                align="center"
+                ink={{ color: '#2a5a9a', shadow: '#c8d8f0' }}
+                text={`${PLAYERS.find((p) => p.id === state.actingPlayerId)?.name ?? 'The dealer'} to act…`}
+              />
+            </>
           )}
         </div>
       )

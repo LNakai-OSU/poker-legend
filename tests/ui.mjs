@@ -919,7 +919,9 @@ for (const [label, viewport, device] of [
 
     let worst = null
     let showdowns = 0
-    for (let i = 0; i < 36; i++) {
+    // Sampled until the end of a hand has been seen twice: a showdown is half of
+    // what this guards, and under load six players can take a while to get there.
+    for (let i = 0; i < 140 && (i < 30 || showdowns < 2); i++) {
       const seen = await page.evaluate(() => {
         const board = document.querySelector('[data-testid="board"]')
         if (!board) return { problem: 'there is no board' }

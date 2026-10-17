@@ -18,7 +18,7 @@ import { INK, type Ink } from './pixel/ink'
 import { frameStyle } from './pixel/frame'
 import { panelFrames } from './pixel/themeFrames'
 import { chipStackUrl, dealerButtonUrl, DENOMINATIONS } from './pixel/chips'
-import { measureText, wrapText, LINE_HEIGHT } from './pixel/font'
+import { fitWords, measureText, wrapText, LINE_HEIGHT } from './pixel/font'
 import { mix, shade } from './pixel/color'
 
 export interface TableInsights {
@@ -210,6 +210,19 @@ function Tag({ text, theme, P, ink = INK.dark, style }: { text: string; theme: T
 
 const STACK_INK: Ink = { color: '#8a4c10', shadow: '#ecd8b0' }
 
+/** The widest a line of text under a seat may be, shadow included. */
+const SEAT_LINE = SEAT.w - 1
+
+/**
+ * The name on a seat's plate: the whole name if it fits, else the first one.
+ * "Nadia Okonkwo" does not fit a six-handed seat; "Nadia" does, and the plate
+ * is hers either way.
+ */
+function plateName(name: string): string {
+  const room = SEAT.w - 2 * SEAT.frame - 1
+  return measureText(name) <= room ? name : name.split(' ')[0]
+}
+
 /** The dealer button, as an actual button on the felt. */
 function DealerButton({ P, style }: { P: number; style?: CSSProperties }) {
   return (
@@ -334,7 +347,7 @@ export function PokerTableView({
                 )}
               </div>
               <div style={{ ...at({ x: 0, y: 50, w: SEAT.w - 2 * SEAT.frame, h: LINE_HEIGHT }, P), display: 'flex', justifyContent: 'center', overflow: 'hidden' }}>
-                <PixelText text={p.name} scale={P} ink={INK.dark} />
+                <PixelText text={plateName(p.name)} scale={P} ink={INK.dark} />
               </div>
               <div
                 data-testid={`stack-${p.id}`}
@@ -356,7 +369,7 @@ export function PokerTableView({
               {p.tell && !p.folded ? (
                 <div data-testid={`tell-${p.id}`} className={`tell-${p.tell.kind}`}>
                   <PixelText
-                    text={tellCue(p.tell)}
+                    text={fitWords(tellCue(p.tell), SEAT_LINE)}
                     scale={P}
                     wrap
                     maxLines={3}
@@ -365,10 +378,10 @@ export function PokerTableView({
                   />
                 </div>
               ) : made ? (
-                <PixelText text={made} scale={P} wrap maxLines={3} align="center" ink={winners.has(p.id) ? INK.gold : INK.light} />
+                <PixelText text={fitWords(made, SEAT_LINE)} scale={P} wrap maxLines={3} align="center" ink={winners.has(p.id) ? INK.gold : INK.light} />
               ) : (
                 <div className="seat-flavour">
-                  <PixelText text={personality.style} scale={P} wrap maxLines={3} align="center" ink={flavourInk} />
+                  <PixelText text={fitWords(personality.style, SEAT_LINE)} scale={P} wrap maxLines={3} align="center" ink={flavourInk} />
                 </div>
               )}
             </div>
