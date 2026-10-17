@@ -448,12 +448,12 @@ const MENSWEAR = parseMap(`
 const AUTO_ROW = parseMap(`
 ^^^^^^^^^^^^^^^^
 ^pppppFFFpppppp^
-^QQQQQFFFQQQQQQ^
+^FQQQQFFFQQQQQF^
 ^QQQQQQQQQQQQQQ^
 ^QFFFQQQQQQFFFQ^
 ^QFFFQQQQQQFFFQ^
 ^QQQQQQQQQQQQQQ^
-^QQQQQQQQQQQQQQ^
+^QFFFQQQQQQQQQF^
 ^QQQQQQQQQQQQQQ^
 ^^^^^^^D^^^^^^^^
 `)
@@ -516,12 +516,12 @@ const MESA_LUXURY = parseMap(`
 const MESA_MOTORS = parseMap(`
 ^^^^^^^^^^^^^^^^
 ^nnnnnFFFnnnnnn^
-^QQQQQFFFQQQQQQ^
+^FQQQQFFFQQQQQF^
 ^QQQQQQQQQQQQQQ^
 ^QFFFQQQQQQFFFQ^
 ^QFFFQQQQQQFFFQ^
 ^QQQQQQQQQQQQQQ^
-^QQQQQQQQQQQQQQ^
+^FQQQQQQQQQFFFQ^
 ^QQQQQQQQQQQQQQ^
 ^^^^^^^D^^^^^^^^
 `)
@@ -1099,6 +1099,8 @@ const silverCreek: CityDef = {
           col: 6,
           row: 2,
           color: COLORS.shop,
+          // Behind the counter, serving. Shops used to be drawn as a box of stock.
+          art: 'person',
           lines: ['Clerk: Souvenirs, snacks, and things nobody needs.'],
           action: { kind: 'shop', shopId: 'silvercreek-gift' },
         },
@@ -1254,6 +1256,7 @@ const riverbend: CityDef = {
           col: 6,
           row: 2,
           color: COLORS.shop,
+          art: 'person',
           lines: ['Clerk: Jackets, bikes, whatever gets you upriver.'],
           action: { kind: 'shop', shopId: 'riverbend-outfitters' },
         },
@@ -1401,6 +1404,7 @@ const crescentHarbor: CityDef = {
           col: 6,
           row: 2,
           color: COLORS.shop,
+          art: 'person',
           lines: ['Tailor: We can have it fitted by tonight.'],
           action: { kind: 'shop', shopId: 'crescent-menswear' },
         },
@@ -1429,6 +1433,7 @@ const crescentHarbor: CityDef = {
           col: 7,
           row: 2,
           color: COLORS.shop,
+          art: 'person',
           lines: ['Salesman: Nothing here is new. Everything here runs.'],
           action: { kind: 'shop', shopId: 'crescent-auto' },
         },
@@ -1622,6 +1627,7 @@ const palmCay: CityDef = {
           col: 6,
           row: 2,
           color: COLORS.shop,
+          art: 'person',
           lines: ['Clerk: Linen, mostly. It photographs well.'],
           action: { kind: 'shop', shopId: 'palmcay-boutique' },
         },
@@ -1660,6 +1666,7 @@ const palmCay: CityDef = {
           col: 7,
           row: 2,
           color: COLORS.shop,
+          art: 'person',
           lines: ['Dealer: Everything on this lot is a bad financial decision.'],
           action: { kind: 'shop', shopId: 'palmcay-marina' },
         },
@@ -1832,6 +1839,7 @@ const neonMesa: CityDef = {
           col: 6,
           row: 2,
           color: COLORS.shop,
+          art: 'person',
           lines: ['Clerk: Everything here is about being let in somewhere.'],
           action: { kind: 'shop', shopId: 'mesa-luxury' },
         },
@@ -1851,6 +1859,7 @@ const neonMesa: CityDef = {
           col: 7,
           row: 2,
           color: COLORS.shop,
+          art: 'person',
           lines: ['Salesman: You look like a man who is tired of buses.'],
           action: { kind: 'shop', shopId: 'mesa-motors' },
         },
@@ -2007,6 +2016,7 @@ const portoLumina: CityDef = {
           col: 6,
           row: 2,
           color: COLORS.shop,
+          art: 'person',
           lines: ['Tailor: For the match, of course. Everyone comes here first.'],
           action: { kind: 'shop', shopId: 'lumina-atelier' },
         },
@@ -2271,6 +2281,10 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'window-sky', col: 13, row: 1 },
     { stampId: 'car-red', col: 2, row: 4 },
     { stampId: 'car-silver', col: 11, row: 4 },
+    { stampId: 'fern', col: 1, row: 2 },
+    { stampId: 'fern', col: 14, row: 2 },
+    { stampId: 'sofa-leather', col: 2, row: 7 },
+    { stampId: 'fern', col: 14, row: 7 },
   ],
   'pc-boutique': [
     { stampId: 'palm', col: 1, row: 1 },
@@ -2316,6 +2330,10 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'window-night', col: 13, row: 1 },
     { stampId: 'car-yellow', col: 2, row: 4 },
     { stampId: 'car-red', col: 11, row: 4 },
+    { stampId: 'fern', col: 1, row: 2 },
+    { stampId: 'fern', col: 14, row: 2 },
+    { stampId: 'sofa-velvet', col: 11, row: 7 },
+    { stampId: 'fern', col: 1, row: 7 },
   ],
   'pl-atelier': [
     { stampId: 'mannequin-gown', col: 1, row: 1 },
