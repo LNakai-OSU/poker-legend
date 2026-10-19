@@ -1,116 +1,42 @@
 import { Container, Sprite, type Texture } from 'pixi.js'
-import { edgeTexture, tileVariant, tileVariantTextures, type Side } from './sprites'
 import { FRAME_MS, SCALE, stampLayers } from './stampArt'
-import { CARPETS, DOOR, FLOOR, FURNITURE, TILE_SIZE, WALL, WALL_FACES, WALL_TOP, isTileWalkable, type TileGrid } from './tiles'
+import { TILE_SIZE, type TileGrid } from './tiles'
+import { cellArt, cellTextures, paintedGrid } from './cells'
+import { WATER_FRAME_MS } from './ground'
 import type { PlacedStamp } from '../world/stamps'
 
 // Re-exported so callers have a single import for map data plus rendering.
 export * from './tiles'
-
-const SIDES: Array<[Side, number, number]> = [
-  ['n', 0, -1],
-  ['e', 1, 0],
-  ['s', 0, 1],
-  ['w', -1, 0],
-]
+export { edgesAt, paintedGrid } from './cells'
 
 /**
- * What to lay over a tile where it meets its neighbours, as edge-texture keys.
+ * The ground, one sprite per square.
  *
- * A room drawn as a grid of independent squares has no corners: the floor runs
- * flat into the wall and a carpet stops dead at the skirting. These are the
- * few joins that sell it as a room — the lit lip on the top of a wall, the
- * shadow a wall throws on the floor, the bound edge of a carpet.
+ * Each square's picture comes from `cellArt`, which reads the squares round it
+ * — so a pavement beside the road has its kerb and a square of water beside
+ * the quay has its lip. Squares that look the same share a texture. Water and
+ * flower beds have frames, swapped on one clock for the whole map so the
+ * ripples move together.
  */
-export function edgesAt(grid: TileGrid, col: number, row: number): string[] {
-  const tile = grid[row][col]
-  const at = (c: number, r: number) => grid[r]?.[c]
-  const keys: string[] = []
-
-  if (tile === WALL_TOP) {
-    for (const [side, dc, dr] of SIDES) {
-      const next = at(col + dc, row + dr)
-      if (next !== undefined && isTileWalkable(next)) keys.push(`lip-${side}`)
-    }
-    return keys
-  }
-
-  if (!isTileWalkable(tile)) return keys
-
-  if (CARPETS.has(tile)) {
-    for (const [side, dc, dr] of SIDES) {
-      const next = at(col + dc, row + dr)
-      // A carpet runs on under whatever stands on it; it is bound where it
-      // stops — at a wall, a doorway or another floor.
-      const stops = next === undefined || next === WALL || next === WALL_TOP || WALL_FACES.has(next) ||
-        (isTileWalkable(next) && next !== tile)
-      if (stops) keys.push(`border-${tile}-${side}`)
-    }
-  }
-
-  // Walls shade the floor below them and to their right.
-  const above = at(col, row - 1)
-  if (above !== undefined && (WALL_FACES.has(above) || above === WALL_TOP)) keys.push('shade-n')
-  if (at(col - 1, row) === WALL_TOP) keys.push('shade-w')
-  return keys
-}
-
-/**
- * The grid as it should be painted.
- *
- * A furniture tile means "something solid stands here", and every piece of
- * furniture is a stamp drawn over it — a round table, a palm in a pot, a
- * pillar. What shows round the edges of those is the floor of the room they
- * stand in, not a square of some furniture texture, so each furniture tile is
- * painted as the nearest floor to it. The collision grid is untouched.
- */
-export function paintedGrid(grid: TileGrid): TileGrid {
-  const painted = grid.map((row) => [...row])
-  for (let row = 0; row < grid.length; row++) {
-    for (let col = 0; col < grid[row].length; col++) {
-      if (grid[row][col] !== FURNITURE) continue
-      const floor = nearestFloor(grid, col, row)
-      if (floor !== undefined) painted[row][col] = floor
-    }
-  }
-  return painted
-}
-
-function nearestFloor(grid: TileGrid, col: number, row: number): number | undefined {
-  for (let reach = 1; reach <= 6; reach++) {
-    // Straight neighbours first at each distance, so a table on a carpet takes the carpet.
-    for (const [dc, dr] of [[0, reach], [0, -reach], [reach, 0], [-reach, 0]]) {
-      const tile = grid[row + dr]?.[col + dc]
-      if (tile !== undefined && tile !== DOOR && isTileWalkable(tile)) return tile
-    }
-    for (let dr = -reach; dr <= reach; dr++) {
-      for (let dc = -reach; dc <= reach; dc++) {
-        if (Math.max(Math.abs(dc), Math.abs(dr)) !== reach) continue
-        const tile = grid[row + dr]?.[col + dc]
-        if (tile !== undefined && tile !== DOOR && isTileWalkable(tile)) return tile
-      }
-    }
-  }
-  return undefined
-}
-
 export function buildTileLayer(grid: TileGrid, themeId = 'default'): Container {
-  const textures = tileVariantTextures(themeId)
   const layer = new Container()
   const painted = paintedGrid(grid)
+  const animated: Array<{ sprite: Sprite; frames: Texture[] }> = []
   for (let row = 0; row < painted.length; row++) {
     for (let col = 0; col < painted[row].length; col++) {
-      const kind = painted[row][col]
-      const variants = textures[kind] ?? textures[FLOOR]
-      const tile = new Sprite(variants[tileVariant(kind, col, row)] ?? variants[0])
+      const frames = cellTextures(cellArt(painted, col, row, themeId))
+      const tile = new Sprite(frames[0])
       tile.position.set(col * TILE_SIZE, row * TILE_SIZE)
       layer.addChild(tile)
-      for (const key of edgesAt(painted, col, row)) {
-        const texture = edgeTexture(key)
-        if (!texture) continue
-        const edge = new Sprite(texture)
-        edge.position.set(col * TILE_SIZE, row * TILE_SIZE)
-        layer.addChild(edge)
+      if (frames.length > 1) animated.push({ sprite: tile, frames })
+    }
+  }
+  if (animated.length > 0) {
+    layer.onRender = () => {
+      const tick = Math.floor(performance.now() / WATER_FRAME_MS)
+      for (const { sprite, frames } of animated) {
+        const next = frames[tick % frames.length]
+        if (sprite.texture !== next) sprite.texture = next
       }
     }
   }
