@@ -1,7 +1,7 @@
 import { Texture } from 'pixi.js'
-import { CARPETS, DECK, DOOR, FURNITURE, WALL, WALL_FACES, WALL_TOP, WATER, isTileWalkable, type TileGrid } from './tiles'
+import { CARPETS, DECK, DOOR, FURNITURE, PROP, WALL, WALL_FACES, WALL_TOP, WATER, isTileWalkable, type TileGrid } from './tiles'
 import { baseDrawing, edgeDrawing, makeCanvas, type Draw, type Side } from './sprites'
-import { cellAt, groundArt, groundKey } from './ground'
+import { cellAt, classOf, groundArt, groundKey } from './ground'
 
 /**
  * What one square of a map looks like, worked out from the square and the
@@ -65,20 +65,45 @@ export function edgesAt(grid: TileGrid, col: number, row: number): string[] {
  *
  * A furniture tile means "something solid stands here", and every piece of
  * furniture is a stamp drawn over it — a round table, a palm in a pot, a
- * pillar. What shows round the edges of those is the floor of the room they
- * stand in, not a square of some furniture texture, so each furniture tile is
- * painted as the nearest floor to it. The collision grid is untouched.
+ * pillar. A prop tile is the same out of doors: a lamp post's foot, a bench, a
+ * bollard. What shows round the edges of those is the ground they stand on,
+ * not a square of some texture, so each is painted as the nearest floor to it.
+ * The collision grid is untouched.
  */
 export function paintedGrid(grid: TileGrid): TileGrid {
   const painted = grid.map((row) => [...row])
+  // Boards are a quay outside and a cabin floor inside; a map with water in it is outside.
+  const waterside = grid.some((row) => row.some((tile) => tile === WATER))
   for (let row = 0; row < grid.length; row++) {
     for (let col = 0; col < grid[row].length; col++) {
-      if (grid[row][col] !== FURNITURE) continue
-      const floor = nearestFloor(grid, col, row)
+      const tile = grid[row][col]
+      if (tile !== FURNITURE && tile !== PROP) continue
+      const floor = groundAlongRow(grid, col, row, waterside) ?? nearestFloor(grid, col, row)
       if (floor !== undefined) painted[row][col] = floor
     }
   }
   return painted
+}
+
+/**
+ * Out of doors, an object stands on the ground of the row it is in: a car
+ * parked in the south lane is on the road, not on the pavement below it, and
+ * a bollard on the boardwalk is on the boards. So look along the row first,
+ * past the object's own squares, for open ground. Rooms are left to
+ * `nearestFloor`, which they were laid out against.
+ */
+function groundAlongRow(grid: TileGrid, col: number, row: number, waterside: boolean): number | undefined {
+  for (const step of [-1, 1]) {
+    for (let c = col + step; c >= 0 && c < grid[row].length; c += step) {
+      const tile = grid[row][c]
+      if (tile === FURNITURE || tile === PROP) continue
+      const kind = classOf(tile)
+      const outdoors = kind === 'road' || kind === 'pave' || kind === 'grass' || kind === 'sand' || kind === 'dirt'
+      if (outdoors || (kind === 'deck' && waterside)) return tile
+      break
+    }
+  }
+  return undefined
 }
 
 function nearestFloor(grid: TileGrid, col: number, row: number): number | undefined {

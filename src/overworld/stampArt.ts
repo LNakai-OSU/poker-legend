@@ -6,6 +6,7 @@ import { BUILDING_ART } from './art/buildingArt'
 import { CASINO_ART } from './art/casinoArt'
 import { FURNITURE_ART } from './art/furnitureArt'
 import { STREET_ART } from './art/streetArt'
+import { STREET_FURNITURE } from './art/streetFurniture'
 
 /**
  * The art for things bigger than a tile.
@@ -56,6 +57,27 @@ export interface StampArt {
   over?: StampDraw
   bleed?: { left?: number; top?: number; right?: number; bottom?: number }
   frames?: number
+  /**
+   * For something taller than the ground it stands on — a lamp post, a palm, a
+   * parked car — how far down from the top of its footprint, in art units, the
+   * picture belongs in front of whoever walks behind it. That much of the
+   * picture (and everything that spills above the footprint) is also drawn in
+   * the layer over the people, so you walk behind a lamp post, not over it.
+   */
+  standsUp?: number
+  /** Where it throws light after dark: pools on the ground, in art units from the footprint's top-left. */
+  lights?: StampLight[]
+}
+
+/** A pool of light a stamp throws on the ground after dark. */
+export interface StampLight {
+  x: number
+  y: number
+  /** How far it reaches, in art units: the long axis of the pool. */
+  reach: number
+  color: string
+  /** 0..1: how bright the middle of the pool is. */
+  strength?: number
 }
 
 const ART: Record<string, StampArt> = {
@@ -63,6 +85,7 @@ const ART: Record<string, StampArt> = {
   ...CASINO_ART,
   ...FURNITURE_ART,
   ...STREET_ART,
+  ...STREET_FURNITURE,
 }
 
 /** How long each animation frame is held, in milliseconds. */
@@ -114,9 +137,10 @@ export function stampLayers(stampId: string): StampLayers | null {
     texture.source.scaleMode = 'nearest'
     return texture
   }
+  const over = overDrawing(art)
   const layers: StampLayers = {
     under: Array.from({ length: frames }, (_, frame) => toTexture(art.draw, frame)),
-    over: art.over ? Array.from({ length: frames }, (_, frame) => toTexture(art.over!, frame)) : null,
+    over: over ? Array.from({ length: frames }, (_, frame) => toTexture(over, frame)) : null,
     bleed,
   }
   layerCache.set(stampId, layers)
@@ -145,6 +169,24 @@ export function stampCanvas(stampId: string): HTMLCanvasElement | null {
   const canvas = paint(art.draw, cols, rows, 0, none, tiles)
   if (art.over) canvas.getContext('2d')!.drawImage(paint(art.over, cols, rows, 0, none, tiles), 0, 0)
   return canvas
+}
+
+/**
+ * What of a stamp goes over the people: its own front, or for something that
+ * stands up out of the ground, the top of its picture.
+ */
+function overDrawing(art: StampArt): StampDraw | null {
+  if (art.over) return art.over
+  if (art.standsUp === undefined) return null
+  const top = art.standsUp
+  const above = -(art.bleed?.top ?? 0)
+  return (px, c) =>
+    art.draw((x, y, w, h, color) => {
+      // Only what lies above the cut, and nothing of the ground below it.
+      const y0 = Math.max(y, above)
+      const y1 = Math.min(y + h, top)
+      if (y1 > y0) px(x, y0, w, y1 - y0, color)
+    }, c)
 }
 
 function footprint(stampId: string): string[] {

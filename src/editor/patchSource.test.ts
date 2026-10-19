@@ -16,21 +16,34 @@ import { parseMap, toSketch } from '../overworld/tileRenderer'
  * it handles the shapes I thought to write down; the real file is the only thing
  * that proves it handles the shapes that are actually in there — two quoting
  * styles for names, POIs written both as `local(...)` calls and as object
- * literals, and six stretches of road drawn from one map they all share.
+ * literals.
  */
 const SOURCE = readFileSync(new URL('../world/cities.ts', import.meta.url), 'utf8')
 
+/**
+ * The real file with two areas drawn from one map.
+ *
+ * The six roads between towns used to share one map; each now has its own, so
+ * nothing in the game is shared. The editor still has to get a shared map
+ * right — a room copied for a second shop is one paste away — so these tests
+ * share one on purpose: River Road pointed at the Mesa Highway's map.
+ */
+const SHARED = SOURCE.replace(/('road-riverbend',\n\s+'River Road',\n\s+)ROAD_RIVERBEND,/, '$1ROAD_MESA,')
+
 describe('finding things in the source', () => {
   it('knows which map an area is drawn from', () => {
-    expect(mapConstantOf(SOURCE, 'road-mesa')).toBe('HIGHWAY')
+    expect(SHARED).not.toBe(SOURCE)
+    expect(mapConstantOf(SOURCE, 'road-mesa')).toBe('ROAD_MESA')
+    expect(mapConstantOf(SHARED, 'road-riverbend')).toBe('ROAD_MESA')
     expect(mapConstantOf(SOURCE, 'basin')).toMatch(/^[A-Z][A-Z0-9_]*$/)
   })
 
   it('knows who else is drawn from the same map', () => {
-    const sharing = areasSharing(SOURCE, 'HIGHWAY')
+    const sharing = areasSharing(SHARED, 'ROAD_MESA')
     expect(sharing).toContain('road-mesa')
     expect(sharing).toContain('road-riverbend')
-    expect(sharing.length).toBeGreaterThan(2)
+    expect(sharing).toHaveLength(2)
+    expect(areasSharing(SOURCE, 'ROAD_MESA')).toEqual(['road-mesa'])
   })
 
   it('refuses an area that does not exist rather than guessing', () => {
@@ -49,15 +62,15 @@ describe('redrawing a map', () => {
   const SKETCH = ['#####', '#...#', '#.D.#', '#####'].join('\n')
 
   it('replaces the map an area is drawn from', () => {
-    const { source, notes } = applyEdit(SOURCE, { areaId: 'road-mesa', sketch: SKETCH })
-    expect(source).toContain(`const HIGHWAY = parseMap(\`\n${SKETCH}\n\`)`)
+    const { source, notes } = applyEdit(SHARED, { areaId: 'road-mesa', sketch: SKETCH })
+    expect(source).toContain(`const ROAD_MESA = parseMap(\`\n${SKETCH}\n\`)`)
     expect(notes.join(' ')).toContain('road-riverbend')
   })
 
   it('says out loud who else it just redrew', () => {
-    // Six stretches of road are the same map. Changing one changes all of them,
-    // and the only unacceptable version of that is the one that happens quietly.
-    const { notes } = applyEdit(SOURCE, { areaId: 'road-mesa', sketch: SKETCH })
+    // Two roads are the same map. Changing one changes both, and the only
+    // unacceptable version of that is the one that happens quietly.
+    const { notes } = applyEdit(SHARED, { areaId: 'road-mesa', sketch: SKETCH })
     expect(notes[0]).toMatch(/also/)
   })
 
@@ -69,14 +82,14 @@ describe('redrawing a map', () => {
   })
 
   it('splits a shared map into one of its own, leaving the others alone', () => {
-    const { source, notes } = applyEdit(SOURCE, { areaId: 'road-mesa', sketch: SKETCH, split: true })
+    const { source, notes } = applyEdit(SHARED, { areaId: 'road-mesa', sketch: SKETCH, split: true })
     expect(source).toContain(`const ROAD_MESA_MAP = parseMap(\`\n${SKETCH}\n\`)`)
     // The shared one is untouched, and everybody else still uses it.
-    const sharedBefore = /const HIGHWAY = parseMap\(`\n?([\s\S]*?)\n?`\)/.exec(SOURCE)![1]
-    const sharedAfter = /const HIGHWAY = parseMap\(`\n?([\s\S]*?)\n?`\)/.exec(source)![1]
+    const sharedBefore = /const ROAD_MESA = parseMap\(`\n?([\s\S]*?)\n?`\)/.exec(SHARED)![1]
+    const sharedAfter = /const ROAD_MESA = parseMap\(`\n?([\s\S]*?)\n?`\)/.exec(source)![1]
     expect(sharedAfter).toBe(sharedBefore)
-    expect(areasSharing(source, 'HIGHWAY')).not.toContain('road-mesa')
-    expect(areasSharing(source, 'HIGHWAY')).toContain('road-riverbend')
+    expect(areasSharing(source, 'ROAD_MESA')).not.toContain('road-mesa')
+    expect(areasSharing(source, 'ROAD_MESA')).toContain('road-riverbend')
     expect(areasSharing(source, 'ROAD_MESA_MAP')).toEqual(['road-mesa'])
     expect(notes.join(' ')).toContain('ROAD_MESA_MAP')
   })

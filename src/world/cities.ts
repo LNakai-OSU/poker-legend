@@ -28,28 +28,119 @@ const COLORS = {
 
 
 
-/**
- * The road between towns.
+/*
+ * The roads between towns.
  *
  * The world is continuous, so towns are joined by somewhere rather than by a
- * menu: scrub, trees and a stretch of highway you can walk if you would rather
- * keep the fare. Each stretch belongs to the town it leads into, so it takes
- * that town's colour as you get close.
+ * menu. Each stretch of road belongs to the town it leads into and is drawn in
+ * its colours, and each has its own map, its scenery turning from the town you
+ * left to the one ahead: Basin's last street trees giving way to saguaros, the
+ * desert to a river, a meadow to the harbour wall, the causeway across the sea
+ * to the island, beach to desert again, and the desert to a marble terrace over
+ * the water. The road itself runs along the same rows in all of them, so the
+ * towns either end line up with it.
  */
-const HIGHWAY = parseMap(`TTTTTTTTTTTTTTTTTTTTTTTTTTTT
-T"""""TTTT""""""TTTT""""""TT
-T""""""""""""""""""""""""""T
-T"""TT""""TT"""""""TT"""""""
-T""""""""""""""""""""""""""T
-----------------------------
+const ROAD_SILVER_CREEK = parseMap(`
+TTTTTTTTTTTTTTTTTTTTTTTTTTTT
+T"""""""""""__:::::::::::::T
+T""o""""o""__::o:::oo::::::T
+T"""""""""__:::::o::::::o::T
+T""""""""__::::::::::::::::T
+---o------------------o-----
+============================
+============================
+---------o--------o---------
+Toooo"""""__:::::::::::::::T
+T"""""""""_::::::::::::::::T
+T"""o""""__:::o::::::::::o:T
+T""""""o__::o::::::::::o:::T
+TTTTTTTTTTTTTTTTTTTTTTTTTTTT
+`)
+
+const ROAD_RIVERBEND = parseMap(`
+TTTTTTTTTTTTTTTTTTTTTTTTTTTT
+T::::::::::"""oo""~~~~~~~~~T
+T:o:::::::""oo""""~~~~~~~~~T
+T::::o:::o""""""""""~~~~~~~T
+T:::::::""""""""""""""""~~~T
+----o----------------o------
+============================
+============================
+------------o---------------
+T:::::::""""""""""""""""~~~T
+T::::::::""""""""~~~~~~~~~~T
+T::o::::::"""""""~~~~~~~~~~T
+T:::::oo::oooo"""~~~~~~~~~~T
+TTTTTTTTTTTTTTTTTTTTTTTTTTTT
+`)
+
+const ROAD_CRESCENT = parseMap(`
+TTTTTTTTTTTTTTTTTTTTTTTTTTTT
+T"""""""""""""+++++++++++++T
+T"oooo"""""""++++++oo++++++T
+T"""""""""""++++++++++o++++T
+T""""""""""++++++++++++++++T
+---o--------------o-----o---
+============================
+============================
+------o--------o------------
+T""""""""""++++++++++++++++T
+T"""""""""""+++oooo++++ooooT
+T""o""""""""""~~~~~~~~~~~~~T
+T"""""oo"""""~~~~~~~~~~~~~~T
+TTTTTTTTTTTTTTTTTTTTTTTTTTTT
+`)
+
+const ROAD_PALM_CAY = parseMap(`
+TTTTTTTTTTTTTTTTTTTTTTTTTTTT
+T~~~~~~~~~~~~~~~~~~~~::::::T
+T~~~~~~~~~~~~~~~~~~~::o::::T
+T~~~~~~~~~~~~~~~~~~:oo:::o:T
+Toooo++++++oooo++++::::::::T
+-------o---------o-----o----
 ============================
 ============================
 ----------------------------
-T"""""""""""""""""""""""""""
-T""::::"""""""""""::::"""""T
-T"":::::TT""""""TT:::::""""T
-T"""""""TTTT""TTTT""""""""""
-TTTTTTTTTTTTTTTTTTTTTTTTTTTT`)
+T+ooooo+++ooooo+o++:::o::::T
+T~~~~~~~~~~~~~~~~~~~:::::::T
+T~~~~~~~~~~~~~~~~~~~~:::o::T
+T~~~~~~~~~~~~~~~~~~~~~::::oT
+TTTTTTTTTTTTTTTTTTTTTTTTTTTT
+`)
+
+const ROAD_MESA = parseMap(`
+TTTTTTTTTTTTTTTTTTTTTTTTTTTT
+T::::::::::::::o::::::++oo+T
+T:o::::::::::::::::::++++++T
+T::::::::::o::::::::+++++++T
+T::::::::::::::::::::++++++T
+---o-------------------o----
+============================
+============================
+----------------------------
+T:::::::::::::::::::++++o++T
+T::::o:o:::::::::::::++++++T
+T:::::::::::::oo:o::::+++o+T
+T::o:::::o:::::::::::::++++T
+TTTTTTTTTTTTTTTTTTTTTTTTTTTT
+`)
+
+const ROAD_LUMINA = parseMap(`
+TTTTTTTTTTTTTTTTTTTTTTTTTTTT
+T::::::::""""""""""+++++oo+T
+T:o::o::"""""""""""+o++++++T
+T::::::""""""""""""++++++++T
+T:::::::""""o""""""++++++++T
+---o------------------o-----
+============================
+============================
+----------------------------
+T::::::""""""""""+o++++++++T
+T:::::""""""""""++++++oo+++T
+T::::"""""ooo"""+~~~~~~~~~~T
+T:::""""""""""""~~~~~~~~~~~T
+TTTTTTTTTTTTTTTTTTTTTTTTTTTT
+`)
 
 /**
  * The reservation.
@@ -63,19 +154,19 @@ T::###########################:T
 T::###########################:T
 T::###########################:T
 T::#############D#############:T
-T::++++++++++++++++++++++++++::T
+To:++++++++++++++++++++++++++:oT
 T::++oo++++++++++++++++oo++++::T
-T::++++++++++++++++++++++++++::T
-----++++++++++++++++++++++++----
+T::FFF++++++++++++++++++++FFF::T
+----+++o+++++o+++++o+++++o++----
 ===============zzz==============
 ===============zzz==============
-----++++++++++++++++++++++++----
-T::++++++++++++++++++++++++++::T
+----++++o+++++++++++++o+++++----
+T::++++++++++++++++++++++++++o:T
 T::+oo+++++++++++++++++++oo++::T
 T::++++#####++++++++#####++++::T
-T::::::#####::::::::#####::::::T
-T::::::##D##::::::::#####::::::T
-T::::::::::::::::::::::::::::::T
+T::::::#####::::::o:#####::::::T
+T:o::::##D##::oo::::#####:o:o::T
+T::::o:::::::::::::::::::::::::T
 TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT`)
 
 /**
@@ -86,18 +177,18 @@ T~~~~~~~##~~~~~~~~~~~~~~~~~~~~~T
 T~~~#######~~~~~~~~~~~~~~~~~~~~T
 T~~#########~~~~~~~~~~~~~~~~~~~T
 T~~#########~~~~~~~~~~~~~~~~~~~T
-TBBBBBBBBDBBBBBBBBBBBBBBBBBBBBBT
-T::::::::::::**::**::::::::::::T
+TBBBBBBBBDBBBoBBBBBBoBBBBBoBBBBT
+T:oo::o::::::**o:**:::o::::::::T
 T::++++++++++++++++++++++++++::T
 ----++++++++++++++++++++++++----
-========zzz=====================
-========zzz=====================
-----++++++++++++++++++++++++----
-T::++++++++++++++++++++++++++::T
-T::######::::oo::oo::::######::T
+========zzz=========FFF=========
+===FFF==zzz=====================
+----+++++++o++++++++++++o+++----
+T:o++++++++++++++++++++++++++o:T
+T::######::::oo::oo::::######o:T
 T::######::::::::::::::######::T
 T::##D###::::::::::::::###D##::T
-T::::::::::::::::::::::::::::::T
+T:::::::ooooo:::oooooo:::::::::T
 T""""""""""""""""""""""""""""""T
 TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT`)
 
@@ -109,16 +200,16 @@ T##############################T
 T##############################T
 T##############################T
 T##D####D#####D#####D####D#####T
-T++++oo++++++++++++++++++++oo++T
+T++++oo+++++++++o+o++++o+++oo++T
+To+++++++++++++++++++++++++++++T
 T++++++++++++++++++++++++++++++T
-T++++++++++++++++++++++++++++++T
-----++++++++++++++++++++++++----
-=============zzz================
-=============zzz================
-----++++++++++++++++++++++++----
+----o++++++o++++++o++++++++o----
+=============zzz===FFF==========
+===FFF=======zzz================
+----++++o++++++++o+++++o++++----
 T++++++++++++++++++++++++++++++T
 T+++++++++oo++++++++oo+++++++++T
-T++++++++++++++++++++++++++++++T
+T+oooo+o+oooo++++oooo+o+ooooo++T
 T~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~T
 T~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~T
 T~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~T
@@ -132,18 +223,18 @@ T:######:#########::########:::T
 T:######:#########::########:::T
 T:######:#########::########:::T
 T:###D##:####D####::########:::T
-T:::T:::::::::::::::::::::::T::T
-T::::::::::**::::::**::::::::::T
+ToooT:::::::::::::o:::::::::T::T
+T::::::::o:**::::::**:o::::::::T
 T::::::::::::::::::::::::::::::T
-----::::::::::::::::::::::::----
-============zzz=================
-============zzz=================
-----::::::::::::::::::::::::----
+----:::o:::::::::::o:::::o::----
+============zzz=====FFF=========
+===FFF======zzz=================
+----:::::o:::::::o::::::o:::----
 T::::::::::::::::::::::::::::::T
-T::::T:#####oo::::oo:#####T::::T
+T::::T:#####oo:oo:oo:#####T::::T
 T::::::#####:::::::::#####:::::T
-T::::::##D##:::::::::##D##:::::T
-T::::::::::::::::::::::::::::::T
+T:o::::##D##:::::::::##D##:::o:T
+T:oooo:::::::::::::::::::oooo::T
 T~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~T
 TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT`)
 
@@ -159,17 +250,17 @@ T##############################T
 T##############################T
 T##############################T
 T#####D#######D#####D######D###T
-T++++++++++++++++++++++++++++++T
+T++++++++++++++++++++++ooo+++++T
 T++oo+++++++~~~~~~++++++++oo+++T
-T+++++++++++~~~~~~+++++++++++++T
+T+++++++++o+~~~~~~+o+++++++++++T
 T++++++++++++++++++++++++++++++T
---------++++++++++++++++--------
+--o-o---o+o++++++++++o++-----o--
+=====zzz=====FFF================
 =====zzz========================
-=====zzz========================
-=====zzz========================
---------++++++++++++++++--------
+=====zzz================FFF=====
+--o-----++o++++++++++o++-----o--
 T++++++++++++++++++++++++++++++T
-T++oo+++++++++++++++++++++oo+++T
+T++oo+++++++o++++++o++++++oo+++T
 T##############################T
 T##############################T
 T##############################T
@@ -187,12 +278,12 @@ T++##D###T#####D#####T###D###++T
 T++++++++++++++++++++++++++++++T
 T++oo++++~~~~~~~~~~~~~~++++oo++T
 T++++++++~~~~~~~~~~~~~~++++++++T
---------++++++++++++++++--------
-==============zzz===============
-==============zzz===============
---------++++++++++++++++--------
-T++++++++++++++++++++++++++++++T
-T++oo++++++++++++++++++++++oo++T
+--o-----o++++o+++o+++++o-----o--
+==============zzz=======FFF=====
+===FFF========zzz===============
+------o-++++o+++++o+++++-o------
+T+++++++oo++++++++++++oo+++++++T
+To+oo++++++++++++++++++++++o++oT
 T++##########################++T
 T++##########################++T
 T++##########################++T
@@ -641,16 +732,16 @@ T#######TT#####TT##########T
 T#######TT#####TT##########T
 T#######TT#####TT##########T
 T####D##TT#####TT##########T
+T--------------o-o--------oT
+T--*""""-oo--------""""*---T
 T--------------------------T
-T--*""""-----------""""*---T
+T-o-o---o---o-------o---o---
+T=============FFF===========
+T==================FFF======
+T-------o---o---o-------o---
 T--------------------------T
-T---------------------------
-T===========================
-T===========================
-T---------------------------
-T--------------------------T
-T--*""""-----------""""*---T
-T--------------------------T
+T--*""""-----oo----""""*---T
+To--oo--------------------oT
 T######TT#####TT###########T
 T######TT#####TT###########T
 T######TT#####TT###########T
@@ -663,20 +754,20 @@ T######TT###########TT#####T
 T######TT###########TT#####T
 T######TT###########TT#####T
 T###D##TT#######D###TT#####T
-T--------------------------T
+T------o---o-------o------oT
 T--*"""------------"""*----T
 T--------------------------T
-----------------------------
-============================
-============================
-----------------------------
+------o-------o--------o----
+=================FFF========
+===========FFF==============
+--o-------o-------o-------o-
 T--------------------------T
 T---oo---------------oo----T
-T--------------------------T
+T-o-------------o--------o-T
 T#######--######TT#########T
 T#######--######TT#########T
 T###D###--######TT#########T
-T--------------------------T
+T--------o--o--------------T
 TTTTTTTTTTTTTTTTTTTTTTTTTTTT
 `)
 
@@ -687,16 +778,16 @@ TTTTTTTTTTTTTTTTTTTTTTTTTTTT
 const DEPOT_LOT = parseMap(`
 TTTTTTTT++++TTTTTTTTTT
 T::###:++++++::::::::T
-T::+++++++++++++o::::T
+T::++++++++++o++o::::T
 T::+oo+++++++++++::::T
 T::++++++++++++++::::T
-----++++++++++++++---T
+----++++o++++++o++o--T
 ======================
 ======================
-----++++++++++++++---T
+----+++++++o++++++---T
 T::++++++++++++++::::T
 T::+oo++++++++oo+::::T
-T::++++++++++++++::::T
+T::+++FFF+FFF++++::::T
 T::::::::::::::::::::T
 T::::::::::::::::::::T
 TTTTTTTTTTTTTTTTTTTTTT
@@ -708,15 +799,15 @@ T#####TTT#####TT#####T
 T#####TTT#####TT#####T
 T#####TTT#####TT#####T
 T#####TTT##D##TT#####T
+T--------o-----------T
+T--*""-o------o--*""-T
+T-oooo----*-----oooo-T
 T--------------------T
-T--*""-----------*""-T
-T---------*----------T
+To-*""-----oo----*""oT
 T--------------------T
-T--*""-----oo----*""-T
-T--------------------T
+T####TT------o---####T
 T####TT----------####T
-T####TT----------####T
-T####TT----------####T
+T####TT---------o####T
 T------****----------T
 TTTTTTTT----TTTTTTTTTT
 `)
@@ -972,7 +1063,7 @@ const silverCreek: CityDef = {
     'road-silvercreek': area(
       'road-silvercreek',
       'Reservation Road',
-      HIGHWAY,
+      ROAD_SILVER_CREEK,
       { col: 14, row: 6 },
       '#161018',
       [
@@ -1126,11 +1217,11 @@ const riverbend: CityDef = {
     'road-riverbend': area(
       'road-riverbend',
       'River Road',
-      HIGHWAY,
+      ROAD_RIVERBEND,
       { col: 14, row: 6 },
       '#0f1620',
       [
-        local('road-rb-angler', 'Angler', 8, 10, [
+        local('road-rb-angler', 'Angler', 16, 10, [
           'Angler: Current is wrong today. Everything is wrong today.',
         ]),
         local('road-rb-walker', 'Woman Walking', 19, 4, [
@@ -1282,7 +1373,7 @@ const crescentHarbor: CityDef = {
     'road-crescent': area(
       'road-crescent',
       'Harbour Approach',
-      HIGHWAY,
+      ROAD_CRESCENT,
       { col: 14, row: 6 },
       '#121020',
       [
@@ -1513,7 +1604,7 @@ const palmCay: CityDef = {
     'road-palmcay': area(
       'road-palmcay',
       'Causeway',
-      HIGHWAY,
+      ROAD_PALM_CAY,
       { col: 14, row: 6 },
       '#0c1a1c',
       [
@@ -1692,13 +1783,18 @@ const neonMesa: CityDef = {
     'road-mesa': area(
       'road-mesa',
       'Mesa Highway',
-      HIGHWAY,
+      ROAD_MESA,
       { col: 14, row: 6 },
       '#1a1020',
       [
-        local('road-nm-billboard', 'Billboard', 6, 10, [
-          'NEON MESA — WHERE THE NIGHT STARTS. A man is painting over the last word.',
-        ]),
+        {
+          ...local('road-nm-billboard', 'Billboard', 6, 10, [
+            'NEON MESA — WHERE THE NIGHT STARTS. A man is painting over the last word.',
+          ]),
+          // The billboard is a stamp; this is where you stand between its legs to read it.
+          art: 'none',
+          labelled: false,
+        },
         local('road-nm-walker', 'Man with a Suitcase', 21, 4, [
           'Man: I am leaving. Do not ask me how it went.',
         ]),
@@ -1916,7 +2012,7 @@ const portoLumina: CityDef = {
     'road-lumina': area(
       'road-lumina',
       'Lumina Coast Road',
-      HIGHWAY,
+      ROAD_LUMINA,
       { col: 14, row: 6 },
       '#141020',
       [
@@ -2383,6 +2479,26 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'checks-basin', col: 1, row: 14 },
     { stampId: 'house-basin-b', col: 9, row: 14 },
     { stampId: 'bingo-basin', col: 16, row: 14 },
+    { stampId: 'lamp-iron', col: 4, row: 6 },
+    { stampId: 'lamp-iron', col: 12, row: 6 },
+    { stampId: 'lamp-iron', col: 20, row: 6 },
+    { stampId: 'tree-street', col: 8, row: 6 },
+    { stampId: 'tree-street', col: 24, row: 6 },
+    { stampId: 'lamp-iron', col: 8, row: 9 },
+    { stampId: 'lamp-iron', col: 16, row: 9 },
+    { stampId: 'lamp-iron', col: 24, row: 9 },
+    { stampId: 'tree-street', col: 12, row: 9 },
+    { stampId: 'bench-park', col: 9, row: 5 },
+    { stampId: 'bench-park', col: 13, row: 12 },
+    { stampId: 'mailbox', col: 17, row: 4 },
+    { stampId: 'hydrant', col: 2, row: 7 },
+    { stampId: 'news-boxes', col: 26, row: 4 },
+    { stampId: 'noticeboard', col: 15, row: 4 },
+    { stampId: 'bin', col: 26, row: 13 },
+    { stampId: 'phone-box', col: 1, row: 12 },
+    { stampId: 'flowerbed-brick-2', col: 4, row: 13 },
+    { stampId: 'parked-car-blue-w', col: 14, row: 8 },
+    { stampId: 'parked-car-red-e', col: 19, row: 9 },
   ],
   seventh: [
     { stampId: 'patels', col: 1, row: 0 },
@@ -2392,6 +2508,26 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'diner-blueplate', col: 1, row: 14 },
     { stampId: 'donuts-seventh', col: 10, row: 14 },
     { stampId: 'garage-seventh', col: 18, row: 14 },
+    { stampId: 'bench-park', col: 4, row: 12 },
+    { stampId: 'flowerbed-brick-2', col: 21, row: 12 },
+    { stampId: 'lamp-iron', col: 6, row: 6 },
+    { stampId: 'lamp-iron', col: 14, row: 6 },
+    { stampId: 'lamp-iron', col: 23, row: 6 },
+    { stampId: 'lamp-iron', col: 10, row: 9 },
+    { stampId: 'lamp-iron', col: 18, row: 9 },
+    { stampId: 'lamp-iron', col: 26, row: 9 },
+    { stampId: 'tree-street', col: 2, row: 9 },
+    { stampId: 'mailbox', col: 11, row: 4 },
+    { stampId: 'news-boxes', col: 19, row: 4 },
+    { stampId: 'bin', col: 26, row: 4 },
+    { stampId: 'hydrant', col: 7, row: 4 },
+    { stampId: 'noticeboard', col: 2, row: 13 },
+    { stampId: 'bin', col: 16, row: 13 },
+    { stampId: 'phone-box', col: 25, row: 12 },
+    { stampId: 'bin', col: 12, row: 17 },
+    { stampId: 'hydrant', col: 9, row: 17 },
+    { stampId: 'parked-car-white-e', col: 11, row: 9 },
+    { stampId: 'parked-car-green-w', col: 17, row: 8 },
   ],
   eastgate: [
     { stampId: 'house-eastgate-a', col: 1, row: 0 },
@@ -2399,9 +2535,30 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'house-eastgate-b', col: 16, row: 0 },
     { stampId: 'cottage-eastgate', col: 1, row: 10 },
     { stampId: 'lockup-eastgate', col: 17, row: 10 },
+    { stampId: 'bench-park', col: 11, row: 8 },
+    { stampId: 'lamp-iron', col: 7, row: 4 },
+    { stampId: 'lamp-iron', col: 14, row: 4 },
+    { stampId: 'lamp-iron', col: 13, row: 9 },
+    { stampId: 'fence-picket-4', col: 2, row: 6 },
+    { stampId: 'fence-picket-4', col: 16, row: 6 },
+    { stampId: 'bush', col: 1, row: 8 },
+    { stampId: 'bush-flowering', col: 20, row: 8 },
+    { stampId: 'mailbox', col: 9, row: 4 },
+    { stampId: 'bin', col: 16, row: 12 },
   ],
   depot: [
     { stampId: 'bus-shelter', col: 3, row: 1 },
+    { stampId: 'bin', col: 16, row: 2 },
+    { stampId: 'bench-park', col: 4, row: 3 },
+    { stampId: 'flowerbed-brick-2', col: 4, row: 10 },
+    { stampId: 'flowerbed-brick-2', col: 14, row: 10 },
+    { stampId: 'lamp-iron', col: 8, row: 4 },
+    { stampId: 'lamp-iron', col: 15, row: 4 },
+    { stampId: 'lamp-iron', col: 11, row: 7 },
+    { stampId: 'parked-car-yellow-e', col: 6, row: 11 },
+    { stampId: 'parked-car-silver-w', col: 10, row: 11 },
+    { stampId: 'hydrant', col: 18, row: 5 },
+    { stampId: 'noticeboard', col: 13, row: 2 },
   ],
   'sc-street': [
     { stampId: 'hotel-silvercreek-w', col: 3, row: 1 },
@@ -2409,11 +2566,50 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'hotel-silvercreek-e', col: 23, row: 1 },
     { stampId: 'giftshop-silvercreek', col: 7, row: 14 },
     { stampId: 'motel-silvercreek', col: 20, row: 14 },
+    { stampId: 'flowerbed-adobe-2', col: 5, row: 6 },
+    { stampId: 'flowerbed-adobe-2', col: 23, row: 6 },
+    { stampId: 'bench-rustic', col: 4, row: 13 },
+    { stampId: 'bench-rustic', col: 25, row: 13 },
+    { stampId: 'lamp-western', col: 7, row: 7 },
+    { stampId: 'lamp-western', col: 13, row: 7 },
+    { stampId: 'lamp-western', col: 19, row: 7 },
+    { stampId: 'lamp-western', col: 25, row: 7 },
+    { stampId: 'lamp-western', col: 8, row: 10 },
+    { stampId: 'lamp-western', col: 22, row: 10 },
+    { stampId: 'parked-car-red-e', col: 3, row: 7 },
+    { stampId: 'parked-car-teal-w', col: 26, row: 7 },
+    { stampId: 'saguaro', col: 1, row: 4 },
+    { stampId: 'saguaro', col: 30, row: 4 },
+    { stampId: 'saguaro', col: 2, row: 15 },
+    { stampId: 'saguaro', col: 28, row: 15 },
+    { stampId: 'rocks-red-2', col: 14, row: 16 },
+    { stampId: 'rocks-red', col: 5, row: 17 },
+    { stampId: 'barrel-cactus', col: 18, row: 15 },
+    { stampId: 'barrel-cactus', col: 26, row: 16 },
+    { stampId: 'noticeboard', col: 29, row: 12 },
   ],
   'rb-street': [
     { stampId: 'riverboat', col: 2, row: 1 },
     { stampId: 'diner-riverbend', col: 3, row: 13 },
     { stampId: 'outfitters-riverbend', col: 23, row: 13 },
+    { stampId: 'bench-rustic', col: 13, row: 13 },
+    { stampId: 'flowerbed-timber-2', col: 17, row: 13 },
+    { stampId: 'bollard-mooring', col: 13, row: 5 },
+    { stampId: 'bollard-mooring', col: 20, row: 5 },
+    { stampId: 'bollard-mooring', col: 26, row: 5 },
+    { stampId: 'lamp-quay', col: 6, row: 5 },
+    { stampId: 'lamp-quay', col: 15, row: 5 },
+    { stampId: 'lamp-quay', col: 22, row: 5 },
+    { stampId: 'lamp-quay', col: 11, row: 10 },
+    { stampId: 'lamp-quay', col: 24, row: 10 },
+    { stampId: 'fence-picket-5', col: 8, row: 16 },
+    { stampId: 'fence-picket-6', col: 16, row: 16 },
+    { stampId: 'bench-teak', col: 2, row: 6 },
+    { stampId: 'noticeboard', col: 29, row: 12 },
+    { stampId: 'parked-car-green-e', col: 3, row: 10 },
+    { stampId: 'parked-car-white-w', col: 20, row: 9 },
+    { stampId: 'bush', col: 2, row: 12 },
+    { stampId: 'bush-flowering', col: 29, row: 13 },
   ],
   'ch-street': [
     { stampId: 'club-harbor', col: 1, row: 0 },
@@ -2421,6 +2617,29 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'cardroom-harbor', col: 11, row: 0 },
     { stampId: 'menswear-harbor', col: 18, row: 0 },
     { stampId: 'autorow-harbor', col: 23, row: 0 },
+    { stampId: 'flowerbed-granite-2', col: 5, row: 5 },
+    { stampId: 'flowerbed-granite-2', col: 27, row: 5 },
+    { stampId: 'bench-teak', col: 10, row: 13 },
+    { stampId: 'bench-teak', col: 20, row: 13 },
+    { stampId: 'fence-rope-4', col: 2, row: 14 },
+    { stampId: 'bollard-mooring', col: 7, row: 14 },
+    { stampId: 'fence-rope-4', col: 9, row: 14 },
+    { stampId: 'fence-rope-4', col: 17, row: 14 },
+    { stampId: 'bollard-mooring', col: 22, row: 14 },
+    { stampId: 'fence-rope-5', col: 24, row: 14 },
+    { stampId: 'lamp-harbor', col: 4, row: 7 },
+    { stampId: 'lamp-harbor', col: 11, row: 7 },
+    { stampId: 'lamp-harbor', col: 18, row: 7 },
+    { stampId: 'lamp-harbor', col: 27, row: 7 },
+    { stampId: 'lamp-harbor', col: 8, row: 10 },
+    { stampId: 'lamp-harbor', col: 17, row: 10 },
+    { stampId: 'lamp-harbor', col: 23, row: 10 },
+    { stampId: 'mailbox', col: 18, row: 5 },
+    { stampId: 'news-boxes', col: 16, row: 5 },
+    { stampId: 'phone-box', col: 1, row: 5 },
+    { stampId: 'bin', col: 23, row: 5 },
+    { stampId: 'parked-car-black-w', col: 19, row: 9 },
+    { stampId: 'parked-car-silver-e', col: 3, row: 10 },
   ],
   'pc-street': [
     { stampId: 'marina-palmcay', col: 2, row: 1 },
@@ -2428,6 +2647,25 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'hotel-palmcay', col: 20, row: 1 },
     { stampId: 'boutique-palmcay', col: 7, row: 13 },
     { stampId: 'grill-palmcay', col: 21, row: 13 },
+    { stampId: 'flowerbed-coral-2', col: 12, row: 13 },
+    { stampId: 'flowerbed-coral-2', col: 18, row: 13 },
+    { stampId: 'lamp-tiki', col: 7, row: 7 },
+    { stampId: 'lamp-tiki', col: 19, row: 7 },
+    { stampId: 'lamp-tiki', col: 25, row: 7 },
+    { stampId: 'lamp-tiki', col: 9, row: 10 },
+    { stampId: 'lamp-tiki', col: 17, row: 10 },
+    { stampId: 'lamp-tiki', col: 24, row: 10 },
+    { stampId: 'palm-tall', col: 9, row: 5 },
+    { stampId: 'palm-tall', col: 22, row: 5 },
+    { stampId: 'palm-tall', col: 2, row: 14 },
+    { stampId: 'palm-tall', col: 29, row: 14 },
+    { stampId: 'fence-rope-4', col: 2, row: 16 },
+    { stampId: 'fence-rope-4', col: 25, row: 16 },
+    { stampId: 'fence-rope-3', col: 1, row: 5 },
+    { stampId: 'bench-teak', col: 15, row: 13 },
+    { stampId: 'bush-flowering', col: 18, row: 5 },
+    { stampId: 'parked-car-teal-e', col: 3, row: 10 },
+    { stampId: 'parked-car-white-w', col: 20, row: 9 },
   ],
   'nm-street': [
     { stampId: 'casino-mesa', col: 1, row: 0 },
@@ -2437,12 +2675,146 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'tower-mesa-a', col: 1, row: 17 },
     { stampId: 'garage-mesa', col: 11, row: 17 },
     { stampId: 'tower-mesa-b', col: 21, row: 17 },
+    { stampId: 'fountain-mesa', col: 12, row: 7 },
+    { stampId: 'planter-chrome-2', col: 3, row: 7 },
+    { stampId: 'planter-chrome-2', col: 26, row: 7 },
+    { stampId: 'bench-chrome', col: 3, row: 16 },
+    { stampId: 'bench-chrome', col: 26, row: 16 },
+    { stampId: 'lamp-chrome', col: 2, row: 9 },
+    { stampId: 'lamp-chrome', col: 10, row: 9 },
+    { stampId: 'lamp-chrome', col: 21, row: 9 },
+    { stampId: 'lamp-chrome', col: 29, row: 9 },
+    { stampId: 'lamp-chrome', col: 2, row: 13 },
+    { stampId: 'lamp-chrome', col: 10, row: 13 },
+    { stampId: 'lamp-chrome', col: 21, row: 13 },
+    { stampId: 'lamp-chrome', col: 29, row: 13 },
+    { stampId: 'palm-planter', col: 10, row: 7 },
+    { stampId: 'palm-planter', col: 19, row: 7 },
+    { stampId: 'palm-planter', col: 12, row: 15 },
+    { stampId: 'palm-planter', col: 19, row: 15 },
+    { stampId: 'fence-chrome-3', col: 23, row: 6 },
+    { stampId: 'bollard', col: 4, row: 10 },
+    { stampId: 'bollard', col: 8, row: 10 },
+    { stampId: 'parked-car-black-w', col: 13, row: 11 },
+    { stampId: 'parked-car-white-e', col: 24, row: 13 },
   ],
   'pl-street': [
     { stampId: 'tower-lumina', col: 3, row: 0 },
     { stampId: 'casino-lumina', col: 10, row: 0 },
     { stampId: 'atelier-lumina', col: 22, row: 0 },
     { stampId: 'hotel-lumina', col: 3, row: 15 },
+    { stampId: 'fountain-lumina', col: 9, row: 7 },
+    { stampId: 'planter-marble-2', col: 3, row: 7 },
+    { stampId: 'planter-marble-2', col: 27, row: 7 },
+    { stampId: 'bench-stone', col: 3, row: 14 },
+    { stampId: 'cypress-pot', col: 27, row: 13 },
+    { stampId: 'lamp-gilded', col: 2, row: 8 },
+    { stampId: 'lamp-gilded', col: 8, row: 8 },
+    { stampId: 'lamp-gilded', col: 23, row: 8 },
+    { stampId: 'lamp-gilded', col: 29, row: 8 },
+    { stampId: 'lamp-gilded', col: 6, row: 11 },
+    { stampId: 'lamp-gilded', col: 12, row: 11 },
+    { stampId: 'lamp-gilded', col: 18, row: 11 },
+    { stampId: 'lamp-gilded', col: 25, row: 11 },
+    { stampId: 'cypress-pot', col: 1, row: 13 },
+    { stampId: 'cypress-pot', col: 30, row: 13 },
+    { stampId: 'bench-stone', col: 8, row: 13 },
+    { stampId: 'bench-stone', col: 22, row: 13 },
+    { stampId: 'bollard', col: 13, row: 9 },
+    { stampId: 'bollard', col: 17, row: 9 },
+    { stampId: 'parked-car-black-e', col: 3, row: 11 },
+    { stampId: 'parked-car-silver-w', col: 24, row: 10 },
+  ],
+  'road-silvercreek': [
+    { stampId: 'tree-street', col: 3, row: 1 },
+    { stampId: 'tree-street', col: 8, row: 1 },
+    { stampId: 'tree-street', col: 4, row: 10 },
+    { stampId: 'fence-picket-4', col: 1, row: 9 },
+    { stampId: 'bush', col: 7, row: 12 },
+    { stampId: 'lamp-iron', col: 3, row: 4 },
+    { stampId: 'lamp-iron', col: 9, row: 7 },
+    { stampId: 'lamp-western', col: 22, row: 4 },
+    { stampId: 'lamp-western', col: 18, row: 7 },
+    { stampId: 'saguaro', col: 15, row: 1 },
+    { stampId: 'saguaro', col: 24, row: 2 },
+    { stampId: 'saguaro', col: 14, row: 10 },
+    { stampId: 'saguaro', col: 25, row: 10 },
+    { stampId: 'rocks-red-2', col: 19, row: 2 },
+    { stampId: 'rocks-red', col: 12, row: 12 },
+    { stampId: 'barrel-cactus', col: 23, row: 12 },
+    { stampId: 'barrel-cactus', col: 17, row: 3 },
+  ],
+  'road-riverbend': [
+    { stampId: 'saguaro', col: 2, row: 1 },
+    { stampId: 'rocks-red', col: 5, row: 3 },
+    { stampId: 'barrel-cactus', col: 3, row: 11 },
+    { stampId: 'rocks-red-2', col: 6, row: 12 },
+    { stampId: 'lamp-western', col: 4, row: 4 },
+    { stampId: 'lamp-quay', col: 21, row: 4 },
+    { stampId: 'lamp-quay', col: 12, row: 7 },
+    { stampId: 'bench-rustic', col: 12, row: 2 },
+    { stampId: 'flowerbed-timber-2', col: 14, row: 1 },
+    { stampId: 'fence-picket-4', col: 10, row: 12 },
+    { stampId: 'bush', col: 9, row: 3 },
+  ],
+  'road-crescent': [
+    { stampId: 'fence-picket-4', col: 2, row: 2 },
+    { stampId: 'bush', col: 3, row: 11 },
+    { stampId: 'hedge-2', col: 6, row: 12 },
+    { stampId: 'lamp-quay', col: 3, row: 4 },
+    { stampId: 'lamp-quay', col: 6, row: 7 },
+    { stampId: 'lamp-harbor', col: 18, row: 4 },
+    { stampId: 'lamp-harbor', col: 24, row: 4 },
+    { stampId: 'lamp-harbor', col: 15, row: 7 },
+    { stampId: 'fence-rope-4', col: 15, row: 10 },
+    { stampId: 'bollard-mooring', col: 23, row: 10 },
+    { stampId: 'fence-rope-3', col: 24, row: 10 },
+    { stampId: 'bench-teak', col: 19, row: 2 },
+    { stampId: 'bin', col: 22, row: 3 },
+  ],
+  'road-palmcay': [
+    { stampId: 'fence-rope-4', col: 1, row: 4 },
+    { stampId: 'fence-rope-4', col: 11, row: 4 },
+    { stampId: 'fence-rope-5', col: 2, row: 9 },
+    { stampId: 'fence-rope-5', col: 10, row: 9 },
+    { stampId: 'lamp-harbor', col: 7, row: 4 },
+    { stampId: 'lamp-harbor', col: 6, row: 8 },
+    { stampId: 'lamp-tiki', col: 17, row: 4 },
+    { stampId: 'lamp-tiki', col: 23, row: 4 },
+    { stampId: 'lamp-tiki', col: 16, row: 8 },
+    { stampId: 'lamp-tiki', col: 22, row: 8 },
+    { stampId: 'palm-tall', col: 22, row: 1 },
+    { stampId: 'palm-tall', col: 25, row: 2 },
+    { stampId: 'palm-tall', col: 24, row: 10 },
+    { stampId: 'flowerbed-coral-2', col: 20, row: 3 },
+    { stampId: 'bush-flowering', col: 26, row: 12 },
+  ],
+  'road-mesa': [
+    { stampId: 'palm-tall', col: 2, row: 1 },
+    { stampId: 'palm-tall', col: 3, row: 11 },
+    { stampId: 'lamp-tiki', col: 3, row: 4 },
+    { stampId: 'billboard-mesa', col: 5, row: 9 },
+    { stampId: 'saguaro', col: 11, row: 2 },
+    { stampId: 'saguaro', col: 17, row: 10 },
+    { stampId: 'rocks-red-2', col: 14, row: 11 },
+    { stampId: 'barrel-cactus', col: 9, row: 12 },
+    { stampId: 'rocks-red', col: 15, row: 1 },
+    { stampId: 'lamp-chrome', col: 23, row: 4 },
+    { stampId: 'lamp-chrome', col: 24, row: 8 },
+    { stampId: 'planter-chrome-2', col: 24, row: 1 },
+    { stampId: 'palm-planter', col: 25, row: 10 },
+  ],
+  'road-lumina': [
+    { stampId: 'lamp-chrome', col: 3, row: 4 },
+    { stampId: 'rocks-red', col: 2, row: 2 },
+    { stampId: 'saguaro', col: 5, row: 1 },
+    { stampId: 'cypress-pot', col: 12, row: 3 },
+    { stampId: 'hedge-3', col: 10, row: 11 },
+    { stampId: 'lamp-gilded', col: 22, row: 4 },
+    { stampId: 'lamp-gilded', col: 18, row: 8 },
+    { stampId: 'planter-marble-2', col: 24, row: 1 },
+    { stampId: 'cypress-pot', col: 20, row: 1 },
+    { stampId: 'bench-stone', col: 22, row: 10 },
   ],
 }
 

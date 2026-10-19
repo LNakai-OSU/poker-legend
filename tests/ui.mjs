@@ -1490,12 +1490,21 @@ await test('the map editor offers to save, and warns about a shared map', async 
   await page.waitForTimeout(200)
   assert(!(await page.locator('[data-testid="save"]').isDisabled()), 'Save is not offered after painting')
 
-  // Every room has a map of its own now, but the six stretches of road between
-  // the towns are still drawn from one, and the editor has to say so.
+  // Every room and every stretch of road has a map of its own now, so a road
+  // carries no warning...
   await page.selectOption('select', 'road-mesa')
   await page.waitForTimeout(600)
   const warning = page.locator('[data-testid="shared-warning"]')
-  assert(await warning.isVisible(), 'no warning that this road is five other roads')
+  assert(!(await warning.isVisible()), 'a road with its own map is said to be shared')
+
+  // ...but a map can still be shared (a room copied for a second shop is one
+  // paste away), and when the source says it is, the editor has to say so.
+  await page.route('**/__editor/area?id=road-riverbend', (route) =>
+    route.fulfill({ json: { constant: 'ROAD_MESA', sharedWith: ['road-mesa'] } }),
+  )
+  await page.selectOption('select', 'road-riverbend')
+  await page.waitForTimeout(600)
+  assert(await warning.isVisible(), 'no warning that this road is another road too')
   assert(
     await page.locator('[data-testid="save-split"]').isVisible(),
     'no way to give this area a map of its own',

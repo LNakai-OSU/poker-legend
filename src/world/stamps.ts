@@ -420,6 +420,97 @@ export const STAMPS: StampDef[] = [
   },
 ]
 
+// ---------------------------------------------------------------------------
+// The street: lamps, benches, planting, fences, cars — each town's own
+// ---------------------------------------------------------------------------
+
+/** Something standing on the pavement: solid where it stands, `?` over it where it only rises. */
+function streetThing(id: string, name: string, about: string, tiles: string[]): StampDef {
+  return { id, name, category: 'street', about, tiles: tiles.join('\n') }
+}
+
+/** A lamp post: you cannot walk through its foot, but you can walk behind its lantern. */
+const lamp = (id: string, name: string, about: string) => streetThing(id, name, about, ['?', 'o'])
+
+const FENCE_KINDS: Array<[string, string, string]> = [
+  ['picket', 'Picket fence', 'White pickets on two rails. Basin and the river.'],
+  ['rope', 'Rope and posts', 'Rope slung between brass-capped posts. The harbour and the marina.'],
+  ['chrome', 'Chrome rail', 'Polished rails on short posts, lit underneath. The Strip.'],
+]
+
+/** Kept in step with the art's list of colours; a car with no art would be a solid hole in the road. */
+const CAR_COLOURS = ['red', 'blue', 'white', 'yellow', 'green', 'black', 'silver', 'teal']
+
+const STREET_FURNITURE: StampDef[] = [
+  lamp('lamp-iron', 'Lamp post (Basin)', 'Cast iron, a four-paned lantern, a bar for the lamplighter\'s ladder.'),
+  lamp('lamp-western', 'Lantern post (Silver Creek)', 'A timber post with a lantern hung off an iron bracket.'),
+  lamp('lamp-quay', 'Gas lamp (Riverbend)', 'Bottle green, a square lantern under a pointed cap.'),
+  lamp('lamp-harbor', 'Lamp standard (Harbour)', 'Black iron, two arms, two white globes.'),
+  lamp('lamp-tiki', 'Tiki torch (Palm Cay)', 'Bamboo, and a real flame.'),
+  lamp('lamp-chrome', 'Light mast (Neon Mesa)', 'Chrome, a light bar on top, a ring of neon halfway up.'),
+  lamp('lamp-gilded', 'Lantern standard (Porto Lumina)', 'Black and gold, three lanterns on scrolled arms.'),
+  streetThing('bench-park', 'Park bench', 'Green slats on iron ends.', ['oo']),
+  streetThing('bench-rustic', 'Rustic bench', 'Planed timber, weathered.', ['oo']),
+  streetThing('bench-teak', 'Teak bench', 'Teak slats on steel, for the waterfront.', ['oo']),
+  streetThing('bench-chrome', 'Chrome bench', 'Steel and chrome, a neon strip under the seat.', ['oo']),
+  streetThing('bench-stone', 'Marble bench', 'A dressed block of marble.', ['oo']),
+  streetThing('mailbox', 'Mailbox', 'Blue, on its legs, collection at five.', ['o']),
+  streetThing('hydrant', 'Fire hydrant', 'Red, chained caps.', ['o']),
+  streetThing('news-boxes', 'Newspaper boxes', 'Red and blue, this morning\'s front page.', ['o']),
+  streetThing('bin', 'Litter bin', 'Municipal green.', ['o']),
+  streetThing('bollard', 'Bollard', 'Steel, with a reflective band.', ['o']),
+  streetThing('bollard-mooring', 'Mooring bollard', 'Cast iron on the quay, rope coiled at its foot.', ['o']),
+  streetThing('noticeboard', 'Noticeboard', 'Flyers pinned three deep.', ['o']),
+  streetThing('phone-box', 'Telephone box', 'Red, glazed, a light in its roof.', ['?', 'o']),
+  streetThing('flowerbed-brick-2', 'Brick flower bed', 'A raised bed in a brick border.', ['oo']),
+  streetThing('flowerbed-brick-3', 'Long brick flower bed', 'A raised bed in a brick border.', ['ooo']),
+  streetThing('flowerbed-adobe-2', 'Adobe planter', 'Agave and desert marigolds in an adobe bed.', ['oo']),
+  streetThing('flowerbed-timber-2', 'Timber planter', 'Daisies in a timber box.', ['oo']),
+  streetThing('flowerbed-granite-2', 'Granite planter', 'Blue and white in a granite trough.', ['oo']),
+  streetThing('flowerbed-coral-2', 'Coral-stone planter', 'Hibiscus in a coral-stone bed.', ['oo']),
+  streetThing('planter-chrome-2', 'Chrome planter', 'Succulents in black and chrome, lit from under the rim.', ['oo']),
+  streetThing('planter-marble-2', 'Marble trough', 'Clipped box in a marble trough.', ['oo']),
+  streetThing('bush', 'Bush', 'Round, two greens.', ['o']),
+  streetThing('bush-flowering', 'Flowering bush', 'Round, in flower.', ['o']),
+  streetThing('hedge-2', 'Hedge', 'Clipped box, two long.', ['oo']),
+  streetThing('hedge-3', 'Long hedge', 'Clipped box, three long.', ['ooo']),
+  ...FENCE_KINDS.flatMap(([kind, name, about]) =>
+    [2, 3, 4, 5, 6].map((n) => streetThing(`fence-${kind}-${n}`, `${name} (${n})`, about, ['o'.repeat(n)])),
+  ),
+  streetThing('tree-street', 'Street tree', 'A round broadleaf in an iron grate.', ['?', 'o']),
+  streetThing('palm-tall', 'Coconut palm', 'Tall, leaning, fronds every way.', ['?', 'o']),
+  streetThing('palm-planter', 'Fan palm in a planter', 'Chrome-rimmed, uplit.', ['?', 'o']),
+  streetThing('cypress-pot', 'Cypress', 'A tall Italian cypress in a marble urn.', ['?', 'o']),
+  streetThing('saguaro', 'Saguaro', 'Arms raised, a flower on top.', ['?', 'o']),
+  streetThing('barrel-cactus', 'Barrel cacti', 'A clump of them among stones.', ['o']),
+  streetThing('rocks-red', 'Red rocks', 'Weathered sandstone.', ['o']),
+  streetThing('rocks-red-2', 'Red boulders', 'Weathered sandstone, three of them.', ['oo']),
+  ...CAR_COLOURS.flatMap((colour) =>
+    (['e', 'w'] as const).map((facing) =>
+      streetThing(
+        `parked-car-${colour}-${facing}`,
+        `Parked car (${colour}, facing ${facing === 'e' ? 'east' : 'west'})`,
+        'Three squares of kerb. Put it in the lane by the pavement.',
+        ['FFF'],
+      ),
+    ),
+  ),
+  streetThing('fountain-mesa', 'Strip fountain', 'Jets dancing in turn, lit from under the water. Lay it over a pool six by two.', [
+    '~~~~~~',
+    '~~~~~~',
+  ]),
+  streetThing('billboard-mesa', 'Billboard', 'NEON MESA over a desert sunset, on two legs. You can stand between them.', [
+    '???',
+    'o?o',
+  ]),
+  streetThing('fountain-lumina', 'Lumina fountain', 'A gilded figure on a plinth, jets arcing in. Over a pool fourteen by two.', [
+    '~'.repeat(14),
+    '~'.repeat(14),
+  ]),
+]
+
+STAMPS.push(...STREET_FURNITURE)
+
 export const STAMP_BY_ID: Record<string, StampDef> = Object.fromEntries(
   STAMPS.map((stamp) => [stamp.id, stamp]),
 )

@@ -309,7 +309,7 @@ const ISLAND: GroundPalette = {
     deep: '#1c889a', base: '#27a4ae', hi: '#4ac4c2', glint: '#e8fff8', foam: '#ffffff', shallow: '#5fd0c2',
     lipHi: '#fbf4e6', lipTop: '#e8dcc8', lipFace: '#b8a890',
   },
-  plaza: { kind: 'flags', tones: ['#f0dccb', '#e8d2c0', '#f4e4d4', '#e2cab8'], hi: '#fbf0e4', grout: '#c8ac98', accent: '#7ac8c0' },
+  plaza: { kind: 'flags', tones: ['#f0dccb', '#e8d2c0', '#f4e4d4', '#e2cab8'], hi: '#fbf0e4', grout: '#c8ac98', accent: '#e8b4a0' },
   tree: {
     style: 'palm', line: '#1e4a2a', dark: '#2a6a34', base: '#3e8c40', hi: '#5cae4e', top: '#8ed06a',
     trunk: '#9a7a52', trunkLo: '#6e5434', stone: '#d8c8a8', stoneHi: '#f0e4cc', stoneLo: '#b0a080',
