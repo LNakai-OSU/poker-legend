@@ -9,6 +9,7 @@ export const TABLES: Record<string, TableDef> = {
   'silvercreek-low': {
     id: 'silvercreek-low',
     name: 'Low Stakes Hold’em',
+    theme: 'silvercreek',
     smallBlind: 1,
     bigBlind: 2,
     buyIn: 100,
@@ -17,6 +18,7 @@ export const TABLES: Record<string, TableDef> = {
   'riverbend-mid': {
     id: 'riverbend-mid',
     name: 'Riverboat 2/5',
+    theme: 'riverboat',
     smallBlind: 2,
     bigBlind: 5,
     buyIn: 300,
@@ -25,6 +27,7 @@ export const TABLES: Record<string, TableDef> = {
   'crescent-main': {
     id: 'crescent-main',
     name: 'Harbor Room 5/10',
+    theme: 'harbor',
     smallBlind: 5,
     bigBlind: 10,
     buyIn: 1000,
@@ -33,6 +36,7 @@ export const TABLES: Record<string, TableDef> = {
   'palmcay-high': {
     id: 'palmcay-high',
     name: 'Cay Room 10/25',
+    theme: 'palmcay',
     smallBlind: 10,
     bigBlind: 25,
     buyIn: 2500,
@@ -41,6 +45,7 @@ export const TABLES: Record<string, TableDef> = {
   'palmcay-tourist': {
     id: 'palmcay-tourist',
     name: 'The Tourist Table',
+    theme: 'palmcay',
     smallBlind: 10,
     bigBlind: 25,
     buyIn: 2500,
@@ -49,6 +54,7 @@ export const TABLES: Record<string, TableDef> = {
   'mesa-main': {
     id: 'mesa-main',
     name: 'Mesa Main 25/50',
+    theme: 'mesa',
     smallBlind: 25,
     bigBlind: 50,
     buyIn: 10000,
@@ -57,6 +63,7 @@ export const TABLES: Record<string, TableDef> = {
   'mesa-highroller': {
     id: 'mesa-highroller',
     name: 'High Roller 100/200',
+    theme: 'mesa',
     smallBlind: 100,
     bigBlind: 200,
     buyIn: 40000,
@@ -66,6 +73,7 @@ export const TABLES: Record<string, TableDef> = {
   'lumina-nosebleed': {
     id: 'lumina-nosebleed',
     name: 'Nosebleed 100/200',
+    theme: 'lumina',
     smallBlind: 100,
     bigBlind: 200,
     buyIn: 30000,
@@ -75,6 +83,7 @@ export const TABLES: Record<string, TableDef> = {
   'crescent-headsup': {
     id: 'crescent-headsup',
     name: 'Heads Up 5/10',
+    theme: 'harbor',
     smallBlind: 5,
     bigBlind: 10,
     buyIn: 1000,
@@ -83,6 +92,7 @@ export const TABLES: Record<string, TableDef> = {
   'crescent-private': {
     id: 'crescent-private',
     name: 'The Back Room',
+    theme: 'backroom',
     smallBlind: 10,
     bigBlind: 20,
     buyIn: 2000,
@@ -91,6 +101,7 @@ export const TABLES: Record<string, TableDef> = {
   'mesa-headsup': {
     id: 'mesa-headsup',
     name: 'Heads Up 50/100',
+    theme: 'mesa',
     smallBlind: 50,
     bigBlind: 100,
     buyIn: 20000,
@@ -100,6 +111,7 @@ export const TABLES: Record<string, TableDef> = {
   'mesa-private': {
     id: 'mesa-private',
     name: 'The Invitational',
+    theme: 'invitational',
     smallBlind: 200,
     bigBlind: 400,
     buyIn: 60000,
@@ -109,6 +121,7 @@ export const TABLES: Record<string, TableDef> = {
   'lumina-finale': {
     id: 'lumina-finale',
     name: 'The Challenge — Heads Up',
+    theme: 'finale',
     // Deep-stacked on purpose: the buy-in is the biggest in the game, but at
     // 250/500 that was only 240bb and the match was decided by the first
     // all-in. At 50/100 the same money is 1,200bb, so there is room to be

@@ -1,11 +1,18 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { TexasHoldEmTable } from '../engine/table'
 import { decideAiAction } from '../engine/ai'
 import { defaultRng } from '../engine/rng'
 import type { PlayerConfig } from '../engine/types'
-import { PokerTableView } from './PokerTableView'
+import { PokerTableView, ShowdownSummary } from './PokerTableView'
 import type { Announcement } from './HandAnnouncer'
 import { playSound } from '../audio/audio'
+import { TableStage } from './TableStage'
+import { DOCK, buttonHeight, type SceneLayout, type SceneNeeds } from './tableLayout'
+import { TABLE_THEMES } from './tableThemes'
+import { Countdown, Panel, PxButton, PxLine } from './pixel/ui'
+import { PixelText } from './pixel/PixelText'
+import { INK } from './pixel/ink'
+import { describeAction, LOG_LINES } from './actionLog'
 
 /**
  * Marcus's kitchen table: the first hand of poker the player ever sees, and the
@@ -69,6 +76,9 @@ interface PokerNightSceneProps {
 export function PokerNightScene({ onWin, onLeave }: PokerNightSceneProps) {
   const tableRef = useRef(createTable())
   const [tick, setTick] = useState(0)
+  /** The last few things anybody did this hand, narrated in the betting menu. */
+  const [log, setLog] = useState<string[]>([])
+  const note = (line: string) => setLog((lines) => [...lines.slice(1 - LOG_LINES), line])
   const rerender = () => setTick((t) => t + 1)
   const aiBusyRef = useRef(false)
 
@@ -105,6 +115,7 @@ export function PokerNightScene({ onWin, onLeave }: PokerNightSceneProps) {
     const current = levelFor(Math.max(1, state.handNumber))
     table.setBlinds(level.small, level.big)
     table.startNewHand()
+    setLog([])
     playSound('deal')
     if (level.index !== current.index || next === 1) {
       announce({
@@ -141,6 +152,7 @@ export function PokerNightScene({ onWin, onLeave }: PokerNightSceneProps) {
       if (ctx) {
         const action = decideAiAction(ctx, defaultRng)
         playSound(action.type === 'fold' ? 'fold' : action.type === 'check' ? 'check' : 'chip')
+        note(describeAction(actingPlayer.name, action, ctx))
         table.submitAction(actingPlayer.id, action)
       }
       aiBusyRef.current = false
@@ -181,11 +193,13 @@ export function PokerNightScene({ onWin, onLeave }: PokerNightSceneProps) {
 
   const act = (type: 'fold' | 'check' | 'call') => {
     playSound(type === 'call' ? 'chip' : type)
+    note(describeAction('You', { type }, { toCall, allInTo }))
     table.submitAction('you', { type })
     rerender()
   }
   const raiseTo = (to: number) => {
     playSound('chip')
+    note(describeAction('You', { type: 'raise', to }, { toCall, allInTo }))
     table.submitAction('you', { type: 'raise', to })
     rerender()
   }
@@ -217,88 +231,53 @@ export function PokerNightScene({ onWin, onLeave }: PokerNightSceneProps) {
   const level = levelFor(state.handNumber)
   const youWon = winnerId === 'you'
 
-  return (
-    <div
-      style={{
-        width: '100%',
-        minHeight: '100vh',
-        background: '#0d1b12',
-        color: '#e8e8f0',
-        fontFamily: 'monospace',
-        padding: 'clamp(10px, 3vw, 24px)',
-        boxSizing: 'border-box',
-        overflowX: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        gap: 10,
-      }}
-    >
-      <div style={{ textAlign: 'center', fontSize: 13 }}>
-        <div>Marcus's kitchen table &middot; winner takes all</div>
-        <div style={{ color: '#9a9ab0' }}>
-          Blinds {level.small}/{level.big} &middot; hand {state.handNumber}
-        </div>
-      </div>
+  const needs = useMemo<SceneNeeds>(
+    () => ({
+      kind: 'home',
+      opponents: PLAYERS.length - 1,
+      sampleAmount: (STARTING_STACK * PLAYERS.length).toLocaleString(),
+      infoTexts: [LONGEST_COACHING],
+      title: "Marcus's kitchen table · winner takes all",
+      subtitle: `Blinds ${level.small}/${level.big} · hand ${state.handNumber}`,
+    }),
+    [level.small, level.big, state.handNumber],
+  )
 
-      <div style={{ position: 'relative' }}>
-        <PokerTableView
-          state={state}
-          lastResult={lastResult}
-          players={PLAYERS}
-          yourHole={yourHole}
-          announcement={announcement}
-        />
-      </div>
+  const dock = (layout: SceneLayout) => {
+    const P = layout.scale
+    const one = buttonHeight(1, P, layout.coarse)
+    const plan = layout.dockPlan
+    const row = { display: 'flex', flexWrap: 'wrap' as const, justifyContent: 'center', alignItems: 'center', gap: DOCK.gap * P }
 
-      {coaching && (
-        <div
-          data-testid="coaching"
-          style={{
-            maxWidth: 560,
-            margin: '0 auto',
-            padding: '8px 14px',
-            borderRadius: 8,
-            border: '1px solid #2f6ea8',
-            background: 'rgba(16,30,46,0.9)',
-            color: '#bcd8f0',
-            fontSize: 13,
-            textAlign: 'center',
-            lineHeight: 1.5,
-          }}
-        >
-          {coaching}
-        </div>
-      )}
-
-      {/* The result sits under the table, not over it. A full-screen overlay threw
-          away the showdown that just busted you — and since most first attempts
-          end here, that was the one hand the player most needed to see. */}
-      {gameOver && (
+    let body: ReactNode = null
+    if (gameOver) {
+      // The result sits under the table, not over it. A full-screen overlay threw
+      // away the showdown that just busted you — and since most first attempts
+      // end here, that was the one hand the player most needed to see.
+      body = (
         <div
           data-testid={youWon ? 'home-game-won' : 'home-game-lost'}
-          style={{
-            maxWidth: 520,
-            margin: '0 auto',
-            padding: 'clamp(10px, 3vw, 16px)',
-            borderRadius: 10,
-            border: `1px solid ${youWon ? 'rgba(127,224,160,0.5)' : 'rgba(224,90,90,0.45)'}`,
-            background: '#101c16',
-            textAlign: 'center',
-            lineHeight: 1.6,
-          }}
+          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 * P }}
         >
-          <h2 style={{ margin: '0 0 6px', fontSize: 'clamp(15px, 4vw, 19px)' }}>
-            {youWon ? 'You cleaned out the table.' : "They've got all your chips."}
+          <h2 style={{ margin: 0, lineHeight: 0 }}>
+            <PixelText
+              text={youWon ? 'You cleaned out the table.' : "They've got all your chips."}
+              scale={P}
+              ink={{ color: THEME.ui.outline, shadow: THEME.ui.band }}
+            />
           </h2>
-          <p style={{ margin: '0 0 10px', color: '#9ab0a0', fontSize: 13 }}>
-            {youWon
-              ? 'Everyone else is tapped out — the game is yours.'
-              : 'Marcus will deal you back in. The blinds start over.'}
-          </p>
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button
-              style={buttonStyle}
+          <PxLine
+            scale={P}
+            wrap
+            align="center"
+            text={youWon ? 'Everyone else is tapped out — the game is yours.' : 'Marcus will deal you back in. The blinds start over.'}
+          />
+          <div style={row}>
+            <PxButton
+              lines={[youWon ? 'Head out' : 'Deal me back in']}
+              scale={P}
+              role="raise"
+              height={one}
               onClick={() => {
                 if (youWon) {
                   onWin(you.stack)
@@ -309,123 +288,179 @@ export function PokerNightScene({ onWin, onLeave }: PokerNightSceneProps) {
                   rerender()
                 }
               }}
-            >
-              {youWon ? 'Head out' : 'Deal me back in'}
-            </button>
+            />
             {!youWon && (
               // There was no way to leave the home game at all, at any point.
-              <button style={smallButtonStyle} onClick={() => onLeave?.()}>
-                Step outside
-              </button>
+              <PxButton lines={['Step outside']} scale={P} role="plain" height={one} onClick={() => onLeave?.()} />
             )}
           </div>
         </div>
-      )}
-
-      {handOver && (
-        <div
-          data-testid="hand-over-bar"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 10,
-            flexWrap: 'wrap',
-            padding: '8px 12px',
-            borderRadius: 8,
-            background: 'rgba(8,16,12,0.9)',
-            border: '1px solid #26402f',
-            fontSize: 12,
-            color: '#9ab0a0',
-          }}
-        >
-          {holding ? (
-            <>
-              <span data-testid="auto-deal-status">Holding</span>
-              <button
-                style={smallButtonStyle}
-                onClick={() => {
-                  setHolding(false)
-                  dealNextHand()
-                }}
-              >
-                Next hand (space)
-              </button>
-            </>
-          ) : (
-            <>
-              <span data-testid="auto-deal-status">Next hand</span>
-              <span
-                style={{
-                  position: 'relative',
-                  width: 90,
-                  height: 3,
-                  borderRadius: 2,
-                  background: '#26402f',
-                  overflow: 'hidden',
-                }}
-              >
-                <span
-                  key={lastResult?.handNumber}
-                  className="deal-countdown"
-                  style={{
-                    position: 'absolute',
-                    inset: 0,
-                    background: '#f2c14e',
-                    animationDuration: `${AUTO_DEAL_MS}ms`,
+      )
+    } else if (handOver) {
+      body = (
+        <>
+          {lastResult && <ShowdownSummary result={lastResult} players={PLAYERS} scale={P} />}
+          <div data-testid="hand-over-bar" style={{ ...row, marginTop: DOCK.gap * P }}>
+            {holding ? (
+              <>
+                <span data-testid="auto-deal-status">
+                  <PixelText text="Holding" scale={P} ink={INK.dark} />
+                </span>
+                <PxButton
+                  lines={['Next hand (space)']}
+                  scale={P}
+                  role="primary"
+                  height={one}
+                  onClick={() => {
+                    setHolding(false)
+                    dealNextHand()
                   }}
                 />
-              </span>
-              <button style={smallButtonStyle} onClick={dealNextHand}>
-                Deal now (space)
-              </button>
-              <button style={smallButtonStyle} onClick={() => setHolding(true)}>
-                Hold
-              </button>
-            </>
+              </>
+            ) : (
+              <>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 * P }}>
+                  <span data-testid="auto-deal-status">
+                    <PixelText text="Next hand" scale={P} ink={INK.dark} />
+                  </span>
+                  <Countdown scale={P} durationMs={AUTO_DEAL_MS} runKey={lastResult?.handNumber} />
+                </span>
+                <PxButton lines={['Deal now (space)']} scale={P} role="primary" height={one} onClick={dealNextHand} />
+                <PxButton lines={['Hold']} scale={P} role="plain" height={one} onClick={() => setHolding(true)} />
+              </>
+            )}
+          </div>
+        </>
+      )
+    } else {
+      const raiseOpen = legalActions.some((a) => a.type === 'raise')
+      body = (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: DOCK.gap * P }}>
+          {coaching && (
+            <div data-testid="coaching">
+              <PixelText text={coaching} scale={P} ink={{ color: '#2a5a9a', shadow: '#c8d8f0' }} wrap />
+            </div>
           )}
-        </div>
-      )}
-
-      {state.handInProgress && canAct && (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
-          {legalActions.some((a) => a.type === 'fold') && (
-            <button style={foldButtonStyle} onClick={() => act('fold')}>
-              Fold
-            </button>
-          )}
-          {legalActions.some((a) => a.type === 'check') && (
-            <button style={primaryButtonStyle} onClick={() => act('check')}>
-              Check
-            </button>
-          )}
-          {legalActions.some((a) => a.type === 'call') && (
-            <button style={primaryButtonStyle} onClick={() => act('call')}>
-              Call {toCall}
-            </button>
-          )}
-          {legalActions.some((a) => a.type === 'raise') && (
+          {state.handInProgress && canAct && (
             <>
-              {state.minRaiseTo < allInTo && (
-                <button style={buttonStyle} onClick={() => raiseTo(state.minRaiseTo)}>
-                  Raise to {state.minRaiseTo}
-                </button>
+              <div style={row}>
+                {legalActions.some((a) => a.type === 'fold') && (
+                  <PxButton lines={['Fold']} scale={P} role="fold" height={one} onClick={() => act('fold')} />
+                )}
+                {legalActions.some((a) => a.type === 'check') && (
+                  <PxButton lines={['Check']} scale={P} role="primary" height={one} onClick={() => act('check')} />
+                )}
+                {legalActions.some((a) => a.type === 'call') && (
+                  <PxButton lines={[`Call ${toCall}`]} scale={P} role="primary" height={one} onClick={() => act('call')} />
+                )}
+              </div>
+              {raiseOpen && (
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: `repeat(${plan.sizingCols}, ${plan.sizingCellW * P}px)`,
+                    justifyContent: 'center',
+                    gap: DOCK.gap * P,
+                  }}
+                >
+                  {state.minRaiseTo < allInTo && (
+                    <PxButton
+                      lines={[`Raise to ${state.minRaiseTo}`]}
+                      scale={P}
+                      role="raise"
+                      width={plan.sizingCellW}
+                      height={one}
+                      onClick={() => raiseTo(state.minRaiseTo)}
+                    />
+                  )}
+                  {raisePresets.map((preset) => (
+                    <PxButton
+                      key={preset.label}
+                      lines={[`${preset.label} (${preset.to})`]}
+                      scale={P}
+                      role="raise"
+                      width={plan.sizingCellW}
+                      height={one}
+                      onClick={() => raiseTo(preset.to)}
+                    />
+                  ))}
+                  <PxButton
+                    lines={[`All in (${allInTo})`]}
+                    scale={P}
+                    role="allin"
+                    width={plan.sizingCellW}
+                    height={one}
+                    onClick={() => raiseTo(allInTo)}
+                  />
+                </div>
               )}
-              {raisePresets.map((preset) => (
-                <button key={preset.label} style={buttonStyle} onClick={() => raiseTo(preset.to)}>
-                  {preset.label} ({preset.to})
-                </button>
-              ))}
-              <button style={allInButtonStyle} onClick={() => raiseTo(allInTo)}>
-                All in ({allInTo})
-              </button>
+            </>
+          )}
+          {state.handInProgress && !canAct && (
+            <>
+              {!coaching && (
+                <div data-testid="action-log">
+                  {log.map((line, i) => (
+                    <PxLine
+                      key={`${i}-${line}`}
+                      scale={P}
+                      text={line}
+                      ink={i === log.length - 1 ? INK.dark : { color: '#8a8a98', shadow: '#dcdce4' }}
+                    />
+                  ))}
+                </div>
+              )}
+              <PxLine
+                scale={P}
+                align="center"
+                ink={{ color: '#2a5a9a', shadow: '#c8d8f0' }}
+                text={`${PLAYERS.find((p) => p.id === state.actingPlayerId)?.name ?? 'The dealer'} to act…`}
+              />
             </>
           )}
         </div>
+      )
+    }
+
+    return (
+      <Panel
+        theme={THEME}
+        scale={P}
+        testId="dock"
+        style={{
+          minHeight: layout.dock.h * P,
+          padding: 3 * P,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          gap: DOCK.gap * P,
+        }}
+      >
+        {body}
+      </Panel>
+    )
+  }
+
+  return (
+    <TableStage
+      theme={THEME}
+      needs={needs}
+      felt={(layout) => (
+        <PokerTableView
+          state={state}
+          lastResult={lastResult}
+          yourHole={yourHole}
+          announcement={announcement}
+          layout={layout}
+          theme={THEME}
+        />
       )}
-    </div>
+      dock={dock}
+    />
   )
 }
+
+const THEME = TABLE_THEMES.home
 
 /**
  * What to tell a player who has never seen a hand of poker, at the moment it
@@ -463,31 +498,6 @@ function coachingFor(options: {
   return null
 }
 
-const buttonStyle = {
-  background: '#3a9d5c', color: '#fff', border: 'none', borderRadius: 4,
-  padding: '8px 16px', fontFamily: 'monospace', cursor: 'pointer', fontSize: 14,
-} as const
-
-const foldButtonStyle = {
-  ...buttonStyle,
-  background: 'transparent',
-  border: '1px solid #4a5160',
-  color: '#b8c0cc',
-} as const
-
-const primaryButtonStyle = { ...buttonStyle, background: '#2f6ea8' } as const
-
-const allInButtonStyle = {
-  ...buttonStyle,
-  background: '#a33636',
-  border: '1px solid #c95c5c',
-} as const
-
-const smallButtonStyle = {
-  ...buttonStyle,
-  background: 'transparent',
-  border: '1px solid #2f5a3f',
-  color: '#bcd8c8',
-  padding: '4px 10px',
-  fontSize: 12,
-} as const
+/** The longest thing Marcus says, which the menu keeps room for. */
+const LONGEST_COACHING =
+  "Marcus: Everyone posts a blind to start — that's the 250 sitting in front of you to match. Call it, raise it, or throw the hand away."

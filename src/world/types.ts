@@ -26,6 +26,22 @@ export interface OpponentDef {
   persona?: string
 }
 
+/**
+ * The room a table stands in: its felt, its rail, the deck the house prints and
+ * what is on the walls behind it. See `TABLE_THEMES` in `game/tableThemes.ts`.
+ */
+export type TableThemeId =
+  | 'home'
+  | 'silvercreek'
+  | 'riverboat'
+  | 'harbor'
+  | 'backroom'
+  | 'palmcay'
+  | 'mesa'
+  | 'invitational'
+  | 'lumina'
+  | 'finale'
+
 export interface TableDef {
   id: string
   name: string
@@ -37,6 +53,11 @@ export interface TableDef {
   dressCode?: number
   /** Heads-up finale tables end the game rather than being a normal cash game. */
   isFinale?: boolean
+  /**
+   * Which room the table is in. Tables in the same room share one, so the
+   * heads-up table on the Harbor floor looks like the Harbor floor.
+   */
+  theme?: TableThemeId
 }
 
 export type ItemEffect =

@@ -6,7 +6,18 @@
  * those stopped play until a button was clicked. A dealer does not hand you a
  * form — they say "flop" and deal it. This is that: a line that appears over the
  * felt, holds long enough to read, and leaves on its own.
+ *
+ * It opens in the band over the board, where the pot is written — the one strip
+ * of the table the layout keeps clear of every seat — so it can never cover a
+ * card. Every street, all-in and result it announces carries the pot with it,
+ * so nothing is lost while it sits over the pot's own line.
  */
+import { frameStyle } from './pixel/frame'
+import { PixelText } from './pixel/PixelText'
+import { INK } from './pixel/ink'
+import { mix, shade } from './pixel/color'
+import type { Rect } from './tableLayout'
+import type { TableTheme } from './tableThemes'
 
 export type AnnouncementTone = 'neutral' | 'good' | 'bad' | 'tense'
 
@@ -19,17 +30,32 @@ export interface Announcement {
   tone: AnnouncementTone
 }
 
-const TONES: Record<AnnouncementTone, { border: string; text: string; glow: string }> = {
-  neutral: { border: 'rgba(200,214,226,0.35)', text: '#dfe7ef', glow: 'rgba(0,0,0,0.5)' },
-  good: { border: 'rgba(127,224,160,0.6)', text: '#9ff0bd', glow: 'rgba(127,224,160,0.25)' },
-  bad: { border: 'rgba(224,90,90,0.55)', text: '#f0a0a0', glow: 'rgba(224,90,90,0.2)' },
-  tense: { border: 'rgba(242,193,78,0.65)', text: '#f6d898', glow: 'rgba(242,193,78,0.28)' },
+const TONE_BAND: Record<Exclude<AnnouncementTone, 'neutral'>, string> = {
+  good: '#38b860',
+  bad: '#d84848',
+  tense: '#f0b830',
 }
 
-export function HandAnnouncer({ announcement }: { announcement: Announcement | null }) {
+export function HandAnnouncer({
+  announcement,
+  scale,
+  theme,
+  band,
+}: {
+  announcement: Announcement | null
+  scale: number
+  theme: TableTheme
+  band: Rect
+}) {
   if (!announcement) return null
-  const tone = TONES[announcement.tone]
-
+  const P = scale
+  const accent = announcement.tone === 'neutral' ? theme.ui.band : TONE_BAND[announcement.tone]
+  const frame = {
+    rings: [theme.ui.outline, accent, mix(accent, '#ffffff', 0.45)],
+    lower: [theme.ui.outline, shade(accent, 0.7), accent],
+    fill: theme.ui.fill,
+    radius: 3,
+  }
   return (
     <div
       key={announcement.key}
@@ -37,41 +63,25 @@ export function HandAnnouncer({ announcement }: { announcement: Announcement | n
       data-tone={announcement.tone}
       className="announcement"
       style={{
+        ...frameStyle(frame, P),
         position: 'absolute',
-        left: '50%',
-        // In the band between the far seats and the board.
-        //
-        // At 79% it sat on the player's own cards; at 26% it sat on the middle
-        // opponent's, which only showed up once tables went six-handed and a seat
-        // appeared at the top centre of the felt. The seats end around 30% and the
-        // board starts around 43%, so this is the one stripe that belongs to
-        // nobody.
-        top: '38%',
-        transform: 'translate(-50%, -50%)',
+        left: band.x * P,
+        top: band.y * P,
+        width: band.w * P,
+        height: band.h * P,
         // Never swallows a click: the table underneath stays live while it is up.
         pointerEvents: 'none',
         zIndex: 5,
-        textAlign: 'center',
-        padding: '6px 16px',
-        borderRadius: 999,
-        border: `1px solid ${tone.border}`,
-        background: 'rgba(6,12,10,0.82)',
-        boxShadow: `0 2px 18px ${tone.glow}`,
-        color: tone.text,
-        fontSize: 'clamp(12px, 3.2vw, 15px)',
-        fontWeight: 'bold',
-        letterSpacing: 0.4,
-        maxWidth: '86%',
-        whiteSpace: 'nowrap',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
         overflow: 'hidden',
-        textOverflow: 'ellipsis',
       }}
     >
-      {announcement.text}
+      <PixelText text={announcement.text} scale={P} ink={INK.dark} />
       {announcement.detail && (
-        <div style={{ fontSize: 'clamp(10px, 2.6vw, 12px)', fontWeight: 'normal', opacity: 0.85 }}>
-          {announcement.detail}
-        </div>
+        <PixelText text={announcement.detail} scale={P} ink={{ color: shade(accent, 0.55), shadow: mix(accent, '#ffffff', 0.6) }} />
       )}
     </div>
   )

@@ -644,6 +644,14 @@ describe('the opponents', () => {
     }
   })
 
+  it('puts every table in a room', () => {
+    // A table with no room drew itself in Silver Creek's — another venue's felt,
+    // rail and walls, which is the palette swap rule 6 forbids.
+    for (const table of Object.values(TABLES)) {
+      expect(table.theme, `${table.name} does not say which room it is in`).toBeDefined()
+    }
+  })
+
   it('gives every character who plays something to say', () => {
     for (const [id, character] of Object.entries(CHARACTERS)) {
       if (!character.seat) continue
