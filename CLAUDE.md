@@ -4,6 +4,9 @@
 this universe and the four kinds of content you write — characters, maps, events
 and time. Nearly every request about this game is a change to one of those four.
 
+**Read [docs/HANDOFF.md](docs/HANDOFF.md) if it exists and is recent** — it is the
+state of an unfinished run and what to do next.
+
 **Read [docs/REQUESTS.md](docs/REQUESTS.md) at the start of a session.** It is
 where the user writes changes they want. Do any that are still `- [ ]`, tick
 them, and note underneath what you did and anything you decided for them.
