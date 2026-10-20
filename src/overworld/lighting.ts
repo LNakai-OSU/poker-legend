@@ -137,7 +137,7 @@ export function computeLight(
       const wide = blur(blur(channel, width, height, 10), width, height, 10)
       for (let i = 0; i < width * height; i++) {
         const v = near[i] * HALO_NEAR + wide[i] * HALO_WIDE
-        const stepped = Math.floor(Math.min(1, v) * 5) / 5
+        const stepped = Math.floor(Math.min(HALO_CAP, v) * 5) / 5
         lit[i * 3 + c] += stepped * light.lamps
       }
     }
@@ -155,8 +155,10 @@ export function computeLight(
 }
 
 /** How much of what glows spills round it: close in, and further out. */
-const HALO_NEAR = 2.6
-const HALO_WIDE = 3.4
+const HALO_NEAR = 2.2
+const HALO_WIDE = 2.6
+/** However much is lit, its halo never rises past this: a floodlit lobby must not flood its tower. */
+const HALO_CAP = 0.65
 
 /**
  * Towns whose nights are not the same night. The Strip is never dark: its sky
@@ -202,6 +204,11 @@ export class LightMap {
     this.sprite.blendMode = 'multiply'
   }
 
+  /** Lets go of the texture: a light map is made for each street you walk into. */
+  destroy() {
+    this.sprite.destroy({ texture: true, textureSource: true })
+  }
+
   /** Lights the map for an hour, or takes the light map away for the daytime. */
   setPeriod(light: PeriodLight | null) {
     if (!light) {
@@ -223,14 +230,18 @@ export class LightMap {
     this.sprite.visible = true
   }
 
-  /** The light at a point, in art units, as a tint for whoever is standing there. */
-  tintAt(x: number, y: number): number {
+  /**
+   * The light at a point, in art units, as a tint for whoever is standing there.
+   *
+   * `floor` is the least of it that anybody gets: a person in the dark is still
+   * a person, and the player above all must be findable on a street with no lamp
+   * near them.
+   */
+  tintAt(x: number, y: number, floor = 0): number {
     const cx = Math.max(0, Math.min(this.width - 1, Math.floor(x)))
     const cy = Math.max(0, Math.min(this.height - 1, Math.floor(y)))
     const i = (cy * this.width + cx) * 3
-    const r = Math.round(this.values[i] * 255)
-    const g = Math.round(this.values[i + 1] * 255)
-    const b = Math.round(this.values[i + 2] * 255)
-    return (r << 16) | (g << 8) | b
+    const lift = (value: number) => Math.round(Math.max(value, floor) * 255)
+    return (lift(this.values[i]) << 16) | (lift(this.values[i + 1]) << 8) | lift(this.values[i + 2])
   }
 }

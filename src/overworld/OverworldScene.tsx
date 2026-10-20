@@ -174,6 +174,7 @@ export function OverworldScene({
     if (!container) return
 
     let app: Application | null = null
+    let lightMapToFree: LightMap | null = null
     let cancelled = false
     const keysDown = new Set<string>()
     // Held keys are *sampled* once per frame, so a tap that goes down and back up
@@ -223,6 +224,7 @@ export function OverworldScene({
         ? new LightMap(artWidth, artHeight, stampScene.lights, stampScene.glow(artWidth, artHeight), 2)
         : null
       if (lightMap) {
+        lightMapToFree = lightMap
         lightMap.sprite.zIndex = LAYER.lightMap
         world.addChild(lightMap.sprite)
       }
@@ -484,7 +486,9 @@ export function OverworldScene({
         if (lit && lightMap) {
           for (const sprite of people()) {
             // Their feet, in art units: the bottom of their tile, a little in.
-            sprite.tint = lightMap.tintAt((sprite.x + TILE_SIZE / 2) / 2, (sprite.y - 3) / 2)
+            // Nobody goes black, and you least of all.
+            const floor = sprite === player.sprite ? 0.66 : 0.44
+            sprite.tint = lightMap.tintAt((sprite.x + TILE_SIZE / 2) / 2, (sprite.y - 3) / 2, floor)
           }
         }
 
@@ -523,6 +527,7 @@ export function OverworldScene({
       cancelled = true
       window.removeEventListener('keydown', keydown)
       window.removeEventListener('keyup', keyup)
+      lightMapToFree?.destroy()
       app?.destroy(true)
     }
   }, [])

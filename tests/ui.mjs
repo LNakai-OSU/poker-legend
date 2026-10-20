@@ -535,7 +535,7 @@ await test('the town is one continuous place', async () => {
  * the evening is to look at the pixels.
  */
 async function canvasColour(page) {
-  const png = await page.locator('[data-testid="overworld"] canvas').screenshot()
+  const png = await page.locator('[data-testid="overworld"] canvas').first().screenshot()
   return page.evaluate(async (b64) => {
     const img = new Image()
     img.src = `data:image/png;base64,${b64}`

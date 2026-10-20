@@ -519,10 +519,13 @@ const casinoLumina: StampArt = {
     }
     px(dx - 2, 20, 5, 3, GOLD)
     stoneWall(px, 0, 24, w, h - 24, MARBLE_WALL, 12)
-    px(30, 29, w - 60, 9, '#ece4d4')
-    px(30, 29, w - 60, 1, '#fbf6ea')
-    px(30, 37, w - 60, 1, MARBLE_WALL.line)
-    textCentred(px, 'CASINO LUMINA', dx, 31, GOLD_DARK)
+    // The frieze is floodlit.
+    glow('lamp', () => {
+      px(30, 29, w - 60, 9, '#ece4d4')
+      px(30, 29, w - 60, 1, '#fbf6ea')
+      px(30, 37, w - 60, 1, MARBLE_WALL.line)
+      textCentred(px, 'CASINO LUMINA', dx, 31, GOLD_DARK)
+    })
     // The wings: arched windows over balconies, lamps glowing.
     for (const x of [6, 20, w - 30, w - 16]) {
       archedWindow(px, x, 30, 10, 16, LUMINA_WINDOW)
@@ -532,10 +535,13 @@ const casinoLumina: StampArt = {
     // The portico: deep shade behind six columns, chandeliers inside.
     px(32, 38, w - 64, h - 42, '#5a4a36')
     px(32, 38, w - 64, 4, '#3a2e22')
-    for (const cx of [44, dx, w - 44]) {
-      px(cx - 4, 44, 9, 2, GOLD)
-      for (let i = 0; i < 5; i++) px(cx - 4 + i * 2, 46, 1, 2 + (i % 2), frame ? '#ffe8a0' : GOLD)
-    }
+    // Chandeliers burning in the portico.
+    glow('lamp', () => {
+      for (const cx of [44, dx, w - 44]) {
+        px(cx - 4, 44, 9, 2, GOLD)
+        for (let i = 0; i < 5; i++) px(cx - 4 + i * 2, 46, 1, 2 + (i % 2), frame ? '#ffe8a0' : GOLD)
+      }
+    })
     for (const x of [40, 54, 68, w - 73, w - 59, w - 45]) column(px, x, 38, h - 42, '#f4eee2', GOLD)
     for (const door of doorTiles(c)) {
       archedWindow(px, door.x - 2, door.y - 12, 20, 28, { ...LUMINA_WINDOW, glass: '#e8c068', glassHi: '#ffe8a8' })

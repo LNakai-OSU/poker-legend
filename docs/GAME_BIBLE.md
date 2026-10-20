@@ -181,9 +181,14 @@ area and per hour, not simulated: a schedule is a statement about where somebody
 *is*, not a model of them walking there. It costs nothing while you are not
 looking and cannot drift out of step with the clock.
 
-The light of the hour is laid over the whole map, so every town gets an evening
-without being drawn four times. Morning is left clear — it is the hour the art
-is drawn for.
+The light of the hour is worked out for every street, so every town gets an
+evening without being drawn four times. Morning is left clear — it is the hour
+the art is drawn for. In the evening the street goes warm and dim; at night it
+goes a deep blue, the lamps and lit windows come on, and the Strip's sky glows
+purple off its signs. The light is *multiplied* over the street, with a pool
+under every lamp post and a halo round everything lit, and whatever glows is
+drawn again above the dark, so a lit window is lit rather than merely bluer.
+Rooms keep their lamps on whatever the hour.
 
 ---
 
