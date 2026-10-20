@@ -17,6 +17,29 @@ them, and note underneath what you did and anything you decided for them.
   something — say so rather than working around it.
 - Sprites and tiles are **drawn at runtime from code**. There are no art assets.
 
+## Working efficiently
+
+Every model call re-reads the whole conversation, so cost is roughly
+**context size × number of calls**. Anything that enters context — a file, a
+log, a screenshot — is paid for again on every later call.
+
+- **Read narrowly.** `grep -n` and ranged reads. Never read a large file
+  (`cities.ts`, the `art/` files) whole.
+- **Logs go to a file.** Redirect test and build output, then `tail`/`grep`
+  it. Never let a full suite's output into context.
+- **Look at one contact sheet, not many screenshots.**
+  `node scripts/shoot.mjs --areas a,b,c --periods morning,night --out DIR
+  --sheet overview` gives one captioned image of every shot. Open a single
+  shot only to inspect detail, and don't re-open ones you've already seen.
+- **Iterate on narrow tests** (`npx vitest run <file>`, `UI_ONLY="…"`) and run
+  the full suites once, at the end.
+- **Batch.** One script that does ten steps beats ten tool calls.
+- **Commit at every milestone.** An interrupted agent is cheapest to replace
+  when its work is already committed.
+
+Agents launched to work in a worktree follow
+[docs/AGENTS.md](docs/AGENTS.md).
+
 ## Commands
 
 ```
