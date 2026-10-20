@@ -21,34 +21,30 @@ Merged: editor tabs for characters and events (#editor/characters,
 #editor/events); 16x24 character sprites with roles and a walk cycle; 48
 drawn buildings, 8 slot-machine variants, a floor plan of its own for every
 casino and 26 interiors; the poker table as a GBA scene in ten themed rooms;
-a browser suite that holds up under load; efficiency tooling. Tests at last
-check: 326 unit, 52/52 browser.
+ground drawn from its neighbours (kerbs, edges, per-town paving, animated
+water), ~270 street-furniture stamps, six distinct roads between towns, and
+evening/night lighting with lit windows, lamp pools and neon; a browser suite
+that holds up under load; efficiency tooling. Tests at last check (main
+cf565da): 352 unit, 52/52 browser, lint clean.
 
 The round-1 critic scored the game 1.5/10 overall. Creators' own scores since:
 buildings 7, casino floors 7.5, slots 7, interiors 7.5, characters 7, table
-scene 8. Streets/terrain and night were the weakest; agent 1B is on those.
+scene 8, streets/terrain 8, time of day 8 (1B). These are the creators' own
+scores, not an independent critic's — round 2 should re-grade everything.
 
 ## In flight
 
-**Agent 1B** — branch `worktree-agent-a908a0cb98da20c16`, worktree
-`.claude/worktrees/agent-a908a0cb98da20c16`, dev server :5175. Ground drawn from
-its neighbours with edges and variants, street furniture, per-town roads, and
-evening/night lighting (lit windows, lamp pools, neon). Told to finish and
-commit items 1–4 only and report. Merge it when it reports
-(`git merge --no-ff`, then typecheck, lint, `npm test`, `npm run test:ui`).
-If it was cut off: check `git log main..<branch>`, and if most of the work is
-committed, launch a fresh agent on that branch rather than resuming.
+Nothing. All agents have finished and their worktrees and branches are removed.
 
 ## Next, in order
 
-1. Merge 1B. Remove its worktree and branch once merged.
-2. **Round-2 critic** (sonnet, read-only): `scripts/shoot.mjs` contact sheets of
+1. **Round-2 critic** (sonnet, read-only): `scripts/shoot.mjs` contact sheets of
    every street, road, casino, interior and table, in morning/evening/night.
    Compare with the round-1 brief at
    `/private/tmp/claude-501/-Users-lanninnakai/4de48707-96de-4b74-8bb2-860c54d11252/scratchpad/critic-r1/BRIEF.md`
    (may be gone; the scores above are the baseline). Output: scores per
    category and the top 8 fixes.
-3. **Creator round 2** (opus), scoped to what the critic found. Include these
+2. **Creator round 2** (opus), scoped to what the critic found. Include these
    known leftovers:
    - Content polish in `src/world/cities.ts`: `hal` and `hal-mesa` are one man
      but have two faces; the `marcus-dana` POI should reuse the `dana`
@@ -62,9 +58,14 @@ committed, launch a fresh agent on that branch rather than resuming.
    - Table scene: rooms are static (no neon flicker/water shimmer), tall phones
      show plain wall above the table, ♣/♠ glyphs are rough at 5px, menus/HUD/
      dialogue box still use the system font.
+   - 1B's known rough edges: the door-label plate on Lumina's Atelier covers
+     some of its gold lettering; several shop doors and island-hotel windows
+     have no/dim lit glass at night; no light spill onto the Mesa fountain
+     water; the editor's stamp tray shows frame 0 only and has no night view,
+     and the editor preview's per-cell drawing was not tested.
    - Editor tabs: no delete/rename for characters or events; tile positions are
      typed numbers with no click-on-map picker.
-4. Repeat critic → creator while scores climb. Suggested stop: overall 8/10, or
+3. Repeat critic → creator while scores climb. Suggested stop: overall 8/10, or
    three rounds, whichever comes first. The user has not set one, so say what
    was done and what it cost rather than looping indefinitely.
 
