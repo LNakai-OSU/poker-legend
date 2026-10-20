@@ -3,13 +3,15 @@ import { AREAS, CITIES } from '../world/cities'
 import { TABLES } from '../world/content'
 import {
   DOOR,
+  FURNITURE,
   TILE_VOCABULARY,
   isTileWalkable,
   parseMap,
   toSketch,
   type TileGrid,
 } from '../overworld/tileRenderer'
-import { TILE_THEMES, tileCanvases } from '../overworld/sprites'
+import { TILE_THEMES } from '../overworld/sprites'
+import { cellArt, cellCanvas, paintedGrid, tileSwatch } from '../overworld/cells'
 import { charactersIn } from '../world/characters'
 import { KEEP, STAMPS, findStamp, stampSize, type PlacedStamp } from '../world/stamps'
 import { stampCanvas } from '../overworld/stampArt'
@@ -140,8 +142,12 @@ export function MapEditor({ onClose, nav }: { onClose: () => void; nav?: React.R
       .catch(() => setSharing([]))
   }
 
-  const canvases = tileCanvases(theme)
   const sketch = toSketch(grid)
+  // Each square drawn the way the game draws it — from the square and the ones
+  // round it — so kerbs, carpet borders and variants show here too. Furniture
+  // with no object on it yet stays visible as a plinth, since that is the thing
+  // being edited.
+  const pictures = useMemo(() => squarePictures(grid, stamps, theme), [grid, stamps, theme])
   const movedMarkers = placed.filter((item) => {
     const original = placeables(area).find((o) => o.kind === item.kind && o.key === item.key)
     return original && (original.col !== item.col || original.row !== item.row)
@@ -479,7 +485,7 @@ export function MapEditor({ onClose, nav }: { onClose: () => void; nav?: React.R
                   boxShadow: brush === tile ? '0 0 0 2px rgba(242,193,78,0.35)' : undefined,
                 }}
               >
-                <img src={canvases[tile]?.toDataURL()} alt="" width={28} height={28} style={pixelated} />
+                <img src={dataUrl(tileSwatch(tile, theme))} alt="" width={28} height={28} style={pixelated} />
                 {/* Named, not just drawn. Two dark tiles are hard to tell apart
                     at 28px, and on a phone there is no hover to explain them. */}
                 <span style={swatchLabel}>{name}</span>
@@ -552,7 +558,7 @@ export function MapEditor({ onClose, nav }: { onClose: () => void; nav?: React.R
           }}
         >
           {grid.flatMap((row, r) =>
-            row.map((tile, c) => {
+            row.map((_, c) => {
               const marker = showMarkers ? markers.get(`${c},${r}`) : undefined
               return (
                 <div
@@ -604,7 +610,7 @@ export function MapEditor({ onClose, nav }: { onClose: () => void; nav?: React.R
                   }}
                 >
                   <img
-                    src={canvases[tile]?.toDataURL()}
+                    src={pictures[r][c]}
                     alt=""
                     width={CELL}
                     height={CELL}
@@ -917,6 +923,34 @@ function markerDot(kind: Marker['kind']): React.CSSProperties {
     boxShadow: '0 0 0 1px rgba(0,0,0,0.6)',
     pointerEvents: 'none',
   }
+}
+
+/** A canvas as a data URL, made once per canvas: there are hundreds of squares and few pictures. */
+const dataUrls = new WeakMap<HTMLCanvasElement, string>()
+function dataUrl(canvas: HTMLCanvasElement): string {
+  let url = dataUrls.get(canvas)
+  if (!url) {
+    url = canvas.toDataURL()
+    dataUrls.set(canvas, url)
+  }
+  return url
+}
+
+/** Every square's picture, as the game would draw this grid, for the editor's cells. */
+function squarePictures(grid: TileGrid, stamps: PlacedStamp[], theme: string): string[][] {
+  const covered = new Set<string>()
+  for (const placed of stamps) {
+    findStamp(placed.stampId)?.tiles.split('\n').forEach((line, r) => {
+      for (let c = 0; c < line.length; c++) if (line[c] !== KEEP) covered.add(`${placed.col + c},${placed.row + r}`)
+    })
+  }
+  const painted = paintedGrid(grid)
+  grid.forEach((row, r) =>
+    row.forEach((tile, c) => {
+      if (tile === FURNITURE && !covered.has(`${c},${r}`)) painted[r][c] = FURNITURE
+    }),
+  )
+  return painted.map((row, r) => row.map((_, c) => dataUrl(cellCanvas(cellArt(painted, c, r, theme)))))
 }
 
 export { TILE_THEMES }

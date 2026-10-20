@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Application, Container, Sprite, Text } from 'pixi.js'
-import { buildStampLayer, buildTileLayer, isWalkable, OVER_PEOPLE, TILE_SIZE, type TileGrid } from './tileRenderer'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Application, Container, Graphics, Sprite, Text } from 'pixi.js'
+import { buildStampScene, buildTileLayer, isWalkable, LAYER, TILE_SIZE, type TileGrid } from './tileRenderer'
+import { LightMap, townLight } from './lighting'
+import { PERIOD_LIGHT, type PeriodLight, type TimePeriod } from '../game/time'
 import type { PlacedStamp } from '../world/stamps'
 import { DELTAS, GridPlayer, type Direction } from './GridPlayer'
 import { Npc, type NpcConfig } from './Npc'
@@ -70,6 +72,11 @@ export interface SceneExit {
   col: number
   row: number
   label: string
+  /**
+   * Whether a sign is hung over it. Street doors are signposted; the way out of
+   * a room is the gap in its wall, and its name would only sit under your feet.
+   */
+  signed?: boolean
 }
 
 interface OverworldSceneProps {
@@ -82,8 +89,10 @@ interface OverworldSceneProps {
   background?: string
   /** Optional persistent corner UI, e.g. a wallet readout. */
   hud?: ReactNode
-  /** The colour of the hour, laid over the map. See PERIOD_LIGHT. */
-  light?: string
+  /** The hour, for its light. See PERIOD_LIGHT. */
+  period?: TimePeriod
+  /** Out of doors, where the hour's light falls. Rooms keep their lamps on. */
+  outdoors?: boolean
   /** Objects bigger than a tile standing on this map. */
   stamps?: PlacedStamp[]
   /** A pursuer that hunts the player across the grid. */
@@ -107,7 +116,8 @@ export function OverworldScene({
   interactables,
   background = '#101018',
   hud,
-  light,
+  period = 'morning',
+  outdoors = false,
   stamps,
   chaser,
   onCaught,
@@ -142,17 +152,29 @@ export function OverworldScene({
   // key events, so the Pixi ticker reads it straight from these refs.
   const touchDirRef = useRef<Direction | null>(null)
   const interactRef = useRef<() => void>(() => {})
+  // The light is set from the period after mount, and again whenever an event
+  // moves the clock on while you are standing in the street.
+  const applyLightRef = useRef<(light: PeriodLight | null) => void>(() => {})
+  const light = useMemo(() => (outdoors ? townLight(theme, PERIOD_LIGHT[period]) : null), [outdoors, theme, period])
+  const lightRef = useRef(light)
+  lightRef.current = light
   const isTouch = useIsTouchDevice()
 
   useEffect(() => {
     talkingRef.current = talkingId
   }, [talkingId])
 
+  // The clock can move on while the scene is up — an event that ends at night.
+  useEffect(() => {
+    applyLightRef.current(light)
+  }, [light])
+
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
 
     let app: Application | null = null
+    let lightMapToFree: LightMap | null = null
     let cancelled = false
     const keysDown = new Set<string>()
     // Held keys are *sampled* once per frame, so a tap that goes down and back up
@@ -191,8 +213,21 @@ export function OverworldScene({
       // Fixed for the life of the scene; a rotation remounts it.
       const zoom = zoomFor(instance.screen.width)
       const world = buildTileLayer(map, theme)
-      // Objects over the tiles, under everybody who walks about on them.
-      world.addChild(buildStampLayer(stamps ?? []))
+      // Objects over the tiles, under everybody who walks about on them, and
+      // what of them glows after dark.
+      const stampScene = buildStampScene(stamps ?? [])
+      world.addChild(stampScene.under, stampScene.over, stampScene.litUnder, stampScene.litOver)
+      // The hour's light, multiplied over the street. Only out of doors.
+      const artWidth = map[0].length * (TILE_SIZE / 2)
+      const artHeight = map.length * (TILE_SIZE / 2)
+      const lightMap = outdoors
+        ? new LightMap(artWidth, artHeight, stampScene.lights, stampScene.glow(artWidth, artHeight), 2)
+        : null
+      if (lightMap) {
+        lightMapToFree = lightMap
+        lightMap.sprite.zIndex = LAYER.lightMap
+        world.addChild(lightMap.sprite)
+      }
       // Everybody who stands on the map, drawn back to front. People are a tile
       // and a half tall, so a head overlaps the tile behind it, and whoever is
       // further down the screen is in front: sorting by where the feet are is
@@ -203,13 +238,14 @@ export function OverworldScene({
       const signs = new Container()
       // Captions go over everybody, so a name is never hidden behind a head.
       const overlay = new Container()
-      // The stamp layer above puts the fronts of counters and cages over the
-      // people at OVER_PEOPLE, which makes this container sort by zIndex. Left
-      // at the default, the captions would sort *under* those fronts, so a
-      // clerk's name could vanish behind their own counter. Order, bottom up:
-      // tiles, objects, signs, people, the fronts of objects, captions.
+      // Bottom up: tiles, objects, the light map, what glows, door signs,
+      // people, the fronts of objects and what of them glows, captions. A name
+      // over a clerk sorts above their own counter, and a door's sign is read
+      // above the dark rather than lost in it.
       world.sortableChildren = true
-      overlay.zIndex = OVER_PEOPLE + 1
+      signs.zIndex = LAYER.signs
+      actors.zIndex = LAYER.actors
+      overlay.zIndex = LAYER.captions
       world.addChild(signs, actors, overlay)
 
       const player = new GridPlayer(playerStart.col, playerStart.row, { figure: HERO_FIGURE })
@@ -230,19 +266,28 @@ export function OverworldScene({
       // "Card Room", "Menswear", "Auto Row" — and none of it was ever drawn, so a
       // boulevard was six identical brown rectangles and the only way to find out
       // which was which was to walk into each one. Signposts, so always shown.
+      // Each is lettered on a small dark plate with a lit rim, so it reads
+      // against a pale fanlight or a busy sign as well as against brick.
       for (const exit of exits) {
-        const sign = new Text({
+        if (exit.signed === false) continue
+        const sign = new Container()
+        const words = new Text({
           text: exit.label,
           style: {
-            fill: '#f0d9a0',
+            fill: '#f6e6b8',
             fontSize: 10,
             fontFamily: 'monospace',
-            stroke: { color: '#0c0c14', width: 3, join: 'round' },
+            stroke: { color: '#0c0c14', width: 2, join: 'round' },
           },
         })
-        sign.anchor.set(0.5, 1)
+        words.anchor.set(0.5, 1)
+        const plate = new Graphics()
+          .roundRect(-words.width / 2 - 4, -words.height - 2, words.width + 8, words.height + 3, 2)
+          .fill({ color: 0x14121c, alpha: 0.86 })
+          .stroke({ color: 0xc8a860, width: 1, alpha: 0.9 })
+        sign.addChild(plate, words)
         sign.scale.set(1 / zoom)
-        sign.position.set(exit.col * TILE_SIZE + TILE_SIZE / 2, exit.row * TILE_SIZE - 1)
+        sign.position.set(exit.col * TILE_SIZE + TILE_SIZE / 2, exit.row * TILE_SIZE - 2)
         signs.addChild(sign)
       }
 
@@ -257,6 +302,24 @@ export function OverworldScene({
         overlay.addChild(alert)
       }
       instance.stage.addChild(world)
+
+      // Everybody standing in the street is lit by what they stand in: a
+      // lamp's pool, a shop window's spill, or the blue of the night.
+      const people = () => [player.sprite, ...npcs.map((n) => n.sprite), ...(hunter ? [hunter.sprite] : [])]
+      let lit: PeriodLight | null = null
+      const applyLight = (next: PeriodLight | null) => {
+        lit = next
+        lightMap?.setPeriod(next)
+        const lamps = !!next && next.lamps > 0
+        stampScene.litUnder.visible = lamps
+        stampScene.litOver.visible = lamps
+        // The fronts of things are drawn over the people, so over the light map
+        // too; they take the hour's colour as a tint instead.
+        stampScene.over.tint = next ? parseInt(next.ambient.slice(1), 16) : 0xffffff
+        if (!next) for (const sprite of people()) sprite.tint = 0xffffff
+      }
+      applyLightRef.current = applyLight
+      applyLight(lightRef.current)
 
       world.scale.set(zoom)
       const worldWidth = map[0].length * TILE_SIZE * zoom
@@ -420,6 +483,15 @@ export function OverworldScene({
 
         centerCamera()
 
+        if (lit && lightMap) {
+          for (const sprite of people()) {
+            // Their feet, in art units: the bottom of their tile, a little in.
+            // Nobody goes black, and you least of all.
+            const floor = sprite === player.sprite ? 0.66 : 0.44
+            sprite.tint = lightMap.tintAt((sprite.x + TILE_SIZE / 2) / 2, (sprite.y - 3) / 2, floor)
+          }
+        }
+
         // Published for automated tests so they can verify each step landed
         // rather than assuming a synthetic keypress was observed, and so the
         // browser suite can find things by name instead of hard-coding tiles
@@ -455,6 +527,7 @@ export function OverworldScene({
       cancelled = true
       window.removeEventListener('keydown', keydown)
       window.removeEventListener('keyup', keyup)
+      lightMapToFree?.destroy()
       app?.destroy(true)
     }
   }, [])
@@ -469,6 +542,8 @@ export function OverworldScene({
         interactables.map((i) => ({ id: i.id, name: i.name, col: i.col, row: i.row })),
       )}
       data-exits={JSON.stringify(exits)}
+      // Which light the street is in, for the browser suite: 'day' indoors and in the morning.
+      data-light={light && period !== 'morning' ? period : 'day'}
       // The walkable grid, so the browser suite can path by breadth-first search
       // instead of walking greedily at a target and giving up when furniture gets
       // in the way. A greedy walker could also blunder into a doorway and leave
@@ -505,24 +580,6 @@ export function OverworldScene({
           ...(chaser ? [{ col: chaser.col, row: chaser.row, kind: 'chaser' as const }] : []),
         ]}
       />
-      {/*
-        The light of the hour, laid over the whole map.
-        Over the canvas rather than mixed into the tiles, so every town gets an
-        evening and a night without each map having to be drawn four times, and
-        under everything you read — the clock is not worth dimming the HUD for.
-      */}
-      {light && light !== 'transparent' && (
-        <div
-          data-testid="period-light"
-          style={{
-            position: 'absolute',
-            inset: 0,
-            background: light,
-            pointerEvents: 'none',
-            transition: 'background 600ms ease',
-          }}
-        />
-      )}
       {hud && (
         <div
           style={{

@@ -65,10 +65,22 @@ export const CARPET_NEON = 33
 export const CARPET_ROYAL = 34
 export const CARPET_VIOLET = 35
 
+// --- more ground ------------------------------------------------------------
+
+/** A beaten track: the verge of a country road, a path down to the water. */
+export const DIRT = 36
+/**
+ * A zebra crossing. Road in every way that matters — walkable, part of the run
+ * of road its lane markings are worked out from — but drawn with its stripes,
+ * where you would cross to a casino's front door.
+ */
+export const CROSSWALK = 37
+
 const WALKABLE = new Set([
   FLOOR, CARPET, ROAD, SIDEWALK, GRASS, DOOR, SAND, FLOWER, PLAZA,
   WOOD_FLOOR, CHECKER, TILE_FLOOR, MARBLE, DECK, LINO,
   CARPET_GREEN, CARPET_TEAL, CARPET_NEON, CARPET_ROYAL, CARPET_VIOLET,
+  DIRT, CROSSWALK,
 ])
 
 /** The faces of back walls: solid, drawn front-on, with a floor in front of them. */
@@ -125,6 +137,8 @@ export const TILE_VOCABULARY: Array<{ tile: number; char: string; name: string }
   { tile: CARPET_NEON, char: '!', name: 'Neon carpet' },
   { tile: CARPET_ROYAL, char: '&', name: 'Royal carpet' },
   { tile: CARPET_VIOLET, char: '%', name: 'Violet carpet' },
+  { tile: DIRT, char: '_', name: 'Dirt track' },
+  { tile: CROSSWALK, char: 'z', name: 'Crossing' },
 ]
 
 /** The character that writes each tile, for turning a grid back into a sketch. */

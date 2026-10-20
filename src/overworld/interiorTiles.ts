@@ -30,6 +30,12 @@ export interface TileVariants {
 }
 
 const quarter = (col: number, row: number) => (col & 1) + 2 * (row & 1)
+/** One of n variants for a square, scattered by position with no pattern to it. */
+const scatter = (col: number, row: number, n: number) => {
+  let h = (Math.imul(col, 374761393) + Math.imul(row, 668265263)) >>> 0
+  h = Math.imul(h ^ (h >>> 13), 1274126177) >>> 0
+  return ((h ^ (h >>> 16)) >>> 0) % n
+}
 const byColumn = (col: number) => col & 1
 const chequer = (col: number, row: number) => (col + row) & 1
 
@@ -350,25 +356,32 @@ const checker: Draw = (px) => {
   px(2, 10, 2, 1, '#ffffff')
 }
 
-/** Small square tiles, grouted: the launderette and the corner shop. */
-const tileFloor: Draw = (px) => {
+/** Small square tiles, grouted: the launderette and the corner shop. A few worn darker, never the same few. */
+const TILE_WEAR: Array<Array<[number, number]>> = [
+  [[4, 0], [8, 8], [0, 12], [12, 4]],
+  [[0, 4], [12, 12], [8, 0]],
+  [[4, 8], [12, 0], [0, 0], [8, 12]],
+]
+const tileFloor = (variant: number): Draw => (px) => {
   px(0, 0, 16, 16, '#d3dcdd')
   for (let i = 0; i < 16; i += 4) {
     px(i + 3, 0, 1, 16, '#a9b6b8')
     px(0, i + 3, 16, 1, '#a9b6b8')
   }
-  for (const [x, y] of [[4, 0], [8, 8], [0, 12], [12, 4]]) px(x, y, 3, 3, '#c8d2d3')
+  for (const [x, y] of TILE_WEAR[variant]) px(x, y, 3, 3, '#c8d2d3')
   for (let x = 0; x < 16; x += 4) for (let y = 0; y < 16; y += 4) px(x, y, 1, 1, '#e8eeee')
 }
 
 /** Marble slabs, light and dark in a chequer, with veins: Porto Lumina. */
-const marble = (dark: boolean): Draw => (px) => {
+const marble = (dark: boolean, flip = false): Draw => (px) => {
   const [base, vein, hi] = dark ? ['#aaa49b', '#8f897f', '#bcb6ad'] : ['#efe9df', '#d2c8b8', '#fbf8f2']
   px(0, 0, 16, 16, base)
+  // The vein runs one way across this slab and the other way across the next.
+  const at = (x: number) => (flip ? 15 - x : x)
   for (const [x, y, w] of [[2, 3, 2], [4, 4, 2], [6, 5, 1], [7, 6, 2], [9, 7, 1], [10, 8, 2], [12, 10, 1], [13, 11, 2]]) {
-    px(x, y, w, 1, vein)
+    px(flip ? at(x) - w + 1 : x, y, w, 1, vein)
   }
-  for (const [x, y] of [[11, 2], [12, 3], [3, 11], [4, 12], [5, 12]]) px(x, y, 1, 1, vein)
+  for (const [x, y] of [[11, 2], [12, 3], [3, 11], [4, 12], [5, 12]]) px(at(x), y, 1, 1, vein)
   px(1, 1, 3, 1, hi)
   px(1, 2, 1, 2, hi)
   px(0, 0, 16, 1, '#c4baa8')
@@ -390,17 +403,25 @@ const deck = (shift: number): Draw => (px) => {
   }
 }
 
-/** Speckled vinyl: the floor of a shop that sells things off shelves. */
-const lino: Draw = (px) => {
+/**
+ * Speckled vinyl: the floor of a shop that sells things off shelves. Four
+ * speckles, so the floor does not show the same square over and over, and the
+ * odd scuff where the trolleys turn.
+ */
+const lino = (variant: number): Draw => (px) => {
   px(0, 0, 16, 16, '#d8d1c2')
   for (let y = 0; y < 16; y++) {
     for (let x = 0; x < 16; x++) {
-      if (speck(x, y, 7, 11)) px(x, y, 1, 1, '#c3bba9')
-      else if (speck(x, y, 3, 17)) px(x, y, 1, 1, '#e9e3d6')
+      if (speck(x, y, 7 + variant * 5, 11)) px(x, y, 1, 1, '#c3bba9')
+      else if (speck(x, y, 3 + variant * 3, 17)) px(x, y, 1, 1, '#e9e3d6')
     }
   }
-  px(0, 0, 16, 1, '#c9c1b0')
-  px(0, 0, 1, 16, '#c9c1b0')
+  if (variant === 3) {
+    px(4, 9, 6, 1, '#b8b09e')
+    px(9, 10, 3, 1, '#b8b09e')
+  }
+  px(0, 0, 16, 1, '#cec6b5')
+  px(0, 0, 1, 16, '#cec6b5')
 }
 
 // ---------------------------------------------------------------------------
@@ -446,27 +467,35 @@ const carpetTeal = motif((x, y) => {
   return '#3f9e96'
 })
 
-/** The Strip: black, with neon confetti that does not line up with anything. */
+/**
+ * The Strip: black, with neon confetti that does not line up with anything.
+ *
+ * It was the loudest thing in the room — brighter than the slot toppers and the
+ * felt — so the floor read before the tables did. The confetti is still there,
+ * in the same three colours, but sunk into the pile: fewer pieces, half the
+ * brightness, and one small bright fleck in each to keep it a neon carpet.
+ */
 const carpetNeon = motif((x, y) => {
   const marks: Array<[number, number, string, string]> = [
-    [3, 4, 'squiggle', '#ff4fd8'], [12, 2, 'dot', '#ffe14f'], [20, 6, 'tri', '#4fe8ff'],
-    [27, 3, 'bar', '#ffe14f'], [7, 12, 'tri', '#ffe14f'], [16, 14, 'squiggle', '#4fe8ff'],
-    [25, 11, 'dot', '#ff4fd8'], [2, 20, 'bar', '#4fe8ff'], [11, 22, 'dot', '#4fe8ff'],
-    [19, 19, 'tri', '#ff4fd8'], [28, 21, 'squiggle', '#ffe14f'], [6, 28, 'dot', '#ff4fd8'],
-    [14, 27, 'bar', '#ff4fd8'], [23, 28, 'dot', '#ffe14f'], [30, 15, 'dot', '#4fe8ff'],
+    [3, 4, 'squiggle', '#8a3a7c'], [20, 6, 'tri', '#2c7480'], [27, 3, 'bar', '#7e7034'],
+    [7, 13, 'dot', '#7e7034'], [16, 15, 'squiggle', '#2c7480'], [25, 11, 'dot', '#8a3a7c'],
+    [2, 21, 'bar', '#2c7480'], [19, 20, 'tri', '#8a3a7c'], [11, 26, 'dot', '#2c7480'],
+    [28, 22, 'squiggle', '#7e7034'],
   ]
   for (const [mx, my, shape, color] of marks) {
     const dx = x - mx
     const dy = y - my
-    if (shape === 'dot' && dx >= 0 && dx < 2 && dy >= 0 && dy < 2) return color
-    if (shape === 'bar' && dy === 0 && dx >= 0 && dx < 4) return color
-    if (shape === 'tri' && dy >= 0 && dy < 3 && Math.abs(dx) <= dy) return color
+    const bright = dx === 0 && dy === 0
+    const tone = bright ? (color === '#8a3a7c' ? '#e060c8' : color === '#2c7480' ? '#58d0e0' : '#e0d060') : color
+    if (shape === 'dot' && dx >= 0 && dx < 2 && dy >= 0 && dy < 2) return tone
+    if (shape === 'bar' && dy === 0 && dx >= 0 && dx < 3) return tone
+    if (shape === 'tri' && dy >= 0 && dy < 2 && Math.abs(dx) <= dy) return tone
     if (shape === 'squiggle' && ((dy === 0 && (dx === 0 || dx === 2)) || (dy === 1 && (dx === 1 || dx === 3)))) {
-      return color
+      return tone
     }
   }
-  if ((x * 7 + y * 13) % 31 === 0) return '#2a1a3a'
-  return '#120c1a'
+  if ((x * 7 + y * 13) % 31 === 0) return '#20162c'
+  return '#130d1b'
 })
 
 /** The high-limit rooms: burgundy, with gold medallions. */
@@ -521,10 +550,13 @@ export const INTERIOR_TILES: Record<number, TileVariants> = {
   [WALL_PAINT]: { draws: [wallPaint], pick: () => 0 },
   [WOOD_FLOOR]: { draws: [woodFloor(0), woodFloor(1)], pick: (col, row) => (col + (row >> 1)) & 1 },
   [CHECKER]: { draws: [checker], pick: () => 0 },
-  [TILE_FLOOR]: { draws: [tileFloor], pick: () => 0 },
-  [MARBLE]: { draws: [marble(false), marble(true)], pick: chequer },
+  [TILE_FLOOR]: { draws: [tileFloor(0), tileFloor(1), tileFloor(2)], pick: (col, row) => scatter(col, row, 3) },
+  [MARBLE]: {
+    draws: [marble(false), marble(true), marble(false, true), marble(true, true)],
+    pick: (col, row) => chequer(col, row) + 2 * scatter(col, row, 2),
+  },
   [DECK]: { draws: [deck(0), deck(1)], pick: byColumn },
-  [LINO]: { draws: [lino], pick: () => 0 },
+  [LINO]: { draws: [lino(0), lino(1), lino(2), lino(3)], pick: (col, row) => scatter(col, row, 4) },
   [CARPET]: { draws: carpetDust, pick: quarter },
   [CARPET_GREEN]: { draws: carpetGreen, pick: quarter },
   [CARPET_TEAL]: { draws: carpetTeal, pick: quarter },
@@ -538,7 +570,7 @@ export const CARPET_BORDERS: Record<number, [string, string, string]> = {
   [CARPET]: ['#4a1a14', '#c08a3a', '#6a241c'],
   [CARPET_GREEN]: ['#0f2e20', '#c8a048', '#174230'],
   [CARPET_TEAL]: ['#2e7a74', '#efe0b0', '#368c85'],
-  [CARPET_NEON]: ['#4fe8ff', '#ff4fd8', '#1c1028'],
+  [CARPET_NEON]: ['#2a7c8c', '#b0409c', '#1a1024'],
   [CARPET_ROYAL]: ['#2e0810', '#d8b060', '#4a0e1c'],
   [CARPET_VIOLET]: ['#120820', '#b46cff', '#2e1450'],
 }

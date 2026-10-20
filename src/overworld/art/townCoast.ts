@@ -1,5 +1,5 @@
 import type { StampArt } from '../stampArt'
-import { icon, shadow, sprite, text, textCentred, textWidth, tint, type Px } from '../pixelArt'
+import { glow, icon, shadow, sprite, text, textCentred, textWidth, tint, type Px } from '../pixelArt'
 import {
   archedWindow, awning, barrelRoof, brickWall, bulbs, doorAt, eaveShadow, flatRoof, glassDoors,
   groundShadow, plinth, puffs, roundWindow, sidingWall, slateRoof, stoneWall, stuccoWall, tinRoof, wallLamp,
@@ -70,7 +70,7 @@ export function torch(px: Px, x: number, y: number, h: number, frame: number) {
   const flame = frame % 2 === 0
     ? ['.#.', '###', '#o#']
     : ['#..', '##.', '#o#']
-  sprite(px, flame, x - 1, y, { '#': '#ff8a2a', o: '#ffe060' })
+  glow('lamp', () => sprite(px, flame, x - 1, y, { '#': '#ff8a2a', o: '#ffe060' }))
 }
 
 /** A potted palm, for either side of a door. */
@@ -184,7 +184,9 @@ const supper: StampArt = {
     // The blade sign down the middle.
     px(w / 2 - 6, 16, 12, 34, '#14141a')
     px(w / 2 - 5, 17, 10, 32, '#2a1a22')
-    'SUPPER'.split('').forEach((letter, i) => text(px, letter, w / 2 - 1, 18 + i * 5, frame ? '#ff6a8a' : '#ff9ab0'))
+    glow('neon', () => {
+      'SUPPER'.split('').forEach((letter, i) => text(px, letter, w / 2 - 1, 18 + i * 5, frame ? '#ff6a8a' : '#ff9ab0'))
+    })
     // The marquee over the door, curved at the ends.
     px(14, 50, w - 28, 6, '#14141a')
     px(15, 50, w - 30, 5, '#2a2a36')
@@ -226,9 +228,11 @@ const cardroom: StampArt = {
     const pw = w - 72
     pediment(px, px0 - 2, 26, pw + 4, 9, LIMESTONE.hi, LIMESTONE.line)
     icon(px, 'spade', w / 2 - 2, 29, '#2a3a5a')
-    px(px0, 38, pw, 8, '#2a2a30')
-    px(px0 + 1, 39, pw - 2, 6, '#3a3a44')
-    textCentred(px, 'CARD ROOM', w / 2, 40, '#e8c868')
+    glow('neon', () => {
+      px(px0, 38, pw, 8, '#2a2a30')
+      px(px0 + 1, 39, pw - 2, 6, '#3a3a44')
+      textCentred(px, 'CARD ROOM', w / 2, 40, '#e8c868')
+    })
     for (const x of [px0 + 1, px0 + 9, w - px0 - 15, w - px0 - 7]) column(px, x, 46, h - 48, '#e4dccc', '#d8b048')
     shadow(px, px0 + 14, 46, pw - 28, h - 48, 0.35)
     for (const door of doorTiles(c)) {
@@ -323,8 +327,10 @@ const autorow: StampArt = {
     brickWall(px, 0, 20, w, 20, { hi: '#f4f4f0', base: '#e8e8e2', lo: '#d4d4cc', line: '#b8b8b0' })
     eaveShadow(px, 0, 20, w)
     const tw = textWidth('AUTO ROW', 2)
-    text(px, 'AUTO ROW', Math.round((w - tw) / 2) + 1, 25, '#5a0a0a', 2)
-    text(px, 'AUTO ROW', Math.round((w - tw) / 2), 24, '#c82a2a', 2)
+    glow('neon', () => {
+      text(px, 'AUTO ROW', Math.round((w - tw) / 2) + 1, 25, '#5a0a0a', 2)
+      text(px, 'AUTO ROW', Math.round((w - tw) / 2), 24, '#c82a2a', 2)
+    })
     // Bunting.
     for (let x = 2; x < w - 2; x += 6) {
       const sag = Math.round(Math.sin((x / w) * Math.PI) * 3)
@@ -335,12 +341,15 @@ const autorow: StampArt = {
     // The showroom: one great window and a convertible in it.
     px(0, 40, w, h - 40, '#c8ccd4')
     px(50, 42, w - 54, h - 46, '#1e2430')
-    px(51, 43, w - 56, h - 48, '#a8c8dc')
-    px(51, 43, w - 56, 10, '#c8e0ec')
-    carSide(px, 64, 58, '#d82a2a')
-    carSide(px, 96, 60, '#2a6ad8')
-    px(52, 44, 1, h - 50, 'rgba(255, 255, 255, 0.55)')
-    px(56, 44, 1, 14, 'rgba(255, 255, 255, 0.35)')
+    // The showroom stays lit.
+    glow('neon', () => {
+      px(51, 43, w - 56, h - 48, '#a8c8dc')
+      px(51, 43, w - 56, 10, '#c8e0ec')
+      carSide(px, 64, 58, '#d82a2a')
+      carSide(px, 96, 60, '#2a6ad8')
+      px(52, 44, 1, h - 50, 'rgba(255, 255, 255, 0.55)')
+      px(56, 44, 1, 14, 'rgba(255, 255, 255, 0.35)')
+    })
     px(4, 44, 24, 12, '#f2c84a')
     text(px, 'SALE', 8, 47, '#c82a2a')
     for (const door of doorTiles(c)) glassDoors(px, door.x + 1, door.y - 1, 14, '#5a6270', '#a8c8dc', '#e8eef4')
@@ -377,9 +386,11 @@ const marina: StampArt = {
     tinRoof(px, -2, 0, w + 4, 20, BLUE_TIN)
     sidingWall(px, 0, 20, w, h - 20, WEATHERBOARD)
     eaveShadow(px, 0, 20, w)
-    px(6, 22, w - 12, 10, '#1a3a6a')
-    px(7, 23, w - 14, 8, '#2a5aa8')
-    textCentred(px, 'MARINA MOTORS', w / 2 + 4, 25, '#ffffff')
+    glow('neon', () => {
+      px(6, 22, w - 12, 10, '#1a3a6a')
+      px(7, 23, w - 14, 8, '#2a5aa8')
+      textCentred(px, 'MARINA MOTORS', w / 2 + 4, 25, '#ffffff')
+    })
     // An anchor at the start of the board.
     sprite(px, ['.#.', '###', '.#.', '#.#', '.#.'], 10, 24, { '#': '#f2c84a' })
     // Life rings either side.
@@ -434,9 +445,11 @@ const casinoCay: StampArt = {
       const a = (i / 8) * Math.PI * 2
       px(w / 2 + Math.round(Math.cos(a) * 6), 1 + Math.round(Math.sin(a) * 6), 1, 1, '#f2c84a')
     }
-    px(gx + 6, 10, gw - 12, 11, '#1e6a6a')
-    px(gx + 7, 11, gw - 14, 9, TEAL)
-    textCentred(px, 'CAY ROOM', w / 2, 13, '#ffffff')
+    glow('neon', () => {
+      px(gx + 6, 10, gw - 12, 11, '#1e6a6a')
+      px(gx + 7, 11, gw - 14, 9, TEAL)
+      textCentred(px, 'CAY ROOM', w / 2, 13, '#ffffff')
+    })
     // Upstairs windows with shutters.
     for (const x of [10, 26, w - 36, w - 20]) windowAt(px, x, 28, 10, 11, { ...ISLAND_WINDOW, shutters: TEAL })
     // The arcade: white arches on columns, deep teal shade inside.
@@ -478,9 +491,11 @@ const hotelCay: StampArt = {
   draw: (px, c) => {
     const { w, h } = c
     flatRoof(px, -1, 0, w + 2, 12, { hi: '#ffffff', base: '#e8e0c8', lo: '#b8ae96' }, '#5a8a9a')
-    px(10, -4, 40, 9, '#1e6a6a')
-    px(11, -3, 38, 7, TEAL)
-    text(px, 'HOTEL', 20, -2, '#ffffff')
+    glow('neon', () => {
+      px(10, -4, 40, 9, '#1e6a6a')
+      px(11, -3, 38, 7, TEAL)
+      text(px, 'HOTEL', 20, -2, '#ffffff')
+    })
     stuccoWall(px, 0, 12, w, h - 12, LEMON, 6)
     eaveShadow(px, 0, 12, w)
     for (const y of [16, 34]) {
@@ -549,9 +564,11 @@ const grill: StampArt = {
     // The surfboard sign.
     px(10, 21, 44, 9, '#1e5a7a')
     px(12, 20, 40, 11, '#1e5a7a')
-    px(13, 21, 38, 9, '#f4f0e0')
-    px(13, 25, 38, 1, CORAL)
-    textCentred(px, 'GRILL', 32, 22, '#1e5a7a')
+    glow('neon', () => {
+      px(13, 21, 38, 9, '#f4f0e0')
+      px(13, 25, 38, 1, CORAL)
+      textCentred(px, 'GRILL', 32, 22, '#1e5a7a')
+    })
     windowAt(px, 6, 33, 20, 10, { ...ISLAND_WINDOW, bars: 'none' })
     for (const door of doorTiles(c)) {
       px(door.x + 2, door.y - 2, 12, 18, '#4a3418')

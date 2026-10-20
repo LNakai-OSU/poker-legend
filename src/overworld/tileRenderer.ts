@@ -1,116 +1,43 @@
 import { Container, Sprite, type Texture } from 'pixi.js'
-import { edgeTexture, tileVariant, tileVariantTextures, type Side } from './sprites'
-import { FRAME_MS, SCALE, stampLayers } from './stampArt'
-import { CARPETS, DOOR, FLOOR, FURNITURE, TILE_SIZE, WALL, WALL_FACES, WALL_TOP, isTileWalkable, type TileGrid } from './tiles'
+import { FRAME_MS, SCALE, UNIT, stampLayers } from './stampArt'
+import type { GlowField, LightSource } from './lighting'
+import { TILE_SIZE, type TileGrid } from './tiles'
+import { cellArt, cellTextures, paintedGrid } from './cells'
+import { WATER_FRAME_MS } from './ground'
 import type { PlacedStamp } from '../world/stamps'
 
 // Re-exported so callers have a single import for map data plus rendering.
 export * from './tiles'
-
-const SIDES: Array<[Side, number, number]> = [
-  ['n', 0, -1],
-  ['e', 1, 0],
-  ['s', 0, 1],
-  ['w', -1, 0],
-]
+export { edgesAt, paintedGrid } from './cells'
 
 /**
- * What to lay over a tile where it meets its neighbours, as edge-texture keys.
+ * The ground, one sprite per square.
  *
- * A room drawn as a grid of independent squares has no corners: the floor runs
- * flat into the wall and a carpet stops dead at the skirting. These are the
- * few joins that sell it as a room — the lit lip on the top of a wall, the
- * shadow a wall throws on the floor, the bound edge of a carpet.
+ * Each square's picture comes from `cellArt`, which reads the squares round it
+ * — so a pavement beside the road has its kerb and a square of water beside
+ * the quay has its lip. Squares that look the same share a texture. Water and
+ * flower beds have frames, swapped on one clock for the whole map so the
+ * ripples move together.
  */
-export function edgesAt(grid: TileGrid, col: number, row: number): string[] {
-  const tile = grid[row][col]
-  const at = (c: number, r: number) => grid[r]?.[c]
-  const keys: string[] = []
-
-  if (tile === WALL_TOP) {
-    for (const [side, dc, dr] of SIDES) {
-      const next = at(col + dc, row + dr)
-      if (next !== undefined && isTileWalkable(next)) keys.push(`lip-${side}`)
-    }
-    return keys
-  }
-
-  if (!isTileWalkable(tile)) return keys
-
-  if (CARPETS.has(tile)) {
-    for (const [side, dc, dr] of SIDES) {
-      const next = at(col + dc, row + dr)
-      // A carpet runs on under whatever stands on it; it is bound where it
-      // stops — at a wall, a doorway or another floor.
-      const stops = next === undefined || next === WALL || next === WALL_TOP || WALL_FACES.has(next) ||
-        (isTileWalkable(next) && next !== tile)
-      if (stops) keys.push(`border-${tile}-${side}`)
-    }
-  }
-
-  // Walls shade the floor below them and to their right.
-  const above = at(col, row - 1)
-  if (above !== undefined && (WALL_FACES.has(above) || above === WALL_TOP)) keys.push('shade-n')
-  if (at(col - 1, row) === WALL_TOP) keys.push('shade-w')
-  return keys
-}
-
-/**
- * The grid as it should be painted.
- *
- * A furniture tile means "something solid stands here", and every piece of
- * furniture is a stamp drawn over it — a round table, a palm in a pot, a
- * pillar. What shows round the edges of those is the floor of the room they
- * stand in, not a square of some furniture texture, so each furniture tile is
- * painted as the nearest floor to it. The collision grid is untouched.
- */
-export function paintedGrid(grid: TileGrid): TileGrid {
-  const painted = grid.map((row) => [...row])
-  for (let row = 0; row < grid.length; row++) {
-    for (let col = 0; col < grid[row].length; col++) {
-      if (grid[row][col] !== FURNITURE) continue
-      const floor = nearestFloor(grid, col, row)
-      if (floor !== undefined) painted[row][col] = floor
-    }
-  }
-  return painted
-}
-
-function nearestFloor(grid: TileGrid, col: number, row: number): number | undefined {
-  for (let reach = 1; reach <= 6; reach++) {
-    // Straight neighbours first at each distance, so a table on a carpet takes the carpet.
-    for (const [dc, dr] of [[0, reach], [0, -reach], [reach, 0], [-reach, 0]]) {
-      const tile = grid[row + dr]?.[col + dc]
-      if (tile !== undefined && tile !== DOOR && isTileWalkable(tile)) return tile
-    }
-    for (let dr = -reach; dr <= reach; dr++) {
-      for (let dc = -reach; dc <= reach; dc++) {
-        if (Math.max(Math.abs(dc), Math.abs(dr)) !== reach) continue
-        const tile = grid[row + dr]?.[col + dc]
-        if (tile !== undefined && tile !== DOOR && isTileWalkable(tile)) return tile
-      }
-    }
-  }
-  return undefined
-}
-
 export function buildTileLayer(grid: TileGrid, themeId = 'default'): Container {
-  const textures = tileVariantTextures(themeId)
   const layer = new Container()
   const painted = paintedGrid(grid)
+  const animated: Array<{ sprite: Sprite; frames: Texture[] }> = []
   for (let row = 0; row < painted.length; row++) {
     for (let col = 0; col < painted[row].length; col++) {
-      const kind = painted[row][col]
-      const variants = textures[kind] ?? textures[FLOOR]
-      const tile = new Sprite(variants[tileVariant(kind, col, row)] ?? variants[0])
+      const frames = cellTextures(cellArt(painted, col, row, themeId))
+      const tile = new Sprite(frames[0])
       tile.position.set(col * TILE_SIZE, row * TILE_SIZE)
       layer.addChild(tile)
-      for (const key of edgesAt(painted, col, row)) {
-        const texture = edgeTexture(key)
-        if (!texture) continue
-        const edge = new Sprite(texture)
-        edge.position.set(col * TILE_SIZE, row * TILE_SIZE)
-        layer.addChild(edge)
+      if (frames.length > 1) animated.push({ sprite: tile, frames })
+    }
+  }
+  if (animated.length > 0) {
+    layer.onRender = () => {
+      const tick = Math.floor(performance.now() / WATER_FRAME_MS)
+      for (const { sprite, frames } of animated) {
+        const next = frames[tick % frames.length]
+        if (sprite.texture !== next) sprite.texture = next
       }
     }
   }
@@ -119,6 +46,65 @@ export function buildTileLayer(grid: TileGrid, themeId = 'default'): Container {
 
 /** Above everybody who walks about, so a counter's front can stand in front of its clerk. */
 export const OVER_PEOPLE = 10
+
+/**
+ * The order things are drawn in, bottom up. The light map multiplies everything
+ * under it, so the ground and the buildings darken with the hour; what glows
+ * is drawn again just above it; the people are lit one by one by what they
+ * stand in; and the fronts of things go over the people, with their own lit
+ * parts over those.
+ */
+export const LAYER = {
+  lightMap: 1,
+  litUnder: 2,
+  signs: 3,
+  actors: 4,
+  over: OVER_PEOPLE,
+  litOver: OVER_PEOPLE + 0.5,
+  captions: OVER_PEOPLE + 1,
+} as const
+
+/** The stamps on a map, by day and by night, and the light they throw. */
+export interface StampScene {
+  /** Under the people. */
+  under: Container
+  /** Over the people: counter fronts, the tops of lamp posts and trees. */
+  over: Container
+  /** What glows after dark, drawn over the darkness. Hidden by day. */
+  litUnder: Container
+  litOver: Container
+  /** Pools of light thrown by lamp posts and the like, in art units of the map. */
+  lights: LightSource[]
+  /** What everything lit gives off, summed per art unit of a map this size, for the halos. */
+  glow: (width: number, height: number) => GlowField | null
+}
+
+/** The per-art-unit colours of a lit canvas, read once per stamp. */
+const glowPixels = new Map<string, { width: number; height: number; rgb: Float32Array } | null>()
+
+function glowOf(stampId: string, canvas: HTMLCanvasElement | null) {
+  if (glowPixels.has(stampId)) return glowPixels.get(stampId)!
+  if (!canvas) {
+    glowPixels.set(stampId, null)
+    return null
+  }
+  const width = Math.floor(canvas.width / SCALE)
+  const height = Math.floor(canvas.height / SCALE)
+  const data = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height).data
+  const rgb = new Float32Array(width * height * 3)
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = ((y * SCALE) * canvas.width + x * SCALE) * 4
+      const a = data[i + 3] / 255
+      rgb[(y * width + x) * 3] = (data[i] / 255) * a
+      rgb[(y * width + x) * 3 + 1] = (data[i + 1] / 255) * a
+      rgb[(y * width + x) * 3 + 2] = (data[i + 2] / 255) * a
+    }
+  }
+  const pixels = { width, height, rgb }
+  glowPixels.set(stampId, pixels)
+  return pixels
+}
 
 /**
  * The objects standing on a map, drawn over its tiles.
@@ -130,15 +116,24 @@ export const OVER_PEOPLE = 10
  * tiles are what you see, and nothing breaks.
  *
  * Some stamps have a front that belongs in front of people: the counter a clerk
- * stands behind, the bars of a cashier's cage. Those parts go in a second layer
- * that puts itself above the people as soon as this one is added to the world,
- * so the scene adds one layer and gets both.
+ * stands behind, the top of a lamp post somebody walks behind. Those parts go in
+ * the `over` layer. And after dark every lit window, bulb and lantern is drawn a
+ * second time, over the darkness, from each stamp's night pass.
  */
-export function buildStampLayer(stamps: PlacedStamp[]): Container {
+export function buildStampScene(stamps: PlacedStamp[]): StampScene {
   const under = new Container()
   const over = new Container()
-  over.zIndex = OVER_PEOPLE
+  const litUnder = new Container()
+  const litOver = new Container()
+  under.zIndex = 0
+  over.zIndex = LAYER.over
+  litUnder.zIndex = LAYER.litUnder
+  litOver.zIndex = LAYER.litOver
+  litUnder.visible = false
+  litOver.visible = false
   const animated: Array<{ sprite: Sprite; frames: Texture[] }> = []
+  const lights: LightSource[] = []
+  const glowing: Array<{ stampId: string; x: number; y: number; canvas: HTMLCanvasElement }> = []
 
   for (const placed of stamps) {
     const art = stampLayers(placed.stampId)
@@ -148,6 +143,8 @@ export function buildStampLayer(stamps: PlacedStamp[]): Container {
     const parts: Array<[Container, Texture[] | null]> = [
       [under, art.under],
       [over, art.over],
+      [litUnder, art.litUnder],
+      [litOver, art.litOver],
     ]
     for (const [layer, frames] of parts) {
       if (!frames) continue
@@ -155,6 +152,18 @@ export function buildStampLayer(stamps: PlacedStamp[]): Container {
       sprite.position.set(x, y)
       layer.addChild(sprite)
       if (frames.length > 1) animated.push({ sprite, frames })
+    }
+    for (const light of art.lights) {
+      lights.push({
+        x: placed.col * UNIT + light.x,
+        y: placed.row * UNIT + light.y,
+        reach: light.reach,
+        color: light.color,
+        strength: light.strength ?? 1,
+      })
+    }
+    if (art.glow) {
+      glowing.push({ stampId: placed.stampId, x: placed.col * UNIT - art.bleed.left, y: placed.row * UNIT - art.bleed.top, canvas: art.glow })
     }
   }
 
@@ -169,8 +178,28 @@ export function buildStampLayer(stamps: PlacedStamp[]): Container {
     }
   }
 
-  under.on('added', (parent: Container) => parent.addChild(over))
-  under.on('removed', () => over.removeFromParent())
-  under.on('destroyed', () => over.destroy({ children: true }))
-  return under
+  const glow = (width: number, height: number): GlowField | null => {
+    if (glowing.length === 0) return null
+    const rgb = new Float32Array(width * height * 3)
+    for (const item of glowing) {
+      const pixels = glowOf(item.stampId, item.canvas)
+      if (!pixels) continue
+      for (let py = 0; py < pixels.height; py++) {
+        const gy = item.y + py
+        if (gy < 0 || gy >= height) continue
+        for (let px = 0; px < pixels.width; px++) {
+          const gx = item.x + px
+          if (gx < 0 || gx >= width) continue
+          const from = (py * pixels.width + px) * 3
+          const to = (gy * width + gx) * 3
+          rgb[to] += pixels.rgb[from]
+          rgb[to + 1] += pixels.rgb[from + 1]
+          rgb[to + 2] += pixels.rgb[from + 2]
+        }
+      }
+    }
+    return { width, height, rgb }
+  }
+
+  return { under, over, litUnder, litOver, lights, glow }
 }

@@ -20,17 +20,24 @@ export const PERIOD_LABEL: Record<TimePeriod, string> = {
 }
 
 /**
- * The light at each time of day, laid over the whole map.
+ * The light at each time of day, out of doors.
  *
- * Drawn over the tiles rather than baked into them, so every town gets a dawn
- * and a night for free and a new map cannot forget to have one. Morning is left
- * clear: it is the hour everything else is read against.
+ * `ambient` is what the street is multiplied by where nothing is lit: white is
+ * daylight as the art was drawn, the evening is warm and dim, the night a deep
+ * blue. `lamps` is how far the lamps, lit windows and neon have come up, from
+ * off to full; they are drawn over the dark, and light the ground round them.
+ * Morning is left alone: it is the hour everything else is read against.
  */
-export const PERIOD_LIGHT: Record<TimePeriod, string> = {
-  morning: 'transparent',
-  afternoon: 'rgba(255, 214, 140, 0.07)',
-  evening: 'rgba(255, 137, 71, 0.16)',
-  night: 'rgba(28, 42, 102, 0.34)',
+export interface PeriodLight {
+  ambient: string
+  lamps: number
+}
+
+export const PERIOD_LIGHT: Record<TimePeriod, PeriodLight | null> = {
+  morning: null,
+  afternoon: { ambient: '#fff3e2', lamps: 0 },
+  evening: { ambient: '#c8907a', lamps: 0.7 },
+  night: { ambient: '#36427c', lamps: 1 },
 }
 
 /** How far through the day a period is, 0 for morning. */

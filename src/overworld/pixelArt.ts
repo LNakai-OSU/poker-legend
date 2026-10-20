@@ -123,6 +123,42 @@ export function shadow(px: Px, x: number, y: number, w: number, h: number, alpha
   px(x, y, w, h, `rgba(10, 8, 20, ${alpha})`)
 }
 
+// ---------------------------------------------------------------------------
+// What lights up after dark
+// ---------------------------------------------------------------------------
+
+/**
+ * How a part of a drawing gives off light after dark.
+ *
+ * - `window`: glass with a lit room behind it. By day it shows the sky; at
+ *   night it is redrawn in the warm light of the room, keeping its shading.
+ * - `lamp`: a lamp's glass or a flame, brightened towards white-hot.
+ * - `neon`: tubes, bulbs and lit signs, exactly as drawn, at full brightness.
+ */
+export type Glow = 'window' | 'lamp' | 'neon'
+
+let glowing: Glow | null = null
+
+/**
+ * Marks what `draw` paints as giving off light. A drawing is painted twice:
+ * once as it looks, and once for the night, when only marked parts are kept
+ * (and everything painted over them afterwards cuts them back out).
+ */
+export function glow(kind: Glow, draw: () => void) {
+  const previous = glowing
+  glowing = kind
+  try {
+    draw()
+  } finally {
+    glowing = previous
+  }
+}
+
+/** The kind of light being painted right now, if any. */
+export function currentGlow(): Glow | null {
+  return glowing
+}
+
 /** Whether a pixel at (x, y) falls on a deterministic scatter, for texture that does not repeat. */
 export function speck(x: number, y: number, seed: number, oneIn: number): boolean {
   let h = (x * 374761393 + y * 668265263 + seed * 2246822519) >>> 0
@@ -231,10 +267,14 @@ export function textShadowed(
  * Returns the width written.
  */
 export function neonText(
-  px: Px, words: string, x: number, y: number, core: string, glow: string, scale = 1, spacing = 1,
+  px: Px, words: string, x: number, y: number, core: string, halo: string, scale = 1, spacing = 1,
 ) {
-  for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) text(px, words, x + dx, y + dy, glow, scale, spacing)
-  return text(px, words, x, y, core, scale, spacing)
+  let width = 0
+  glow('neon', () => {
+    for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) text(px, words, x + dx, y + dy, halo, scale, spacing)
+    width = text(px, words, x, y, core, scale, spacing)
+  })
+  return width
 }
 
 // ---------------------------------------------------------------------------

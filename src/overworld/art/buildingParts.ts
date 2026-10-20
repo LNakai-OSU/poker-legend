@@ -1,4 +1,4 @@
-import { INK, rounded, shadow, speck, text, textCentred, textWidth, tint, type Px } from '../pixelArt'
+import { INK, glow, rounded, shadow, speck, text, textCentred, textWidth, tint, type Px } from '../pixelArt'
 
 /**
  * The parts a building is made of.
@@ -323,8 +323,14 @@ export function windowAt(px: Px, x: number, y: number, w: number, h: number, s: 
   const gy = y + 2
   const gw = w - 4
   const gh = h - 4
-  px(gx, gy, gw, gh, s.glass)
-  px(gx, gy, gw, Math.ceil(gh / 2), s.glassHi)
+  // A fifth of the windows in a town are dark at night: nobody home.
+  const home = (x * 7 + y * 13) % 5 !== 0
+  const glass = () => {
+    px(gx, gy, gw, gh, s.glass)
+    px(gx, gy, gw, Math.ceil(gh / 2), s.glassHi)
+  }
+  if (home) glow('window', glass)
+  else glass()
   if (s.curtain) {
     px(gx, gy, 1, gh, s.curtain)
     px(gx + gw - 1, gy, 1, gh, s.curtain)
@@ -351,10 +357,15 @@ export function windowAt(px: Px, x: number, y: number, w: number, h: number, s: 
 
 /** A round window — a porthole, an oculus. */
 export function roundWindow(px: Px, cx: number, cy: number, r: number, rim: string, glass: string) {
+  const n = parseInt(glass.slice(1), 16)
+  const pale = (((n >> 16) & 0xff) * 0.299 + ((n >> 8) & 0xff) * 0.587 + (n & 0xff) * 0.114) / 255 > 0.5
   for (let dy = -r; dy <= r; dy++) {
     for (let dx = -r; dx <= r; dx++) {
       const d = dx * dx + dy * dy
-      if (d <= r * r + r) px(cx + dx, cy + dy, 1, 1, d >= (r - 1) * (r - 1) + 1 ? rim : glass)
+      if (d > r * r + r) continue
+      if (d >= (r - 1) * (r - 1) + 1) px(cx + dx, cy + dy, 1, 1, rim)
+      else if (pale) glow('window', () => px(cx + dx, cy + dy, 1, 1, glass))
+      else px(cx + dx, cy + dy, 1, 1, glass)
     }
   }
   px(cx - Math.floor(r / 2), cy - Math.floor(r / 2), 1, 1, '#ffffff')
@@ -367,8 +378,10 @@ export function archedWindow(px: Px, x: number, y: number, w: number, h: number,
   rounded(px, x, y, w, head + 1, s.frame, Math.min(2, Math.floor(w / 3)))
   px(x + 1, y + 2, w - 2, h - 3, s.trim)
   rounded(px, x + 1, y + 1, w - 2, head, s.trim, Math.min(2, Math.floor(w / 3)))
-  px(x + 2, y + 3, w - 4, h - 5, s.glass)
-  px(x + 2, y + 2, w - 4, Math.ceil((h - 4) / 2), s.glassHi)
+  glow('window', () => {
+    px(x + 2, y + 3, w - 4, h - 5, s.glass)
+    px(x + 2, y + 2, w - 4, Math.ceil((h - 4) / 2), s.glassHi)
+  })
   px(x + Math.floor(w / 2), y + 2, 1, h - 4, s.trim)
   px(x + 2, y + 3, 1, 2, '#ffffff')
   px(x - 1, y + h, w + 2, 1, s.sill)
@@ -388,8 +401,9 @@ export function doorAt(px: Px, x: number, y: number, s: DoorStyle) {
   px(x + 5, y + 3, 7, 11, s.leaf)
   px(x + 5, y + 3, 7, 1, tint(s.leaf, 0.2))
   if (s.glass) {
+    const glass = s.glass
     px(x + 6, y + 4, 5, 4, tint(s.leaf, -0.4))
-    px(x + 6, y + 4, 5, 4, s.glass)
+    glow('window', () => px(x + 6, y + 4, 5, 4, glass))
     px(x + 6, y + 4, 2, 1, '#ffffff')
     px(x + 8, y + 4, 1, 4, tint(s.leaf, -0.2))
   } else {
@@ -410,8 +424,10 @@ export function glassDoors(px: Px, x: number, y: number, w: number, frame: strin
   px(x, y, w, 15, frame)
   const leaf = Math.floor((w - 3) / 2)
   for (const lx of [x + 1, x + 2 + leaf]) {
-    px(lx, y + 1, leaf, 14, glass)
-    px(lx, y + 1, leaf, 6, tint(glass, 0.2))
+    glow('window', () => {
+      px(lx, y + 1, leaf, 14, glass)
+      px(lx, y + 1, leaf, 6, tint(glass, 0.2))
+    })
     px(lx + 1, y + 2, 1, 4, '#ffffff')
     px(lx, y + 8, leaf, 1, bar)
   }
@@ -444,18 +460,22 @@ export function displayWindow(
   px: Px, x: number, y: number, w: number, h: number, frame: string, goods: string[], seed = 1,
 ) {
   px(x, y, w, h, frame)
-  px(x + 1, y + 1, w - 2, h - 2, '#2a3440')
-  px(x + 1, y + 1, w - 2, 2, '#3a4a5a')
-  // Shelves, and things on them.
-  for (let sy = y + 4; sy < y + h - 2; sy += 4) {
-    px(x + 1, sy + 2, w - 2, 1, '#6a5a48')
-    for (let gx = x + 2; gx < x + w - 2; gx += 3) {
-      if (speck(gx, sy, seed, 4)) continue
-      const color = goods[(gx + sy + seed) % goods.length]
-      px(gx, sy, 2, 2, color)
-      px(gx, sy, 1, 1, tint(color, 0.3))
+  glow('window', () => {
+    px(x + 1, y + 1, w - 2, h - 2, '#2a3440')
+    px(x + 1, y + 1, w - 2, 2, '#3a4a5a')
+  })
+  // Shelves, and things on them, seen in the shop's own light.
+  glow('neon', () => {
+    for (let sy = y + 4; sy < y + h - 2; sy += 4) {
+      px(x + 1, sy + 2, w - 2, 1, '#6a5a48')
+      for (let gx = x + 2; gx < x + w - 2; gx += 3) {
+        if (speck(gx, sy, seed, 4)) continue
+        const color = goods[(gx + sy + seed) % goods.length]
+        px(gx, sy, 2, 2, color)
+        px(gx, sy, 1, 1, tint(color, 0.3))
+      }
     }
-  }
+  })
   // Reflections across the glass.
   px(x + 2, y + 2, 1, h - 4, 'rgba(255, 255, 255, 0.22)')
   px(x + 4, y + 2, 1, Math.floor(h / 2), 'rgba(255, 255, 255, 0.14)')
@@ -487,10 +507,10 @@ export function hangingSign(px: Px, x: number, y: number, words: string, board: 
 }
 
 /** A wall lantern, for the side of a door. */
-export function wallLamp(px: Px, x: number, y: number, glow: string) {
+export function wallLamp(px: Px, x: number, y: number, light: string) {
   px(x + 1, y, 1, 1, '#2a2a30')
   px(x, y + 1, 3, 4, '#2a2a30')
-  px(x + 1, y + 2, 1, 2, glow)
+  glow('lamp', () => px(x + 1, y + 2, 1, 2, light))
   px(x, y + 5, 3, 1, '#2a2a30')
 }
 
@@ -498,7 +518,8 @@ export function wallLamp(px: Px, x: number, y: number, glow: string) {
 export function bulbs(px: Px, x: number, y: number, count: number, gap: number, frame: number, on = '#ffe680', off = '#8a6a2a') {
   for (let i = 0; i < count; i++) {
     const lit = (i + frame) % 2 === 0
-    px(x + i * gap, y, 1, 1, lit ? on : off)
+    if (lit) glow('neon', () => px(x + i * gap, y, 1, 1, on))
+    else px(x + i * gap, y, 1, 1, off)
   }
 }
 
@@ -516,8 +537,10 @@ export function lintel(px: Px, x: number, y: number, w: number, color: string) {
 export function fanlight(px: Px, x: number, y: number, frame: string, glass: string) {
   px(x + 4, y - 4, 8, 4, frame)
   px(x + 3, y - 2, 10, 2, frame)
-  px(x + 5, y - 3, 6, 3, glass)
-  px(x + 4, y - 1, 8, 1, glass)
+  glow('window', () => {
+    px(x + 5, y - 3, 6, 3, glass)
+    px(x + 4, y - 1, 8, 1, glass)
+  })
   px(x + 7, y - 3, 1, 3, frame)
   px(x + 9, y - 3, 1, 3, frame)
   px(x + 5, y - 3, 1, 1, '#ffffff')
@@ -548,7 +571,8 @@ export function bulbBorder(
 ) {
   let i = 0
   const dot = (bx: number, by: number) => {
-    px(bx, by, 1, 1, (i + frame) % 2 === 0 ? on : off)
+    if ((i + frame) % 2 === 0) glow('neon', () => px(bx, by, 1, 1, on))
+    else px(bx, by, 1, 1, off)
     i++
   }
   for (let bx = x; bx < x + w; bx += 2) dot(bx, y)
@@ -594,11 +618,13 @@ export function barberPole(px: Px, x: number, y: number, h: number, frame: numbe
   px(x, y - 2, 4, 2, '#d8dce4')
   px(x, y + h, 4, 2, '#d8dce4')
   px(x, y - 2, 4, 1, '#ffffff')
-  for (let i = 0; i < h; i++) {
-    const phase = (i + frame * 2) % 6
-    const color = phase < 2 ? '#d83a3a' : phase < 4 ? '#f4f4f4' : '#3a5ad8'
-    px(x, y + i, 4, 1, color)
-  }
+  glow('neon', () => {
+    for (let i = 0; i < h; i++) {
+      const phase = (i + frame * 2) % 6
+      const color = phase < 2 ? '#d83a3a' : phase < 4 ? '#f4f4f4' : '#3a5ad8'
+      px(x, y + i, 4, 1, color)
+    }
+  })
   px(x, y, 1, h, 'rgba(255, 255, 255, 0.35)')
   px(x + 3, y, 1, h, 'rgba(0, 0, 0, 0.25)')
 }

@@ -1,5 +1,5 @@
 import type { ArtContext, StampArt } from '../stampArt'
-import { icon, shadow, sprite, text, textCentred, textWidth, tint } from '../pixelArt'
+import { glow, icon, shadow, sprite, text, textCentred, textWidth, tint } from '../pixelArt'
 import {
   acUnit, awning, barberPole, brickWall, bulbBorder, canopy, chimney, dish, displayWindow, doorAt, downpipe,
   eaveShadow, fanlight, fireEscape, flatRoof, glassDoors, groundShadow, lintel, plinth, puffs,
@@ -84,10 +84,13 @@ const bakery: StampArt = {
     px(0, 38, 64, 1, '#3a6a54')
     px(0, 38, 2, 26, '#e2d6bc')
     px(62, 38, 2, 26, '#e2d6bc')
-    px(2, 39, 60, 7, '#1c382e')
-    textCentred(px, 'BAKERY', 32, 40, '#f2c86a')
-    px(8, 41, 3, 2, '#c88a48')
-    px(53, 41, 3, 2, '#c88a48')
+    // The fascia is lit.
+    glow('neon', () => {
+      px(2, 39, 60, 7, '#1c382e')
+      textCentred(px, 'BAKERY', 32, 40, '#f2c86a')
+      px(8, 41, 3, 2, '#c88a48')
+      px(53, 41, 3, 2, '#c88a48')
+    })
     awning(px, 2, 46, 60, 4, '#2f6a50', '#efe4c8')
     // Loaves and a cake in the window.
     px(4, 53, 38, 10, '#1a2a24')
@@ -165,11 +168,13 @@ const pawn: StampArt = {
     brickWall(px, 0, roof, c.w, c.h - roof, SOOT_BRICK)
     eaveShadow(px, 0, roof, c.w)
     // The sign across the first floor.
-    px(4, 13, c.w - 8, 16, '#14141a')
-    px(5, 14, c.w - 10, 14, '#22222c')
-    text(px, 'PAWN', 12, 16, '#2a2010', 2)
-    text(px, 'PAWN', 11, 15, '#f2c84a', 2)
-    px(5, 27, c.w - 10, 1, '#3a3a48')
+    glow('neon', () => {
+      px(4, 13, c.w - 8, 16, '#14141a')
+      px(5, 14, c.w - 10, 14, '#22222c')
+      text(px, 'PAWN', 12, 16, '#2a2010', 2)
+      text(px, 'PAWN', 11, 15, '#f2c84a', 2)
+      px(5, 27, c.w - 10, 1, '#3a3a48')
+    })
     // Three gold balls hanging off a bracket.
     px(56, 31, 16, 1, '#2a2a30')
     px(70, 29, 1, 3, '#2a2a30')
@@ -197,8 +202,10 @@ const pawn: StampArt = {
     for (let x = 4; x < 43; x += 3) px(x, 45, 1, 16, '#14141a')
     px(4, 52, 39, 1, '#14141a')
     // A shutter down over the door, and the sign that says what they do.
-    px(50, 40, 26, 6, '#8a2020')
-    textCentred(px, 'LOANS', 63, 40, '#f4ead0')
+    glow('neon', () => {
+      px(50, 40, 26, 6, '#8a2020')
+      textCentred(px, 'LOANS', 63, 40, '#f4ead0')
+    })
     rollerShutter(px, 49, 48, 14, 16)
     plinth(px, 0, c.h - 2, c.w, '#5a524a')
     groundShadow(px, c.w, roof, c.h)
@@ -253,19 +260,24 @@ const checks: StampArt = {
     stuccoWall(px, 0, roof, c.w, c.h - roof, { hi: '#e4dcc4', base: '#d4cab0', lo: '#bcb298', line: '#8a8270' })
     eaveShadow(px, 0, roof, c.w)
     // The sign is the building.
-    px(4, 12, c.w - 8, 26, '#1a1408')
-    px(5, 13, c.w - 10, 24, '#f2c830')
-    px(5, 13, c.w - 10, 1, '#fff08a')
-    textCentred(px, 'CHECKS', c.w / 2 + 1, 15, '#8a6a10', 2)
-    textCentred(px, 'CHECKS', c.w / 2, 14, '#1a1408', 2)
-    textCentred(px, 'CASHED', c.w / 2 + 1, 27, '#8a6a10', 2)
-    textCentred(px, 'CASHED', c.w / 2, 26, '#c83020', 2)
+    // A lightbox: the sign is the building.
+    glow('neon', () => {
+      px(4, 12, c.w - 8, 26, '#1a1408')
+      px(5, 13, c.w - 10, 24, '#f2c830')
+      px(5, 13, c.w - 10, 1, '#fff08a')
+      textCentred(px, 'CHECKS', c.w / 2 + 1, 15, '#8a6a10', 2)
+      textCentred(px, 'CHECKS', c.w / 2, 14, '#1a1408', 2)
+      textCentred(px, 'CASHED', c.w / 2 + 1, 27, '#8a6a10', 2)
+      textCentred(px, 'CASHED', c.w / 2, 26, '#c83020', 2)
+    })
     // Barred window with a neon OPEN in it, buzzing on and off.
     px(6, 42, 36, 18, '#1a1a20')
     px(7, 43, 34, 16, '#2a3440')
     const lit = c.frame === 0
-    px(12, 47, 17, 7, lit ? '#3a1018' : '#22161a')
-    text(px, 'OPEN', 13, 48, lit ? '#ff5a6a' : '#6a2a30')
+    glow('neon', () => {
+      px(12, 47, 17, 7, lit ? '#3a1018' : '#22161a')
+      text(px, 'OPEN', 13, 48, lit ? '#ff5a6a' : '#6a2a30')
+    })
     for (let x = 7; x < 41; x += 3) px(x, 43, 1, 16, '#101014')
     px(7, 50, 34, 1, '#101014')
     // The door, with its own steel gate.
@@ -323,16 +335,19 @@ const bingo: StampArt = {
     // The marquee.
     const mx = 38
     const mw = 100
-    px(mx, 14, mw, 24, '#3a0a0a')
-    px(mx + 1, 15, mw - 2, 22, '#a82020')
-    px(mx + 1, 15, mw - 2, 1, '#d84040')
-    bulbBorder(px, mx + 2, 16, mw - 4, 20, c.frame)
-    const words = 'BINGO'
-    const tw = textWidth(words, 3)
-    text(px, words, mx + Math.round((mw - tw) / 2) + 1, 19, '#3a0a0a', 3)
-    text(px, words, mx + Math.round((mw - tw) / 2), 18, '#ffd84a', 3)
-    px(mx + 20, 39, mw - 40, 7, '#f4f0e4')
-    textCentred(px, 'TUE THU 7PM', mx + mw / 2, 40, '#a82020')
+    // The marquee is lit all night.
+    glow('neon', () => {
+      px(mx, 14, mw, 24, '#3a0a0a')
+      px(mx + 1, 15, mw - 2, 22, '#a82020')
+      px(mx + 1, 15, mw - 2, 1, '#d84040')
+      bulbBorder(px, mx + 2, 16, mw - 4, 20, c.frame)
+      const words = 'BINGO'
+      const tw = textWidth(words, 3)
+      text(px, words, mx + Math.round((mw - tw) / 2) + 1, 19, '#3a0a0a', 3)
+      text(px, words, mx + Math.round((mw - tw) / 2), 18, '#ffd84a', 3)
+      px(mx + 20, 39, mw - 40, 7, '#f4f0e4')
+      textCentred(px, 'TUE THU 7PM', mx + mw / 2, 40, '#a82020')
+    })
     // Double doors (locked till seven), posters, little high windows.
     glassDoors(px, 80, 48, 16, '#2a2a30', '#5a7890', '#c8ccd4')
     px(82, 52, 5, 6, '#f2e0a0')
@@ -370,11 +385,13 @@ const patels: StampArt = {
     px(36, 18, 22, 9, '#8a4232')
     icon(px, 'star', 44, 20, '#f2c84a')
     // Fascia and awning.
-    px(2, 31, c.w - 4, 10, '#6a1a14')
-    px(3, 32, c.w - 6, 8, '#b8261c')
-    px(3, 32, c.w - 6, 1, '#e04a3a')
-    textCentred(px, "PATEL'S", c.w / 2 + 1, 34, '#5a0a08')
-    textCentred(px, "PATEL'S", c.w / 2, 33, '#fff4e0')
+    glow('neon', () => {
+      px(2, 31, c.w - 4, 10, '#6a1a14')
+      px(3, 32, c.w - 6, 8, '#b8261c')
+      px(3, 32, c.w - 6, 1, '#e04a3a')
+      textCentred(px, "PATEL'S", c.w / 2 + 1, 34, '#5a0a08')
+      textCentred(px, "PATEL'S", c.w / 2, 33, '#fff4e0')
+    })
     awning(px, 2, 41, c.w - 4, 5, '#2e7a4a', '#f0ead8')
     displayWindow(px, 4, 49, 40, 13, '#3a2a20', ['#e05a3a', '#f2c14e', '#4a8ad8', '#3a9d5c', '#f4f4f4', '#c84aa8'])
     // Crates of fruit on the pavement under the window.
@@ -452,24 +469,31 @@ const laundromat: StampArt = {
       windowAt(px, x, 15, 14, 8, x === 8 ? BASIN_WINDOW : { ...BASIN_WINDOW, curtain: '#7ab8d8' })
     }
     // The sign, big and blue.
-    px(2, 25, c.w - 4, 14, '#123a6a')
-    px(3, 26, c.w - 6, 12, '#2a6ab8')
-    px(3, 26, c.w - 6, 1, '#5a9ae0')
-    text(px, 'LAUNDROMAT', 6, 28, '#0a2448', 2, 0.5)
-    text(px, 'LAUNDROMAT', 5, 27, '#ffffff', 2, 0.5)
+    glow('neon', () => {
+      px(2, 25, c.w - 4, 14, '#123a6a')
+      px(3, 26, c.w - 6, 12, '#2a6ab8')
+      px(3, 26, c.w - 6, 1, '#5a9ae0')
+      text(px, 'LAUNDROMAT', 6, 28, '#0a2448', 2, 0.5)
+      text(px, 'LAUNDROMAT', 5, 27, '#ffffff', 2, 0.5)
+    })
     // Washers in a row behind the big window; one is going.
     px(48, 42, 46, 20, '#2a3038')
-    px(49, 43, 44, 18, '#b8d0dc')
-    px(49, 43, 44, 4, '#d8e8f0')
-    for (let i = 0; i < 4; i++) washer(px, 49 + i * 11, 48, i === 1 ? (c.frame ? '#6aa8f0' : '#3a7ad0') : '#5a6a7a')
-    px(50, 44, 1, 16, 'rgba(255, 255, 255, 0.45)')
+    // Open late, every strip light on.
+    glow('neon', () => {
+      px(49, 43, 44, 18, '#b8d0dc')
+      px(49, 43, 44, 4, '#d8e8f0')
+      for (let i = 0; i < 4; i++) washer(px, 49 + i * 11, 48, i === 1 ? (c.frame ? '#6aa8f0' : '#3a7ad0') : '#5a6a7a')
+      px(50, 44, 1, 16, 'rgba(255, 255, 255, 0.45)')
+    })
     // A smaller window the other side of the door, with the price card.
     px(3, 42, 26, 20, '#2a3038')
-    px(4, 43, 24, 18, '#b8d0dc')
-    washer(px, 5, 48, '#5a6a7a')
-    washer(px, 16, 48, '#5a6a7a')
-    px(6, 44, 14, 3, '#ffffff')
-    text(px, '2.50', 7, 44, '#c83030')
+    glow('neon', () => {
+      px(4, 43, 24, 18, '#b8d0dc')
+      washer(px, 5, 48, '#5a6a7a')
+      washer(px, 16, 48, '#5a6a7a')
+      px(6, 44, 14, 3, '#ffffff')
+      text(px, '2.50', 7, 44, '#c83030')
+    })
     for (const door of doorTiles(c)) {
       px(door.x, door.y - 6, 16, 6, '#2a6ab8')
       glassDoors(px, door.x + 1, door.y, 14, '#3a4450', '#a8d0e8', '#d8dce4')
@@ -499,7 +523,9 @@ const hotel: StampArt = {
     px(2, 6, 12, 42, '#0e0e14')
     px(3, 7, 10, 40, '#1e1a24')
     const on = c.frame === 0 ? '#ff4a5a' : '#ff7a86'
-    'HOTEL'.split('').forEach((letter, i) => text(px, letter, 7, 9 + i * 7, on))
+    glow('neon', () => {
+      'HOTEL'.split('').forEach((letter, i) => text(px, letter, 7, 9 + i * 7, on))
+    })
     px(14, 14, 3, 1, '#2a2a30')
     px(14, 40, 3, 1, '#2a2a30')
     canopy(px, 26, 43, 28, '#6a1a2a', 'INN')
@@ -524,13 +550,15 @@ const diner: StampArt = {
     // The sign stands on the roof.
     px(30, 12, 2, 5, '#3a3a42')
     px(80, 12, 2, 5, '#3a3a42')
-    px(18, -6, 76, 18, '#0e2a5a')
-    px(19, -5, 74, 16, '#f4f6fa')
-    px(19, -5, 74, 1, '#ffffff')
-    roundWindow(px, 28, 3, 6, '#2a5ab0', '#f4f6fa')
-    px(25, 1, 7, 5, '#e8eef8')
-    text(px, 'BLUE PLATE', 38, -1, '#1a4aa8', 1)
-    text(px, 'DINER', 47, 5, c.frame === 0 ? '#e83a4a' : '#ff8a96', 1)
+    glow('neon', () => {
+      px(18, -6, 76, 18, '#0e2a5a')
+      px(19, -5, 74, 16, '#f4f6fa')
+      px(19, -5, 74, 1, '#ffffff')
+      roundWindow(px, 28, 3, 6, '#2a5ab0', '#f4f6fa')
+      px(25, 1, 7, 5, '#e8eef8')
+      text(px, 'BLUE PLATE', 38, -1, '#1a4aa8', 1)
+      text(px, 'DINER', 47, 5, c.frame === 0 ? '#e83a4a' : '#ff8a96', 1)
+    })
     // The front: chrome, a blue stripe, a band of windows, a ribbed skirt.
     const top = 17
     px(0, top, c.w, 2, '#f0f4f8')
@@ -583,19 +611,24 @@ const donuts: StampArt = {
     px(46, 10, 2, 5, '#3a3a42')
     stuccoWall(px, 0, roof, c.w, c.h - roof, { hi: '#f8dce4', base: '#f0c8d4', lo: '#d8a8b8', line: '#a07888' })
     eaveShadow(px, 0, roof, c.w)
-    px(0, roof + 1, c.w, 7, '#ffffff')
-    textCentred(px, 'DONUTS', c.w / 2, roof + 2, '#d83a7a')
+    glow('neon', () => {
+      px(0, roof + 1, c.w, 7, '#ffffff')
+      textCentred(px, 'DONUTS', c.w / 2, roof + 2, '#d83a7a')
+    })
     // The display case through the glass, then a door that says SOLD OUT.
     px(4, 25, 52, 21, '#3a2a30')
-    px(5, 26, 50, 19, '#fff4f0')
-    for (let row = 0; row < 3; row++) {
-      for (let x = 7; x < 52; x += 6) {
-        const icing = ['#f48ab8', '#7a4a2a', '#f4f0e0', '#f2c14e'][(x / 6 + row) % 4 | 0]
-        px(x, 28 + row * 6, 4, 3, '#c8884a')
-        px(x, 28 + row * 6, 4, 2, icing)
+    // The display case is lit inside.
+    glow('neon', () => {
+      px(5, 26, 50, 19, '#fff4f0')
+      for (let row = 0; row < 3; row++) {
+        for (let x = 7; x < 52; x += 6) {
+          const icing = ['#f48ab8', '#7a4a2a', '#f4f0e0', '#f2c14e'][(x / 6 + row) % 4 | 0]
+          px(x, 28 + row * 6, 4, 3, '#c8884a')
+          px(x, 28 + row * 6, 4, 2, icing)
+        }
+        px(5, 31 + row * 6, 50, 1, '#d8c8c0')
       }
-      px(5, 31 + row * 6, 50, 1, '#d8c8c0')
-    }
+    })
     doorAt(px, 64, 32, { line: '#3a2a30', trim: '#ffffff', leaf: '#d83a7a', glass: '#f8e8e8' })
     plinth(px, 0, c.h - 2, c.w, '#a08890')
     groundShadow(px, c.w, roof, c.h)
@@ -712,7 +745,9 @@ const marcus: StampArt = {
       px(door.x + 7, door.y + 5, 3, 1, '#3a3a40')
       px(door.x + 7, door.y + 6, 2, 1, '#3a3a40')
       wallLamp(px, door.x + 16, door.y + 2, '#ffe080')
-      px(door.x + 15, door.y + 1, 5, 7, 'rgba(255, 220, 120, 0.25)')
+      glow('lamp', () => {
+        px(door.x + 15, door.y + 1, 5, 7, 'rgba(255, 220, 120, 0.25)')
+      })
     }
     // Two crates of beer by the step, for later.
     px(c.w - 17, c.h - 7, 7, 5, '#c89a3a')

@@ -9,9 +9,10 @@ import { CARPET_BORDERS, INTERIOR_TILES, WALL_TOP_COLORS } from './interiorTiles
 const ART_SIZE = 16
 const SCALE = TILE_SIZE / ART_SIZE
 
-type Draw = (px: (x: number, y: number, w: number, h: number, color: string) => void) => void
+export type Draw = (px: (x: number, y: number, w: number, h: number, color: string) => void) => void
 
-function makeCanvas(draw: Draw): HTMLCanvasElement {
+/** A square's canvas, at the size the game draws it, painted by one drawing. */
+export function makeCanvas(draw: Draw): HTMLCanvasElement {
   const canvas = document.createElement('canvas')
   canvas.width = ART_SIZE * SCALE
   canvas.height = ART_SIZE * SCALE
@@ -19,13 +20,14 @@ function makeCanvas(draw: Draw): HTMLCanvasElement {
   ctx.imageSmoothingEnabled = false
 
   draw((x, y, w, h, color) => {
+    if (w <= 0 || h <= 0) return
     ctx.fillStyle = color
     ctx.fillRect(x * SCALE, y * SCALE, w * SCALE, h * SCALE)
   })
   return canvas
 }
 
-function makeTexture(draw: Draw): Texture {
+export function makeTexture(draw: Draw): Texture {
   const texture = Texture.from(makeCanvas(draw))
   texture.source.scaleMode = 'nearest'
   return texture
@@ -232,70 +234,22 @@ const TILE_DRAWINGS: Record<number, Draw> = {
 }
 
 /**
- * Each tile's pictures and which one to use where.
+ * The picture of a tile on its own, before anything round it is considered.
  *
  * Interior tiles carry their own palettes and are never put through a town's
  * colour filter: a marble floor is marble in any town, and a room's identity
- * comes from which wall and floor it is built from, not from a tint. The town
- * filter is for the street — grass, stone, water — where a colour of light is
- * what it is for.
+ * comes from which wall and floor it is built from, not from a tint. Outdoor
+ * ground is drawn per town in `ground.ts`; what is left here — a bare wall, a
+ * furniture plinth, a prop nobody has put an object on — takes the town's tint.
  */
-function variantsFor(tile: number): { draws: Draw[]; themed: boolean } {
+export function baseDrawing(tile: number, col: number, row: number, themeId = 'default'): { draw: Draw; variant: number } {
   const interior = INTERIOR_TILES[tile]
-  if (interior) return { draws: interior.draws, themed: false }
-  return { draws: [TILE_DRAWINGS[tile] ?? FLOOR_TILE], themed: true }
-}
-
-const ALL_TILES = [...new Set([...Object.keys(TILE_DRAWINGS), ...Object.keys(INTERIOR_TILES)].map(Number))]
-
-/** Which picture of a tile to draw at a position. */
-export function tileVariant(tile: number, col: number, row: number): number {
-  const interior = INTERIOR_TILES[tile]
-  return interior ? interior.pick(col, row) % interior.draws.length : 0
-}
-
-const variantCaches = new Map<string, Record<number, Texture[]>>()
-
-/** Every picture of every tile, in a town's colours. */
-export function tileVariantTextures(themeId = 'default'): Record<number, Texture[]> {
-  const cached = variantCaches.get(themeId)
-  if (cached) return cached
-  const theme = TILE_THEMES[themeId] ?? TILE_THEMES.default
-  const textures: Record<number, Texture[]> = {}
-  for (const tile of ALL_TILES) {
-    const { draws, themed: inTownColours } = variantsFor(tile)
-    textures[tile] = draws.map((draw) => makeTexture(inTownColours ? themed(draw, theme) : draw))
+  if (interior) {
+    const variant = interior.pick(col, row) % interior.draws.length
+    return { draw: interior.draws[variant], variant }
   }
-  variantCaches.set(themeId, textures)
-  return textures
-}
-
-/** The first picture of every tile, for callers that only need one. */
-export function tileTextures(themeId = 'default'): Record<number, Texture> {
-  const variants = tileVariantTextures(themeId)
-  return Object.fromEntries(Object.entries(variants).map(([tile, list]) => [tile, list[0]]))
-}
-
-const tileCanvasCaches = new Map<string, Record<number, HTMLCanvasElement>>()
-
-/**
- * The same tile art as plain canvases, for anything drawing outside Pixi.
- *
- * The map editor paints with these, so what you paint really is what the game
- * draws — an editor with its own idea of what a tile looks like is an editor
- * you cannot trust.
- */
-export function tileCanvases(themeId = 'default'): Record<number, HTMLCanvasElement> {
-  const cached = tileCanvasCaches.get(themeId)
-  if (cached) return cached
   const theme = TILE_THEMES[themeId] ?? TILE_THEMES.default
-  const canvases: Record<number, HTMLCanvasElement> = {}
-  for (const tile of ALL_TILES) {
-    const { draws, themed: inTownColours } = variantsFor(tile)
-    canvases[tile] = makeCanvas(inTownColours ? themed(draws[0], theme) : draws[0])
-  }
-  tileCanvasCaches.set(themeId, canvases)
-  return canvases
+  return { draw: themed(TILE_DRAWINGS[tile] ?? FLOOR_TILE, theme), variant: 0 }
 }
 
 // ---------------------------------------------------------------------------
@@ -342,17 +296,9 @@ for (const side of ['n', 'e', 's', 'w'] as Side[]) {
   }
 }
 
-const edgeCache = new Map<string, Texture>()
-
 /** One edge piece, by the key `EDGE_DRAWINGS` files it under. */
-export function edgeTexture(key: string): Texture | null {
-  const cached = edgeCache.get(key)
-  if (cached) return cached
-  const draw = EDGE_DRAWINGS[key]
-  if (!draw) return null
-  const texture = makeTexture(draw)
-  edgeCache.set(key, texture)
-  return texture
+export function edgeDrawing(key: string): Draw | undefined {
+  return EDGE_DRAWINGS[key]
 }
 
 // ---------------------------------------------------------------------------

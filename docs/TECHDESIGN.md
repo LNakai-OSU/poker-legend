@@ -111,7 +111,13 @@ canvas and scaled to the 32px tile size with nearest-neighbour filtering, which
 is what produces the chunky GBA-era look without shipping any assets.
 
 - Tiles (floor, wall, furniture, carpet, water, road) are patterned rather than
-  flat, so large rooms don't read as blocks of colour.
+  flat, so large rooms don't read as blocks of colour. Out of doors a square is
+  drawn from where it is, not only what it is (`src/overworld/ground.ts`, reached
+  through `cellArt` in `cells.ts`, which the map editor uses too): its eight
+  neighbours decide its kerbs, rims, quay lips and foam; a road knows where it
+  sits in its run of road, so lane lines fall on the median; a hash of position
+  picks variants so nothing tiles visibly; and each town has its own palette,
+  paving and trees. Water and flower beds animate.
 - People (`src/overworld/characterArt.ts`) are 16x24: a tile wide, standing on
   their tile with the head over the one behind. Each is composed from layered
   pixel maps — anatomy, hairstyle, hat, face accessory, role outfit — with
@@ -149,10 +155,20 @@ a slot bank, a poker table, a bed. A stamp writes its tiles into the map and is
 listed in `AREA_STAMPS`; its art (`src/overworld/art/`) is drawn as one picture
 over the tiles and under the people, can spill past its footprint (eaves, red
 carpets), animate (marquee bulbs, neon), and carry a front drawn over the people
-standing behind it (counters, the cashier's bars). The content tests check that
+standing behind it (counters, the cashier's bars, the top of a lamp post: a stamp
+that stands up says how much of it does with `standsUp`). The content tests check that
 every stamp stands on the tiles it lays down, that every wall on a street
 belongs to a building and every furniture tile to an object, and that every
 door tile leads somewhere.
+
+**Night** (`src/overworld/lighting.ts`). Out of doors, each map gets a light map —
+one colour per art unit — that the street is multiplied by: the hour's ambient
+colour (`PERIOD_LIGHT` in `src/game/time.ts`), stepped pools under lamp posts (a
+stamp lists its `lights`) and halos round everything lit. Whatever glows is
+marked in the drawing with `glow('window' | 'lamp' | 'neon', …)` from
+`pixelArt.ts`; a stamp's drawing runs a second time keeping only those parts, and
+that night layer is drawn above the dark. People are tinted by the light under
+their feet. The browser suite checks the hour by measuring the canvas.
 
 People and props occupy their tile, so you cannot walk through a crowd. The
 camera is zoomed 2x with captions counter-scaled, because at 1x the map sat as

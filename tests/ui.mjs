@@ -528,46 +528,98 @@ await test('the town is one continuous place', async () => {
 })
 
 /**
+ * The average colour of what the overworld canvas is showing, 0..255 a channel.
+ *
+ * The hour's light is drawn by Pixi now, into the canvas, so there is no
+ * overlay element to count: the only honest check that the evening looks like
+ * the evening is to look at the pixels.
+ */
+async function canvasColour(page) {
+  const png = await page.locator('[data-testid="overworld"] canvas').first().screenshot()
+  return page.evaluate(async (b64) => {
+    const img = new Image()
+    img.src = `data:image/png;base64,${b64}`
+    await img.decode()
+    const c = document.createElement('canvas')
+    c.width = img.width
+    c.height = img.height
+    const ctx = c.getContext('2d')
+    ctx.drawImage(img, 0, 0)
+    const d = ctx.getImageData(0, 0, c.width, c.height).data
+    let r = 0
+    let g = 0
+    let b = 0
+    for (let i = 0; i < d.length; i += 4) {
+      r += d[i]
+      g += d[i + 1]
+      b += d[i + 2]
+    }
+    const n = d.length / 4
+    return { r: r / n, g: g / n, b: b / n, light: (0.299 * r + 0.587 * g + 0.114 * b) / n }
+  }, png.toString('base64'))
+}
+
+/**
  * The town keeps its own hours.
  *
  * Every walk through a street used to meet exactly the same people on exactly
  * the same tiles, whatever you had been doing. A character with a schedule is
  * somewhere else by the evening, which is the only thing that makes the clock
  * worth having — and the only thing that makes coming back later a reason to.
+ * And the street looks like the hour: dim and warm in the evening, dark and
+ * blue at night, with the lamps and windows lit.
  */
 await test('who is on the street depends on the hour', async () => {
   const page = await newPage(baseSave({ cityId: 'apartment', areaId: 'basin', period: 'morning' }))
   await page.goto(BASE)
   await page.waitForSelector('canvas')
-  await page.waitForTimeout(500)
+  await page.waitForTimeout(800)
 
   const whoIsHere = () => poisOf(page).then((people) => people.map((p) => p.name).sort())
   const hudSays = () => page.textContent('[data-testid="overworld"]').catch(() => '')
+  const lightOf = (p) => p.getAttribute('[data-testid="overworld"]', 'data-light')
 
   const morning = await whoIsHere()
   assert(morning.includes('Marcus'), `Marcus is not on Basin Street in the morning (saw: ${morning})`)
   assert((await hudSays()).includes('Morning'), 'the clock does not say what time it is')
 
-  // The light of the hour is drawn over the map, and morning is the one hour
-  // that is left clear.
-  assert(
-    (await page.locator('[data-testid="period-light"]').count()) === 0,
-    'the morning is being tinted',
-  )
+  // Morning is the hour the art is drawn for, and is left clear.
+  assert((await lightOf(page)) === 'day', 'the morning is being lit')
+  const day = await canvasColour(page)
 
   const evening = await newPage(baseSave({ cityId: 'apartment', areaId: 'basin', period: 'evening' }))
   await evening.goto(BASE)
   await evening.waitForSelector('canvas')
-  await evening.waitForTimeout(500)
+  await evening.waitForTimeout(800)
   const later = await poisOf(evening).then((people) => people.map((p) => p.name).sort())
   assert(!later.includes('Marcus'), 'Marcus is still on Basin Street in the evening')
-  assert(
-    (await evening.locator('[data-testid="period-light"]').count()) === 1,
-    'the evening looks exactly like the morning',
-  )
-  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
-  await page.close()
-  await evening.close()
+  assert((await lightOf(evening)) === 'evening', 'the evening is not lit as the evening')
+  const dusk = await canvasColour(evening)
+  // Dimmer, and warmer: the red holds up better than the blue does.
+  assert(dusk.light < day.light * 0.88, `the evening is not dimmer (${dusk.light.toFixed(1)} against ${day.light.toFixed(1)})`)
+  assert(dusk.r / dusk.b > (day.r / day.b) * 1.1, 'the evening is not warmer than the morning')
+
+  const night = await newPage(baseSave({ cityId: 'apartment', areaId: 'basin', period: 'night' }))
+  await night.goto(BASE)
+  await night.waitForSelector('canvas')
+  await night.waitForTimeout(800)
+  assert((await lightOf(night)) === 'night', 'the night is not lit as the night')
+  const dark = await canvasColour(night)
+  // Properly dark, and blue rather than grey.
+  assert(dark.light < day.light * 0.6, `the night is not dark (${dark.light.toFixed(1)} against ${day.light.toFixed(1)})`)
+  assert(dark.b / dark.r > (day.b / day.r) * 1.15, 'the night is not blue')
+
+  // Rooms keep their lamps on whatever the hour.
+  const indoors = await newPage(baseSave({ cityId: 'apartment', areaId: 'bodega', period: 'night' }))
+  await indoors.goto(BASE)
+  await indoors.waitForSelector('canvas')
+  await indoors.waitForTimeout(500)
+  assert((await lightOf(indoors)) === 'day', 'a room goes dark at night')
+
+  for (const p of [page, evening, night, indoors]) {
+    assert(p.__errors.length === 0, `console errors: ${p.__errors[0]}`)
+    await p.close()
+  }
 })
 
 await test('the window in the apartment is scenery, not a person', async () => {
@@ -1577,12 +1629,21 @@ await test('the map editor offers to save, and warns about a shared map', async 
   await page.waitForTimeout(200)
   assert(!(await page.locator('[data-testid="save"]').isDisabled()), 'Save is not offered after painting')
 
-  // Every room has a map of its own now, but the six stretches of road between
-  // the towns are still drawn from one, and the editor has to say so.
+  // Every room and every stretch of road has a map of its own now, so a road
+  // carries no warning...
   await page.selectOption('select', 'road-mesa')
   await page.waitForTimeout(600)
   const warning = page.locator('[data-testid="shared-warning"]')
-  assert(await warning.isVisible(), 'no warning that this road is five other roads')
+  assert(!(await warning.isVisible()), 'a road with its own map is said to be shared')
+
+  // ...but a map can still be shared (a room copied for a second shop is one
+  // paste away), and when the source says it is, the editor has to say so.
+  await page.route('**/__editor/area?id=road-riverbend', (route) =>
+    route.fulfill({ json: { constant: 'ROAD_MESA', sharedWith: ['road-mesa'] } }),
+  )
+  await page.selectOption('select', 'road-riverbend')
+  await page.waitForTimeout(600)
+  assert(await warning.isVisible(), 'no warning that this road is another road too')
   assert(
     await page.locator('[data-testid="save-split"]').isVisible(),
     'no way to give this area a map of its own',
