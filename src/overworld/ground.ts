@@ -319,7 +319,7 @@ const ISLAND: GroundPalette = {
 }
 
 const NEON: GroundPalette = {
-  pave: { hi: '#4c4759', base: '#3d3949', alt: '#393546', lo: '#353141', seam: '#26232f', crack: '#1f1d27' },
+  pave: { hi: '#58526a', base: '#48435a', alt: '#444056', lo: '#3f3b50', seam: '#2c2938', crack: '#24212e' },
   kerb: { lip: '#d4d6e2', top: '#8a8a9c', face: '#2c2a36', seam: '#1e1c26' },
   road: {
     base: '#25222c', grain: '#2f2b37', grainLo: '#1e1c24', edge: '#eeeef6', median: '#f2c040', gutter: '#1c1a21',
@@ -339,7 +339,7 @@ const NEON: GroundPalette = {
     lipHi: '#dadce6', lipTop: '#4e4a5c', lipFace: '#2a2734',
   },
   plaza: {
-    kind: 'terrazzo', base: '#2f2b3a', fleck: '#463f58', fleckHi: '#5e5574', inlay: '#a8863a', inlayHi: '#e2c262',
+    kind: 'terrazzo', base: '#3c374b', fleck: '#524a66', fleckHi: '#6a6084', inlay: '#a8863a', inlayHi: '#e2c262',
     sheen: ['#5a2c62', '#24505e'],
   },
   tree: {

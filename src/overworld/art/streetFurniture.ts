@@ -39,7 +39,7 @@ const WARM = '#ffd27a'
 const lampIron: StampArt = {
   bleed: { top: 4, right: 2 },
   standsUp: 18,
-  lights: [{ x: 8, y: 30, reach: 46, color: WARM, strength: 0.95 }],
+  lights: [{ x: 8, y: 29, reach: 38, color: WARM, strength: 1 }],
   draw: (px) => {
     const iron = '#2a2b33'
     const ironHi = '#55576a'
@@ -77,7 +77,7 @@ const lampIron: StampArt = {
 const lampWestern: StampArt = {
   bleed: { top: 2, right: 3 },
   standsUp: 18,
-  lights: [{ x: 11, y: 30, reach: 40, color: '#ffc46a', strength: 0.9 }],
+  lights: [{ x: 11, y: 29, reach: 34, color: '#ffc46a', strength: 1 }],
   draw: (px) => {
     const wood = '#8a5e3a'
     const woodHi = '#b07c50'
@@ -112,7 +112,7 @@ const lampWestern: StampArt = {
 const lampQuay: StampArt = {
   bleed: { top: 4, right: 2 },
   standsUp: 18,
-  lights: [{ x: 8, y: 30, reach: 44, color: WARM, strength: 0.9 }],
+  lights: [{ x: 8, y: 29, reach: 36, color: WARM, strength: 1 }],
   draw: (px) => {
     const green = '#2a5a40'
     const greenHi = '#4a8a62'
@@ -145,7 +145,7 @@ const lampQuay: StampArt = {
 const lampHarbor: StampArt = {
   bleed: { top: 6, right: 2 },
   standsUp: 18,
-  lights: [{ x: 8, y: 30, reach: 50, color: '#fff0c8', strength: 0.95 }],
+  lights: [{ x: 8, y: 29, reach: 42, color: '#ffe8b0', strength: 1 }],
   draw: (px) => {
     const iron = '#1e2028'
     const ironHi = '#4a4e5e'
@@ -184,7 +184,7 @@ const lampTiki: StampArt = {
   bleed: { top: 6, right: 2 },
   standsUp: 18,
   frames: 2,
-  lights: [{ x: 8, y: 30, reach: 38, color: '#ffa64a', strength: 0.85 }],
+  lights: [{ x: 8, y: 29, reach: 32, color: '#ffa64a', strength: 1 }],
   draw: (px, c) => {
     const cane = '#c8a860'
     const caneHi = '#e8d088'
@@ -218,7 +218,7 @@ const lampTiki: StampArt = {
 const lampChrome: StampArt = {
   bleed: { top: 4, right: 2 },
   standsUp: 18,
-  lights: [{ x: 8, y: 30, reach: 50, color: '#e8dcff', strength: 1 }],
+  lights: [{ x: 8, y: 29, reach: 44, color: '#f0e4ff', strength: 1 }],
   draw: (px) => {
     footShadow(px, 9, 29, 10)
     px(5, 28, 6, 3, '#1c1b24')
@@ -243,7 +243,7 @@ const lampChrome: StampArt = {
 const lampGilded: StampArt = {
   bleed: { top: 7, right: 2, left: 1 },
   standsUp: 18,
-  lights: [{ x: 8, y: 30, reach: 52, color: '#ffe0a0', strength: 1 }],
+  lights: [{ x: 8, y: 29, reach: 44, color: '#ffe0a0', strength: 1 }],
   draw: (px) => {
     const iron = '#1c1a20'
     const ironHi = '#4a4652'
@@ -1002,8 +1002,9 @@ function parkedCar(body: string, facing: 'e' | 'w'): StampArt {
       p(26, 6, 2, 1, '#e8eaf0')
       p(W - 4, 8, 3, 2, '#c8ccd4')
       p(0, 8, 3, 2, '#c8ccd4')
-      glow('lamp', () => p(W - 4, 5, 2, 2, '#fff4c8'))
-      glow('neon', () => p(1, 5, 2, 2, '#e83a3a'))
+      // Parked, so its lamps are off.
+      p(W - 4, 5, 2, 2, '#fff4c8')
+      p(1, 5, 2, 2, '#e83a3a')
     },
   }
 }

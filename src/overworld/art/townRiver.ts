@@ -1,5 +1,5 @@
 import type { StampArt } from '../stampArt'
-import { icon, shadow, text, textCentred, textWidth, type Px } from '../pixelArt'
+import { glow, icon, shadow, text, textCentred, textWidth, type Px } from '../pixelArt'
 import {
   acUnit, archedWindow, bulbBorder, bulbs, chimney, doorAt, eaveShadow, glassDoors, groundShadow,
   plinth, puffs, sidingWall, stuccoWall, tinRoof, wallLamp, windowAt,
@@ -72,14 +72,17 @@ const casinoSilverCreek: StampArt = {
     px(w - 72, 6, 2, 8, '#2a2420')
     const signW = 112
     const sx = Math.round((w - signW) / 2)
-    px(sx, -10, signW, 18, '#3a0c08')
-    px(sx + 1, -9, signW - 2, 16, '#8e2018')
-    px(sx + 1, -9, signW - 2, 1, '#c8402e')
-    bulbBorder(px, sx + 2, -8, signW - 4, 14, frame)
-    const words = 'SILVER CREEK'
-    const tx = sx + Math.round((signW - textWidth(words, 2)) / 2)
-    text(px, words, tx + 1, -5, '#3a0c08', 2)
-    text(px, words, tx, -6, '#f4f4f8', 2)
+    // The name in lights.
+    glow('neon', () => {
+      px(sx, -10, signW, 18, '#3a0c08')
+      px(sx + 1, -9, signW - 2, 16, '#8e2018')
+      px(sx + 1, -9, signW - 2, 1, '#c8402e')
+      bulbBorder(px, sx + 2, -8, signW - 4, 14, frame)
+      const words = 'SILVER CREEK'
+      const tx = sx + Math.round((signW - textWidth(words, 2)) / 2)
+      text(px, words, tx + 1, -5, '#3a0c08', 2)
+      text(px, words, tx, -6, '#f4f4f8', 2)
+    })
     // The false front: a stepped parapet, highest over the middle bay.
     stuccoWall(px, 0, 14, w, h - 14, ADOBE, 3)
     px(0, 14, w, 2, TIMBER.base)
@@ -98,11 +101,13 @@ const casinoSilverCreek: StampArt = {
     // The CASINO board over the marquee.
     const bx = 70
     const bw = w - 140
-    px(bx, 20, bw, 18, TIMBER.line)
-    px(bx + 1, 21, bw - 2, 16, '#2a1a10')
-    bulbBorder(px, bx + 2, 22, bw - 4, 14, frame + 1)
-    textCentred(px, 'CASINO', w / 2 + 1, 25, '#5a3a10', 2)
-    textCentred(px, 'CASINO', w / 2, 24, '#f2c84a', 2)
+    glow('neon', () => {
+      px(bx, 20, bw, 18, TIMBER.line)
+      px(bx + 1, 21, bw - 2, 16, '#2a1a10')
+      bulbBorder(px, bx + 2, 22, bw - 4, 14, frame + 1)
+      textCentred(px, 'CASINO', w / 2 + 1, 25, '#5a3a10', 2)
+      textCentred(px, 'CASINO', w / 2, 24, '#f2c84a', 2)
+    })
     // The marquee, on two timber posts, bulbs all along its edge.
     px(56, 40, w - 112, 9, '#5a120e')
     px(56, 40, w - 112, 7, '#a8241c')
@@ -172,9 +177,11 @@ function hotelWing(sign: string, mirror: boolean): StampArt {
       // The sign along the parapet.
       const sw = textWidth(sign) + 8
       const sx = mirror ? 10 : w - sw - 10
-      px(sx, 2, sw, 9, TURQUOISE_DARK)
-      px(sx + 1, 3, sw - 2, 7, TURQUOISE)
-      text(px, sign, sx + 4, 4, '#fff8e8')
+      glow('neon', () => {
+        px(sx, 2, sw, 9, TURQUOISE_DARK)
+        px(sx + 1, 3, sw - 2, 7, TURQUOISE)
+        text(px, sign, sx + 4, 4, '#fff8e8')
+      })
       // The portal: a timber walkway roof on posts, and its deep shade.
       px(0, 35, w, 4, TIMBER.line)
       px(0, 35, w, 3, TIMBER.base)
@@ -249,19 +256,24 @@ const motel: StampArt = {
     const { w, h, frame } = c
     // The sign: a board on a pole with an arrow pointing down at the office.
     px(w - 22, -3, 2, 6, '#3a3a40')
-    px(w - 52, -15, 46, 14, '#1a1a22')
-    px(w - 51, -14, 44, 12, '#e8e0c8')
-    text(px, 'MOTEL', w - 47, -13, '#d82a2a')
-    text(px, 'VACANCY', w - 49, -7, frame ? '#3ad86a' : '#1a6a3a')
-    px(w - 10, -12, 4, 3, '#d82a2a')
-    px(w - 8, -9, 2, 2, '#d82a2a')
+    // VACANCY, buzzing all night.
+    glow('neon', () => {
+      px(w - 52, -15, 46, 14, '#1a1a22')
+      px(w - 51, -14, 44, 12, '#e8e0c8')
+      text(px, 'MOTEL', w - 47, -13, '#d82a2a')
+      text(px, 'VACANCY', w - 49, -7, frame ? '#3ad86a' : '#1a6a3a')
+      px(w - 10, -12, 4, 3, '#d82a2a')
+      px(w - 8, -9, 2, 2, '#d82a2a')
+    })
     puebloRoof(px, -2, 0, w + 4, 12)
     stuccoWall(px, 0, 12, w, h - 12, ADOBE, 7)
     eaveShadow(px, 0, 12, w)
     vigas(px, 0, 14, w)
     windowAt(px, 4, 24, 28, 12, { ...DESERT_WINDOW, glass: '#e8b858', glassHi: '#f8d888', bars: 'none' })
     px(6, 27, 25, 7, '#2a2a30')
-    text(px, 'OFFICE', 7, 28, frame ? '#ff6a3a' : '#ff8a5a')
+    glow('neon', () => {
+      text(px, 'OFFICE', 7, 28, frame ? '#ff6a3a' : '#ff8a5a')
+    })
     doorAt(px, 32, 32, { line: TIMBER.line, trim: TURQUOISE, leaf: '#6a4226', glass: '#e8b858' })
     // Ice machine and a soda machine against the wall.
     px(52, 26, 11, 20, '#c8d0d8')
@@ -329,9 +341,11 @@ const riverboat: StampArt = {
       px(x + 1, 22, 4, 5, '#ffd27a')
       px(x + 1, 22, 4, 2, '#ffe8a8')
     }
-    px(60, 18, 64, 9, '#5a120e')
-    px(61, 19, 62, 7, '#a8241c')
-    textCentred(px, 'RIVER QUEEN', 92, 20, '#f2c84a')
+    glow('neon', () => {
+      px(60, 18, 64, 9, '#5a120e')
+      px(61, 19, 62, 7, '#a8241c')
+      textCentred(px, 'RIVER QUEEN', 92, 20, '#f2c84a')
+    })
     // Main deck: lit arched windows, a railing in front, bunting along the top.
     px(10, 32, 160, 16, WHITE_PAINT.line)
     px(11, 33, 158, 15, WHITE_PAINT.base)
@@ -405,10 +419,12 @@ const landingDiner: StampArt = {
     px(0, 14, 2, h - 14, '#ece8de')
     px(w - 2, 14, 2, h - 14, '#c8c2b4')
     // The sign on the roof edge.
-    px(24, -2, 48, 12, '#5a120e')
-    px(25, -1, 46, 10, '#c8302a')
-    px(25, -1, 46, 1, '#e86050')
-    textCentred(px, 'DINER', w / 2, 1, '#ffffff', 1)
+    glow('neon', () => {
+      px(24, -2, 48, 12, '#5a120e')
+      px(25, -1, 46, 10, '#c8302a')
+      px(25, -1, 46, 1, '#e86050')
+      textCentred(px, 'DINER', w / 2, 1, '#ffffff', 1)
+    })
     px(36, 10, 2, 4, '#3a3a40')
     px(58, 10, 2, 4, '#3a3a40')
     // Porch roof.
@@ -424,8 +440,10 @@ const landingDiner: StampArt = {
       doorAt(px, door.x, door.y, { line: '#2a4a5a', trim: '#ece8de', leaf: '#ece8de', glass: '#a8d0e0' })
       // EAT, and an arrow that blinks at the door.
       px(door.x - 12, door.y - 12, 11, 7, '#1a1a22')
-      text(px, 'EAT', door.x - 11, door.y - 11, frame ? '#ffe060' : '#ff8a3a')
-      px(door.x - 2, door.y - 9, 2, 1, frame ? '#ffe060' : '#ff8a3a')
+      glow('neon', () => {
+        text(px, 'EAT', door.x - 11, door.y - 11, frame ? '#ffe060' : '#ff8a3a')
+        px(door.x - 2, door.y - 9, 2, 1, frame ? '#ffe060' : '#ff8a3a')
+      })
     }
     for (const x of [1, w - 4]) {
       px(x, 26, 3, h - 26, '#ece8de')

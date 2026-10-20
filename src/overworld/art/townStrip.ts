@@ -1,5 +1,5 @@
 import type { StampArt } from '../stampArt'
-import { neonText, shadow, sprite, text, textCentred, textWidth, tint, type Px } from '../pixelArt'
+import { glow, neonText, shadow, sprite, text, textCentred, textWidth, tint, type Px } from '../pixelArt'
 import {
   archedWindow, awning, barrelRoof, bulbs, eaveShadow, flatRoof, glassDoors, groundShadow,
   plinth, roundWindow, stoneWall, windowAt,
@@ -47,6 +47,10 @@ function glassGrid(px: Px, x: number, y: number, w: number, h: number, glass: st
 
 /** A neon tube along an edge: a bright core with a dim glow either side. */
 function tube(px: Px, x: number, y: number, w: number, h: number, n: { core: string; tube: string; glow: string }) {
+  glow('neon', () => tubeDrawn(px, x, y, w, h, n))
+}
+
+function tubeDrawn(px: Px, x: number, y: number, w: number, h: number, n: { core: string; tube: string; glow: string }) {
   if (w >= h) {
     px(x, y - 1, w, 1, n.glow)
     px(x, y, w, h, n.tube)
@@ -65,7 +69,7 @@ function starburst(px: Px, cx: number, cy: number, frame: number, color: string)
   const shape = frame % 2 === 0
     ? ['...#...', '...#...', '...#...', '###o###', '...#...', '...#...', '...#...']
     : ['#.....#', '.#...#.', '..#.#..', '...o...', '..#.#..', '.#...#.', '#.....#']
-  sprite(px, shape, cx - 3, cy - 3, { '#': color, o: '#ffffff' })
+  glow('neon', () => sprite(px, shape, cx - 3, cy - 3, { '#': color, o: '#ffffff' }))
 }
 
 /**
@@ -102,40 +106,46 @@ const casinoMesa: StampArt = {
     // The marquee: gold edges, two rows of chasing bulbs, CASINO on white.
     px(0, 58, w, 16, '#1a1024')
     px(4, 58, w - 8, 16, '#2a1a08')
-    px(5, 59, w - 10, 14, '#f4f0e4')
-    px(5, 59, w - 10, 1, GOLD)
-    px(5, 72, w - 10, 1, GOLD)
-    bulbs(px, 6, 60, Math.floor((w - 12) / 3) + 1, 3, frame)
-    bulbs(px, 7, 71, Math.floor((w - 12) / 3), 3, frame + 1)
-    const cw = textWidth('CASINO', 2)
-    text(px, 'CASINO', Math.round((w - cw) / 2) + 1, 62, '#7a1010', 2)
-    text(px, 'CASINO', Math.round((w - cw) / 2), 61, '#d8202a', 2)
-    text(px, 'OPEN 24 HRS', 10, 63, '#3a3a48')
-    text(px, 'POKER  CRAPS', w - 10 - textWidth('POKER  CRAPS'), 63, '#3a3a48')
+    // The marquee is a lightbox.
+    glow('neon', () => {
+      px(5, 59, w - 10, 14, '#f4f0e4')
+      px(5, 59, w - 10, 1, GOLD)
+      px(5, 72, w - 10, 1, GOLD)
+      bulbs(px, 6, 60, Math.floor((w - 12) / 3) + 1, 3, frame)
+      bulbs(px, 7, 71, Math.floor((w - 12) / 3), 3, frame + 1)
+      const cw = textWidth('CASINO', 2)
+      text(px, 'CASINO', Math.round((w - cw) / 2) + 1, 62, '#7a1010', 2)
+      text(px, 'CASINO', Math.round((w - cw) / 2), 61, '#d8202a', 2)
+      text(px, 'OPEN 24 HRS', 10, 63, '#3a3a48')
+      text(px, 'POKER  CRAPS', w - 10 - textWidth('POKER  CRAPS'), 63, '#3a3a48')
+    })
     shadow(px, 4, 74, w - 8, 2, 0.4)
     // The floor through the glass: machines, glowing.
-    px(0, 73, w, h - 73, '#1a1024')
-    for (let x = 4; x < w - 4; x += 7) {
-      px(x, 78, 5, 12, '#5a2a7a')
-      px(x, 78, 5, 2, (x + frame) % 2 ? '#ffe14f' : '#ff8a3a')
-      px(x + 1, 81, 3, 2, '#e8e8f0')
-    }
-    for (const x of [58, w - 62]) {
-      px(x, 73, 4, h - 75, GOLD_DARK)
-      px(x + 1, 73, 1, h - 75, GOLD)
-    }
-    for (const door of doorTiles(c)) {
-      px(door.x - 10, door.y - 2, 36, 18, '#2a1a08')
-      glassDoors(px, door.x - 9, door.y - 1, 16, GOLD_DARK, '#3a2a4a', GOLD)
-      glassDoors(px, door.x + 9, door.y - 1, 16, GOLD_DARK, '#3a2a4a', GOLD)
-    }
-    // A neon cactus on the left, a pair of dice on the right.
-    sprite(px, ['..#..', '#.#..', '#.#.#', '###.#', '..###', '..#..', '..#..', '..#..'], 6, 77, { '#': '#5aff7a' })
-    px(w - 18, 78, 7, 7, '#f4f4f4')
-    px(w - 16, 80, 1, 1, '#d8202a')
-    px(w - 14, 82, 1, 1, '#d8202a')
-    px(w - 11, 82, 6, 6, '#f4f4f4')
-    px(w - 9, 84, 1, 1, '#d8202a')
+    // The floor through the glass, every machine lit.
+    glow('neon', () => {
+      px(0, 73, w, h - 73, '#1a1024')
+      for (let x = 4; x < w - 4; x += 7) {
+        px(x, 78, 5, 12, '#5a2a7a')
+        px(x, 78, 5, 2, (x + frame) % 2 ? '#ffe14f' : '#ff8a3a')
+        px(x + 1, 81, 3, 2, '#e8e8f0')
+      }
+      for (const x of [58, w - 62]) {
+        px(x, 73, 4, h - 75, GOLD_DARK)
+        px(x + 1, 73, 1, h - 75, GOLD)
+      }
+      for (const door of doorTiles(c)) {
+        px(door.x - 10, door.y - 2, 36, 18, '#2a1a08')
+        glassDoors(px, door.x - 9, door.y - 1, 16, GOLD_DARK, '#3a2a4a', GOLD)
+        glassDoors(px, door.x + 9, door.y - 1, 16, GOLD_DARK, '#3a2a4a', GOLD)
+      }
+      // A neon cactus on the left, a pair of dice on the right.
+      sprite(px, ['..#..', '#.#..', '#.#.#', '###.#', '..###', '..#..', '..#..', '..#..'], 6, 77, { '#': '#5aff7a' })
+      px(w - 18, 78, 7, 7, '#f4f4f4')
+      px(w - 16, 80, 1, 1, '#d8202a')
+      px(w - 14, 82, 1, 1, '#d8202a')
+      px(w - 11, 82, 6, 6, '#f4f4f4')
+      px(w - 9, 84, 1, 1, '#d8202a')
+    })
     plinth(px, 0, h - 2, w, '#3a2a18')
     // Red carpet and its ropes.
     for (const door of doorTiles(c)) {
@@ -169,27 +179,32 @@ const luxury: StampArt = {
     px(0, 59, w, 1, GOLD)
     px(0, 70, w, 1, GOLD)
     const lw = textWidth('LUXURY', 2)
-    text(px, 'LUXURY', Math.round((w - lw) / 2), 60, GOLD, 2)
+    glow('neon', () => {
+      text(px, 'LUXURY', Math.round((w - lw) / 2), 60, GOLD, 2)
+    })
     px(0, 71, w, h - 71, '#14141a')
-    for (const [x, item] of [[3, 'watch'], [52, 'bag']] as const) {
-      px(x, 74, 25, 19, GOLD_DARK)
-      px(x + 1, 75, 23, 17, '#1a1a22')
-      px(x + 7, 75, 11, 17, 'rgba(255, 240, 200, 0.12)')
-      px(x + 8, 87, 9, 4, '#e8e4dc')
-      if (item === 'watch') {
-        px(x + 10, 81, 5, 5, GOLD)
-        px(x + 11, 82, 3, 3, '#f4f4f4')
-        px(x + 12, 82, 1, 2, '#1a1a22')
-        px(x + 11, 79, 3, 2, '#2a2a30')
-        px(x + 11, 86, 3, 1, '#2a2a30')
-      } else {
-        px(x + 9, 81, 8, 6, '#b82a3a')
-        px(x + 10, 79, 6, 1, '#8a1a2a')
-        px(x + 10, 79, 1, 2, '#8a1a2a')
-        px(x + 15, 79, 1, 2, '#8a1a2a')
-        px(x + 12, 83, 2, 1, GOLD)
+    // Spotlit in the window all night.
+    glow('neon', () => {
+      for (const [x, item] of [[3, 'watch'], [52, 'bag']] as const) {
+        px(x, 74, 25, 19, GOLD_DARK)
+        px(x + 1, 75, 23, 17, '#1a1a22')
+        px(x + 7, 75, 11, 17, 'rgba(255, 240, 200, 0.12)')
+        px(x + 8, 87, 9, 4, '#e8e4dc')
+        if (item === 'watch') {
+          px(x + 10, 81, 5, 5, GOLD)
+          px(x + 11, 82, 3, 3, '#f4f4f4')
+          px(x + 12, 82, 1, 2, '#1a1a22')
+          px(x + 11, 79, 3, 2, '#2a2a30')
+          px(x + 11, 86, 3, 1, '#2a2a30')
+        } else {
+          px(x + 9, 81, 8, 6, '#b82a3a')
+          px(x + 10, 79, 6, 1, '#8a1a2a')
+          px(x + 10, 79, 1, 2, '#8a1a2a')
+          px(x + 15, 79, 1, 2, '#8a1a2a')
+          px(x + 12, 83, 2, 1, GOLD)
+        }
       }
-    }
+    })
     for (const door of doorTiles(c)) {
       px(door.x - 4, door.y - 4, 24, 3, '#08080c')
       px(door.x - 4, door.y - 2, 24, 1, GOLD)
@@ -209,10 +224,12 @@ const motors: StampArt = {
     px(-1, 0, w + 2, 16, '#08080e')
     const mw = textWidth('MOTORS', 2)
     neonText(px, 'MOTORS', Math.round((w - mw) / 2), 3, CYAN_NEON.core, CYAN_NEON.glow, 2)
-    for (const y of [5, 9, 13]) {
-      px(4, y, 8 + (y % 3) * 2, 1, CYAN_NEON.tube)
-      px(w - 12 - (y % 3) * 2, y, 8 + (y % 3) * 2, 1, CYAN_NEON.tube)
-    }
+    glow('neon', () => {
+      for (const y of [5, 9, 13]) {
+        px(4, y, 8 + (y % 3) * 2, 1, CYAN_NEON.tube)
+        px(w - 12 - (y % 3) * 2, y, 8 + (y % 3) * 2, 1, CYAN_NEON.tube)
+      }
+    })
     // Two decks of parking, cars seen from above.
     for (const [y, seed] of [[16, 1], [32, 2]]) {
       px(0, y, w, 16, '#3a3a44')
@@ -230,33 +247,36 @@ const motors: StampArt = {
     }
     // The showroom.
     px(0, 48, w, h - 48, '#c8ccd4')
-    px(2, 50, w - 4, h - 54, '#14141c')
-    // Spotlights on the turntable.
-    for (const [sx, dir] of [[64, 1], [w - 8, -1]] as const) {
-      for (let i = 0; i < 26; i++) {
-        px(sx + dir * Math.round(i * 0.6), 51 + i, 2 + Math.round(i / 4), 1, 'rgba(255, 250, 220, 0.08)')
+    // The showroom, lit for whoever drives past.
+    glow('neon', () => {
+      px(2, 50, w - 4, h - 54, '#14141c')
+      // Spotlights on the turntable.
+      for (const [sx, dir] of [[64, 1], [w - 8, -1]] as const) {
+        for (let i = 0; i < 26; i++) {
+          px(sx + dir * Math.round(i * 0.6), 51 + i, 2 + Math.round(i / 4), 1, 'rgba(255, 250, 220, 0.08)')
+        }
       }
-    }
-    // The turntable, right of the door, and the car turning on it.
-    const tx = 84
-    px(tx - 22, 80, 44, 8, '#2a2a36')
-    px(tx - 20, 80, 40, 6, '#4a4a5a')
-    px(tx - 20, 80, 40, 1, '#7a7a8a')
-    const shift = frame ? 1 : 0
-    px(tx - 16 + shift, 70, 32, 9, '#a87a10')
-    px(tx - 15 + shift, 70, 30, 8, '#ffd21e')
-    px(tx - 15 + shift, 70, 30, 1, '#fff08a')
-    px(tx - 9 + shift, 66, 16, 5, '#ffd21e')
-    px(tx - 8 + shift, 67, 14, 3, '#2a3440')
-    px(tx - 12 + shift, 77, 6, 4, '#14141a')
-    px(tx + 6 + shift, 77, 6, 4, '#14141a')
-    // A sales desk the other side, with its price board.
-    px(10, 76, 24, 10, '#3a3a48')
-    px(10, 76, 24, 2, '#c8ccd4')
-    px(12, 58, 20, 12, '#f4f0e4')
-    px(12, 58, 20, 1, CYAN_NEON.tube)
-    text(px, '0 DOWN', 13, 61, '#d8202a')
-    px(4, 52, 1, h - 58, 'rgba(255, 255, 255, 0.35)')
+      // The turntable, right of the door, and the car turning on it.
+      const tx = 84
+      px(tx - 22, 80, 44, 8, '#2a2a36')
+      px(tx - 20, 80, 40, 6, '#4a4a5a')
+      px(tx - 20, 80, 40, 1, '#7a7a8a')
+      const shift = frame ? 1 : 0
+      px(tx - 16 + shift, 70, 32, 9, '#a87a10')
+      px(tx - 15 + shift, 70, 30, 8, '#ffd21e')
+      px(tx - 15 + shift, 70, 30, 1, '#fff08a')
+      px(tx - 9 + shift, 66, 16, 5, '#ffd21e')
+      px(tx - 8 + shift, 67, 14, 3, '#2a3440')
+      px(tx - 12 + shift, 77, 6, 4, '#14141a')
+      px(tx + 6 + shift, 77, 6, 4, '#14141a')
+      // A sales desk the other side, with its price board.
+      px(10, 76, 24, 10, '#3a3a48')
+      px(10, 76, 24, 2, '#c8ccd4')
+      px(12, 58, 20, 12, '#f4f0e4')
+      px(12, 58, 20, 1, CYAN_NEON.tube)
+      text(px, '0 DOWN', 13, 61, '#d8202a')
+      px(4, 52, 1, h - 58, 'rgba(255, 255, 255, 0.35)')
+    })
     for (const door of doorTiles(c)) glassDoors(px, door.x + 1, door.y - 1, 14, '#5a6270', '#3a4a5a', '#e8eef4')
     plinth(px, 0, h - 2, w, '#5a5e66')
     groundShadow(px, w, 16, h)
@@ -287,16 +307,20 @@ const ultraviolet: StampArt = {
     neonText(px, 'VIOLET', Math.round((w - vw) / 2), 30, frame ? violet.tube : violet.core, violet.glow, 2)
     // Lightning either side.
     const bolt = ['..##', '.##.', '####', '.##.', '##..', '#...']
-    sprite(px, bolt, 6, 22, { '#': '#4f6bff' })
-    sprite(px, bolt, w - 10, 22, { '#': '#4f6bff' })
+    glow('neon', () => {
+      sprite(px, bolt, 6, 22, { '#': '#4f6bff' })
+      sprite(px, bolt, w - 10, 22, { '#': '#4f6bff' })
+    })
     tube(px, 4, 46, w - 8, 1, { core: '#f0d8ff', tube: '#b46cff', glow: '#3a1a6a' })
     // The door in a frame of light, round windows, a board for tonight.
     for (const door of doorTiles(c)) {
-      px(door.x - 2, door.y - 12, 20, 28, '#b46cff')
-      px(door.x - 1, door.y - 11, 18, 27, '#2a1440')
-      px(door.x + 1, door.y - 9, 14, 25, '#08060c')
-      px(door.x + 7, door.y - 2, 1, 6, '#b46cff')
-      px(door.x + 8, door.y - 2, 1, 6, '#b46cff')
+      glow('neon', () => {
+        px(door.x - 2, door.y - 12, 20, 28, '#b46cff')
+        px(door.x - 1, door.y - 11, 18, 27, '#2a1440')
+        px(door.x + 1, door.y - 9, 14, 25, '#08060c')
+        px(door.x + 7, door.y - 2, 1, 6, '#b46cff')
+        px(door.x + 8, door.y - 2, 1, 6, '#b46cff')
+      })
     }
     roundWindow(px, 18, 66, 5, '#b46cff', '#3a1a6a')
     roundWindow(px, w - 18, 66, 5, '#b46cff', '#3a1a6a')
@@ -349,13 +373,16 @@ const garageMesa: StampArt = {
   draw: (px, c) => {
     const { w, h, frame } = c
     px(-1, 0, w + 2, 14, '#3a3a44')
-    px(10, -6, w - 20, 18, '#14141a')
-    px(11, -5, w - 22, 16, '#d8202a')
-    neonText(px, 'WIN BIG', 18, -2, '#fff4c8', '#7a1010', 2)
-    for (let i = 0; i < 3; i++) {
-      px(w - 56 + i * 14, -3, 11, 12, '#f4f0e4')
-      text(px, '7', w - 52 + i * 14, frame ? -1 : 0, '#d8202a', 2)
-    }
+    // A billboard, lit.
+    glow('neon', () => {
+      px(10, -6, w - 20, 18, '#14141a')
+      px(11, -5, w - 22, 16, '#d8202a')
+      neonText(px, 'WIN BIG', 18, -2, '#fff4c8', '#7a1010', 2)
+      for (let i = 0; i < 3; i++) {
+        px(w - 56 + i * 14, -3, 11, 12, '#f4f0e4')
+        text(px, '7', w - 52 + i * 14, frame ? -1 : 0, '#d8202a', 2)
+      }
+    })
     for (let y = 14; y < h - 2; y += 12) {
       px(0, y, w, 12, '#2a2a32')
       px(0, y, w, 3, '#9aa0aa')
@@ -436,10 +463,12 @@ const towerLumina: StampArt = {
     px(4, 78, w - 8, h - 80, '#2a2418')
     px(5, 79, w - 10, h - 82, '#e8c068')
     px(5, 79, w - 10, 4, '#f8dc90')
-    px(14, 74, w - 28, 6, '#1e3a30')
-    px(14, 74, w - 28, 1, GOLD)
-    px(14, 79, w - 28, 1, GOLD)
-    textCentred(px, 'LUMINA', w / 2, 75, GOLD)
+    glow('neon', () => {
+      px(14, 74, w - 28, 6, '#1e3a30')
+      px(14, 74, w - 28, 1, GOLD)
+      px(14, 79, w - 28, 1, GOLD)
+      textCentred(px, 'LUMINA', w / 2, 75, GOLD)
+    })
     for (const door of doorTiles(c)) {
       px(door.x + 1, door.y + 1, 14, 15, GOLD_DARK)
       px(door.x + 2, door.y + 2, 12, 14, '#3a3226')
@@ -560,15 +589,20 @@ const atelier: StampArt = {
     px(0, 68, w, h - 68, '#0e0e12')
     px(0, 68, w, 1, GOLD)
     const aw = textWidth('ATELIER', 2)
-    text(px, 'ATELIER', Math.round((w - aw) / 2), 70, GOLD, 2)
+    glow('neon', () => {
+      text(px, 'ATELIER', Math.round((w - aw) / 2), 70, GOLD, 2)
+    })
     awning(px, 2, 81, w - 4, 3, '#14141a', '#2a2a30', 4)
-    for (const [x, gown] of [[6, '#b81c2c'], [w - 34, '#14141a']] as const) {
-      px(x, 86, 28, 9, '#2a2418')
-      px(x + 1, 87, 26, 8, '#f4ecd8')
-      px(x + 11, 87, 6, 7, gown)
-      px(x + 12, 86, 4, 1, '#d8c8b0')
-      if (gown === '#14141a') px(x + 13, 88, 2, 3, '#f4f4f4')
-    }
+    // The windows are lit after closing.
+    glow('neon', () => {
+      for (const [x, gown] of [[6, '#b81c2c'], [w - 34, '#14141a']] as const) {
+        px(x, 86, 28, 9, '#2a2418')
+        px(x + 1, 87, 26, 8, '#f4ecd8')
+        px(x + 11, 87, 6, 7, gown)
+        px(x + 12, 86, 4, 1, '#d8c8b0')
+        if (gown === '#14141a') px(x + 13, 88, 2, 3, '#f4f4f4')
+      }
+    })
     for (const door of doorTiles(c)) {
       px(door.x + 1, door.y + 3, 14, 13, GOLD_DARK)
       px(door.x + 2, door.y + 4, 12, 12, '#1e1e24')
@@ -589,9 +623,11 @@ const grandHotel: StampArt = {
     const { w, h, frame } = c
     barrelRoof(px, -2, 0, w + 4, 15, LUMINA_TILE)
     const sw = textWidth('GRAND HOTEL LUMINA', 1) + 12
-    px(Math.round((w - sw) / 2), -8, sw, 10, '#14243a')
-    px(Math.round((w - sw) / 2) + 1, -7, sw - 2, 8, '#1e3a5a')
-    textCentred(px, 'GRAND HOTEL LUMINA', w / 2, -5, GOLD)
+    glow('neon', () => {
+      px(Math.round((w - sw) / 2), -8, sw, 10, '#14243a')
+      px(Math.round((w - sw) / 2) + 1, -7, sw - 2, 8, '#1e3a5a')
+      textCentred(px, 'GRAND HOTEL LUMINA', w / 2, -5, GOLD)
+    })
     stoneWall(px, 0, 15, w, h - 15, MARBLE_WALL, 12)
     eaveShadow(px, 0, 15, w)
     for (let x = 2; x < w - 14; x += 18) {

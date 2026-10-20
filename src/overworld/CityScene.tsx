@@ -6,7 +6,7 @@ import { daysUntilDue, totalOwed, type GameState, type StoryFlag } from '../game
 import type { PoiAction, PoiDef } from '../world/types'
 import type { NpcArt } from './Npc'
 import { useAmbientMusic } from '../audio/SoundToggle'
-import { PERIOD_LABEL, PERIOD_LIGHT } from '../game/time'
+import { PERIOD_LABEL } from '../game/time'
 import { CHARACTERS, charactersIn } from '../world/characters'
 import { EVENTS, eventFor, type GameEvent } from '../world/events'
 import { artForPoi, figureForCharacter, figuresForPois } from './casting'
@@ -111,7 +111,10 @@ export function CityScene({
   // bug, and `content.test.ts` fails on it rather than letting somebody be
   // unreachable in the corner of a wall.
 
-  const exits: SceneExit[] = area.exits.map((exit) => ({ col: exit.col, row: exit.row, label: exit.label }))
+  // Doors in a street are signposted; the way out of a room is not, or its name
+  // sits under the feet of whoever is standing on the mat.
+  const outdoors = !!area.edges
+  const exits: SceneExit[] = area.exits.map((exit) => ({ col: exit.col, row: exit.row, label: exit.label, signed: outdoors }))
 
   // Collectors work the streets. Ducking into a shop buys a moment, but the
   // door puts you straight back out where they are. Where they are, though, is
@@ -189,7 +192,8 @@ export function CityScene({
         }
         onEnterArea(link.toAreaId, landing.col, landing.row)
       }}
-      light={PERIOD_LIGHT[state.period]}
+      period={state.period}
+      outdoors={outdoors}
       stamps={area.stamps}
       hud={
         <>

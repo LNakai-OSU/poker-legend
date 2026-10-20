@@ -23,12 +23,26 @@ describe('the clock', () => {
   })
 
   it('gives every period a light to be seen in', () => {
-    for (const period of TIME_PERIODS) {
-      expect(PERIOD_LIGHT[period], `${period} has no light`).toBeTruthy()
-    }
-    // Morning is the hour the art is drawn for; everything else is laid over it.
-    expect(PERIOD_LIGHT.morning).toBe('transparent')
+    // Morning is the hour the art is drawn for; everything else is lit against it.
+    expect(PERIOD_LIGHT.morning).toBeNull()
     expect(periodIndex('morning')).toBe(0)
+    const brightness = (hex: string) => {
+      const n = parseInt(hex.slice(1), 16)
+      return ((n >> 16) & 0xff) * 0.299 + ((n >> 8) & 0xff) * 0.587 + (n & 0xff) * 0.114
+    }
+    const later = TIME_PERIODS.slice(1).map((period) => PERIOD_LIGHT[period]!)
+    for (const [i, light] of later.entries()) {
+      expect(light, `${TIME_PERIODS[i + 1]} has no light`).toBeTruthy()
+      // Each hour of the day darker than the one before it.
+      if (i > 0) expect(brightness(light.ambient)).toBeLessThan(brightness(later[i - 1].ambient))
+    }
+    // The evening is warm and the night is blue; the lamps are on for both.
+    const [, evening, night] = later
+    const channel = (hex: string, shift: number) => (parseInt(hex.slice(1), 16) >> shift) & 0xff
+    expect(channel(evening.ambient, 16)).toBeGreaterThan(channel(evening.ambient, 0))
+    expect(channel(night.ambient, 0)).toBeGreaterThan(channel(night.ambient, 16))
+    expect(evening.lamps).toBeGreaterThan(0)
+    expect(night.lamps).toBe(1)
   })
 })
 

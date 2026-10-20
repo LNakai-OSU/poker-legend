@@ -1,7 +1,7 @@
 import { Texture } from 'pixi.js'
 import { TILE_SIZE } from './tiles'
 import { STAMP_BY_ID, stampSize } from '../world/stamps'
-import type { Px } from './pixelArt'
+import { currentGlow, type Glow, type Px } from './pixelArt'
 import { BUILDING_ART } from './art/buildingArt'
 import { CASINO_ART } from './art/casinoArt'
 import { FURNITURE_ART } from './art/furnitureArt'
@@ -113,6 +113,13 @@ export interface StampLayers {
   under: Texture[]
   /** One texture per frame, over the people, if the stamp has a front to it. */
   over: Texture[] | null
+  /** What of it gives off light, one texture per frame, drawn over the dark after dusk. */
+  litUnder: Texture[] | null
+  litOver: Texture[] | null
+  /** The first frame of everything lit, at canvas scale, for the light map's halos. */
+  glow: HTMLCanvasElement | null
+  /** Pools of light it throws on the ground after dark. */
+  lights: StampLight[]
   /** How far the art spills past the footprint, in art units. */
   bleed: StampBleed
 }
@@ -138,13 +145,37 @@ export function stampLayers(stampId: string): StampLayers | null {
     return texture
   }
   const over = overDrawing(art)
+  // The night pass: the same drawings again, keeping only what glows.
+  const lit = (draw: StampDraw) => Array.from({ length: frames }, (_, frame) => paintLit(draw, cols, rows, frame, bleed, tiles))
+  const litUnder = lit(art.draw)
+  const litOver = over ? lit(over) : null
+  const toLitTextures = (canvases: Array<HTMLCanvasElement | null> | null) => {
+    if (!canvases || canvases.every((canvas) => canvas === null)) return null
+    return canvases.map((canvas) => {
+      const texture = Texture.from(canvas ?? blankLike(litUnder.find((c) => c) ?? null, cols, rows, bleed))
+      texture.source.scaleMode = 'nearest'
+      return texture
+    })
+  }
   const layers: StampLayers = {
     under: Array.from({ length: frames }, (_, frame) => toTexture(art.draw, frame)),
     over: over ? Array.from({ length: frames }, (_, frame) => toTexture(over, frame)) : null,
+    litUnder: toLitTextures(litUnder),
+    litOver: toLitTextures(litOver),
+    glow: litUnder[0] ?? litOver?.[0] ?? null,
+    lights: art.lights ?? [],
     bleed,
   }
   layerCache.set(stampId, layers)
   return layers
+}
+
+/** An empty canvas the size of a stamp, for a frame of a lit stamp in which nothing happens to be lit. */
+function blankLike(model: HTMLCanvasElement | null, cols: number, rows: number, bleed: StampBleed): HTMLCanvasElement {
+  const canvas = document.createElement('canvas')
+  canvas.width = model?.width ?? (cols * UNIT + bleed.left + bleed.right) * SCALE
+  canvas.height = model?.height ?? (rows * UNIT + bleed.top + bleed.bottom) * SCALE
+  return canvas
 }
 
 /** The first frame of a stamp's art, under the people. Kept for callers that want one texture. */
@@ -187,6 +218,89 @@ function overDrawing(art: StampArt): StampDraw | null {
       const y1 = Math.min(y + h, top)
       if (y1 > y0) px(x, y0, w, y1 - y0, color)
     }, c)
+}
+
+/**
+ * Colours the buildings already paint lit glass in — the warm panes of a room
+ * with the lights on, the frosted glass of a lantern. They were drawn lit by
+ * day, so after dark they glow without having to be marked.
+ */
+const LIT_GLASS = new Set([
+  '#ffd27a', '#ffe8a8', '#fff4cc', '#e8c068', '#f8dc90', '#ffe8a0', '#f8e0a0', '#e8b858', '#f8d888',
+  '#ffe080', '#fff0c0', '#ffe07a', '#f4d68a',
+])
+
+function rgba(color: string): [number, number, number, number] {
+  if (color.startsWith('#')) {
+    const n = parseInt(color.slice(1), 16)
+    return [(n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff, 1]
+  }
+  const parts = color.slice(color.indexOf('(') + 1, color.indexOf(')')).split(',').map((v) => parseFloat(v))
+  return [parts[0], parts[1], parts[2], parts[3] ?? 1]
+}
+
+/**
+ * The colour a lit thing is at night.
+ *
+ * - A window keeps its shading but turns from sky to lamplight: the lighter the
+ *   glass was, the brighter the room behind it.
+ * - A lamp's glass or a flame is pushed towards white-hot.
+ * - Neon, bulbs and lit signs are exactly as drawn.
+ */
+export function litColor(kind: Glow, color: string): string {
+  const [r, g, b, a] = rgba(color)
+  if (kind === 'neon') return color
+  if (kind === 'lamp') {
+    const t = 0.5
+    return `rgba(${Math.round(r + (255 - r) * t)}, ${Math.round(g + (246 - g) * t)}, ${Math.round(b + (220 - b) * t)}, ${a})`
+  }
+  const light = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+  const warm = light > 0.82 ? [255, 244, 214] : light > 0.62 ? [255, 228, 158] : light > 0.4 ? [255, 210, 122] : [236, 172, 92]
+  return `rgba(${warm[0]}, ${warm[1]}, ${warm[2]}, ${a})`
+}
+
+/**
+ * A stamp's night pass: only what glows, at the colour it glows.
+ *
+ * The drawing runs as usual. Anything painted while marked with `glow` (or in
+ * a lit-glass colour) is kept; anything painted afterwards over it — a glazing
+ * bar, a curtain, a sign hung in front — cuts it back out, so a lit window
+ * keeps its bars and a lantern its frame. Nothing marked at all: no canvas.
+ */
+function paintLit(
+  draw: StampDraw,
+  cols: number,
+  rows: number,
+  frame: number,
+  bleed: StampBleed,
+  tiles: string[],
+): HTMLCanvasElement | null {
+  const w = cols * UNIT
+  const h = rows * UNIT
+  const canvas = document.createElement('canvas')
+  canvas.width = (w + bleed.left + bleed.right) * SCALE
+  canvas.height = (h + bleed.top + bleed.bottom) * SCALE
+  const ctx = canvas.getContext('2d')!
+  ctx.imageSmoothingEnabled = false
+  let glowed = false
+  draw(
+    (x, y, pw, ph, color) => {
+      if (pw <= 0 || ph <= 0) return
+      const kind: Glow | null = currentGlow() ?? (LIT_GLASS.has(color) ? 'neon' : null)
+      if (kind) {
+        ctx.globalCompositeOperation = 'source-over'
+        ctx.fillStyle = litColor(kind, color)
+        glowed = true
+      } else {
+        // Paint laid over something lit hides it, in proportion to how opaque it is.
+        ctx.globalCompositeOperation = 'destination-out'
+        ctx.fillStyle = color
+      }
+      ctx.fillRect((x + bleed.left) * SCALE, (y + bleed.top) * SCALE, pw * SCALE, ph * SCALE)
+    },
+    { cols, rows, w, h, frame, tiles },
+  )
+  return glowed ? canvas : null
 }
 
 function footprint(stampId: string): string[] {

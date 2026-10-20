@@ -267,10 +267,14 @@ export function textShadowed(
  * Returns the width written.
  */
 export function neonText(
-  px: Px, words: string, x: number, y: number, core: string, glow: string, scale = 1, spacing = 1,
+  px: Px, words: string, x: number, y: number, core: string, halo: string, scale = 1, spacing = 1,
 ) {
-  for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) text(px, words, x + dx, y + dy, glow, scale, spacing)
-  return text(px, words, x, y, core, scale, spacing)
+  let width = 0
+  glow('neon', () => {
+    for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) text(px, words, x + dx, y + dy, halo, scale, spacing)
+    width = text(px, words, x, y, core, scale, spacing)
+  })
+  return width
 }
 
 // ---------------------------------------------------------------------------
