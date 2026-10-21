@@ -85,3 +85,14 @@ Nothing. All agents have finished and their worktrees and branches are removed.
 - Earlier known-unfixed items: tutorial coaching goes quiet after hand 1; bet
   sizing is lumpy at micro stakes. (The action-button wall on phones may be
   resolved by the table redesign — check.)
+
+## Round 2 (2026-10-20)
+
+Critic r2 (sonnet) scored overall 7/10. Creator r2 fixed its top items (merged
+to main, not pushed): Mesa frontage, quiet Mesa carpets, taller slots and fuller
+floors, five shop floors, night rim light, one Hal face, gas station and Mesa
+lay-by. Creator's own overall ~7.8; 356 unit, 52/52 browser. Left: Mesa casino
+floor near the door is empty; slot banks repeat reel order; Outfitters slate
+busy; Ultraviolet front plain; jackpot boards clipped by the HUD; editor
+preview per-cell logic; door labels vs signs; worktree dev servers ignore
+file changes (vite ignores .claude/). Next: round-3 critic, then stop and report.
