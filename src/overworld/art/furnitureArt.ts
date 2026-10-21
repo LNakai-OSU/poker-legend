@@ -894,12 +894,24 @@ const danceFloor: StampArt = {
   frames: 2,
   draw: (px, c) => {
     const colors = ['#ff4fd8', '#4fe8ff', '#ffe14f', '#7a4aff']
+    // A chrome edge round black grout.
+    px(0, 0, c.w, c.h, '#08060c')
+    px(0, 0, c.w, 1, '#c8ccd8')
+    px(0, c.h - 1, c.w, 1, '#5a5a6a')
+    px(0, 0, 1, c.h, '#8a8c9c')
+    px(c.w - 1, 0, 1, c.h, '#5a5a6a')
     for (let y = 2; y < c.h - 2; y += 8) {
       for (let x = 2; x < c.w - 2; x += 8) {
-        const lit = ((x + y) / 8 + c.frame) % 2 === 0
-        const color = colors[((x * 3 + y) / 8) % colors.length | 0]
-        px(x, y, 7, 7, lit ? color : tint(color, -0.6))
-        if (lit) px(x, y, 7, 1, tint(color, 0.4))
+        // Squares counted from the corner, so half are lit on each beat.
+        const i = (x - 2) / 8
+        const j = (y - 2) / 8
+        const lit = (i + j + c.frame) % 2 === 0
+        const color = colors[(i * 3 + j * 2) % colors.length]
+        px(x, y, 7, 7, lit ? color : tint(color, -0.62))
+        if (lit) {
+          px(x, y, 7, 1, tint(color, 0.45))
+          px(x + 1, y + 1, 2, 2, tint(color, 0.6))
+        }
       }
     }
   },

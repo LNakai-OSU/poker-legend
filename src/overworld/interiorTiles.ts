@@ -468,34 +468,26 @@ const carpetTeal = motif((x, y) => {
 })
 
 /**
- * The Strip: black, with neon confetti that does not line up with anything.
+ * The Strip: near-black pile with a faint diagonal lattice, and a small neon
+ * medallion where every other pair of lines cross.
  *
- * It was the loudest thing in the room — brighter than the slot toppers and the
- * felt — so the floor read before the tables did. The confetti is still there,
- * in the same three colours, but sunk into the pile: fewer pieces, half the
- * brightness, and one small bright fleck in each to keep it a neon carpet.
+ * It used to be neon confetti, and however far the confetti was sunk it was
+ * still the loudest thing in the room: a floor of sparkle reads as noise, and
+ * the machines and the felt are what should glow. Now the floor is quiet and
+ * dark, and the neon in it is trim — one thin ring and one bright point every
+ * two tiles — so it is still unmistakably the Strip's carpet.
  */
 const carpetNeon = motif((x, y) => {
-  const marks: Array<[number, number, string, string]> = [
-    [3, 4, 'squiggle', '#8a3a7c'], [20, 6, 'tri', '#2c7480'], [27, 3, 'bar', '#7e7034'],
-    [7, 13, 'dot', '#7e7034'], [16, 15, 'squiggle', '#2c7480'], [25, 11, 'dot', '#8a3a7c'],
-    [2, 21, 'bar', '#2c7480'], [19, 20, 'tri', '#8a3a7c'], [11, 26, 'dot', '#2c7480'],
-    [28, 22, 'squiggle', '#7e7034'],
-  ]
-  for (const [mx, my, shape, color] of marks) {
-    const dx = x - mx
-    const dy = y - my
-    const bright = dx === 0 && dy === 0
-    const tone = bright ? (color === '#8a3a7c' ? '#e060c8' : color === '#2c7480' ? '#58d0e0' : '#e0d060') : color
-    if (shape === 'dot' && dx >= 0 && dx < 2 && dy >= 0 && dy < 2) return tone
-    if (shape === 'bar' && dy === 0 && dx >= 0 && dx < 3) return tone
-    if (shape === 'tri' && dy >= 0 && dy < 2 && Math.abs(dx) <= dy) return tone
-    if (shape === 'squiggle' && ((dy === 0 && (dx === 0 || dx === 2)) || (dy === 1 && (dx === 1 || dx === 3)))) {
-      return tone
-    }
-  }
-  if ((x * 7 + y * 13) % 31 === 0) return '#20162c'
-  return '#130d1b'
+  const corner = wrap(x) + wrap(y)
+  const centre = wrap(x - 16) + wrap(y - 16)
+  if (corner === 0) return '#46b0c0'
+  if (corner === 3) return '#6a2864'
+  if (corner < 3) return '#261832'
+  if (centre === 0) return '#6a2a64'
+  if (centre === 1) return '#211629'
+  if ((x + y) % 16 === 0 || (x - y + 32) % 16 === 0) return '#211829'
+  if ((x * 7 + y * 13) % 37 === 0) return '#1c1524'
+  return '#16101d'
 })
 
 /** The high-limit rooms: burgundy, with gold medallions. */
@@ -514,21 +506,26 @@ const carpetRoyal = motif((x, y) => {
   return '#5a1222'
 })
 
-/** Ultraviolet: deep violet, stars and rings that would glow under a black light. */
+/**
+ * Ultraviolet: deep plum pile in broad diagonal bands, and a thin ring here
+ * and there that would glow under the black light. Quiet, so the dance floor
+ * and the bar are what light up.
+ */
 const carpetViolet = motif((x, y) => {
-  const star = (cx: number, cy: number) =>
-    (x === cx && Math.abs(y - cy) <= 2) || (y === cy && Math.abs(x - cx) <= 2)
-  if (star(7, 7) || star(23, 21)) return '#c890ff'
-  const rx = x - 22
-  const ry = y - 8
-  const r2 = rx * rx + ry * ry
-  if (r2 >= 6 && r2 <= 10) return '#5a78ff'
-  const sx = x - 9
-  const sy = y - 24
-  const s2 = sx * sx + sy * sy
-  if (s2 >= 3 && s2 <= 6) return '#ff9ef0'
-  if ((x + y * 3) % 23 === 0) return '#3a1c5c'
-  return '#24103e'
+  const ring = (cx: number, cy: number) => {
+    const dx = wrap(x - cx)
+    const dy = wrap(y - cy)
+    return dx * dx + dy * dy
+  }
+  const r = ring(8, 8)
+  if (r >= 6 && r <= 9) return '#5a3a9a'
+  if (r === 0) return '#c890ff'
+  const s2 = ring(24, 24)
+  if (s2 === 0) return '#ff9ef0'
+  if (s2 === 1) return '#3a1c5c'
+  const band = Math.floor(((x + y) % 32) / 8)
+  if ((x + y) % 8 === 0) return '#2a1646'
+  return band % 2 === 0 ? '#1e1034' : '#221238'
 })
 
 // ---------------------------------------------------------------------------
@@ -570,7 +567,7 @@ export const CARPET_BORDERS: Record<number, [string, string, string]> = {
   [CARPET]: ['#4a1a14', '#c08a3a', '#6a241c'],
   [CARPET_GREEN]: ['#0f2e20', '#c8a048', '#174230'],
   [CARPET_TEAL]: ['#2e7a74', '#efe0b0', '#368c85'],
-  [CARPET_NEON]: ['#2a7c8c', '#b0409c', '#1a1024'],
+  [CARPET_NEON]: ['#0e0a14', '#a03894', '#1c1426'],
   [CARPET_ROYAL]: ['#2e0810', '#d8b060', '#4a0e1c'],
   [CARPET_VIOLET]: ['#120820', '#b46cff', '#2e1450'],
 }
