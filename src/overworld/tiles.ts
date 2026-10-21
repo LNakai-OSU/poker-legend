@@ -76,11 +76,27 @@ export const DIRT = 36
  */
 export const CROSSWALK = 37
 
+// --- more floors -----------------------------------------------------------
+// Every shop used to stand on one of two plank floors or the same speckled
+// vinyl, so a boutique, an outfitters and a boat showroom were the same room.
+
+/** Woven seagrass matting: the island boutique. */
+export const SEAGRASS = 38
+/** Blue-grey slate flags: the riverside outfitters. */
+export const SLATE = 39
+/** Pale polished concrete in big slabs: a showroom. */
+export const SHOWROOM = 40
+/** Terracotta squares with a painted tile now and then: the trading post. */
+export const SALTILLO = 41
+/** Cream and sage vinyl in a chequer: the corner shop. */
+export const VINYL = 42
+
 const WALKABLE = new Set([
   FLOOR, CARPET, ROAD, SIDEWALK, GRASS, DOOR, SAND, FLOWER, PLAZA,
   WOOD_FLOOR, CHECKER, TILE_FLOOR, MARBLE, DECK, LINO,
   CARPET_GREEN, CARPET_TEAL, CARPET_NEON, CARPET_ROYAL, CARPET_VIOLET,
   DIRT, CROSSWALK,
+  SEAGRASS, SLATE, SHOWROOM, SALTILLO, VINYL,
 ])
 
 /** The faces of back walls: solid, drawn front-on, with a floor in front of them. */
@@ -139,6 +155,11 @@ export const TILE_VOCABULARY: Array<{ tile: number; char: string; name: string }
   { tile: CARPET_VIOLET, char: '%', name: 'Violet carpet' },
   { tile: DIRT, char: '_', name: 'Dirt track' },
   { tile: CROSSWALK, char: 'z', name: 'Crossing' },
+  { tile: SEAGRASS, char: 'r', name: 'Seagrass matting' },
+  { tile: SLATE, char: 'y', name: 'Slate flags' },
+  { tile: SHOWROOM, char: 'e', name: 'Showroom concrete' },
+  { tile: SALTILLO, char: 'x', name: 'Terracotta tiles' },
+  { tile: VINYL, char: 'v', name: 'Vinyl chequer' },
 ]
 
 /** The character that writes each tile, for turning a grid back into a sketch. */

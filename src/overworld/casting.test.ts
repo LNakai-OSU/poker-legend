@@ -77,6 +77,29 @@ describe('looks', () => {
     expect(figures.get('marcus-dana')?.look.shirt).toBe(CHARACTERS.dana.look.shirt)
   })
 
+  it('gives somebody who turns up in two towns the same face in both', () => {
+    // Hal teaches in Crescent Harbor and on the Strip; he was drawn from each
+    // POI's id, so the same man had two faces.
+    const drawn = new Map<string, string[]>()
+    for (const city of Object.values(CITIES)) {
+      for (const area of allAreas(city)) {
+        const figures = figuresForPois(area.pois, CHARACTERS)
+        for (const p of area.pois) {
+          if (p.name !== 'Hal') continue
+          drawn.set(p.id, [visualKey(figures.get(p.id)!)])
+        }
+      }
+    }
+    expect([...drawn.keys()].sort()).toEqual(['hal', 'hal-mesa'])
+    expect(drawn.get('hal')).toEqual(drawn.get('hal-mesa'))
+  })
+
+  it('dresses the shopkeeper and the boat dealer for the job', () => {
+    const everyone = Object.values(CITIES).flatMap((city) => allAreas(city).flatMap((a) => a.pois))
+    expect(roleForPoi(everyone.find((p) => p.id === 'patel')!)).toBe('clerk')
+    expect(roleForPoi(everyone.find((p) => p.id === 'marina')!)).toBe('suit')
+  })
+
   /**
    * The whole point of giving strangers faces: no street has two of the same
    * person standing in it, at any hour.

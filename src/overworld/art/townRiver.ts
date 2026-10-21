@@ -288,6 +288,84 @@ const motel: StampArt = {
   },
 }
 
+/** One old gas pump: a rounded red body, a white face with its dial, a globe on top, the hose. */
+function gasPump(px: Px, x: number, y: number, frame: number) {
+  shadow(px, x + 1, y + 20, 10, 2, 0.3)
+  px(x + 1, y + 4, 8, 17, '#7a1410')
+  px(x + 2, y + 4, 6, 16, '#d82a20')
+  px(x + 2, y + 4, 1, 16, '#f05a48')
+  px(x + 3, y + 7, 4, 5, '#f4f0e4')
+  px(x + 4, y + 8, 2, 2, '#2a2a30')
+  px(x + 3, y + 14, 4, 1, '#f2c84a')
+  // The globe, lit at night.
+  px(x + 3, y, 4, 4, '#3a3a40')
+  glow('lamp', () => {
+    px(x + 3, y, 4, 3, '#fff0d0')
+    px(x + 4, y + 1, 2, 1, frame ? '#e83a2a' : '#d82a20')
+  })
+  // The hose round to the nozzle on its hook.
+  px(x + 8, y + 9, 1, 8, '#1a1a20')
+  px(x + 9, y + 9, 2, 2, '#4a4a52')
+}
+
+/**
+ * The gas station between the trading post and the motel: an adobe office with
+ * a soda machine, a canopy on posts over two old red pumps, GAS on the fascia,
+ * and the canopy lit underneath at night so the pumps stand in a pool of light.
+ */
+const gasStation: StampArt = {
+  bleed: { left: 2, right: 3 },
+  frames: 2,
+  lights: [{ x: 70, y: 46, reach: 34, color: '#fff0d0', strength: 0.9 }],
+  draw: (px, c) => {
+    const { w, h, frame } = c
+    // The office: pueblo roof, adobe, a lit window, the soda machine.
+    const ow = 40
+    puebloRoof(px, -2, 2, ow + 4, 12)
+    stuccoWall(px, 0, 14, ow, h - 14, ADOBE_PALE, 5)
+    eaveShadow(px, 0, 14, ow)
+    vigas(px, 0, 16, ow)
+    windowAt(px, 4, 25, 18, 12, { ...DESERT_WINDOW, glass: '#e8b858', glassHi: '#f8d888' })
+    px(26, 24, 11, 22, '#2a5a9a')
+    px(27, 25, 9, 20, '#3a7ac8')
+    px(28, 27, 7, 6, '#f4f4f4')
+    text(px, 'POP', 28, 34, '#f4f4f4')
+    px(28, 41, 7, 1, '#1a2a4a')
+    plinth(px, 0, h - 2, ow, '#8a6a4a')
+    // The forecourt: concrete under the canopy, an island the pumps stand on.
+    px(ow, 20, w - ow, h - 20, '#b8b0a4')
+    for (let x = ow + 8; x < w; x += 12) px(x, 20, 1, h - 20, '#a8a094')
+    px(ow + 10, h - 12, w - ow - 18, 6, '#d8d0c4')
+    px(ow + 10, h - 12, w - ow - 18, 1, '#ece6dc')
+    px(ow + 10, h - 7, w - ow - 18, 1, '#8a8478')
+    gasPump(px, ow + 14, h - 30, frame)
+    gasPump(px, ow + 32, h - 30, frame + 1)
+    // The canopy on two posts, GAS on its fascia, lights underneath.
+    for (const x of [ow + 4, w - 6]) {
+      px(x, 12, 3, h - 14, '#c8c4bc')
+      px(x, 12, 1, h - 14, '#ece8e0')
+      px(x + 2, 12, 1, h - 14, '#8a867e')
+    }
+    px(ow - 2, 0, w - ow + 4, 15, '#2a2a30')
+    px(ow - 1, 1, w - ow + 2, 10, '#f4f0e6')
+    px(ow - 1, 1, w - ow + 2, 1, '#ffffff')
+    px(ow - 1, 11, w - ow + 2, 3, '#d82a20')
+    px(ow - 1, 11, w - ow + 2, 1, '#f05a48')
+    const word = 'GAS'
+    const gx = ow + Math.round((w - ow - textWidth(word, 2)) / 2)
+    glow('neon', () => {
+      text(px, word, gx, 1, '#d82a20', 2)
+      icon(px, 'star', gx - 9, 3, '#d82a20')
+      icon(px, 'star', gx + textWidth(word, 2) + 4, 3, '#d82a20')
+    })
+    shadow(px, ow, 15, w - ow, 2, 0.35)
+    glow('lamp', () => {
+      for (const x of [ow + 12, ow + 30, ow + 48]) px(x, 14, 5, 1, '#fff6dc')
+    })
+    groundShadow(px, w, 14, h)
+  },
+}
+
 // ---------------------------------------------------------------------------
 // Riverbend
 // ---------------------------------------------------------------------------
@@ -509,6 +587,7 @@ export const RIVER_BUILDINGS: Record<string, StampArt> = {
   'hotel-silvercreek-e': hotelWing('BUFFET', true),
   'giftshop-silvercreek': giftShop,
   'motel-silvercreek': motel,
+  'gas-silvercreek': gasStation,
   riverboat,
   'diner-riverbend': landingDiner,
   'outfitters-riverbend': outfitters,

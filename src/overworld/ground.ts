@@ -319,7 +319,7 @@ const ISLAND: GroundPalette = {
 }
 
 const NEON: GroundPalette = {
-  pave: { hi: '#58526a', base: '#48435a', alt: '#444056', lo: '#3f3b50', seam: '#2c2938', crack: '#24212e' },
+  pave: { hi: '#a49cb2', base: '#9088a0', alt: '#8a829a', lo: '#7e768e', seam: '#5e566e', crack: '#4e4860' },
   kerb: { lip: '#d4d6e2', top: '#8a8a9c', face: '#2c2a36', seam: '#1e1c26' },
   road: {
     base: '#25222c', grain: '#2f2b37', grainLo: '#1e1c24', edge: '#eeeef6', median: '#f2c040', gutter: '#1c1a21',
@@ -339,8 +339,8 @@ const NEON: GroundPalette = {
     lipHi: '#dadce6', lipTop: '#4e4a5c', lipFace: '#2a2734',
   },
   plaza: {
-    kind: 'terrazzo', base: '#3c374b', fleck: '#524a66', fleckHi: '#6a6084', inlay: '#a8863a', inlayHi: '#e2c262',
-    sheen: ['#5a2c62', '#24505e'],
+    kind: 'terrazzo', base: '#a69ab2', fleck: '#94889f', fleckHi: '#c6bcd2', inlay: '#b88e3a', inlayHi: '#f0d070',
+    sheen: ['#c040b0', '#30a0c0', '#c89a40'],
   },
   tree: {
     style: 'palm-planter', line: '#16301e', dark: '#1e4a2a', base: '#2e6a3a', hi: '#4a8e48', top: '#72b45e',
@@ -691,7 +691,7 @@ function plazaArt(cell: Cell, palette: GroundPalette): GroundArt {
   if (style.kind === 'concrete') feature = roll < 14 ? 'stain' : roll < 22 ? 'crack' : roll < 26 ? 'drain' : 'none'
   else if (style.kind === 'flags') feature = roll < 10 ? 'crack' : roll < 18 ? 'tuft' : 'none'
   else if (style.kind === 'setts') feature = roll < 4 ? 'puddle' : roll < 10 ? 'loose' : 'none'
-  else if (style.kind === 'terrazzo') feature = roll < 9 ? 'sheen' : 'none'
+  else if (style.kind === 'terrazzo') feature = roll < 16 ? 'sheen' : 'none'
   else if (style.kind === 'marble') feature = roll < 18 ? 'vein' : 'none'
 
   const draw: GroundArt['draw'] = (px) => {

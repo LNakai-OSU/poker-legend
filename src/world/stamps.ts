@@ -168,6 +168,8 @@ export const STAMPS: StampDef[] = [
   slots('slot-bank-western', 'Saloon slots', 'Red and green machines, saddle-leather stools.', 4),
   slots('slot-bank-brass', 'Riverboat slots', 'Green, red and burgundy machines with brass trim.', 4),
   slots('slot-bank-island', 'Island slots', 'Blue, green and red machines, cane stools.', 4),
+  slots('slot-bank-reef', 'Reef slots', 'Coral, seafoam and sunshine machines, cane stools.', 4),
+  slots('slot-bank-ivory', 'Salon slots', 'Ivory and burgundy machines in gold, without the jackpot board.', 4),
   slots('slot-bank-neon', 'Neon slots', 'Black cabinets with pink and cyan toppers.', 5),
   {
     ...slots('slot-bank-jackpot', 'Progressive bank', 'Six neon machines under a JACKPOT board counting up.', 6),
@@ -268,6 +270,7 @@ export const STAMPS: StampDef[] = [
   fixture('rug-red', 'Red rug', 'Walk on it.', ['???', '???']),
   fixture('rug-blue', 'Blue rug', 'Walk on it.', ['???', '???']),
   fixture('rug-green', 'Green rug', 'Walk on it.', ['???', '???']),
+  fixture('rug-woven', 'Woven rug', 'Stepped diamonds in red, black, cream and turquoise. Walk on it.', ['????', '????', '????']),
   fixture('sofa', 'Sofa', 'Facing into the room.', ['FFF']),
   fixture('sofa-leather', 'Leather sofa', 'Buttoned, brown.', ['FFF']),
   fixture('sofa-velvet', 'Velvet sofa', 'Purple, gold feet.', ['FFF']),
@@ -285,6 +288,8 @@ export const STAMPS: StampDef[] = [
   fixture('counter-concierge', 'Concierge desk', 'Marble and gold, a bell.', ['FFF', 'FFF']),
   fixture('rack-suits', 'Rail of suits', 'Charcoal and navy.', ['FF']),
   fixture('rack-linen', 'Rail of linen', 'Pastels.', ['FF']),
+  fixture('rack-blankets', 'Blanket rail', 'Wool blankets folded over a rail.', ['FF']),
+  fixture('pottery-table', 'Pottery table', 'Clay pots and a turquoise bowl on a low table.', ['FF']),
   fixture('rack-outdoor', 'Rail of jackets', 'Waxed cotton.', ['FF']),
   fixture('rack-gowns', 'Rail of gowns', 'Red, black and ivory.', ['FF']),
   fixture('mannequin-suit', 'Dummy in a suit', 'Charcoal.', ['F', 'F']),
@@ -353,6 +358,7 @@ export const STAMPS: StampDef[] = [
   building('hotel-silvercreek-w', 'Hotel wing', 'Pueblo adobe with a shaded portal; the hotel side.', 7, 4),
   building('hotel-silvercreek-e', 'Buffet wing', 'Pueblo adobe with a shaded portal; the buffet side.', 7, 4),
   building('giftshop-silvercreek', 'Trading post', 'GIFTS on a timber false front, a porch, a cactus in a pot.', 5, 3, { col: 2, label: 'Gift Shop' }),
+  building('gas-silvercreek', 'Gas station', 'An adobe office, and two red pumps under a canopy that is lit at night.', 6, 3),
   building('motel-silvercreek', 'Motel office', 'A tall sign buzzing VACANCY.', 5, 3),
   // --- Riverbend -------------------------------------------------------------
   {
@@ -498,6 +504,15 @@ const STREET_FURNITURE: StampDef[] = [
   streetThing('fountain-mesa', 'Strip fountain', 'Jets dancing in turn, lit from under the water. Lay it over a pool six by two.', [
     '~~~~~~',
     '~~~~~~',
+  ]),
+  streetThing('inlay-sun', 'Sun inlay', 'A terracotta sun in a ring of turquoise, laid into the paving. Walk across it.', [
+    '???',
+    '???',
+    '???',
+  ]),
+  streetThing('welcome-mesa', 'Welcome sign', 'WELCOME TO NEON MESA on a diamond in bulbs, on two legs. You can stand between them.', [
+    '???',
+    'o?o',
   ]),
   streetThing('billboard-mesa', 'Billboard', 'NEON MESA over a desert sunset, on two legs. You can stand between them.', [
     '???',

@@ -1,5 +1,5 @@
 import type { StampArt } from '../stampArt'
-import { glow, mix, neonText, oval, shadow, textWidth, tint, type Px } from '../pixelArt'
+import { glow, icon, mix, neonText, oval, shadow, textCentred, textWidth, tint, type Px } from '../pixelArt'
 
 /**
  * What stands in a street: lamp posts, benches, post boxes, hydrants, planters,
@@ -1005,6 +1005,20 @@ function parkedCar(body: string, facing: 'e' | 'w'): StampArt {
       // Parked, so its lamps are off.
       p(W - 4, 5, 2, 2, '#fff4c8')
       p(1, 5, 2, 2, '#e83a3a')
+      // After dark, whatever light there is catches the chrome and glass: the
+      // roof's edge, the top of the windscreen, the bumpers, the hubs, the rear
+      // reflector. A black car on a black road is still a car.
+      const glint = mix(hi, '#dfe8ff', 0.55)
+      glow('neon', () => {
+        p(14, -6, 17, 1, glint)
+        p(13, -4, 8, 1, '#c8e8f6')
+        p(14, -3, 2, 1, '#ffffff')
+        p(3, 2, W - 7, 1, mix(glint, body, 0.35))
+        p(W - 4, 8, 3, 1, '#e8ecf4')
+        p(0, 8, 3, 1, '#e8ecf4')
+        for (const x of [6, 33]) p(x + 3, 11, 1, 1, '#e8ecf4')
+        p(1, 5, 2, 1, '#c02828')
+      })
     },
   }
 }
@@ -1149,6 +1163,90 @@ const billboardMesa: StampArt = {
   },
 }
 
+/**
+ * The sign at the edge of town: a diamond lit round its edge in chasing bulbs,
+ * WELCOME over NEON MESA, a red star on a stalk above it, on two legs.
+ */
+const welcomeMesa: StampArt = {
+  bleed: { top: 30, left: 10, right: 12 },
+  standsUp: 16,
+  frames: 2,
+  lights: [{ x: 24, y: 30, reach: 30, color: '#ffe0f0', strength: 0.8 }],
+  draw: (px, c) => {
+    const w = c.w
+    const cx = Math.floor(w / 2)
+    shadow(px, 6, 28, w - 8, 4, 0.28)
+    for (const x of [10, w - 12]) {
+      px(x, 2, 2, 28, '#c8ccd8')
+      px(x, 2, 1, 28, '#f4f6fc')
+      px(x + 1, 2, 1, 28, '#6a6e7a')
+    }
+    // The diamond, wider than it is tall: a white board, its rim in red,
+    // bulbs round it, chasing.
+    const top = -20
+    const half = 22
+    const across = (i: number) => Math.round(i * 1.4)
+    for (let i = 0; i <= half; i++) {
+      for (const y of [top + i, top + 2 * half - i]) {
+        px(cx - across(i), y, across(i) * 2 + 1, 1, '#d82a2a')
+        if (i >= 2) px(cx - across(i) + 2, y, across(i) * 2 - 3, 1, '#f8f4ea')
+      }
+    }
+    glow('neon', () => {
+      for (let i = 0; i <= half; i += 2) {
+        const lit = (i / 2 + c.frame) % 2 === 0
+        const color = lit ? '#fff4a0' : '#c8a040'
+        for (const y of [top + i, top + 2 * half - i]) {
+          px(cx - across(i), y, 1, 1, color)
+          px(cx + across(i), y, 1, 1, color)
+        }
+      }
+      textCentred(px, 'WELCOME', cx + 1, -8, '#2a5ad8')
+      textCentred(px, 'TO', cx + 1, -2, '#d82a2a')
+      neonText(px, 'NEON', cx - Math.floor(textWidth('NEON') / 2), 4, '#ff4fd8', '#ffd2f6')
+      textCentred(px, 'MESA', cx + 1, 10, '#d82a2a')
+    })
+    // A star on a stalk at the top.
+    px(cx, top - 4, 1, 4, '#c8ccd8')
+    glow('neon', () => icon(px, 'star', cx - 2, top - 9, c.frame ? '#ffe14f' : '#ff4a4a'))
+  },
+}
+
+/**
+ * A sun laid into the paving in tile: a ring of turquoise, a terracotta sun
+ * with eight rays, long and short. Flush with the ground; walk across it.
+ */
+const inlaySun: StampArt = {
+  draw: (px, c) => {
+    const cx = c.w / 2
+    const cy = c.h / 2
+    for (let y = 0; y < c.h; y++) {
+      for (let x = 0; x < c.w; x++) {
+        const dx = x + 0.5 - cx
+        const dy = y + 0.5 - cy
+        const d = Math.sqrt(dx * dx + dy * dy)
+        const angle = Math.atan2(dy, dx)
+        // Which tessera of the ring this is, and which of eight rays it is near.
+        const segment = Math.floor(((angle + Math.PI) / (2 * Math.PI)) * 32)
+        const ray = ((angle + Math.PI) / (Math.PI / 4)) % 1
+        // How far off the nearest ray this unit lies, across it, in art units.
+        const across = d * Math.sin(Math.min(ray, 1 - ray) * (Math.PI / 4))
+        const long = Math.round((angle + Math.PI) / (Math.PI / 4)) % 2 === 0
+        const reach = long ? 16 : 12
+        let color: string | null = null
+        if (d >= 20.5 && d < 21.5) color = '#8a6a4a'
+        else if (d >= 18 && d < 20.5) color = segment % 2 === 0 ? '#2fa4a0' : '#46bcb4'
+        else if (d >= 17 && d < 18) color = '#1e6e6a'
+        else if (d < 5) color = d < 2.5 ? '#f2b04a' : '#d8702e'
+        else if (d < 5.8) color = '#a84a1e'
+        else if (d < reach && across < (reach - d) * 0.32 + 0.4) color = long ? '#e8a83a' : '#d8702e'
+        else if (d < 17) color = '#ead2a2'
+        if (color) px(x, y, 1, 1, color)
+      }
+    }
+  },
+}
+
 // ---------------------------------------------------------------------------
 // The table the renderer reads
 // ---------------------------------------------------------------------------
@@ -1250,5 +1348,7 @@ export const STREET_FURNITURE: Record<string, StampArt> = {
   'fountain-mesa': fountainMesa,
   'fountain-lumina': fountainLumina,
   'billboard-mesa': billboardMesa,
+  'welcome-mesa': welcomeMesa,
+  'inlay-sun': inlaySun,
 }
 
