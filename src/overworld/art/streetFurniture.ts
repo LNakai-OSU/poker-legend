@@ -1005,6 +1005,20 @@ function parkedCar(body: string, facing: 'e' | 'w'): StampArt {
       // Parked, so its lamps are off.
       p(W - 4, 5, 2, 2, '#fff4c8')
       p(1, 5, 2, 2, '#e83a3a')
+      // After dark, whatever light there is catches the chrome and glass: the
+      // roof's edge, the top of the windscreen, the bumpers, the hubs, the rear
+      // reflector. A black car on a black road is still a car.
+      const glint = mix(hi, '#dfe8ff', 0.55)
+      glow('neon', () => {
+        p(14, -6, 17, 1, glint)
+        p(13, -4, 8, 1, '#c8e8f6')
+        p(14, -3, 2, 1, '#ffffff')
+        p(3, 2, W - 7, 1, mix(glint, body, 0.35))
+        p(W - 4, 8, 3, 1, '#e8ecf4')
+        p(0, 8, 3, 1, '#e8ecf4')
+        for (const x of [6, 33]) p(x + 3, 11, 1, 1, '#e8ecf4')
+        p(1, 5, 2, 1, '#c02828')
+      })
     },
   }
 }

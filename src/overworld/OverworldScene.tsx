@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Application, Container, Graphics, Sprite, Text } from 'pixi.js'
 import { buildStampScene, buildTileLayer, isWalkable, LAYER, TILE_SIZE, type TileGrid } from './tileRenderer'
 import { LightMap, townLight } from './lighting'
+import { RIM_PAD, rimTexture } from './rimLight'
 import { PERIOD_LIGHT, type PeriodLight, type TimePeriod } from '../game/time'
 import type { PlacedStamp } from '../world/stamps'
 import { DELTAS, GridPlayer, type Direction } from './GridPlayer'
@@ -306,6 +307,20 @@ export function OverworldScene({
       // Everybody standing in the street is lit by what they stand in: a
       // lamp's pool, a shop window's spill, or the blue of the night.
       const people = () => [player.sprite, ...npcs.map((n) => n.sprite), ...(hunter ? [hunter.sprite] : [])]
+      // After dark, everybody (not the signs and gulls) has a rim of moonlight
+      // round them, so a dark coat on a dark road is still a person.
+      const figures = () => [player.sprite, ...npcs.filter((n) => n.isPerson).map((n) => n.sprite), ...(hunter ? [hunter.sprite] : [])]
+      const rims = new Map<Container, Sprite>()
+      const rimOf = (person: Container) => {
+        let rim = rims.get(person)
+        if (!rim) {
+          rim = new Sprite()
+          rim.anchor.set(0, 1)
+          rims.set(person, rim)
+          actors.addChild(rim)
+        }
+        return rim
+      }
       let lit: PeriodLight | null = null
       const applyLight = (next: PeriodLight | null) => {
         lit = next
@@ -317,6 +332,7 @@ export function OverworldScene({
         // too; they take the hour's colour as a tint instead.
         stampScene.over.tint = next ? parseInt(next.ambient.slice(1), 16) : 0xffffff
         if (!next) for (const sprite of people()) sprite.tint = 0xffffff
+        if (!lamps) for (const rim of rims.values()) rim.visible = false
       }
       applyLightRef.current = applyLight
       applyLight(lightRef.current)
@@ -487,8 +503,23 @@ export function OverworldScene({
           for (const sprite of people()) {
             // Their feet, in art units: the bottom of their tile, a little in.
             // Nobody goes black, and you least of all.
-            const floor = sprite === player.sprite ? 0.66 : 0.44
+            const floor = sprite === player.sprite ? 0.72 : 0.56
             sprite.tint = lightMap.tintAt((sprite.x + TILE_SIZE / 2) / 2, (sprite.y - 3) / 2, floor)
+          }
+          if (lit.lamps > 0) {
+            for (const person of figures()) {
+              const body = person instanceof Sprite ? person : (person.children[0] as Sprite | undefined)
+              const rim = rimOf(person)
+              const texture = body && body.visible && person.visible ? rimTexture(body.texture) : null
+              rim.visible = !!texture
+              if (!texture || !body) continue
+              rim.texture = texture
+              const bx = person === body ? person.x : person.x + body.x
+              const by = person === body ? person.y : person.y + body.y
+              rim.position.set(bx - RIM_PAD, by + RIM_PAD)
+              rim.zIndex = person.zIndex - 0.5
+              rim.alpha = lit.lamps >= 1 ? 0.7 : 0.3
+            }
           }
         }
 
