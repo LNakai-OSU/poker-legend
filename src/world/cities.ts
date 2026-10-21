@@ -111,9 +111,9 @@ TTTTTTTTTTTTTTTTTTTTTTTTTTTT
 const ROAD_MESA = parseMap(`
 TTTTTTTTTTTTTTTTTTTTTTTTTTTT
 T::::::::::::::o::::::++oo+T
-T:o::::::::::::::::::++++++T
-T::::::::::o::::::::+++++++T
-T::::::::::::::::::::++++++T
+T:o::_________:::o:::++++++T
+T::::_FFF_FFF_::::::+++++++T
+T::::_________:o:o:::++++++T
 ---o-------------------o----
 ============================
 ============================
@@ -163,9 +163,9 @@ T::FFF++++++++++++++++++++FFF::T
 ----++++o+++++++++++++o+++++----
 T::++++++++++++++++++++++++++o:T
 T::+oo+++++++++++++++++++oo++::T
-T::++++#####++++++++#####++++::T
-T::::::#####::::::o:#####::::::T
-T:o::::##D##::oo::::#####:o:o::T
+T::++++#####+######+#####++++::T
+T::::::#####:######:#####::::::T
+T:oo:::##D##:######:#####:o:o::T
 T::::o:::::::::::::::::::::::::T
 TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT`)
 
@@ -2609,9 +2609,10 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'saguaro', col: 30, row: 4 },
     { stampId: 'saguaro', col: 2, row: 15 },
     { stampId: 'saguaro', col: 28, row: 15 },
-    { stampId: 'rocks-red-2', col: 14, row: 16 },
+    { stampId: 'gas-silvercreek', col: 13, row: 14 },
+    { stampId: 'inlay-sun', col: 14, row: 11 },
     { stampId: 'rocks-red', col: 5, row: 17 },
-    { stampId: 'barrel-cactus', col: 18, row: 15 },
+    { stampId: 'barrel-cactus', col: 3, row: 16 },
     { stampId: 'barrel-cactus', col: 26, row: 16 },
     { stampId: 'noticeboard', col: 29, row: 12 },
   ],
@@ -2821,7 +2822,10 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'palm-tall', col: 3, row: 11 },
     { stampId: 'lamp-tiki', col: 3, row: 4 },
     { stampId: 'billboard-mesa', col: 5, row: 9 },
-    { stampId: 'saguaro', col: 11, row: 2 },
+    { stampId: 'saguaro', col: 17, row: 1 },
+    { stampId: 'parked-car-white-e', col: 6, row: 3 },
+    { stampId: 'parked-car-red-w', col: 10, row: 3 },
+    { stampId: 'welcome-mesa', col: 15, row: 3 },
     { stampId: 'saguaro', col: 17, row: 10 },
     { stampId: 'rocks-red-2', col: 14, row: 11 },
     { stampId: 'barrel-cactus', col: 9, row: 12 },

@@ -358,6 +358,7 @@ export const STAMPS: StampDef[] = [
   building('hotel-silvercreek-w', 'Hotel wing', 'Pueblo adobe with a shaded portal; the hotel side.', 7, 4),
   building('hotel-silvercreek-e', 'Buffet wing', 'Pueblo adobe with a shaded portal; the buffet side.', 7, 4),
   building('giftshop-silvercreek', 'Trading post', 'GIFTS on a timber false front, a porch, a cactus in a pot.', 5, 3, { col: 2, label: 'Gift Shop' }),
+  building('gas-silvercreek', 'Gas station', 'An adobe office, and two red pumps under a canopy that is lit at night.', 6, 3),
   building('motel-silvercreek', 'Motel office', 'A tall sign buzzing VACANCY.', 5, 3),
   // --- Riverbend -------------------------------------------------------------
   {
@@ -503,6 +504,15 @@ const STREET_FURNITURE: StampDef[] = [
   streetThing('fountain-mesa', 'Strip fountain', 'Jets dancing in turn, lit from under the water. Lay it over a pool six by two.', [
     '~~~~~~',
     '~~~~~~',
+  ]),
+  streetThing('inlay-sun', 'Sun inlay', 'A terracotta sun in a ring of turquoise, laid into the paving. Walk across it.', [
+    '???',
+    '???',
+    '???',
+  ]),
+  streetThing('welcome-mesa', 'Welcome sign', 'WELCOME TO NEON MESA on a diamond in bulbs, on two legs. You can stand between them.', [
+    '???',
+    'o?o',
   ]),
   streetThing('billboard-mesa', 'Billboard', 'NEON MESA over a desert sunset, on two legs. You can stand between them.', [
     '???',
