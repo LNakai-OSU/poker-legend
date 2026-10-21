@@ -1,7 +1,7 @@
 import type { StampArt } from '../stampArt'
-import { glow, neonText, shadow, sprite, text, textCentred, textWidth, tint, type Px } from '../pixelArt'
+import { glow, icon, neonText, shadow, sprite, text, textCentred, textWidth, tint, type Px } from '../pixelArt'
 import {
-  archedWindow, awning, barrelRoof, bulbs, eaveShadow, flatRoof, glassDoors, groundShadow,
+  archedWindow, awning, barrelRoof, bulbBorder, bulbs, eaveShadow, flatRoof, glassDoors, groundShadow,
   plinth, roundWindow, stoneWall, windowAt,
   type RoofPalette, type WallPalette, type WindowStyle,
 } from './buildingParts'
@@ -72,93 +72,175 @@ function starburst(px: Px, cx: number, cy: number, frame: number, color: string)
   glow('neon', () => sprite(px, shape, cx - 3, cy - 3, { '#': color, o: '#ffffff' }))
 }
 
+/** A blade sign hung off a facade: a lightbox, letters stacked down it, bulbs chasing round the edge. */
+function bladeSign(px: Px, x: number, y: number, word: string, frame: number) {
+  const bw = 16
+  const bh = word.length * 12 + 4
+  // Brackets back to the wall, then the box.
+  for (const by of [y + 6, y + bh - 8]) px(x + bw, by, 3, 2, '#5a5a6e')
+  px(x - 1, y - 1, bw + 2, bh + 2, '#08060e')
+  glow('neon', () => {
+    px(x, y, bw, bh, '#f4e8c8')
+    px(x + 2, y + 2, bw - 4, bh - 4, '#fff6e0')
+  })
+  bulbBorder(px, x, y, bw, bh, frame, '#ffe680', '#a8801e')
+  ;[...word].forEach((ch, i) => {
+    const lx = x + Math.round((bw - textWidth(ch, 2)) / 2)
+    const ly = y + 4 + i * 12
+    text(px, ch, lx + 1, ly + 1, '#7a1010', 2)
+    glow('neon', () => text(px, ch, lx, ly, frame && i % 2 ? '#ff4a4a' : '#e8202a', 2))
+  })
+}
+
+/** Three reels on a pay line, every one a seven: the jackpot, in neon, on the lobby glass. */
+function neonSevens(px: Px, x: number, y: number, frame: number) {
+  px(x, y, 35, 14, GOLD_DARK)
+  px(x, y, 35, 1, GOLD)
+  glow('neon', () => {
+    for (let i = 0; i < 3; i++) {
+      const rx = x + 2 + i * 11
+      px(rx, y + 2, 9, 10, '#fff8ec')
+      px(rx, y + 2, 9, 1, '#d8d0c0')
+      text(px, '7', rx + 2, y + 2, frame && i === 1 ? '#ffd84a' : '#e8202a', 2)
+    }
+    // The pay line, lit.
+    px(x + 1, y + 7, 33, 1, 'rgba(255, 90, 216, 0.75)')
+  })
+}
+
+/** A royal flush fanned out on the glass, lit from behind. */
+function neonCards(px: Px, x: number, y: number) {
+  const cards: Array<[string, 'spade' | 'heart' | 'diamond', string]> = [
+    ['A', 'spade', '#1a1a24'], ['K', 'heart', '#d8202a'], ['Q', 'diamond', '#d8202a'], ['J', 'spade', '#1a1a24'],
+  ]
+  cards.forEach(([rank, suit, ink], i) => {
+    const cx = x + i * 8
+    const cy = y + (i === 1 || i === 2 ? 0 : 1)
+    px(cx - 1, cy - 1, 12, 15, '#1a1024')
+    glow('neon', () => {
+      px(cx, cy, 10, 13, '#fbf8f0')
+      text(px, rank, cx + 1, cy + 1, ink)
+      icon(px, suit, cx + 3, cy + 7, ink)
+    })
+  })
+}
+
 /**
- * The Mesa Casino: a sign the width of the building with MESA in pink neon,
- * gold glass above a marquee that runs the whole frontage, and a red carpet.
+ * The Mesa Casino. A gold glass tower; a sign box across the front with MESA in
+ * pink neon the height of a man, bulbs chasing round it; CASINO down a blade
+ * sign; a marquee ticker; and at street level a lobby lit gold, sevens and a
+ * royal flush in neon on the glass, a red carpet, and light pouring out of the
+ * doors onto the pavement.
  */
 const casinoMesa: StampArt = {
-  bleed: { left: 2, right: 3, bottom: 12 },
+  bleed: { left: 2, right: 3, bottom: 14 },
   frames: 2,
+  lights: [
+    { x: 88, y: 104, reach: 50, color: '#ffd890', strength: 1 },
+    { x: 30, y: 100, reach: 34, color: '#ff7ae0', strength: 0.8 },
+    { x: 146, y: 100, reach: 34, color: '#7ae8ff', strength: 0.8 },
+  ],
   draw: (px, c) => {
     const { w, h, frame } = c
-    // The sign.
-    px(-2, 0, w + 4, 32, '#08060e')
-    px(-1, 1, w + 2, 30, '#140c1e')
-    tube(px, 2, 3, w - 4, 1, PINK_NEON)
-    tube(px, 2, 27, w - 4, 1, PINK_NEON)
-    tube(px, 2, 3, 1, 25, PINK_NEON)
-    tube(px, w - 3, 3, 1, 25, PINK_NEON)
-    const word = 'MESA'
-    const ww = textWidth(word, 4)
-    neonText(px, word, Math.round((w - ww) / 2), 6, frame ? '#ffe0fa' : PINK_NEON.tube, PINK_NEON.glow, 4)
-    starburst(px, 22, 15, frame, '#ffe14f')
-    starburst(px, w - 22, 15, frame + 1, CYAN_NEON.tube)
-    starburst(px, 40, 9, frame + 1, CYAN_NEON.tube)
-    starburst(px, w - 40, 21, frame, '#ffe14f')
-    // Gold glass.
-    px(0, 32, w, 2, GOLD)
-    glassGrid(px, 0, 34, w, 26, '#3a2a18', GOLD_DARK)
-    for (let y = 35; y < 59; y += 6) {
+    // The tower: a parapet of bulbs over gold glass.
+    px(0, 0, w, 4, '#120c18')
+    px(0, 3, w, 1, GOLD)
+    bulbs(px, 2, 1, Math.floor((w - 4) / 3) + 1, 3, frame)
+    glassGrid(px, 0, 4, w, 34, '#3a2a18', GOLD_DARK)
+    for (let y = 5; y < 36; y += 6) {
       for (let x = 1; x < w - 1; x += 8) if ((x * 7 + y + frame * 5) % 11 === 0) px(x, y, 7, 5, '#ffd27a')
     }
-    tube(px, 1, 34, 1, 26, CYAN_NEON)
-    tube(px, w - 2, 34, 1, 26, CYAN_NEON)
-    // The marquee: gold edges, two rows of chasing bulbs, CASINO on white.
-    px(0, 58, w, 16, '#1a1024')
-    px(4, 58, w - 8, 16, '#2a1a08')
-    // The marquee is a lightbox.
+    tube(px, 1, 4, 1, 34, CYAN_NEON)
+    tube(px, w - 2, 4, 1, 34, CYAN_NEON)
+
+    // The sign box, standing proud of the glass.
+    const sx = 22
+    const sw = w - sx - 2
+    shadow(px, sx + 2, 38, sw, 36, 0.35)
+    px(sx, 37, sw, 35, '#08060e')
+    px(sx + 1, 38, sw - 2, 33, '#1a0c26')
+    for (let y = 40; y < 70; y += 3) px(sx + 2, y, sw - 4, 1, '#22102e')
+    bulbBorder(px, sx + 2, 39, sw - 4, 31, frame)
+    const ww = textWidth('MESA', 5)
+    const mx = sx + Math.round((sw - ww) / 2)
+    neonText(px, 'MESA', mx, 43, frame ? '#ffe0fa' : PINK_NEON.tube, PINK_NEON.glow, 5)
+    // A tube underlining the word, and stars either side.
+    tube(px, mx, 69, ww, 1, CYAN_NEON)
+    starburst(px, sx + Math.round((mx - sx) / 2), 54, frame, '#ffe14f')
+    starburst(px, mx + ww + Math.round((sx + sw - mx - ww) / 2), 54, frame + 1, CYAN_NEON.tube)
+
+    // The marquee ticker over the doors.
+    glassGrid(px, 0, 38, sx, 41, '#3a2a18', GOLD_DARK)
+    px(sx, 72, w - sx, 8, '#1a1024')
+    px(sx, 72, sw, 1, GOLD)
+    px(sx, 79, sw, 1, GOLD_DARK)
     glow('neon', () => {
-      px(5, 59, w - 10, 14, '#f4f0e4')
-      px(5, 59, w - 10, 1, GOLD)
-      px(5, 72, w - 10, 1, GOLD)
-      bulbs(px, 6, 60, Math.floor((w - 12) / 3) + 1, 3, frame)
-      bulbs(px, 7, 71, Math.floor((w - 12) / 3), 3, frame + 1)
-      const cw = textWidth('CASINO', 2)
-      text(px, 'CASINO', Math.round((w - cw) / 2) + 1, 62, '#7a1010', 2)
-      text(px, 'CASINO', Math.round((w - cw) / 2), 61, '#d8202a', 2)
-      text(px, 'OPEN 24 HRS', 10, 63, '#3a3a48')
-      text(px, 'POKER  CRAPS', w - 10 - textWidth('POKER  CRAPS'), 63, '#3a3a48')
+      px(sx, 73, sw, 6, '#f4f0e4')
+      // Either side of the door, so its name plate never sits on the words.
+      const left = 'SLOTS  POKER'
+      const right = 'CRAPS  24 HRS'
+      text(px, left, sx + Math.round((68 - sx - textWidth(left)) / 2), 74, '#3a1a48')
+      text(px, right, 108 + Math.round((sx + sw - 108 - textWidth(right)) / 2), 74, '#3a1a48')
     })
-    shadow(px, 4, 74, w - 8, 2, 0.4)
-    // The floor through the glass: machines, glowing.
-    // The floor through the glass, every machine lit.
+
+    // The blade, hung off the left corner, over everything behind it.
+    bladeSign(px, 3, 2, 'CASINO', frame)
+
+    // Street level: the lobby through the glass, lit gold.
+    px(0, 79, w, h - 79, '#2a1a08')
+    glow('window', () => {
+      px(2, 80, w - 4, 14, '#e8b858')
+      px(2, 80, w - 4, 3, '#ffe8a8')
+      px(2, 83, w - 4, 1, '#f8dc90')
+    })
+    // Chandeliers, and machines along the back wall.
+    for (const cx of [12, 50, w - 50, w - 12]) {
+      glow('lamp', () => {
+        px(cx - 3, 81, 7, 1, '#fff4cc')
+        px(cx - 1, 82, 3, 1, '#ffffff')
+      })
+    }
     glow('neon', () => {
-      px(0, 73, w, h - 73, '#1a1024')
-      for (let x = 4; x < w - 4; x += 7) {
-        px(x, 78, 5, 12, '#5a2a7a')
-        px(x, 78, 5, 2, (x + frame) % 2 ? '#ffe14f' : '#ff8a3a')
-        px(x + 1, 81, 3, 2, '#e8e8f0')
+      for (let x = 3; x < w - 4; x += 6) {
+        if (x > 58 && x < 118) continue
+        px(x, 86, 5, 8, '#4a1a5a')
+        px(x + 1, 87, 3, 2, ['#5ae8ff', '#ff5ad8', '#ffe14f'][(x + frame) % 3])
+        px(x, 85, 5, 1, (x + frame) % 2 ? '#ffe14f' : '#ff8a3a')
       }
-      for (const x of [58, w - 62]) {
-        px(x, 73, 4, h - 75, GOLD_DARK)
-        px(x + 1, 73, 1, h - 75, GOLD)
-      }
-      for (const door of doorTiles(c)) {
-        px(door.x - 10, door.y - 2, 36, 18, '#2a1a08')
-        glassDoors(px, door.x - 9, door.y - 1, 16, GOLD_DARK, '#3a2a4a', GOLD)
-        glassDoors(px, door.x + 9, door.y - 1, 16, GOLD_DARK, '#3a2a4a', GOLD)
-      }
-      // A neon cactus on the left, a pair of dice on the right.
-      sprite(px, ['..#..', '#.#..', '#.#.#', '###.#', '..###', '..#..', '..#..', '..#..'], 6, 77, { '#': '#5aff7a' })
-      px(w - 18, 78, 7, 7, '#f4f4f4')
-      px(w - 16, 80, 1, 1, '#d8202a')
-      px(w - 14, 82, 1, 1, '#d8202a')
-      px(w - 11, 82, 6, 6, '#f4f4f4')
-      px(w - 9, 84, 1, 1, '#d8202a')
     })
-    plinth(px, 0, h - 2, w, '#3a2a18')
-    // Red carpet and its ropes.
+    neonSevens(px, 12, 80, frame)
+    neonCards(px, 132, 80)
+    // Gold columns either side of the entrance bay.
+    for (const x of [58, w - 62]) {
+      px(x, 79, 4, h - 81, GOLD_DARK)
+      px(x + 1, 79, 1, h - 81, GOLD)
+      tube(px, x + 3, 80, 1, h - 83, PINK_NEON)
+    }
     for (const door of doorTiles(c)) {
-      px(door.x - 6, h, 28, 12, '#7a1414')
-      px(door.x - 5, h, 26, 12, '#c82424')
-      px(door.x - 5, h, 1, 12, GOLD)
-      px(door.x + 20, h, 1, 12, GOLD)
+      px(door.x - 18, 79, 52, h - 81, '#3a2410')
+      glow('window', () => px(door.x - 17, 80, 50, h - 83, '#f8d888'))
+      glassDoors(px, door.x - 9, door.y - 1, 16, GOLD, '#ffe8a8', GOLD_DARK)
+      glassDoors(px, door.x + 9, door.y - 1, 16, GOLD, '#ffe8a8', GOLD_DARK)
+    }
+    plinth(px, 0, h - 2, w, '#3a2a18')
+
+    // Light pouring out of the doors, a red carpet down the steps, and ropes.
+    for (const door of doorTiles(c)) {
+      glow('window', () => {
+        px(door.x - 10, h, 36, 2, '#f8d888')
+        px(door.x - 6, h + 2, 28, 1, '#e8b858')
+      })
+      px(door.x - 6, h + 2, 28, 12, '#7a1414')
+      px(door.x - 5, h + 2, 26, 12, '#c82424')
+      for (let y = h + 4; y < h + 14; y += 3) px(door.x - 4, y, 24, 1, '#b01c1c')
+      px(door.x - 5, h + 2, 1, 12, GOLD)
+      px(door.x + 20, h + 2, 1, 12, GOLD)
       for (const post of [door.x - 10, door.x + 24]) {
-        for (const py of [h + 2, h + 9]) {
+        for (const py of [h + 3, h + 11]) {
           px(post, py, 2, 3, GOLD_DARK)
           px(post, py, 2, 1, '#ffe080')
         }
-        px(post, h + 4, 1, 5, '#8a1a2a')
+        px(post, h + 5, 1, 6, '#8a1a2a')
       }
     }
     groundShadow(px, w, 32, h)
@@ -168,6 +250,7 @@ const casinoMesa: StampArt = {
 /** Mesa Luxury: black glass ruled in gold, a watch and a handbag spot-lit in the window. */
 const luxury: StampArt = {
   bleed: { left: 1, right: 3 },
+  lights: [{ x: 40, y: 100, reach: 36, color: '#ffe0a0', strength: 0.8 }],
   draw: (px, c) => {
     const { w, h } = c
     px(-1, 0, w + 2, 7, GOLD_DARK)
@@ -186,22 +269,36 @@ const luxury: StampArt = {
     // Spotlit in the window all night.
     glow('neon', () => {
       for (const [x, item] of [[3, 'watch'], [52, 'bag']] as const) {
-        px(x, 74, 25, 19, GOLD_DARK)
-        px(x + 1, 75, 23, 17, '#1a1a22')
-        px(x + 7, 75, 11, 17, 'rgba(255, 240, 200, 0.12)')
-        px(x + 8, 87, 9, 4, '#e8e4dc')
+        px(x, 73, 25, 21, GOLD_DARK)
+        px(x + 1, 74, 23, 19, '#1a1a22')
+        // A spotlight cone down onto a velvet plinth.
+        for (let i = 0; i < 12; i++) px(x + 10 - (i >> 1), 74 + i, 5 + i, 1, 'rgba(255, 240, 200, 0.10)')
+        px(x + 4, 87, 17, 5, '#3a1a2a')
+        px(x + 4, 87, 17, 1, '#6a2a4a')
+        px(x + 5, 92, 15, 1, '#0e0e14')
         if (item === 'watch') {
-          px(x + 10, 81, 5, 5, GOLD)
-          px(x + 11, 82, 3, 3, '#f4f4f4')
-          px(x + 12, 82, 1, 2, '#1a1a22')
-          px(x + 11, 79, 3, 2, '#2a2a30')
-          px(x + 11, 86, 3, 1, '#2a2a30')
+          // Strap through the face, a gold bezel, the hands at ten to two.
+          px(x + 10, 75, 5, 13, '#5a3420')
+          px(x + 11, 75, 1, 13, '#7a4a2e')
+          px(x + 7, 77, 11, 9, GOLD_DARK)
+          px(x + 8, 76, 9, 11, GOLD_DARK)
+          px(x + 8, 77, 9, 9, GOLD)
+          px(x + 9, 78, 7, 7, '#fbf8f0')
+          px(x + 12, 79, 1, 3, '#1a1a22')
+          px(x + 13, 81, 2, 1, '#1a1a22')
+          px(x + 9, 78, 2, 1, '#ffffff')
+          px(x + 17, 80, 1, 2, '#ffe080')
         } else {
-          px(x + 9, 81, 8, 6, '#b82a3a')
-          px(x + 10, 79, 6, 1, '#8a1a2a')
-          px(x + 10, 79, 1, 2, '#8a1a2a')
-          px(x + 15, 79, 1, 2, '#8a1a2a')
-          px(x + 12, 83, 2, 1, GOLD)
+          // A red bag with a flap, a gold clasp and a handle.
+          px(x + 8, 76, 9, 1, '#6a1420')
+          px(x + 7, 77, 1, 4, '#6a1420')
+          px(x + 17, 77, 1, 4, '#6a1420')
+          px(x + 5, 80, 15, 8, '#8a1a2a')
+          px(x + 5, 80, 15, 7, '#c82a3a')
+          px(x + 5, 80, 15, 1, '#e85a6a')
+          px(x + 5, 81, 15, 3, '#a81e2e')
+          px(x + 11, 83, 3, 2, GOLD)
+          px(x + 11, 83, 3, 1, '#fff0b0')
         }
       }
     })
@@ -218,6 +315,7 @@ const luxury: StampArt = {
 /** Mesa Motors: parking decks over a showroom, a yellow car turning on a plinth. */
 const motors: StampArt = {
   bleed: { left: 1, right: 3 },
+  lights: [{ x: 60, y: 100, reach: 44, color: '#e8f4ff', strength: 0.8 }],
   frames: 2,
   draw: (px, c) => {
     const { w, h, frame } = c
@@ -286,6 +384,7 @@ const motors: StampArt = {
 /** Ultraviolet: black, lightning in UV neon, searchlights, and a rope to queue behind. */
 const ultraviolet: StampArt = {
   bleed: { left: 1, right: 3, top: 14, bottom: 10 },
+  lights: [{ x: 56, y: 100, reach: 44, color: '#c890ff', strength: 0.9 }],
   frames: 2,
   draw: (px, c) => {
     const { w, h, frame } = c

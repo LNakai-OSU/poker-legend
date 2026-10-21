@@ -1806,7 +1806,7 @@ const neonMesa: CityDef = {
       'nm-street',
       'The Mesa Strip',
       NEON_MESA_TOWN,
-      { col: 15, row: 9 },
+      { col: 9, row: 7 },
       '#1a1020',
       [
         {
