@@ -357,16 +357,17 @@ const CAY_FLOOR = parseMap(`
 ^FFFFFF'FFFFF'FFFF'^
 ^''''''''''''''''''^
 ^''''''''''''''''''^
+^''FFF''FFFF''FFF''^
+^''FFF''FFFF''FFF''^
 ^''''''''''''''''''^
-^''FFF''F''F''FFF''^
-^''FFF''F''F''FFF''^
 ^''''''''''''''''''^
-^''''''''''''''''''^
+^'FFFF''''''''FFFF'^
+^'FFFF''''''''FFFF'^
 ^F''''''''''''''''F^
 ^^^^^^^^^^D^^^^^^^^^
 `)
 
-/** The Mesa Casino: black carpet with neon confetti, neon walls, a progressive bank, the high-roller door roped off. */
+/** The Mesa Casino: near-black carpet with neon trim, neon walls, a progressive bank, the high-roller door roped off. */
 const MESA_FLOOR = parseMap(`
 ^^^^^^^^^^^^^^^^^^^^^^
 ^FFFFFFnnnnnnnnnFFFFF^
@@ -387,15 +388,15 @@ const MESA_FLOOR = parseMap(`
 /** Porto Lumina: white marble, gold columns, chandelier light, a roped salon in burgundy for the last game. */
 const LUMINA_FLOOR = parseMap(`
 ^^^^^^^^^^^^^^^^^^^^
-^FFFFmmmmmmmmmFFFFF^
-^FFFFMMMMMMMMMFFFFF^
+^FFFFFFFFmmmmmFFFFF^
+^FFFFFFFFMMMMMFFFFF^
 ^MMMMMMMMMMMMMMMMMM^
 ^MMMMMMMMMM&&&&&&&&^
-^MMMMMMMFMMF&&&&&&&^
+^MMFFFMMFMMF&&&&&&&^
 ^MMFFFMMFMMF&&FF&&&^
-^MMFFFMMMMM&&&&&&&&^
 ^MMMMMMMMMM&&&&&&&&^
-^FMMMMMMMMMFFF&&FFF^
+^MMMMMMMMMM&&&&&&&&^
+^FMMFFMMMMMFFF&&FFF^
 ^FMMMMMMMMMMMMMMMMF^
 ^^^^^^^^^^D^^^^^^^^^
 `)
@@ -1654,7 +1655,7 @@ const palmCay: CityDef = {
         ]),
       ],
       [
-        { col: 13, row: 4, toAreaId: 'pc-casino', toCol: 10, toRow: 10, label: 'Cay Room' },
+        { col: 13, row: 4, toAreaId: 'pc-casino', toCol: 10, toRow: 11, label: 'Cay Room' },
         { col: 9, row: 15, toAreaId: 'pc-boutique', toCol: 6, toRow: 7, label: 'Boutique' },
         { col: 23, row: 15, toAreaId: 'pc-grill', toCol: 7, toRow: 8, label: 'Shoreline Grill' },
         { col: 5, row: 4, toAreaId: 'pc-marina', toCol: 7, toRow: 8, label: 'Marina Motors' },
@@ -1665,14 +1666,14 @@ const palmCay: CityDef = {
       'pc-casino',
       'The Cay Room',
       CAY_FLOOR,
-      { col: 10, row: 10 },
+      { col: 10, row: 11 },
       '#0c1a1c',
       [
         {
           id: 'cay-dealer',
           name: 'Dealer',
           col: 4,
-          row: 5,
+          row: 4,
           color: COLORS.dealer,
           lines: ['Dealer: Ten-twenty-five. Twenty-five hundred to sit.'],
           action: { kind: 'table', tableId: 'palmcay-high' },
@@ -1681,7 +1682,7 @@ const palmCay: CityDef = {
           id: 'tourist-dealer',
           name: 'Tourist Table',
           col: 15,
-          row: 5,
+          row: 4,
           color: COLORS.dealer,
           lines: [
             'Dealer: Same stake, softer game. Bernard is celebrating something.',
@@ -1703,7 +1704,7 @@ const palmCay: CityDef = {
           'Barman: Something with an umbrella in it? Everyone has something with an umbrella in it.',
         ]),
       ],
-      [{ col: 10, row: 11, toAreaId: 'pc-street', toCol: 13, toRow: 5, label: 'Out' }],
+      [{ col: 10, row: 12, toAreaId: 'pc-street', toCol: 13, toRow: 5, label: 'Out' }],
     ),
     'pc-boutique': area(
       'pc-boutique',
@@ -2075,7 +2076,7 @@ const portoLumina: CityDef = {
           id: 'lumina-dealer',
           name: 'Dealer',
           col: 4,
-          row: 5,
+          row: 4,
           color: COLORS.dealer,
           lines: ['Dealer: Hundred-two hundred. Thirty thousand to sit.'],
           action: { kind: 'table', tableId: 'lumina-nosebleed' },
@@ -2236,12 +2237,13 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'slot-bank-island', col: 8, row: 1 },
     { stampId: 'palm', col: 12, row: 1 },
     { stampId: 'slot-bank-island', col: 14, row: 1 },
-    { stampId: 'poker-table-teal', col: 2, row: 5 },
-    { stampId: 'poker-table-teal', col: 13, row: 5 },
-    { stampId: 'palm', col: 8, row: 6 },
-    { stampId: 'palm', col: 11, row: 6 },
-    { stampId: 'fern', col: 1, row: 10 },
-    { stampId: 'fern', col: 18, row: 10 },
+    { stampId: 'poker-table-teal', col: 2, row: 4 },
+    { stampId: 'poker-table-teal', col: 13, row: 4 },
+    { stampId: 'slot-bank-reef', col: 8, row: 5 },
+    { stampId: 'slot-bank-reef', col: 2, row: 9 },
+    { stampId: 'slot-bank-reef', col: 14, row: 9 },
+    { stampId: 'fern', col: 1, row: 11 },
+    { stampId: 'fern', col: 18, row: 11 },
   ],
   'nm-casino': [
     { stampId: 'slot-bank-jackpot', col: 1, row: 1 },
@@ -2260,10 +2262,12 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
   ],
   'pl-casino': [
     { stampId: 'slot-bank-gold', col: 1, row: 1 },
-    { stampId: 'painting-portrait', col: 6, row: 1 },
-    { stampId: 'painting-landscape', col: 10, row: 1 },
+    { stampId: 'slot-bank-ivory', col: 5, row: 1 },
+    { stampId: 'painting-portrait', col: 9, row: 1 },
+    { stampId: 'painting-landscape', col: 11, row: 1 },
     { stampId: 'bar-marble', col: 14, row: 1 },
-    { stampId: 'poker-table-royal', col: 2, row: 5 },
+    { stampId: 'poker-table-royal', col: 2, row: 4 },
+    { stampId: 'roulette', col: 3, row: 8 },
     { stampId: 'poker-table-royal-4', col: 13, row: 5 },
     { stampId: 'pillar-marble', col: 8, row: 5 },
     { stampId: 'pillar-marble', col: 11, row: 5 },
@@ -2271,7 +2275,7 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'velvet-rope', col: 16, row: 9 },
     { stampId: 'palm', col: 1, row: 9 },
     { stampId: 'fern', col: 18, row: 10 },
-    { stampId: 'light-pool', col: 3, row: 5 },
+    { stampId: 'light-pool', col: 3, row: 4 },
     { stampId: 'light-pool', col: 13, row: 5 },
   ],
   'ch-club': [

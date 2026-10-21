@@ -168,6 +168,8 @@ export const STAMPS: StampDef[] = [
   slots('slot-bank-western', 'Saloon slots', 'Red and green machines, saddle-leather stools.', 4),
   slots('slot-bank-brass', 'Riverboat slots', 'Green, red and burgundy machines with brass trim.', 4),
   slots('slot-bank-island', 'Island slots', 'Blue, green and red machines, cane stools.', 4),
+  slots('slot-bank-reef', 'Reef slots', 'Coral, seafoam and sunshine machines, cane stools.', 4),
+  slots('slot-bank-ivory', 'Salon slots', 'Ivory and burgundy machines in gold, without the jackpot board.', 4),
   slots('slot-bank-neon', 'Neon slots', 'Black cabinets with pink and cyan toppers.', 5),
   {
     ...slots('slot-bank-jackpot', 'Progressive bank', 'Six neon machines under a JACKPOT board counting up.', 6),
