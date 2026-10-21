@@ -232,6 +232,15 @@ export const STAMPS: StampDef[] = [
   fixture('fern', 'Fern', 'A fern in a brass pot.', ['F']),
   fixture('velvet-rope', 'Velvet rope', 'Brass posts and a red rope.', ['FFF']),
   fixture('light-pool', 'Pool of light', 'Light from a chandelier on the floor. You can walk through it.', ['???', '???', '???']),
+  fixture('prize-car', 'Prize car', 'A convertible with a bow on it, turning on a lit plinth under a WIN ME sign.', ['FFF', 'FFF'], 'casino'),
+  {
+    id: 'change-booth',
+    name: 'Change booth',
+    category: 'casino',
+    about: 'A glass kiosk out on the floor, a cashier inside and CHANGE lit on the roof. Faces down.',
+    tiles: ['FFF', 'FFF'].join('\n'),
+    wiring: { kind: 'poi', at: { col: 1, row: 1 }, name: 'Change Booth', action: 'flavor' },
+  },
   // --- On the wall ---------------------------------------------------------------
   onWall('window-brick', 'Window (brick view)', 'Curtains, and the wall of the next building four feet away.', 2),
   onWall('window-sky', 'Window (sky)', 'Curtains and blue sky.', 2),

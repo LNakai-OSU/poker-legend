@@ -1,5 +1,5 @@
 import type { ArtContext, StampArt } from '../stampArt'
-import { INK, oval, ovalSpans, shadow, sprite, text, textCentred, textWidth, tint, type Px } from '../pixelArt'
+import { INK, glow, oval, ovalSpans, shadow, sprite, text, textCentred, textWidth, tint, type Px } from '../pixelArt'
 import { bulbBorder } from './buildingParts'
 
 /**
@@ -685,6 +685,133 @@ const velvetRope: StampArt = {
   },
 }
 
+/**
+ * The Strip's way of saying the slots pay: a convertible with a red bow on the
+ * bonnet, turning on a drum ringed in neon, under a WIN ME sign on two chrome
+ * posts. Three tiles by two; the sign stands above the footprint and in front
+ * of whoever walks behind it.
+ */
+const prizeCar: StampArt = {
+  frames: 2,
+  bleed: { top: 13 },
+  standsUp: 10,
+  draw: (px, c) => {
+    const { w, h, frame } = c
+    // The sign, on two chrome posts behind the car.
+    for (const x of [7, w - 8]) {
+      px(x, -2, 2, 18, '#8a8e98')
+      px(x, -2, 1, 18, '#d8dce4')
+    }
+    px(4, -13, w - 8, 12, INK)
+    px(5, -12, w - 10, 10, '#3a0a3a')
+    bulbBorder(px, 5, -12, w - 10, 10, frame, '#ffe680', '#6a3a20')
+    glow('neon', () => textCentred(px, 'WIN ME', w / 2, -10, frame ? '#ff6ae0' : '#ffe066'))
+    // The drum: its side in shadow, a neon band round the rim, the turning top.
+    shadow(px, 1, h - 4, w - 2, 4, 0.4)
+    oval(px, 1, 17, w - 2, 14, '#100c18')
+    glow('neon', () => oval(px, 1, 15, w - 2, 13, frame ? '#4fe8ff' : '#2ab8d8'))
+    oval(px, 2, 16, w - 4, 11, '#2a2238')
+    oval(px, 6, 17, w - 12, 8, '#352c46')
+    // The car, side-on, nose to the right.
+    const x0 = 5
+    const body = '#e8303a'
+    const dark = tint(body, -0.35)
+    // Tail fin, rear deck, the open cabin, the long bonnet.
+    px(x0, 11, 6, 3, body)
+    px(x0, 11, 6, 1, tint(body, 0.4))
+    px(x0 + 1, 10, 3, 1, body)
+    px(x0, 13, 38, 8, body)
+    px(x0, 13, 38, 1, tint(body, 0.35))
+    px(x0 + 27, 12, 10, 1, body)
+    px(x0 + 27, 12, 10, 1, tint(body, 0.25))
+    px(x0, 19, 38, 2, dark)
+    // Cream leather seats behind the windscreen.
+    px(x0 + 9, 9, 4, 5, '#ece0c4')
+    px(x0 + 9, 9, 4, 1, '#ffffff')
+    px(x0 + 16, 9, 4, 5, '#ece0c4')
+    px(x0 + 16, 9, 4, 1, '#ffffff')
+    px(x0 + 8, 13, 14, 1, '#7a1a20')
+    // Windscreen, chrome frame, the steering wheel behind it.
+    px(x0 + 22, 8, 1, 6, '#d8dce4')
+    px(x0 + 23, 8, 3, 5, '#9fd4ec')
+    px(x0 + 23, 8, 1, 5, '#e8f6fc')
+    px(x0 + 20, 10, 2, 3, '#2a2a30')
+    // Chrome strip and bumpers, head and tail lights.
+    px(x0 + 1, 16, 36, 1, '#f4f6f8')
+    px(x0 + 37, 15, 2, 5, '#d8dce4')
+    px(x0 - 1, 15, 2, 5, '#d8dce4')
+    glow('lamp', () => px(x0 + 37, 14, 2, 2, '#fff4c8'))
+    px(x0, 12, 2, 2, '#ff6a4a')
+    // Whitewall tyres.
+    for (const wx of [x0 + 5, x0 + 27]) {
+      px(wx, 18, 7, 7, '#1a1a1e')
+      px(wx + 1, 19, 5, 5, '#e8e8ec')
+      px(wx + 2, 20, 3, 3, '#a8b0b8')
+      px(wx + 3, 21, 1, 1, '#4a4e54')
+    }
+    // The bow on the bonnet.
+    px(x0 + 29, 9, 3, 3, '#ff3a5a')
+    px(x0 + 33, 9, 3, 3, '#ff3a5a')
+    px(x0 + 32, 10, 1, 2, '#c81a3a')
+    px(x0 + 29, 9, 1, 1, '#ff9ab0')
+    px(x0 + 31, 12, 1, 2, '#c81a3a')
+    px(x0 + 33, 12, 1, 2, '#c81a3a')
+  },
+}
+
+/**
+ * A change booth standing out on the floor: a glass kiosk with a cashier in it.
+ * Built like a counter — the back and the window under the people, the front
+ * over them — so whoever stands at its middle tile is inside, from the ribs up.
+ */
+const changeBooth: StampArt = {
+  frames: 2,
+  bleed: { top: 9 },
+  standsUp: 0,
+  draw: (px, c) => {
+    const { w, frame } = c
+    shadow(px, 1, 29, w - 2, 3, 0.4)
+    // The roof and its sign.
+    px(1, -9, w - 2, 10, INK)
+    px(2, -8, w - 4, 8, '#1a1030')
+    glow('neon', () => {
+      px(2, -8, w - 4, 1, frame ? '#ff4fd8' : '#4fe8ff')
+      px(2, -1, w - 4, 1, frame ? '#4fe8ff' : '#ff4fd8')
+      textCentred(px, 'CHANGE', w / 2, -6, '#ffe066')
+    })
+    px(0, 0, w, 3, '#2a2238')
+    px(0, 0, w, 1, '#4a3e62')
+    // Inside: a dark back wall with racks of chips and rolls of coin.
+    px(1, 3, w - 2, 13, '#120c1c')
+    for (let x = 4; x < w - 4; x += 5) {
+      chips(px, x, 6, [['#e83a3a', '#3ac860', '#4fe8ff', '#f4f4f4'][(x / 5) % 4 | 0]])
+      px(x, 11, 3, 2, '#c8a040')
+      px(x, 11, 3, 1, '#f2d068')
+    }
+    // The counter, with a tray of chips and a lamp.
+    px(0, 16, w, 9, '#3a2e50')
+    px(0, 16, w, 1, '#6a5a8a')
+    chips(px, 6, 19, ['#e83a3a', '#3ac860', '#f4f4f4'])
+    px(w - 12, 18, 6, 3, '#c8a040')
+    px(w - 12, 18, 6, 1, '#f2d068')
+  },
+  over: (px, c) => {
+    const { w } = c
+    // Glass to either side of the window, and the chrome uprights holding the roof.
+    for (const [x, gw] of [[1, 12], [w - 13, 12]] as const) {
+      px(x, 3, gw, 22, 'rgba(160, 220, 255, 0.28)')
+      px(x + 1, 4, 1, 8, 'rgba(255, 255, 255, 0.55)')
+    }
+    for (const x of [0, 13, w - 14, w - 1]) px(x, 3, 1, 22, '#c8ccd4')
+    // The front, black with a neon trim line.
+    px(0, 25, w, 7, '#14101c')
+    px(0, 25, w, 1, '#6a5a8a')
+    glow('neon', () => px(1, 28, w - 2, 1, '#ff4fd8'))
+    px(w / 2 - 6, 26, 12, 2, '#c8ccd4')
+    px(0, 31, w, 1, '#08060c')
+  },
+}
+
 /** A pool of chandelier light on the floor. Walk through it; it is only light. */
 const lightPool: StampArt = {
   draw: (px, c) => {
@@ -735,4 +862,6 @@ export const CASINO_ART: Record<string, StampArt> = {
   fern,
   'velvet-rope': velvetRope,
   'light-pool': lightPool,
+  'prize-car': prizeCar,
+  'change-booth': changeBooth,
 }
