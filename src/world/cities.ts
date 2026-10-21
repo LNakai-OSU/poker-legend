@@ -712,6 +712,15 @@ function local(
  * Something to look at whose picture is a stamp: a bank of dryers, a cooler.
  * Nothing is drawn for it, because the object it stands on already is.
  */
+/**
+ * Hal teaches in Crescent Harbor and again on the Strip. Without a look of his
+ * own he was drawn from each POI's id, so the same man had two faces.
+ */
+const HAL_LOOK: PoiDef['look'] = {
+  skin: '#d2a07a', hair: '#c8c4bc', hairStyle: 'short', shirt: '#7a5e3e', accessory: 'glasses',
+  trousers: '#3a3a46', shoes: '#2a1a10', lower: 'trousers', sleeves: 'long',
+}
+
 function thing(id: string, name: string, col: number, row: number, lines: string[]): PoiDef {
   return { id, name, col, row, color: COLORS.local, lines, art: 'none', action: { kind: 'flavor' } }
 }
@@ -1015,11 +1024,14 @@ const apartmentCity: CityDef = {
       { col: 6, row: 7 },
       '#16161f',
       [
-        local('patel', 'Mr Patel', 5, 2, [
-          'Mr Patel: Late again. Coffee is still hot, I make no promises about fresh.',
-          'Mr Patel: Marcus bought two bags of ice and a deck of cards an hour ago.',
-          'Mr Patel: Whatever you are all doing out there, do it quietly.',
-        ]),
+        {
+          ...local('patel', 'Mr Patel', 5, 2, [
+            'Mr Patel: Late again. Coffee is still hot, I make no promises about fresh.',
+            'Mr Patel: Marcus bought two bags of ice and a deck of cards an hour ago.',
+            'Mr Patel: Whatever you are all doing out there, do it quietly.',
+          ]),
+          role: 'clerk',
+        },
         thing('bodega-cooler', 'Cooler', 10, 2, [
           'Energy drinks, a sad sandwich, and one bottle of champagne nobody has ever bought.',
         ]),
@@ -1411,6 +1423,8 @@ const crescentHarbor: CityDef = {
           col: 24,
           row: 6,
           color: COLORS.person,
+          role: 'local',
+          look: HAL_LOOK,
           lines: [
             'Hal: Forty years in card rooms and I still take students.',
             'Hal: I do not sell luck. I sell the things you should already be counting.',
@@ -1649,10 +1663,13 @@ const palmCay: CityDef = {
           'Tourist: I am up four hundred dollars! On the slots!',
           'Tourist: I have been here since Tuesday.',
         ]),
-        local('pc-lifeguard', 'Lifeguard', 15, 16, [
-          'Lifeguard: Bernard has not left the tourist table in two days.',
-          'Lifeguard: Someone should check on him. Someone with cards.',
-        ]),
+        {
+          ...local('pc-lifeguard', 'Lifeguard', 15, 16, [
+            'Lifeguard: Bernard has not left the tourist table in two days.',
+            'Lifeguard: Someone should check on him. Someone with cards.',
+          ]),
+          look: { shirt: '#e03a3a', trousers: '#e03a3a', lower: 'shorts', sleeves: 'short', accessory: 'visor' },
+        },
       ],
       [
         { col: 13, row: 4, toAreaId: 'pc-casino', toCol: 10, toRow: 11, label: 'Cay Room' },
@@ -1759,6 +1776,7 @@ const palmCay: CityDef = {
           row: 2,
           color: COLORS.shop,
           art: 'person',
+          role: 'suit',
           lines: ['Dealer: Everything on this lot is a bad financial decision.'],
           action: { kind: 'shop', shopId: 'palmcay-marina' },
         },
@@ -1826,6 +1844,8 @@ const neonMesa: CityDef = {
           col: 4,
           row: 8,
           color: COLORS.person,
+          role: 'local',
+          look: HAL_LOOK,
           lines: [
             'Hal: You made it out here. Good.',
             'Hal: Everything I teach costs more now, because it is worth more now.',
