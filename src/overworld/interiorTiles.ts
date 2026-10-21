@@ -1,9 +1,9 @@
 import {
   CARPET, CARPET_GREEN, CARPET_NEON, CARPET_ROYAL, CARPET_TEAL, CARPET_VIOLET, CHECKER, DECK, DOOR,
-  LINO, MARBLE, PANEL_WOOD, PAPER_DAMASK, PAPER_STRIPE, TILE_FLOOR, WALL_BAIZE, WALL_BAMBOO, WALL_CABIN,
-  WALL_MARBLE, WALL_NEON, WALL_PAINT, WALL_TILED, WALL_TOP, WOOD_FLOOR,
+  LINO, MARBLE, PANEL_WOOD, PAPER_DAMASK, PAPER_STRIPE, SALTILLO, SEAGRASS, SHOWROOM, SLATE, TILE_FLOOR, VINYL,
+  WALL_BAIZE, WALL_BAMBOO, WALL_CABIN, WALL_MARBLE, WALL_NEON, WALL_PAINT, WALL_TILED, WALL_TOP, WOOD_FLOOR,
 } from './tiles'
-import { speck, type Px } from './pixelArt'
+import { mix, speck, type Px } from './pixelArt'
 
 /**
  * The inside of buildings.
@@ -424,6 +424,122 @@ const lino = (variant: number): Draw => (px) => {
   px(0, 0, 1, 16, '#cec6b5')
 }
 
+/**
+ * Seagrass matting, woven in a basket weave: the Cay Boutique, where the floor
+ * should feel like a beach house rather than a shop.
+ */
+const seagrass: Draw = (px) => {
+  for (let by = 0; by < 16; by += 4) {
+    for (let bx = 0; bx < 16; bx += 4) {
+      const across = ((bx + by) / 4) % 2 === 0
+      for (let i = 0; i < 4; i += 2) {
+        if (across) {
+          px(bx, by + i, 4, 1, '#e4d3aa')
+          px(bx, by + i + 1, 4, 1, '#cdb688')
+        } else {
+          px(bx + i, by, 1, 4, '#e4d3aa')
+          px(bx + i + 1, by, 1, 4, '#cdb688')
+        }
+      }
+      // Where one block of strands tucks under the next.
+      px(bx + 3, by + 3, 1, 1, '#b09868')
+    }
+  }
+}
+
+/**
+ * Slate flags in blue-grey, laid in two patterns: an outfitters' floor that
+ * wet boots and dripping waders have walked across for forty years.
+ */
+const SLATE_STONES: Array<Array<[number, number, number, number]>> = [
+  [[0, 0, 9, 7], [9, 0, 7, 5], [9, 5, 7, 11], [0, 7, 4, 9], [4, 7, 5, 9]],
+  [[0, 0, 6, 10], [6, 0, 10, 6], [6, 6, 6, 10], [12, 6, 4, 10], [0, 10, 6, 6]],
+  [[0, 0, 16, 6], [0, 6, 7, 10], [7, 6, 9, 5], [7, 11, 9, 5]],
+]
+const SLATE_TONES = ['#8a929a', '#7e8890', '#949ca2', '#868e96', '#8a948e']
+const slate = (variant: number): Draw => (px) => {
+  px(0, 0, 16, 16, '#5a5e66')
+  SLATE_STONES[variant].forEach(([x, y, w, h], i) => {
+    const tone = SLATE_TONES[(i + variant * 2) % SLATE_TONES.length]
+    px(x, y, w - 1, h - 1, tone)
+    px(x, y, w - 1, 1, mix(tone, '#ffffff', 0.18))
+    px(x, y + h - 2, w - 1, 1, mix(tone, '#000000', 0.15))
+    // A chip off one corner, a darker patch where water stood.
+    if (w > 5 && h > 5) px(x + 2, y + h - 4, 2, 1, mix(tone, '#000000', 0.1))
+  })
+}
+
+/**
+ * A showroom's polished concrete: pale, in big slabs, with the windows
+ * reflected in it — Marina Motors, where the boat on its trailer is the thing
+ * to look at.
+ */
+const showroom = (variant: number): Draw => (px) => {
+  px(0, 0, 16, 16, '#c9cfd4')
+  for (let y = 0; y < 16; y++) {
+    for (let x = 0; x < 16; x++) {
+      if (speck(x, y, 11 + variant, 23)) px(x, y, 1, 1, '#bcc3c9')
+      else if (speck(x, y, 5 + variant, 41)) px(x, y, 1, 1, '#d8dde1')
+    }
+  }
+  if (variant === 1) {
+    // The sea window, reflected, lying across the floor.
+    for (let i = 0; i < 9; i++) px(3 + i, 12 - i, 3, 1, 'rgba(232, 244, 252, 0.7)')
+  }
+  // Sawn joints at the edge of every slab.
+  px(0, 0, 16, 1, '#a9b0b6')
+  px(0, 0, 1, 16, '#a9b0b6')
+  px(0, 1, 16, 1, '#dde2e6')
+}
+
+/**
+ * Saltillo: hand-made terracotta squares, no two quite the same colour, and a
+ * painted tile set in now and then — the trading post at Silver Creek.
+ */
+const SALTILLO_TONES = ['#c8743e', '#bc6a36', '#d2824c', '#b8623a']
+const saltillo = (variant: number): Draw => (px) => {
+  px(0, 0, 16, 16, '#9a6644')
+  for (const [x, y, i] of [[0, 0, 0], [8, 0, 1], [0, 8, 2], [8, 8, 3]] as const) {
+    const tone = SALTILLO_TONES[(i + variant) % 4]
+    px(x, y, 7, 7, tone)
+    px(x, y, 7, 1, mix(tone, '#ffe8c8', 0.25))
+    px(x, y, 1, 7, mix(tone, '#ffe8c8', 0.15))
+    px(x + 1, y + 6, 6, 1, mix(tone, '#3a1a08', 0.15))
+    if (speck(x, y, 9 + variant, 3)) px(x + 3, y + 2, 2, 1, mix(tone, '#3a1a08', 0.1))
+  }
+  if (variant === 2) {
+    // A talavera tile: blue and white, in one corner of the square.
+    px(8, 8, 7, 7, '#f4eee0')
+    px(11, 9, 1, 5, '#2a5aa8')
+    px(9, 11, 5, 1, '#2a5aa8')
+    px(10, 10, 3, 3, '#3a7ac8')
+    px(11, 11, 1, 1, '#f2c84a')
+  }
+}
+
+/**
+ * Vinyl composition tiles, cream and sage in a chequer, the shine worn off
+ * where the queue for the till stands: Patel's corner shop.
+ */
+const vinyl = (variant: number): Draw => (px) => {
+  for (const [x, y, sage] of [[0, 0, true], [8, 0, false], [0, 8, false], [8, 8, true]] as const) {
+    const base = sage ? '#9fb89a' : '#e6dfcc'
+    px(x, y, 8, 8, base)
+    for (let yy = 0; yy < 8; yy++) {
+      for (let xx = 0; xx < 8; xx++) {
+        if (speck(x + xx, y + yy, 17 + variant, 9)) px(x + xx, y + yy, 1, 1, mix(base, '#4a4a3a', 0.12))
+      }
+    }
+    px(x, y, 8, 1, mix(base, '#ffffff', 0.3))
+    px(x + 7, y, 1, 8, mix(base, '#3a3a2a', 0.15))
+  }
+  if (variant === 1) {
+    // Scuffed by a trolley wheel.
+    px(3, 11, 6, 1, '#c4bca8')
+    px(8, 12, 3, 1, '#c4bca8')
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Carpets — each a 32x32 motif over four tiles
 // ---------------------------------------------------------------------------
@@ -554,6 +670,14 @@ export const INTERIOR_TILES: Record<number, TileVariants> = {
   },
   [DECK]: { draws: [deck(0), deck(1)], pick: byColumn },
   [LINO]: { draws: [lino(0), lino(1), lino(2), lino(3)], pick: (col, row) => scatter(col, row, 4) },
+  [SEAGRASS]: { draws: [seagrass], pick: () => 0 },
+  [SLATE]: { draws: [slate(0), slate(1), slate(2)], pick: (col, row) => scatter(col, row, 3) },
+  [SHOWROOM]: { draws: [showroom(0), showroom(1)], pick: (col, row) => (scatter(col, row, 5) === 0 ? 1 : 0) },
+  [SALTILLO]: {
+    draws: [saltillo(0), saltillo(1), saltillo(2)],
+    pick: (col, row) => (scatter(col, row, 11) === 0 ? 2 : (col + row) & 1),
+  },
+  [VINYL]: { draws: [vinyl(0), vinyl(1)], pick: (col, row) => (scatter(col, row, 9) === 0 ? 1 : 0) },
   [CARPET]: { draws: carpetDust, pick: quarter },
   [CARPET_GREEN]: { draws: carpetGreen, pick: quarter },
   [CARPET_TEAL]: { draws: carpetTeal, pick: quarter },

@@ -889,6 +889,75 @@ const fireplace: StampArt = {
   },
 }
 
+/**
+ * A woven wool rug: a border of stepped teeth round a field of stepped
+ * diamonds, in madder red, black, cream and turquoise. Walk on it.
+ */
+const wovenRug: StampArt = {
+  draw: (px, c) => {
+    const x = 2
+    const y = 3
+    const w = c.w - 4
+    const h = c.h - 6
+    shadow(px, x + 1, y + h, w, 1, 0.2)
+    px(x, y, w, h, '#2a1e1a')
+    px(x + 1, y + 1, w - 2, h - 2, '#b8402e')
+    // A cream band inside the border, with black teeth stepping along it.
+    px(x + 2, y + 2, w - 4, 2, '#ece0c4')
+    px(x + 2, y + h - 4, w - 4, 2, '#ece0c4')
+    for (let tx = x + 3; tx < x + w - 3; tx += 4) {
+      px(tx, y + 3, 2, 1, '#2a1e1a')
+      px(tx + 1, y + 2, 1, 1, '#2a1e1a')
+      px(tx, y + h - 4, 2, 1, '#2a1e1a')
+      px(tx + 1, y + h - 3, 1, 1, '#2a1e1a')
+    }
+    // Stepped diamonds down the middle, alternating black and turquoise.
+    const cy = Math.round(y + h / 2)
+    const count = 3
+    for (let i = 0; i < count; i++) {
+      const cx = Math.round(x + (w * (i + 1)) / (count + 1))
+      const ink = i % 2 === 0 ? '#2a1e1a' : '#2fa4a0'
+      for (let r = 0; r < 5; r++) {
+        const half = r < 3 ? r : 4 - r
+        px(cx - half * 2, cy - 2 + r, half * 4 + 1, 1, ink)
+      }
+      px(cx, cy, 1, 1, '#ece0c4')
+    }
+    // Fringe at both ends.
+    for (let fy = y + 1; fy < y + h - 1; fy += 2) {
+      px(x - 1, fy, 1, 1, '#ece0c4')
+      px(x + w, fy, 1, 1, '#ece0c4')
+    }
+  },
+}
+
+/** A low table of pots: terracotta, black-on-cream, and a turquoise bowl. */
+const potteryTable: StampArt = {
+  draw: (px, c) => {
+    shadow(px, 1, 13, c.w - 1, 3, 0.3)
+    // The table: a plank top on two legs.
+    px(1, 9, c.w - 2, 2, '#8a5a32')
+    px(1, 9, c.w - 2, 1, '#b07a48')
+    px(2, 11, 2, 4, '#5e3a1e')
+    px(c.w - 4, 11, 2, 4, '#5e3a1e')
+    // A tall jar.
+    px(4, 2, 6, 7, '#b8602e')
+    px(5, 1, 4, 1, '#8a4420')
+    px(4, 4, 6, 1, '#2a1e1a')
+    px(5, 6, 4, 1, '#ece0c4')
+    px(4, 2, 1, 6, '#d88050')
+    // A round pot, black on cream.
+    px(13, 4, 7, 5, '#ece0c4')
+    px(14, 3, 5, 1, '#d8ccb0')
+    for (let i = 0; i < 3; i++) px(14 + i * 2, 5 + (i % 2), 1, 2, '#2a1e1a')
+    px(13, 8, 7, 1, '#c8bca0')
+    // A turquoise bowl, low.
+    px(23, 6, 6, 3, '#2fa4a0')
+    px(23, 6, 6, 1, '#7ad8d0')
+    px(24, 8, 4, 1, '#1e7a76')
+  },
+}
+
 /** A dance floor of squares lit in turns. Walk on it. */
 const danceFloor: StampArt = {
   frames: 2,
@@ -1018,6 +1087,9 @@ export const FURNITURE_ART: Record<string, StampArt> = {
   'counter-concierge': conciergeDesk,
   'rack-suits': clothesRack(['#3a3a44', '#1e2e5a', '#5a5a64', '#2a2a30']),
   'rack-linen': clothesRack(['#f4f0e0', '#bfe8d4', '#f2b8b0', '#a8d0f0', '#f4e0a0']),
+  'rack-blankets': clothesRack(['#b8402e', '#2fa4a0', '#ece0c4', '#2a1e1a', '#e8a83a']),
+  'rug-woven': wovenRug,
+  'pottery-table': potteryTable,
   'rack-outdoor': clothesRack(['#3a6a3a', '#8a5a2a', '#c84a2a', '#2a4a7a']),
   'rack-gowns': clothesRack(['#b81c2c', '#14141a', '#f4ecd8', '#2a1a4a']),
   'mannequin-suit': mannequin('#2a2a34', '#f4f4f4'),

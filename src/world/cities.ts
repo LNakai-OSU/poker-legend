@@ -447,12 +447,12 @@ const ULTRAVIOLET = parseMap(`
 const BODEGA = parseMap(`
 ^^^^^^^^^^^^^^
 ^FFpFFFpppFFp^
-^FFLFFFLLLFFL^
-^LLLLLLLLLLLL^
-^FFFLLLLLFFFL^
-^FFFLLLLLFFFL^
-^LLLLLLLLLLLL^
-^LLLLLLLLLLLL^
+^FFvFFFvvvFFv^
+^vvvvvvvvvvvv^
+^FFFvvvvvFFFv^
+^FFFvvvvvFFFv^
+^vvvvvvvvvvvv^
+^vvvvvvvvvvvv^
 ^^^^^^D^^^^^^^
 `)
 
@@ -487,12 +487,12 @@ const BLUE_PLATE = parseMap(`
 const GIFT_SHOP = parseMap(`
 ^^^^^^^^^^^^^^
 ^FFwwFFFwwwFF^
-^FFLLFFFLLLFF^
-^LLLLLLLLLLLL^
-^LFFFLLLLFFFL^
-^LFFFLLLLFFFL^
-^FLLLLLLLLLLF^
-^LLLLLLLLLLLL^
+^FFxxFFFxxxFF^
+^xxxxxxxxxxxx^
+^xFFxxxxxxFFx^
+^xxxxxxxxxxxx^
+^Fxxxxxxxxxxx^
+^xFFxxxxxxFFx^
 ^^^^^^D^^^^^^^
 `)
 
@@ -514,12 +514,12 @@ const LANDING_DINER = parseMap(`
 const OUTFITTERS = parseMap(`
 ^^^^^^^^^^^^^^
 ^FFwwFFFwwwFF^
-^FFBBFFFBBBFF^
-^BBBBBBBBBBBB^
-^BBBBBBBBBBBB^
-^BFFBBBBBBFFB^
-^BBBBBBBBBBBB^
-^BBBBBBBBBBBB^
+^FFyyFFFyyyFF^
+^yyyyyyyyyyyy^
+^yyyyyyyyyyyy^
+^yFFyyyyyyFFy^
+^yyyyyyyyyyyy^
+^yyyyyyyyyyyy^
 ^^^^^^D^^^^^^^
 `)
 
@@ -554,12 +554,12 @@ const AUTO_ROW = parseMap(`
 const BOUTIQUE = parseMap(`
 ^^^^^^^^^^^^^^
 ^FbbbFFFbFbbF^
-^FWWWFFFWFWWF^
-^WWWWWWWWWWWW^
-^WWWWWWWWWWWW^
-^FFWWWWWWWWFF^
-^WWWWWWWWWWWW^
-^WWWWWWWWWWWW^
+^FrrrFFFrFrrF^
+^rrrrrrrrrrrr^
+^rrrrrrrrrrrr^
+^FFrrrrrrrrFF^
+^rrrrrrrrrrrr^
+^rrrrrrrrrrrr^
 ^^^^^^D^^^^^^^
 `)
 
@@ -581,13 +581,13 @@ const SHORELINE_GRILL = parseMap(`
 const MARINA_MOTORS = parseMap(`
 ^^^^^^^^^^^^^^^^
 ^pppppFFFpppppp^
-^BBBBBFFFBBBBBB^
-^BBBBBBBBBBBBBB^
-^FFFFBBBBBBFFFB^
-^FFFFBBBBBBFFFB^
-^BBBBBBBBBBBBBB^
-^BBBBBBBBBBBBBB^
-^BBBBBBBBBBBBBB^
+^eeeeeFFFeeeeee^
+^eeeeeeeeeeeeee^
+^FFFFeeeeeeFFFe^
+^FFFFeeeeeeFFFe^
+^eeeeeeeeeeeeee^
+^eeeeeeeeeeeeee^
+^eeeeeeeeeeeeee^
 ^^^^^^^D^^^^^^^^
 `)
 
@@ -2340,10 +2340,12 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'counter-glass', col: 5, row: 1 },
     { stampId: 'painting-horse', col: 9, row: 1 },
     { stampId: 'shelves-souvenirs', col: 11, row: 1 },
-    { stampId: 'gondola-gifts', col: 2, row: 4 },
-    { stampId: 'gondola-gifts', col: 9, row: 4 },
+    { stampId: 'rack-blankets', col: 2, row: 4 },
+    { stampId: 'rack-blankets', col: 10, row: 4 },
+    { stampId: 'rug-woven', col: 4, row: 4 },
     { stampId: 'cactus', col: 1, row: 6 },
-    { stampId: 'cactus', col: 12, row: 6 },
+    { stampId: 'pottery-table', col: 2, row: 7 },
+    { stampId: 'pottery-table', col: 10, row: 7 },
   ],
   'rb-diner': [
     { stampId: 'window-sea', col: 1, row: 1 },
@@ -2363,6 +2365,7 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'shelves-outdoor', col: 11, row: 1 },
     { stampId: 'rack-outdoor', col: 2, row: 5 },
     { stampId: 'rack-outdoor', col: 10, row: 5 },
+    { stampId: 'rug-green', col: 5, row: 4 },
   ],
   'ch-menswear': [
     { stampId: 'shelves-shoes', col: 1, row: 1 },
