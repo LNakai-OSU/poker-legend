@@ -318,18 +318,18 @@ const SILVER_CREEK_FLOOR = parseMap(`
 ^^^^^^^^^^D^^^^^^^^^
 `)
 
-/** The riverboat saloon: deck boards, varnished cabin walls, portholes on the river side. */
+/** The riverboat saloon: navy carpet with a gold lattice, varnished cabin walls, portholes on the river side. */
 const RIVERBOAT_FLOOR = parseMap(`
 ^^^^^^^^^^^^^^^^^^^^^^
 ^FFFFssssssssssFFFFFs^
-^FFFFBBBBBBBBBBFFFFFB^
-^BBBBBBBBBBBBBBBBBBBB^
-^BBBBBBBBBBBBBBBBBBBB^
-^BBBBFBBBFFFBBBFBBBBB^
-^BBBBFBBBFFFBBBFBBBBB^
-^FFFFBBBBBBBBBBBBFFFF^
-^FFFFBBBBBBBBBBBBFFFF^
-^BBBBBBBBBBBBBBBBBBBB^
+^FFFFRRRRRRRRRRFFFFFR^
+^RRRRRRRRRRRRRRRRRRRR^
+^RRRRRRRRRRRRRRRRRRRR^
+^RRRRFRRRFFFRRRFRRRRR^
+^RRRRFRRRFFFRRRFRRRRR^
+^FFFFRRRRRRRRRRRRFFFF^
+^FFFFRRRRRRRRRRRRFFFF^
+^RRRRRRRRRRRRRRRRRRRR^
 ^^^^^^^^^^^D^^^^^^^^^^
 `)
 
@@ -345,7 +345,7 @@ const CARDROOM_FLOOR = parseMap(`
 ^;;;;;;;;;;;;;;;;;;^
 ^;;;;;;;;;;;;;;;;;;^
 ^;;FFF;;;;;;;;;FF;;^
-^;;FFF;;;;;;;;;;;;;^
+^;;FFF;FF;;;FF;;;;;^
 ^;;;;;;;;;;;;;;;;;;^
 ^^^^^^^^^^D^^^^^^^^^
 `)
@@ -405,13 +405,13 @@ const LUMINA_FLOOR = parseMap(`
 const HARBOUR_ROOM = parseMap(`
 ^^^^^^^^^^^^^^^^
 ^FFdddFFFdFFFFF^
-^FFWWWFFFWFFFFF^
-^WWWWWWWWWWWWWW^
-^WWWWWWWWWWWWWW^
-^WFFFWWWWWFFFWW^
-^WWWWWWWWWWWWWW^
-^WWWWWWWWWWWWWW^
-^FWWWWWWWWWWWWF^
+^FFHHFFFFHFFFFF^
+^HHHHHHHHHHHHHH^
+^HHHHHHHHHHHHHH^
+^FFFFFHFFHFFFFH^
+^HHHHHHHHHHHHHH^
+^HHHHHHHHHHFFFH^
+^FFFFHHHHHHFFFF^
 ^^^^^^^D^^^^^^^^
 `)
 
@@ -452,7 +452,7 @@ const BODEGA = parseMap(`
 ^FFFvvvvvFFFv^
 ^FFFvvvvvFFFv^
 ^vvvvvvvvvvvv^
-^vvvvvvvvvvvv^
+^vvvFvvvFvvvv^
 ^^^^^^D^^^^^^^
 `)
 
@@ -465,7 +465,7 @@ const LAUNDROMAT = parseMap(`
 ^QQQQQQQQQQQQ^
 ^FFFQQQQQFFFF^
 ^QQQQQQQQQQQQ^
-^QQQQQQQQQQQQ^
+^QQQFQQQFQQQQ^
 ^^^^^^D^^^^^^^
 `)
 
@@ -476,7 +476,7 @@ const BLUE_PLATE = parseMap(`
 ^FKKKKFFFFFKKKK^
 ^KKKKKKKKKKKKKK^
 ^FFKKKKKKKKKKFF^
-^FFKKKKKKKKKKFF^
+^FFKFFKKKFFKKFF^
 ^KKKKKKKKKKKKKK^
 ^FFKKKKKKKKKKFF^
 ^FFKKKKKKKKKKFF^
@@ -496,17 +496,17 @@ const GIFT_SHOP = parseMap(`
 ^^^^^^D^^^^^^^
 `)
 
-/** The Landing Diner: cabin planking, the river in the windows, a counter and four tables. */
+/** The Landing Diner: mint and cream lino, the river in the windows, a counter, four tables, booths and a jukebox. */
 const LANDING_DINER = parseMap(`
 ^^^^^^^^^^^^^^^^
 ^sssssssssFFFFF^
-^WWWWWWWWWFFFFF^
-^WWWWWWWWWWWWWW^
-^WFFWWFFWWWWWWW^
-^WWWWWWWWWWWWWW^
-^WWWWWWWWWWWWWW^
-^WFFWWFFWWWWWWW^
-^WWWWWWWWWWWWWW^
+^FGGGGGGGGFFFFF^
+^GGGGGGGGGGGGGG^
+^FFFGGFFGGFGGFF^
+^GGGGGGGGGFGGFF^
+^GGGGGGGGGGGGGG^
+^GFFGGFFGGGGGFF^
+^FGGGGGGGGGGGFF^
 ^^^^^^^D^^^^^^^^
 `)
 
@@ -540,13 +540,13 @@ const MENSWEAR = parseMap(`
 const AUTO_ROW = parseMap(`
 ^^^^^^^^^^^^^^^^
 ^pppppFFFpppppp^
-^FQQQQFFFQQQQQF^
+^FQQQFFFFFQQQQF^
 ^QQQQQQQQQQQQQQ^
 ^QFFFQQQQQQFFFQ^
 ^QFFFQQQQQQFFFQ^
 ^QQQQQQQQQQQQQQ^
-^QFFFQQQQQQQQQF^
-^QQQQQQQQQQQQQQ^
+^QFFFFQQQQQQFFF^
+^FQQQQQQQQQQQQQ^
 ^^^^^^^D^^^^^^^^
 `)
 
@@ -571,7 +571,7 @@ const SHORELINE_GRILL = parseMap(`
 ^BBBBBBBBBBBBBB^
 ^BFBBBFBBBBBBBB^
 ^BBBBBBBBBBBBBB^
-^BBBBBBBBBBBBBF^
+^BBBBBBBBBFBBBF^
 ^BFBBBFBBBBBBBF^
 ^BBBBBBBBBBBBBB^
 ^^^^^^^D^^^^^^^^
@@ -581,13 +581,13 @@ const SHORELINE_GRILL = parseMap(`
 const MARINA_MOTORS = parseMap(`
 ^^^^^^^^^^^^^^^^
 ^pppppFFFpppppp^
-^eeeeeFFFeeeeee^
+^FeeeFFFFeFFeeF^
 ^eeeeeeeeeeeeee^
 ^FFFFeeeeeeFFFe^
 ^FFFFeeeeeeFFFe^
 ^eeeeeeeeeeeeee^
-^eeeeeeeeeeeeee^
-^eeeeeeeeeeeeee^
+^FeeeeeeeeeFFFF^
+^FeeeeeeeeeeeeF^
 ^^^^^^^D^^^^^^^^
 `)
 
@@ -596,11 +596,11 @@ const MESA_LUXURY = parseMap(`
 ^^^^^^^^^^^^^^
 ^nnnnFFFnFnnF^
 ^MMMMFFFMFMMF^
-^MMMMMMMMMMMM^
-^MMMMMMMMMMMM^
+^MMFMMMMMMMMM^
+^MMFMMMMMMMMM^
 ^FFMMMMMMMFFM^
 ^MMMMMMMMMMMM^
-^MMMMMMMMMMMM^
+^MMMFMMMFMMMM^
 ^^^^^^D^^^^^^^
 `)
 
@@ -608,12 +608,12 @@ const MESA_LUXURY = parseMap(`
 const MESA_MOTORS = parseMap(`
 ^^^^^^^^^^^^^^^^
 ^nnnnnFFFnnnnnn^
-^FQQQQFFFQQQQQF^
+^FQQQFFFFFQQQQF^
 ^QQQQQQQQQQQQQQ^
 ^QFFFQQQQQQFFFQ^
 ^QFFFQQQQQQFFFQ^
 ^QQQQQQQQQQQQQQ^
-^FQQQQQQQQQFFFQ^
+^FFFFQQQQQQFFFF^
 ^QQQQQQQQQQQQQQ^
 ^^^^^^^D^^^^^^^^
 `)
@@ -623,11 +623,11 @@ const ATELIER = parseMap(`
 ^^^^^^^^^^^^^^
 ^FFmmFFFmmmmF^
 ^FF&&FFF&&&&F^
-^&&&&&&&&&&&&^
-^&&&&&&&&&&&&^
+^&&F&&&&&&&&&^
+^&&F&&&&&&&&&^
 ^FF&&&&&&&FF&^
 ^&&&&&&&&&&&&^
-^&&&&&&&&&&&&^
+^&&&F&&&F&&&&^
 ^^^^^^D^^^^^^^
 `)
 
@@ -635,11 +635,11 @@ const ATELIER = parseMap(`
 const PENTHOUSE_LOBBY = parseMap(`
 ^^^^^^^^^^^^^^
 ^FFFFmmmmmmmF^
-^FFFFMMMMMMMF^
+^FFFFMMMMMMFF^
 ^MMMMMMMMMMMM^
-^MMMMMMMMMMMM^
-^MMMMMMMMMMMM^
-^MFFMMMMMMFFM^
+^FMMMMMMMMMMF^
+^FMMMMMMMMMMF^
+^FFFMMMMMMFFF^
 ^MMMMMMMMMMMM^
 ^^^^^^D^^^^^^^
 `)
@@ -661,14 +661,14 @@ const APARTMENT_ROOM = parseMap(`
 const MARCUS_HOUSE = parseMap(`
 ^^^^^^^^^^^^^^^^
 ^FFwwwwwwwwwFFF^
-^FFWWWWWWWWWFFF^
-^WWWWWWWWWWWWWW^
-^WWWWWWWWWWWWWW^
-^FWWWWFFFWWWWWF^
-^WWWWWWWWWWWWWW^
-^WWWWWWWWWWWWWW^
-^WWWWWWWWWWFFFW^
-^WWWWWWWWWWWWWW^
+^FFAAAAAAAAAFFF^
+^AAAAAAAAAAAFFA^
+^AAAAAAAAAAAAAA^
+^FAAAAFFFAAAAAF^
+^AAAAAAAAAAAAAA^
+^FAAAAAAAAAAAAA^
+^AAAAAAAAAFFFFF^
+^FAAAFAAAAAAAAA^
 ^^^^^^^D^^^^^^^^
 `)
 
@@ -1344,6 +1344,10 @@ const riverbend: CityDef = {
           lines: MISSIONS['riverbend-marker'].brief,
           action: { kind: 'mission', missionId: 'riverbend-marker' },
         },
+        local('rb-diner-pilot', 'River Pilot', 13, 4, [
+          'Pilot: Forty years on this river and the coffee has never once been hot.',
+          'Pilot: The boat pays out on a Thursday. Do not ask me how I know.',
+        ]),
       ],
       [{ col: 7, row: 9, toAreaId: 'rb-street', toCol: 5, toRow: 16, label: 'Out' }],
     ),
@@ -2291,6 +2295,10 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'light-pool', col: 14, row: 5 },
     { stampId: 'light-pool', col: 3, row: 9 },
     { stampId: 'light-pool', col: 14, row: 8 },
+    { stampId: 'armchair-green', col: 7, row: 10 },
+    { stampId: 'side-table', col: 8, row: 10 },
+    { stampId: 'side-table', col: 12, row: 10 },
+    { stampId: 'armchair-green', col: 13, row: 10 },
   ],
   'pc-casino': [
     { stampId: 'bar-tiki', col: 1, row: 1 },
@@ -2348,13 +2356,23 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'bookshelf-dark', col: 1, row: 1 },
     { stampId: 'door-back-room', col: 4, row: 1 },
     { stampId: 'fireplace', col: 6, row: 1 },
+    { stampId: 'clock', col: 9, row: 1 },
     { stampId: 'bar-marble', col: 10, row: 1 },
+    { stampId: 'plant-tall', col: 5, row: 2 },
     { stampId: 'rug-green', col: 2, row: 5 },
+    { stampId: 'side-table', col: 1, row: 5 },
     { stampId: 'sofa-leather', col: 2, row: 5 },
+    { stampId: 'side-table', col: 5, row: 5 },
     { stampId: 'rug-red', col: 10, row: 5 },
     { stampId: 'sofa-leather', col: 10, row: 5 },
+    { stampId: 'floor-lamp', col: 13, row: 5 },
+    { stampId: 'piano', col: 11, row: 7 },
     { stampId: 'fern', col: 1, row: 8 },
+    { stampId: 'armchair-green', col: 2, row: 8 },
+    { stampId: 'side-table', col: 3, row: 8 },
+    { stampId: 'armchair-green', col: 4, row: 8 },
     { stampId: 'fern', col: 14, row: 8 },
+    { stampId: 'table-chairs', col: 7, row: 5 },
   ],
   'ch-supper': [
     { stampId: 'painting-portrait', col: 2, row: 1 },
@@ -2382,6 +2400,8 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'cooler', col: 10, row: 1 },
     { stampId: 'gondola-groceries', col: 1, row: 4 },
     { stampId: 'gondola-groceries', col: 9, row: 4 },
+    { stampId: 'crates', col: 4, row: 7 },
+    { stampId: 'brochure-stand', col: 8, row: 7 },
   ],
   laundromat: [
     { stampId: 'dryer-stack', col: 1, row: 1 },
@@ -2389,6 +2409,8 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'dryer-stack', col: 9, row: 1 },
     { stampId: 'folding-table', col: 1, row: 5 },
     { stampId: 'washer-row', col: 9, row: 5 },
+    { stampId: 'gumball', col: 4, row: 7 },
+    { stampId: 'plant-tall', col: 8, row: 7 },
   ],
   diner: [
     { stampId: 'jukebox', col: 1, row: 1 },
@@ -2400,6 +2422,8 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'booth', col: 1, row: 7 },
     { stampId: 'booth', col: 13, row: 4 },
     { stampId: 'booth', col: 13, row: 7 },
+    { stampId: 'table-chairs', col: 4, row: 5 },
+    { stampId: 'table-chairs', col: 9, row: 5 },
   ],
   'sc-gift': [
     { stampId: 'shelves-souvenirs', col: 1, row: 1 },
@@ -2415,13 +2439,21 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
   ],
   'rb-diner': [
     { stampId: 'window-sea', col: 1, row: 1 },
+    { stampId: 'calendar', col: 3, row: 1 },
     { stampId: 'trophy-fish', col: 4, row: 1 },
     { stampId: 'window-sea', col: 6, row: 1 },
+    { stampId: 'menu-diner', col: 8, row: 1 },
     { stampId: 'diner-counter', col: 10, row: 1 },
+    { stampId: 'gumball', col: 1, row: 2 },
+    { stampId: 'coat-stand', col: 1, row: 4 },
     { stampId: 'table-chairs', col: 2, row: 4 },
     { stampId: 'table-chairs', col: 6, row: 4 },
+    { stampId: 'jukebox', col: 10, row: 4 },
+    { stampId: 'booth', col: 13, row: 4 },
     { stampId: 'table-chairs', col: 2, row: 7 },
     { stampId: 'table-chairs', col: 6, row: 7 },
+    { stampId: 'booth', col: 13, row: 7 },
+    { stampId: 'plant-tall', col: 1, row: 8 },
   ],
   'rb-outfitters': [
     { stampId: 'shelves-outdoor', col: 1, row: 1 },
@@ -2447,13 +2479,22 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'window-sky', col: 1, row: 1 },
     { stampId: 'painting-abstract', col: 4, row: 1 },
     { stampId: 'counter-glass', col: 6, row: 1 },
+    { stampId: 'poster-car', col: 9, row: 1 },
+    { stampId: 'calendar', col: 11, row: 1 },
     { stampId: 'window-sky', col: 13, row: 1 },
+    { stampId: 'fern', col: 1, row: 2 },
+    { stampId: 'brochure-stand', col: 5, row: 2 },
+    { stampId: 'water-cooler', col: 9, row: 2 },
+    { stampId: 'fern', col: 14, row: 2 },
     { stampId: 'car-red', col: 2, row: 4 },
     { stampId: 'car-silver', col: 11, row: 4 },
-    { stampId: 'fern', col: 1, row: 2 },
-    { stampId: 'fern', col: 14, row: 2 },
+    { stampId: 'rug-blue', col: 6, row: 6 },
     { stampId: 'sofa-leather', col: 2, row: 7 },
+    { stampId: 'side-table', col: 5, row: 7 },
+    { stampId: 'tyre-stack', col: 12, row: 7 },
+    { stampId: 'tyre-stack', col: 13, row: 7 },
     { stampId: 'fern', col: 14, row: 7 },
+    { stampId: 'plant-tall', col: 1, row: 8 },
   ],
   'pc-boutique': [
     { stampId: 'palm', col: 1, row: 1 },
@@ -2475,14 +2516,27 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'dining-table-cane', col: 1, row: 6 },
     { stampId: 'dining-table-cane', col: 5, row: 6 },
     { stampId: 'palm', col: 14, row: 6 },
+    { stampId: 'dining-table-cane', col: 9, row: 5 },
   ],
   'pc-marina': [
     { stampId: 'window-sea', col: 1, row: 1 },
     { stampId: 'life-ring', col: 4, row: 1 },
     { stampId: 'counter-glass', col: 6, row: 1 },
+    { stampId: 'poster-boat', col: 9, row: 1 },
+    { stampId: 'calendar', col: 11, row: 1 },
     { stampId: 'window-sea', col: 12, row: 1 },
+    { stampId: 'plant-tall', col: 1, row: 2 },
+    { stampId: 'brochure-stand', col: 5, row: 2 },
+    { stampId: 'fish-tank', col: 10, row: 2 },
+    { stampId: 'water-cooler', col: 14, row: 2 },
     { stampId: 'speedboat', col: 1, row: 4 },
     { stampId: 'car-yellow', col: 11, row: 4 },
+    { stampId: 'rug-woven', col: 5, row: 6 },
+    { stampId: 'tool-chest', col: 1, row: 7 },
+    { stampId: 'sofa', col: 11, row: 7 },
+    { stampId: 'side-table', col: 14, row: 7 },
+    { stampId: 'crates', col: 1, row: 8 },
+    { stampId: 'plant-tall', col: 14, row: 8 },
   ],
   'nm-luxury': [
     { stampId: 'neon-vip', col: 1, row: 1 },
@@ -2491,18 +2545,29 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'mirror-stand', col: 12, row: 1 },
     { stampId: 'rack-gowns', col: 1, row: 5 },
     { stampId: 'velvet-bench', col: 10, row: 5 },
+    { stampId: 'mannequin-suit', col: 3, row: 3 },
+    { stampId: 'plant-tall', col: 4, row: 7 },
+    { stampId: 'floor-lamp', col: 8, row: 7 },
   ],
   'nm-motors': [
     { stampId: 'window-night', col: 1, row: 1 },
     { stampId: 'counter-glass', col: 6, row: 1 },
+    { stampId: 'poster-car', col: 8, row: 1 },
     { stampId: 'neon-open', col: 10, row: 1 },
     { stampId: 'window-night', col: 13, row: 1 },
+    { stampId: 'fern', col: 1, row: 2 },
+    { stampId: 'brochure-stand', col: 5, row: 2 },
+    { stampId: 'water-cooler', col: 9, row: 2 },
+    { stampId: 'fern', col: 14, row: 2 },
     { stampId: 'car-yellow', col: 2, row: 4 },
     { stampId: 'car-red', col: 11, row: 4 },
-    { stampId: 'fern', col: 1, row: 2 },
-    { stampId: 'fern', col: 14, row: 2 },
-    { stampId: 'sofa-velvet', col: 11, row: 7 },
+    { stampId: 'rug-red', col: 6, row: 6 },
     { stampId: 'fern', col: 1, row: 7 },
+    { stampId: 'armchair', col: 2, row: 7 },
+    { stampId: 'side-table', col: 3, row: 7 },
+    { stampId: 'armchair', col: 4, row: 7 },
+    { stampId: 'sofa-velvet', col: 11, row: 7 },
+    { stampId: 'floor-lamp', col: 14, row: 7 },
   ],
   'pl-atelier': [
     { stampId: 'mannequin-gown', col: 1, row: 1 },
@@ -2512,6 +2577,9 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'mirror-stand', col: 12, row: 1 },
     { stampId: 'rack-gowns', col: 1, row: 5 },
     { stampId: 'velvet-bench', col: 10, row: 5 },
+    { stampId: 'mannequin-navy', col: 3, row: 3 },
+    { stampId: 'side-table', col: 4, row: 7 },
+    { stampId: 'plant-tall', col: 8, row: 7 },
   ],
   'pl-lift': [
     { stampId: 'palm', col: 1, row: 1 },
@@ -2519,9 +2587,16 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'lift-doors', col: 6, row: 1 },
     { stampId: 'painting-landscape', col: 9, row: 1 },
     { stampId: 'palm', col: 12, row: 1 },
+    { stampId: 'luggage-cart', col: 11, row: 2 },
+    { stampId: 'armchair', col: 1, row: 4 },
+    { stampId: 'armchair', col: 12, row: 4 },
     { stampId: 'rug-red', col: 5, row: 4 },
+    { stampId: 'side-table', col: 1, row: 5 },
+    { stampId: 'floor-lamp', col: 12, row: 5 },
+    { stampId: 'plant-tall', col: 1, row: 6 },
     { stampId: 'velvet-bench', col: 2, row: 6 },
     { stampId: 'velvet-bench', col: 10, row: 6 },
+    { stampId: 'plant-tall', col: 12, row: 6 },
   ],
   home: [
     { stampId: 'kitchenette', col: 1, row: 1 },
@@ -2535,14 +2610,23 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
   ],
   'marcus-house': [
     { stampId: 'bookshelf-dark', col: 1, row: 1 },
+    { stampId: 'dartboard', col: 3, row: 1 },
     { stampId: 'window-garden', col: 4, row: 1 },
+    { stampId: 'wall-shelf', col: 6, row: 1 },
     { stampId: 'painting-horse', col: 8, row: 1 },
+    { stampId: 'calendar', col: 11, row: 1 },
     { stampId: 'kitchenette', col: 12, row: 1 },
+    { stampId: 'table-chairs', col: 12, row: 3 },
     { stampId: 'rug-red', col: 6, row: 4 },
     { stampId: 'card-table', col: 5, row: 4 },
     { stampId: 'tv', col: 1, row: 5 },
-    { stampId: 'sofa', col: 11, row: 8 },
     { stampId: 'fern', col: 14, row: 5 },
+    { stampId: 'armchair', col: 1, row: 7 },
+    { stampId: 'side-table', col: 10, row: 8 },
+    { stampId: 'sofa', col: 11, row: 8 },
+    { stampId: 'floor-lamp', col: 14, row: 8 },
+    { stampId: 'crates', col: 1, row: 9 },
+    { stampId: 'coat-stand', col: 5, row: 9 },
   ],
   basin: [
     { stampId: 'bakery-basin', col: 1, row: 0 },
