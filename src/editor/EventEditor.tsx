@@ -3,6 +3,7 @@ import { CHARACTERS } from '../world/characters'
 import { EVENTS, type EventAction, type EventCondition, type EventTrigger, type GameEvent } from '../world/events'
 import { AREAS, LESSONS, TABLES, allShopItems } from '../world/content'
 import { TIME_PERIODS, type TimePeriod } from '../game/time'
+import { TOWN_ORDER, type CityId } from '../game/state'
 import {
   ACTION_KINDS,
   CONDITION_KINDS,
@@ -62,6 +63,7 @@ const CONDITION_LABEL: Record<EventCondition['kind'], string> = {
   hasItem: 'you own an item',
   hasLesson: 'you have a lesson',
   eventDone: 'another event',
+  chapter: 'how far the run has got',
 }
 
 const ACTION_LABEL: Record<EventAction['kind'], string> = {
@@ -542,6 +544,29 @@ function ConditionFields({
           />
         </>
       )
+    case 'chapter': {
+      // One town, or any of several, picked the way the hours are.
+      const chosen: CityId[] = Array.isArray(condition.cityId) ? condition.cityId : [condition.cityId]
+      return (
+        <span className="ed-periods" data-testid={`${id}-towns`}>
+          {TOWN_ORDER.map((town) => (
+            <button
+              key={town}
+              type="button"
+              className="ed-btn small"
+              aria-pressed={chosen.includes(town)}
+              data-testid={`${id}-${town}`}
+              onClick={() => {
+                const next = chosen.includes(town) ? chosen.filter((t) => t !== town) : TOWN_ORDER.filter((t) => t === town || chosen.includes(t))
+                if (next.length > 0) onChange({ ...condition, cityId: next.length === 1 ? next[0] : next })
+              }}
+            >
+              {options.cities.find(([cityId]) => cityId === town)?.[1] ?? town}
+            </button>
+          ))}
+        </span>
+      )
+    }
   }
 }
 

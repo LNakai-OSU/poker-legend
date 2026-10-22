@@ -53,7 +53,7 @@ export function CityScene({
   // Whoever the hour puts here. A POI is part of the map and is always in it;
   // these are people, and where they are depends on when you came. Each is
   // drawn as themselves: the Marcus in the street is the Marcus at the table.
-  const scheduled = charactersIn(areaId, state.period).map((entry) => ({
+  const scheduled = charactersIn(areaId, state.period, state).map((entry) => ({
     ...entry,
     figure: figureForCharacter(entry.id, entry.character),
   }))
@@ -86,7 +86,7 @@ export function CityScene({
             : () => onAction(poi.action, poi),
       }
     }),
-    ...scheduled.map(({ id, character, at, figure }) => {
+    ...scheduled.map(({ id, character, at, lines, figure }) => {
       // Somebody with something scripted to say says that instead of their
       // usual line for the hour.
       const event = onEvent ? eventFor(EVENTS, { kind: 'talkTo', characterId: id }, state) : undefined
@@ -101,7 +101,7 @@ export function CityScene({
         figure,
         behind: behind(placed.col, placed.row),
         restless: !behind(placed.col, placed.row),
-        lines: at.lines ?? character.overworld?.lines ?? [],
+        lines,
         onTalk: event && onEvent ? () => (onEvent(event), true) : undefined,
       }
     }),

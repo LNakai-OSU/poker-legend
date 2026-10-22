@@ -1,5 +1,5 @@
 import type { TimePeriod } from '../game/time'
-import type { GameState, StoryFlag } from '../game/state'
+import { chapterOf, type CityId, type GameState, type StoryFlag } from '../game/state'
 
 /**
  * Scripted moments, written as data.
@@ -36,6 +36,12 @@ export type EventCondition =
   | { kind: 'hasItem'; itemId: string }
   | { kind: 'hasLesson'; lessonId: string }
   | { kind: 'eventDone'; eventId: string; done?: boolean }
+  /**
+   * How far up the ladder the run has got: the furthest town set foot in (see
+   * `chapterOf`). One town, or any of several. This is what moves the cast from
+   * town to town and keeps each town's beats in its own part of the story.
+   */
+  | { kind: 'chapter'; cityId: CityId | CityId[] }
 
 /**
  * What happens, in order.
@@ -100,7 +106,72 @@ export function conditionHolds(condition: EventCondition, state: GameState): boo
       return state.lessonIds.includes(condition.lessonId)
     case 'eventDone':
       return state.completedEventIds.includes(condition.eventId) === (condition.done ?? true)
+    case 'chapter': {
+      const chapter = chapterOf(state)
+      return Array.isArray(condition.cityId) ? condition.cityId.includes(chapter) : condition.cityId === chapter
+    }
   }
+}
+
+/** Whether every one of these holds. No conditions at all always holds. */
+export function allHold(conditions: EventCondition[] | undefined, state: GameState): boolean {
+  return (conditions ?? []).every((condition) => conditionHolds(condition, state))
+}
+
+/**
+ * Whether two events could ever be ready to fire at the same moment.
+ *
+ * Two events on one trigger must be told apart by their conditions, or which
+ * one fires is decided by declaration order — which is not a decision anybody
+ * made. This only has to understand the conditions actually used to separate
+ * rivals, and anything it cannot prove apart counts as a clash, so it errs
+ * toward complaining:
+ *
+ * - a flag one needs set and the other needs clear;
+ * - hours, or chapters, that do not overlap;
+ * - an earlier beat one needs done and the other needs not done;
+ * - one waiting on the other, which only fires once — the commonest way to
+ *   give a character a second thing to say.
+ *
+ * Shared by the content tests and the editor, so they cannot disagree.
+ */
+export function canBothFire(a: GameEvent, b: GameEvent): boolean {
+  const ca = a.conditions ?? []
+  const cb = b.conditions ?? []
+
+  const flags = (cs: EventCondition[]) =>
+    new Map(cs.flatMap((c) => (c.kind === 'flag' ? [[c.flag, c.set ?? true] as const] : [])))
+  const flagsB = flags(cb)
+  for (const [flag, want] of flags(ca)) {
+    if (flagsB.has(flag) && flagsB.get(flag) !== want) return false
+  }
+
+  const done = (cs: EventCondition[]) =>
+    new Map(cs.flatMap((c) => (c.kind === 'eventDone' ? [[c.eventId, c.done ?? true] as const] : [])))
+  const doneA = done(ca)
+  const doneB = done(cb)
+  for (const [eventId, want] of doneA) {
+    if (doneB.has(eventId) && doneB.get(eventId) !== want) return false
+  }
+  if (!b.repeatable && doneA.get(b.id) === true) return false
+  if (!a.repeatable && doneB.get(a.id) === true) return false
+
+  const overlap = <T>(pick: (c: EventCondition) => T | T[] | undefined) => {
+    const of = (cs: EventCondition[]) => {
+      for (const c of cs) {
+        const value = pick(c)
+        if (value !== undefined) return new Set(Array.isArray(value) ? value : [value])
+      }
+      return null
+    }
+    const sa = of(ca)
+    const sb = of(cb)
+    return !sa || !sb || [...sa].some((value) => sb.has(value))
+  }
+  if (!overlap((c) => (c.kind === 'period' ? c.period : undefined))) return false
+  if (!overlap((c) => (c.kind === 'chapter' ? c.cityId : undefined))) return false
+
+  return true
 }
 
 /** Whether the same trigger is being described twice. */
@@ -134,7 +205,7 @@ export function eventFor(
   return events.find((event) => {
     if (!sameTrigger(event.trigger, trigger)) return false
     if (!event.repeatable && state.completedEventIds.includes(event.id)) return false
-    return (event.conditions ?? []).every((condition) => conditionHolds(condition, state))
+    return allHold(event.conditions, state)
   })
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { EVENTS, conditionHolds, eventFor, eventsSharing, type GameEvent } from './events'
+import { EVENTS, canBothFire, conditionHolds, eventFor, eventsSharing, type GameEvent } from './events'
 import { CHARACTERS } from './characters'
 import { TABLES } from './content'
 import { initialState, type GameState } from '../game/state'
@@ -42,6 +42,55 @@ describe('conditions', () => {
     expect(conditionHolds({ kind: 'eventDone', eventId: 'poker-night' }, after)).toBe(true)
     expect(conditionHolds({ kind: 'eventDone', eventId: 'poker-night', done: false }, after)).toBe(false)
     expect(conditionHolds({ kind: 'eventDone', eventId: 'poker-night', done: false }, at())).toBe(true)
+  })
+
+  it('reads the chapter as the furthest town set foot in, not the one you are in', () => {
+    const upriver = at({ cityId: 'silverCreek', unlockedCityIds: ['apartment', 'silverCreek', 'riverbend'] })
+    expect(conditionHolds({ kind: 'chapter', cityId: 'riverbend' }, upriver)).toBe(true)
+    expect(conditionHolds({ kind: 'chapter', cityId: 'silverCreek' }, upriver)).toBe(false)
+    expect(conditionHolds({ kind: 'chapter', cityId: ['palmCay', 'riverbend'] }, upriver)).toBe(true)
+    expect(conditionHolds({ kind: 'chapter', cityId: 'apartment' }, at())).toBe(true)
+  })
+})
+
+describe('telling two events apart', () => {
+  const event = (id: string, conditions: GameEvent['conditions'], repeatable?: boolean): GameEvent => ({
+    ...SAY_HELLO,
+    id,
+    conditions,
+    repeatable,
+  })
+
+  it('separates them by a flag, an hour or a chapter', () => {
+    expect(canBothFire(event('a', [{ kind: 'flag', flag: 'wonPokerNight' }]), event('b', [{ kind: 'flag', flag: 'wonPokerNight', set: false }]))).toBe(false)
+    expect(canBothFire(event('a', [{ kind: 'period', period: 'morning' }]), event('b', [{ kind: 'period', period: ['evening', 'night'] }]))).toBe(false)
+    expect(canBothFire(event('a', [{ kind: 'chapter', cityId: 'riverbend' }]), event('b', [{ kind: 'chapter', cityId: 'palmCay' }]))).toBe(false)
+  })
+
+  it('does not separate them by things that can both be true', () => {
+    expect(canBothFire(event('a', []), event('b', []))).toBe(true)
+    expect(canBothFire(event('a', [{ kind: 'period', period: 'morning' }]), event('b', [{ kind: 'period', period: ['morning', 'night'] }]))).toBe(true)
+    expect(canBothFire(event('a', [{ kind: 'chapter', cityId: 'riverbend' }]), event('b', [{ kind: 'cashAtLeast', amount: 600 }]))).toBe(true)
+    // An hour that differs does not help when the other has no hour at all.
+    expect(canBothFire(event('a', [{ kind: 'period', period: 'morning' }]), event('b', [{ kind: 'chapter', cityId: 'riverbend' }]))).toBe(true)
+  })
+
+  it('separates a beat from the one that waits for it', () => {
+    const first = event('first', [{ kind: 'chapter', cityId: 'riverbend' }])
+    const second = event('second', [
+      { kind: 'chapter', cityId: 'riverbend' },
+      { kind: 'eventDone', eventId: 'first' },
+    ])
+    expect(canBothFire(first, second)).toBe(false)
+    expect(canBothFire(second, first)).toBe(false)
+    // Unless the first can happen again, in which case they really can collide.
+    expect(canBothFire({ ...first, repeatable: true }, second)).toBe(true)
+  })
+
+  it('separates two beats that ask opposite things about a third', () => {
+    const before = event('a', [{ kind: 'eventDone', eventId: 'x', done: false }])
+    const after = event('b', [{ kind: 'eventDone', eventId: 'x' }])
+    expect(canBothFire(before, after)).toBe(false)
   })
 })
 
@@ -140,7 +189,7 @@ describe('the events in the game', () => {
     for (const event of EVENTS) {
       const rivals = eventsSharing(EVENTS, event.trigger).filter((other) => other.id !== event.id)
       for (const rival of rivals) {
-        const exclusive = conditionsConflict(event, rival)
+        const exclusive = !canBothFire(event, rival)
         expect(
           exclusive,
           `${event.id} and ${rival.id} share a trigger and could both fire`,
@@ -156,36 +205,3 @@ describe('the events in the game', () => {
     expect(night!.repeatable ?? false, 'the opening night can be played again').toBe(false)
   })
 })
-
-/**
- * Whether two events can be told apart by their conditions alone.
- *
- * Only has to understand the kinds of condition actually used to separate
- * rivals — a flag that must differ, or hours that do not overlap. Anything it
- * cannot prove apart counts as a clash, so the test errs toward complaining.
- */
-function conditionsConflict(a: GameEvent, b: GameEvent): boolean {
-  const flagsOf = (event: GameEvent) =>
-    new Map(
-      (event.conditions ?? [])
-        .filter((c) => c.kind === 'flag')
-        .map((c) => [c.flag, c.set ?? true] as const),
-    )
-  const flagsA = flagsOf(a)
-  const flagsB = flagsOf(b)
-  for (const [flag, want] of flagsA) {
-    if (flagsB.has(flag) && flagsB.get(flag) !== want) return true
-  }
-
-  const periodsOf = (event: GameEvent) => {
-    const condition = (event.conditions ?? []).find((c) => c.kind === 'period')
-    if (!condition) return null
-    return new Set(Array.isArray(condition.period) ? condition.period : [condition.period])
-  }
-  const periodsA = periodsOf(a)
-  const periodsB = periodsOf(b)
-  if (periodsA && periodsB) {
-    return [...periodsA].every((period) => !periodsB.has(period))
-  }
-  return false
-}

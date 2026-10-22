@@ -17,6 +17,40 @@ export type CityId =
   | 'neonMesa'
   | 'portoLumina'
 
+/**
+ * Every town, from home to the top of the ladder.
+ *
+ * The order the story is told in, which is why it lives with the state rather
+ * than with the maps: a beat that asks how far the run has got needs it, and
+ * the maps should not have to be loaded to answer. `CITY_ORDER` in `cities.ts`
+ * is this list without home, and a content test holds the two together.
+ */
+export const TOWN_ORDER: CityId[] = [
+  'apartment',
+  'silverCreek',
+  'riverbend',
+  'crescentHarbor',
+  'palmCay',
+  'neonMesa',
+  'portoLumina',
+]
+
+/**
+ * How far up the ladder the run has got: the furthest town the player has set
+ * foot in, by bus or on foot.
+ *
+ * This is the story's clock. Characters move town to town by it and beats ask
+ * for it, so going back down the ladder does not rewind anything — Ray is
+ * still at Silver Creek, but the people who followed you up have moved on.
+ */
+export function chapterOf(state: Pick<GameState, 'unlockedCityIds'>): CityId {
+  let furthest = 0
+  for (const cityId of state.unlockedCityIds) {
+    furthest = Math.max(furthest, TOWN_ORDER.indexOf(cityId))
+  }
+  return TOWN_ORDER[furthest]
+}
+
 export interface Debt {
   id: string
   sponsorId: string
@@ -46,6 +80,11 @@ export interface GameState {
   cityId: CityId
   /** Which space inside the city you're in — a street, a casino floor, a shop. */
   areaId: string | null
+  /**
+   * Towns the player has been to, by bus or on foot. The bus will always take
+   * you back to one of these, and the furthest of them is the story's chapter
+   * (see `chapterOf`).
+   */
   unlockedCityIds: CityId[]
   ownedItemIds: string[]
   completedMissionIds: string[]
@@ -288,6 +327,18 @@ export function reputation(state: GameState): number {
     Math.floor(state.stats.biggestPot / 250) +
     state.lessonIds.length * 4
   )
+}
+
+/**
+ * Walking into an area, or being put in one by a scene.
+ *
+ * The town counts as visited however you got there. Only the bus used to mark
+ * it, so a player who walked the road to Riverbend was, as far as the story
+ * could tell, still in Silver Creek — and the people who follow you up the
+ * ladder never followed.
+ */
+export function arriveAt(state: GameState, areaId: string, cityId: CityId): GameState {
+  return unlockCity({ ...state, areaId, cityId }, cityId)
 }
 
 export function unlockCity(state: GameState, cityId: CityId): GameState {

@@ -1,6 +1,6 @@
 import type { Accessory, AvatarLook, HairStyle } from '../game/avatars'
 import type { Archetype, SkillTier } from '../engine/types'
-import type { StoryFlag } from '../game/state'
+import { TOWN_ORDER, type StoryFlag } from '../game/state'
 import type { SoundName } from '../audio/audio'
 import { TIME_PERIODS, type TimePeriod } from '../game/time'
 import type { CharacterDef, Persona, ScheduleEntry, TableLines } from '../world/characters'
@@ -81,6 +81,7 @@ export const CONDITION_KINDS = keysOf<EventCondition['kind']>({
   hasItem: true,
   hasLesson: true,
   eventDone: true,
+  chapter: true,
 })
 export const ACTION_KINDS = keysOf<EventAction['kind']>({
   dialogue: true,
@@ -137,6 +138,8 @@ export function blankCondition(kind: EventCondition['kind'], ids: { item: string
       return { kind, lessonId: ids.lesson }
     case 'eventDone':
       return { kind, eventId: ids.event }
+    case 'chapter':
+      return { kind, cityId: 'silverCreek' }
   }
 }
 
@@ -410,28 +413,51 @@ export function characterShapeProblems(value: unknown, path = 'character'): Prob
     if (!isObj(value.overworld)) problems.push(`${path}.overworld should be an overworld presence`)
     else {
       const presence = value.overworld
-      keys(presence, `${path}.overworld`, ['lines', 'schedule'], ['art', 'color'], problems)
+      keys(presence, `${path}.overworld`, ['lines', 'schedule'], ['art', 'color', 'chapters'], problems)
       lineList(presence.lines, `${path}.overworld.lines`, problems)
       if (presence.color !== undefined) integer(presence.color, `${path}.overworld.color`, problems, 0)
-      if (!Array.isArray(presence.schedule)) problems.push(`${path}.overworld.schedule should be a list`)
-      else {
-        presence.schedule.forEach((entry, i) => {
-          const at = `${path}.overworld.schedule[${i}]`
-          if (!isObj(entry)) {
-            problems.push(`${at} is not a schedule entry`)
-            return
-          }
-          keys(entry, at, ['period', 'areaId', 'col', 'row'], ['lines'], problems)
-          oneOf(entry.period, TIME_PERIODS, `${at}.period`, problems)
-          string(entry.areaId, `${at}.areaId`, problems, true)
-          integer(entry.col, `${at}.col`, problems, 0)
-          integer(entry.row, `${at}.row`, problems, 0)
-          if (entry.lines !== undefined) lineList(entry.lines, `${at}.lines`, problems)
-        })
+      scheduleShape(presence.schedule, `${path}.overworld.schedule`, problems)
+      if (presence.chapters !== undefined) {
+        if (!Array.isArray(presence.chapters)) problems.push(`${path}.overworld.chapters should be a list`)
+        else {
+          presence.chapters.forEach((chapter, i) => {
+            const at = `${path}.overworld.chapters[${i}]`
+            if (!isObj(chapter)) {
+              problems.push(`${at} is not a chapter`)
+              return
+            }
+            keys(chapter, at, ['when', 'schedule'], ['lines'], problems)
+            if (!Array.isArray(chapter.when)) problems.push(`${at}.when should be a list of conditions`)
+            else chapter.when.forEach((c, j) => conditionShape(c, `${at}.when[${j}]`, problems))
+            scheduleShape(chapter.schedule, `${at}.schedule`, problems)
+            if (chapter.lines !== undefined) lineList(chapter.lines, `${at}.lines`, problems)
+          })
+        }
       }
     }
   }
   return problems
+}
+
+/** A list of where somebody is, hour by hour: their usual day or a chapter's. */
+function scheduleShape(value: unknown, path: string, problems: Problems) {
+  if (!Array.isArray(value)) {
+    problems.push(`${path} should be a list`)
+    return
+  }
+  value.forEach((entry, i) => {
+    const at = `${path}[${i}]`
+    if (!isObj(entry)) {
+      problems.push(`${at} is not a schedule entry`)
+      return
+    }
+    keys(entry, at, ['period', 'areaId', 'col', 'row'], ['lines'], problems)
+    oneOf(entry.period, TIME_PERIODS, `${at}.period`, problems)
+    string(entry.areaId, `${at}.areaId`, problems, true)
+    integer(entry.col, `${at}.col`, problems, 0)
+    integer(entry.row, `${at}.row`, problems, 0)
+    if (entry.lines !== undefined) lineList(entry.lines, `${at}.lines`, problems)
+  })
 }
 
 function triggerShape(value: unknown, path: string, problems: Problems) {
@@ -502,6 +528,13 @@ function conditionShape(value: unknown, path: string, problems: Problems) {
       string(value.eventId, `${path}.eventId`, problems, true)
       if (value.done !== undefined && typeof value.done !== 'boolean') problems.push(`${path}.done should be true or false`)
       return
+    case 'chapter': {
+      keys(value, path, ['kind', 'cityId'], [], problems)
+      const towns = Array.isArray(value.cityId) ? value.cityId : [value.cityId]
+      if (towns.length === 0) problems.push(`${path} names no town`)
+      towns.forEach((t, i) => oneOf(t, TOWN_ORDER, `${path}.cityId[${i}]`, problems))
+      return
+    }
     default:
       problems.push(`${path}.kind should be one of ${CONDITION_KINDS.join(', ')}`)
   }
@@ -658,6 +691,10 @@ export function describeCondition(condition: EventCondition, names: Names): stri
       return (condition.done ?? true)
         ? `“${condition.eventId}” has happened`
         : `“${condition.eventId}” has not happened yet`
+    case 'chapter': {
+      const towns = Array.isArray(condition.cityId) ? condition.cityId : [condition.cityId]
+      return `the furthest you have got is ${listOf(towns.map(names.city))}`
+    }
   }
 }
 

@@ -4,6 +4,8 @@ import type { OpponentDef, TableDef } from './types'
 import type { NpcArt } from '../overworld/Npc'
 import type { NpcRole, PersonLook } from '../overworld/characterArt'
 import { TIME_PERIODS, type TimePeriod } from '../game/time'
+import type { GameState } from '../game/state'
+import { allHold, type EventCondition } from './events'
 
 /**
  * Who somebody is, in one place.
@@ -92,6 +94,27 @@ export interface OverworldPresence {
   lines: string[]
   /** Where they are through the day. An empty schedule means they are nowhere. */
   schedule: ScheduleEntry[]
+  /**
+   * Where the story takes them later.
+   *
+   * A schedule used to be forever: Marcus was in Basin on the last day of the
+   * game exactly as on the first, so nobody you met could come up the ladder
+   * with you. A chapter is a whole day somewhere else, from the moment its
+   * conditions hold — usually how far the run has got. The last chapter whose
+   * conditions hold replaces `schedule`, so the list reads as a timeline: later
+   * in the story is lower down.
+   */
+  chapters?: ScheduleChapter[]
+}
+
+/** Part of somebody's story: where they spend their days once it has begun. */
+export interface ScheduleChapter {
+  /** When this part of the story applies. All must hold. */
+  when: EventCondition[]
+  /** Where they are at each hour of it. Hours left out, they are nowhere. */
+  schedule: ScheduleEntry[]
+  /** What they say when the hour has nothing more specific. Falls back to their usual lines. */
+  lines?: string[]
 }
 
 export interface CharacterDef {
@@ -788,44 +811,98 @@ export function seatsOf(table: TableDef): OpponentDef[] {
  * walking there. It costs nothing while you are not looking, it cannot drift out
  * of step with the clock, and a save holds the hour rather than everyone's
  * coordinates.
+ *
+ * Given the state, the story counts too: whoever has followed you up the
+ * ladder is where their current chapter puts them. `lines` is what they say
+ * here, with the fallbacks already applied.
  */
-export function charactersIn(areaId: string, period: TimePeriod): Array<{
+export function charactersIn(
+  areaId: string,
+  period: TimePeriod,
+  state?: GameState,
+): Array<{
   id: string
   character: CharacterDef
   at: ScheduleEntry
+  lines: string[]
 }> {
   const here = []
   for (const [id, character] of Object.entries(CHARACTERS)) {
-    const at = character.overworld?.schedule.find(
-      (entry) => entry.areaId === areaId && entry.period === period,
-    )
-    if (at) here.push({ id, character, at })
+    const { schedule, lines } = scheduleFor(character, state)
+    // Where they are this hour first, then whether that is here — so nobody can
+    // be in two rooms at once however their chapters are written.
+    const at = schedule.find((entry) => entry.period === period)
+    if (at && at.areaId === areaId) here.push({ id, character, at, lines: at.lines ?? lines })
   }
   return here
 }
 
-/** Every period a character is somewhere, for checking nobody is in two places. */
+/**
+ * Where somebody spends their days at this point in the story: the last of
+ * their chapters whose conditions hold, or their usual schedule.
+ *
+ * Without a state it is the usual schedule — where they are when the game
+ * begins.
+ */
+export function scheduleFor(
+  character: CharacterDef,
+  state?: GameState,
+): { schedule: ScheduleEntry[]; lines: string[] } {
+  const presence = character.overworld
+  if (!presence) return { schedule: [], lines: [] }
+  const chapter = state
+    ? [...(presence.chapters ?? [])].reverse().find((c) => allHold(c.when, state))
+    : undefined
+  return chapter
+    ? { schedule: chapter.schedule, lines: chapter.lines ?? presence.lines }
+    : { schedule: presence.schedule, lines: presence.lines }
+}
+
+/**
+ * Every schedule a character keeps at any point in the story — their usual
+ * one and each chapter's — for checking every place anybody could ever stand.
+ */
+export function allSchedules(character: CharacterDef): ScheduleEntry[][] {
+  const presence = character.overworld
+  if (!presence) return []
+  return [presence.schedule, ...(presence.chapters ?? []).map((c) => c.schedule)]
+}
+
+/**
+ * Anybody in two places at once, or two people on one tile.
+ *
+ * One place per hour is checked within each schedule — the usual one and each
+ * chapter — because a chapter is somebody's whole day somewhere else. A tile is
+ * checked across every schedule anybody keeps, whatever the story: two people
+ * sharing one would only be fine if their chapters could never overlap, and
+ * that is not worth proving.
+ */
 export function scheduleConflicts(): string[] {
   const seen = new Map<string, string>()
   const problems: string[] = []
   for (const [id, character] of Object.entries(CHARACTERS)) {
-    const periods = new Set<TimePeriod>()
-    for (const entry of character.overworld?.schedule ?? []) {
-      if (periods.has(entry.period)) {
-        problems.push(`${id} is in two places at once in the ${entry.period}`)
+    for (const schedule of allSchedules(character)) {
+      const periods = new Set<TimePeriod>()
+      for (const entry of schedule) {
+        if (periods.has(entry.period)) {
+          problems.push(`${id} is in two places at once in the ${entry.period}`)
+        }
+        periods.add(entry.period)
+        const key = `${entry.areaId}:${entry.period}:${entry.col},${entry.row}`
+        const other = seen.get(key)
+        if (other && other !== id) problems.push(`${id} and ${other} stand on the same tile in the ${entry.period}`)
+        seen.set(key, id)
       }
-      periods.add(entry.period)
-      const key = `${entry.areaId}:${entry.period}:${entry.col},${entry.row}`
-      const other = seen.get(key)
-      if (other) problems.push(`${id} and ${other} stand on the same tile in the ${entry.period}`)
-      seen.set(key, id)
     }
   }
   return problems
 }
 
-/** Periods a character has nowhere to be, so you can tell a gap from an oversight. */
+/**
+ * Periods a character has nowhere to be at any point in the story, so you can
+ * tell a gap from an oversight.
+ */
 export function periodsAway(character: CharacterDef): TimePeriod[] {
-  const scheduled = new Set(character.overworld?.schedule.map((e) => e.period))
+  const scheduled = new Set(allSchedules(character).flat().map((e) => e.period))
   return TIME_PERIODS.filter((period) => !scheduled.has(period))
 }

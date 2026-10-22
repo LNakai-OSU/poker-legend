@@ -1,5 +1,5 @@
-import { CHARACTERS, type CharacterDef } from '../world/characters'
-import { EVENTS, eventsSharing, type GameEvent } from '../world/events'
+import { CHARACTERS, allSchedules, type CharacterDef } from '../world/characters'
+import { EVENTS, canBothFire, eventsSharing, type GameEvent } from '../world/events'
 import { AREAS, CITIES, LESSONS, TABLES, allShopItems } from '../world/content'
 import { isWalkable } from '../overworld/tileRenderer'
 import type { AreaDef, TableDef } from '../world/types'
@@ -117,36 +117,39 @@ function characterRules(id: string, character: CharacterDef, world: World): stri
   // the town keeps its own hours
   const presence = character.overworld
   if (presence) {
-    if (presence.schedule.length === 0) {
+    const schedules = allSchedules(character)
+    if (schedules.every((schedule) => schedule.length === 0)) {
       problems.push(`${name} is out in the town but keeps no hours at all — add where they are, or take them out of the town`)
     }
-    const periods = new Set<string>()
-    for (const entry of presence.schedule) {
-      const when = `in the ${entry.period}`
-      if (periods.has(entry.period)) problems.push(`${name} is in two places at once ${when}`)
-      periods.add(entry.period)
+    for (const schedule of schedules) {
+      const periods = new Set<string>()
+      for (const entry of schedule) {
+        const when = `in the ${entry.period}`
+        if (periods.has(entry.period)) problems.push(`${name} is in two places at once ${when}`)
+        periods.add(entry.period)
 
-      const area = world.areas[entry.areaId]?.area
-      if (!area) {
-        problems.push(`${name} is scheduled into "${entry.areaId}", which is not an area`)
-        continue
-      }
-      if (!isWalkable(area.map, entry.col, entry.row)) {
-        problems.push(`${name} stands in a wall in ${area.name} (${entry.col},${entry.row}) ${when}`)
-      } else if (!approachTiles(entry.col, entry.row).some(([c, r]) => isWalkable(area.map, c, r))) {
-        problems.push(`nobody can walk up to ${name} in ${area.name} ${when}`)
-      }
-      const poi = area.pois.find((p) => p.col === entry.col && p.row === entry.row)
-      if (poi) problems.push(`${name} stands on ${poi.name} in ${area.name} ${when}`)
-      const door = area.exits.find((e) => e.col === entry.col && e.row === entry.row)
-      if (door) problems.push(`${name} stands in the ${door.label} doorway ${when}`)
+        const area = world.areas[entry.areaId]?.area
+        if (!area) {
+          problems.push(`${name} is scheduled into "${entry.areaId}", which is not an area`)
+          continue
+        }
+        if (!isWalkable(area.map, entry.col, entry.row)) {
+          problems.push(`${name} stands in a wall in ${area.name} (${entry.col},${entry.row}) ${when}`)
+        } else if (!approachTiles(entry.col, entry.row).some(([c, r]) => isWalkable(area.map, c, r))) {
+          problems.push(`nobody can walk up to ${name} in ${area.name} ${when}`)
+        }
+        const poi = area.pois.find((p) => p.col === entry.col && p.row === entry.row)
+        if (poi) problems.push(`${name} stands on ${poi.name} in ${area.name} ${when}`)
+        const door = area.exits.find((e) => e.col === entry.col && e.row === entry.row)
+        if (door) problems.push(`${name} stands in the ${door.label} doorway ${when}`)
 
-      for (const [otherId, other] of Object.entries(everyone)) {
-        if (otherId === id) continue
-        const clash = other.overworld?.schedule.find(
-          (o) => o.period === entry.period && o.areaId === entry.areaId && o.col === entry.col && o.row === entry.row,
-        )
-        if (clash) problems.push(`${name} and ${other.name} stand on the same tile ${when}`)
+        for (const [otherId, other] of Object.entries(everyone)) {
+          if (otherId === id) continue
+          const clash = allSchedules(other).flat().find(
+            (o) => o.period === entry.period && o.areaId === entry.areaId && o.col === entry.col && o.row === entry.row,
+          )
+          if (clash) problems.push(`${name} and ${other.name} stand on the same tile ${when}`)
+        }
       }
     }
   }
@@ -155,24 +158,7 @@ function characterRules(id: string, character: CharacterDef, world: World): stri
 
 /** Whether two events can be told apart by their conditions alone — as `events.test.ts` decides it. */
 export function conditionsDistinguish(a: GameEvent, b: GameEvent): boolean {
-  const flagsOf = (event: GameEvent) =>
-    new Map(
-      (event.conditions ?? []).flatMap((c) => (c.kind === 'flag' ? [[c.flag, c.set ?? true] as const] : [])),
-    )
-  const flagsA = flagsOf(a)
-  const flagsB = flagsOf(b)
-  for (const [flag, want] of flagsA) {
-    if (flagsB.has(flag) && flagsB.get(flag) !== want) return true
-  }
-  const periodsOf = (event: GameEvent) => {
-    const condition = (event.conditions ?? []).find((c) => c.kind === 'period')
-    if (!condition || condition.kind !== 'period') return null
-    return new Set(Array.isArray(condition.period) ? condition.period : [condition.period])
-  }
-  const periodsA = periodsOf(a)
-  const periodsB = periodsOf(b)
-  if (periodsA && periodsB) return [...periodsA].every((period) => !periodsB.has(period))
-  return false
+  return !canBothFire(a, b)
 }
 
 /**
@@ -239,7 +225,7 @@ function eventRules(event: GameEvent, originalId: string | null, world: World): 
   for (const rival of eventsSharing(others, trigger)) {
     if (!conditionsDistinguish(event, rival)) {
       problems.push(
-        `it and "${rival.id}" share a trigger and could both fire — add a flag or an hour that tells them apart`,
+        `it and "${rival.id}" share a trigger and could both fire — add a flag, an hour or a chapter that tells them apart`,
       )
     }
   }

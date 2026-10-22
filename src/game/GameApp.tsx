@@ -19,6 +19,7 @@ import { playSound } from '../audio/audio'
 import {
   advanceDay,
   advancePeriod,
+  arriveAt,
   caughtByCollectors,
   daysUntilRematch,
   initialState,
@@ -101,7 +102,7 @@ export function GameApp() {
     onStartPokerNight: () => setView({ kind: 'pokerNight' }),
     onTeleport: (areaId, col, row) => {
       const destination = findArea(areaId)
-      setState((s) => ({ ...s, areaId, cityId: destination?.cityId ?? s.cityId }))
+      setState((s) => arriveAt(s, areaId, destination?.cityId ?? s.cityId))
       setEntryTile({ col, row })
     },
   })
@@ -504,7 +505,7 @@ export function GameApp() {
               // Walking between towns is just walking, so the city follows the
               // area rather than the other way round.
               const destination = findArea(areaId)
-              setState((s) => ({ ...s, areaId, cityId: destination?.cityId ?? s.cityId }))
+              setState((s) => arriveAt(s, areaId, destination?.cityId ?? s.cityId))
               setEntryTile({ col, row })
             }}
             onCaught={handleCaught}
