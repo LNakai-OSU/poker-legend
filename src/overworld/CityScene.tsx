@@ -76,6 +76,8 @@ export function CityScene({
         art,
         figure: figures.get(poi.id),
         behind: art === 'person' && behind(poi.col, poi.row),
+        // Furniture behind them too is the back of a counter, not the bench of a booth.
+        counter: art === 'person' && behind(poi.col, poi.row) && behind(poi.col, poi.row - 1),
         // People at a post keep their eyes on it; everybody else looks about.
         restless: art === 'person' && !behind(poi.col, poi.row) && (role === 'local' || role === 'tourist' || role === 'kid'),
         labelled: poi.labelled,
@@ -100,6 +102,7 @@ export function CityScene({
         art: character.overworld?.art ?? ('person' as NpcArt),
         figure,
         behind: behind(placed.col, placed.row),
+        counter: behind(placed.col, placed.row) && behind(placed.col, placed.row - 1),
         restless: !behind(placed.col, placed.row),
         lines: at.lines ?? character.overworld?.lines ?? [],
         onTalk: event && onEvent ? () => (onEvent(event), true) : undefined,

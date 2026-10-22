@@ -235,6 +235,8 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     overworld: {
       // He works, he eats, he goes home and deals. The Friday game is at his
       // place because his place is where he already is.
+      // Straight from work: overalls over the shirt he plays in.
+      look: { garment: 'overalls', garmentColor: '#3a5a8a', trousers: '#3a5a8a', shoes: '#5a3a22' },
       lines: ['Marcus: Catch me later. I am always around.'],
       schedule: [
         { period: 'morning', areaId: 'basin', col: 9, row: 11, lines: [
@@ -268,6 +270,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     },
     overworld: {
       // She is at the laundromat because it is warm and nobody asks her anything.
+      look: { garment: 'cardigan', garmentColor: '#4a4a54', lower: 'skirt', trousers: '#2e2e36' },
       lines: ['Dana: Mm.'],
       schedule: [
         { period: 'morning', areaId: 'laundromat', col: 8, row: 4, lines: [
@@ -297,6 +300,8 @@ export const CHARACTERS: Record<string, CharacterDef> = {
       lose: ['Ray: Bah. Next one.'],
     },
     overworld: {
+      // A windbreaker he has had since the casino gave them away.
+      look: { garment: 'jacket', garmentColor: '#a8603a', sleeves: 'long' },
       lines: ['Ray: I am due. I can feel it.'],
       schedule: [
         { period: 'afternoon', areaId: 'sc-street', col: 18, row: 7, lines: [
@@ -326,6 +331,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
       lose: ['Sully: Well played.'],
     },
     overworld: {
+      look: { garment: 'vest', garmentColor: '#2e2e36', sleeves: 'short' },
       lines: ['Sully: Working.'],
       schedule: [
         { period: 'morning', areaId: 'sc-street', col: 12, row: 13, lines: [
@@ -351,6 +357,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
       lose: ['Deb: Alright. That was good.'],
     },
     overworld: {
+      look: { garment: 'jacket', garmentColor: '#2a1e1a', lower: 'skirt', trousers: '#5a3a24' },
       lines: ['Deb: Been here longer than you.'],
       schedule: [
         { period: 'morning', areaId: 'rb-street', col: 9, row: 7, lines: [
@@ -376,6 +383,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
       lose: ['Mack: Hm.'],
     },
     overworld: {
+      look: { garment: 'hoodie', garmentColor: '#5a6a4a' },
       lines: ['Mack: Waiting on a hand. Same as always.'],
       schedule: [
         { period: 'afternoon', areaId: 'rb-street', col: 20, row: 12, lines: [

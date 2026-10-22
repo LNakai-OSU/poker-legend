@@ -1987,10 +1987,11 @@ function frameTexture(figure: Figure, facing: Facing, frame: WalkFrame, blink: b
 }
 
 /**
- * How much of somebody shows over a counter: down to the bottom of the ribs, so
- * the counter's edge hides their hands and everything below.
+ * How much of somebody shows behind furniture: down to the belt, hands and all.
+ * Down to the ribs was a head and a collar over every counter in the game, and
+ * a shopkeeper read as a child peering over it.
  */
-export const UPPER_BODY_ROWS = 17
+export const UPPER_BODY_ROWS = 19
 
 /** Every frame somebody needs: three walk frames per facing, a blink, and the same from the waist up. */
 export interface PersonFrames {

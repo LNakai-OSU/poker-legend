@@ -31,6 +31,12 @@ export interface NpcConfig {
    * dealer at a table. Drawn from the ribs up, so the furniture is in front.
    */
   behind?: boolean
+  /**
+   * Behind a counter whose back stands against the wall — a till, a bar, a
+   * cashier's cage. They stand at its far edge, so all of them down to the belt
+   * shows over the counter top instead of a head over its front.
+   */
+  counter?: boolean
   /** Which way they face when nobody is talking to them. */
   facing?: Facing
   /** Glances about now and then. People at a post — dealers, clerks — keep still. */
@@ -77,7 +83,7 @@ export class Npc {
       )
       this.body = new Sprite(this.currentTexture())
       this.body.anchor.set(0, 1)
-      if (config.behind) this.body.y = -(TILE_SIZE - COUNTER_EDGE * UNIT)
+      if (config.behind) this.body.y = -(TILE_SIZE - (config.counter ? 0 : COUNTER_EDGE) * UNIT)
     } else if (art === 'none') {
       this.frames = null
       this.body = null
