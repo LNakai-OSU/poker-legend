@@ -128,3 +128,15 @@ branch:
 Left: the cast still has many dealer-uniformed staff (by role, on purpose);
 showroom middles are an aisle by design; the Lumina lobby and casino share
 marble; no new tests for the people beyond the existing casting suite.
+
+## Losing progression (2026-10-22, branch worktree-agent-a1af32883948641a8, not merged)
+
+Losing is now part of the story: the state keeps a `record` of busts, matches
+lost and each sponsor's stakes; events can ask `cashBelow`, `debt`, `hunted`,
+`challenge` and `count`, fire on `caught`, and set `cameBack`. ~50 beats: the
+kitchen table deals you back in wherever Marcus is when you are broke; each
+sponsor notices owing/late/square and has a collector with a face and lines;
+a lost match is met by Nadia, Marcus, Dana, Hal and Kit with a rematch path;
+the rent pays off. STORYBOARD.md §4 is the map; GAME_BIBLE §2 the vocabulary.
+Left: see STORYBOARD.md §6 (choices, a stake-sized home game, bust beats for
+Deb/Rosa/the Fixer, collectors indoors).

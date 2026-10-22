@@ -175,11 +175,33 @@ A scripted beat: when it happens, what has to be true, what then occurs.
 **Triggers:** `talkTo` (a character), `interact` (a fixture — the beat gets
 first refusal over its action, and the next talk does the usual thing),
 `enterArea` (walking in through a door, off an edge or off a bus; not loading a
-save, not getting up from a table), `standOn` (typed and validated, **not yet
-fired** by the overworld).
+save, not getting up from a table), `caught` (the collectors catch you: the beat
+plays with them standing over you, and the shakedown follows its last line),
+`standOn` (typed and validated, **not yet fired** by the overworld).
 
 **Conditions** (all must hold): `flag`, `period`, `dayAtLeast`, `cashAtLeast`,
-`hasItem`, `hasLesson`, `eventDone`, `chapter`.
+`hasItem`, `hasLesson`, `eventDone`, `chapter`, and the ones that let the story
+see losing:
+
+| Condition | Holds when | Example |
+|---|---|---|
+| `cashBelow` | you hold less than `amount` | `{ kind: 'cashBelow', amount: 100 }` — broke |
+| `debt` | you owe a sponsor (or, with no `sponsorId`, anybody) `none`, `owing` (on time) or `overdue` (the stake was missed) | `{ kind: 'debt', sponsorId: 'cass', status: 'owing' }` |
+| `hunted` | collectors are working the town you are in — anybody's, or one sponsor's | `{ kind: 'hunted', sponsorId: 'wen' }` |
+| `challenge` | the match is `unplayed`, `lost` (she is making you wait), `rematch` (she will play you now) or `won` | `{ kind: 'challenge', status: ['lost', 'rematch'] }` |
+| `count` | something has happened `atLeast`/`atMost` times (at least once by default; `atMost: 0` is never): `busted`, `challengeLost`, or a sponsor's `staked`, `repaid`, `missed`, `caught` | `{ kind: 'count', of: 'repaid', sponsorId: 'cass' }` |
+
+**The record.** The run remembers what has gone wrong, because nobody can talk
+about a setback the state has forgotten: `record` in `state.ts` counts busts
+(a session, shakedown or gamble that leaves you below `BUST_LINE`, the cheapest
+seat on the ladder), matches lost, and for each sponsor the stakes taken,
+repaid, missed and collected on. The mechanics count; beats read it with
+`count`. A paid debt leaves the debt list but stays in the record.
+
+**Flags:** `wonPokerNight`, `beatFinalRival`, `hasPenthouse`, and `cameBack` —
+set by a beat that marks climbing back from a setback (Ray's when you are back
+at boat money after going broke; Marcus's after a rematch won), and read by
+beats that care that you did.
 
 **The chapter** is how far up the ladder the run has got: the furthest town set
 foot in, by bus or on foot (`chapterOf` in `state.ts`). `{ kind: 'chapter',
@@ -198,7 +220,9 @@ Rules:
 - An event fires **once**, ever, unless marked `repeatable`.
 - **At most one event per moment.** Two events sharing a trigger must have
   conditions that tell them apart — a flag one way and the other, hours or
-  chapters that do not overlap, or one waiting on the other with `eventDone` —
+  chapters that do not overlap, one waiting on the other with `eventDone`,
+  cash at least one amount and below another, different debt or match
+  statuses, different collectors, or counts whose ranges do not meet —
   and the tests fail otherwise, because declaration order is not a decision
   anybody made. `canBothFire` in `events.ts` is the rule; the tests and the
   editor share it.
@@ -271,6 +295,19 @@ days. Miss it and collectors hunt you in the town you are standing in. Skipping
 town sets a grace period before they pick the trail back up, and a shakedown
 buys three more days. Getting caught costs three quarters of your bankroll —
 enough to hurt, not enough to end the run with nothing to rebuy with.
+
+Every sponsor names its `collector`, a character: the face that stands beside
+the sponsor while you owe on time, chases you down the street once the stake
+runs out, and says its piece (a `caught` beat) before the shakedown. When
+several stakes are past due, the one that ran out first sends the collector.
+
+**Losing is part of the story.** No setback ends the run, and each one is met by
+somebody who says what to do next. Below the cheapest seat (`BUST_LINE`,
+$100) Marcus deals the kitchen table again, wherever he is; the bus home is
+free and Basin's local bus passes the hours, so he can always be reached. A
+lost match costs the buy-in and a week, and the people who followed you up
+meet it. The content tests hold the kitchen table open in every chapter.
+[STORYBOARD.md](STORYBOARD.md) §4 is the map of the losing paths.
 
 **The help.** A mentor sells lessons in real, standard poker strategy — pot
 odds, position, hand reading. They are teaching, not flavour.
