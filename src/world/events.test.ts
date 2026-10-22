@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { EVENTS, canBothFire, conditionHolds, eventFor, eventsSharing, type GameEvent } from './events'
-import { CHARACTERS } from './characters'
-import { TABLES } from './content'
-import { initialState, type GameState } from '../game/state'
+import { readFileSync } from 'node:fs'
+import { CHARACTERS, allSchedules } from './characters'
+import { AREAS, CITIES, CITY_ORDER, TABLES } from './content'
+import { TOWN_ORDER, initialState, type GameState } from '../game/state'
 
 const at = (overrides: Partial<GameState> = {}): GameState => ({ ...initialState(), ...overrides })
 
@@ -203,5 +204,69 @@ describe('the events in the game', () => {
     expect(night, 'the game that opens the campaign is gone').toBeDefined()
     expect(night!.actions.some((a) => a.kind === 'startPokerNight')).toBe(true)
     expect(night!.repeatable ?? false, 'the opening night can be played again').toBe(false)
+  })
+})
+
+/**
+ * The shape of the run, as docs/STORYBOARD.md sets it out: every town says what
+ * it costs and notices when you have outgrown it, and somebody you know is in
+ * every one of them.
+ */
+describe('the run is carried by people', () => {
+  const townOf = (areaId: string) => AREAS[areaId]?.cityId
+  const townsOf = (id: string) => new Set(allSchedules(CHARACTERS[id]).flat().map((e) => townOf(e.areaId)))
+
+  it('greets the player in every town with what it costs and what moves them on', () => {
+    for (const town of CITY_ORDER) {
+      const arrival = EVENTS.find((e) => e.trigger.kind === 'enterArea' && townOf(e.trigger.areaId) === town)
+      expect(arrival, `nothing happens when you arrive in ${CITIES[town].name}`).toBeDefined()
+    }
+  })
+
+  it('notices when the player has the bankroll for the next town', () => {
+    // Tied to the gate itself, so moving a gate without moving the send-off fails.
+    for (let i = 0; i + 1 < CITY_ORDER.length; i++) {
+      const town = CITY_ORDER[i]
+      const gate = CITIES[CITY_ORDER[i + 1]].unlockCash
+      const sendOff = EVENTS.find((e) => {
+        const conditions = e.conditions ?? []
+        return (
+          conditions.some((c) => c.kind === 'chapter' && [c.cityId].flat().includes(town)) &&
+          conditions.some((c) => c.kind === 'cashAtLeast' && c.amount === gate)
+        )
+      })
+      expect(sendOff, `nobody in ${CITIES[town].name} notices when you reach $${gate.toLocaleString()}`).toBeDefined()
+    }
+  })
+
+  it('puts somebody who follows you up the ladder in every town', () => {
+    const recurring = Object.keys(CHARACTERS).filter((id) => townsOf(id).size >= 4)
+    expect(recurring.length, 'nobody follows the player from town to town').toBeGreaterThanOrEqual(2)
+    for (const town of TOWN_ORDER) {
+      const here = recurring.filter((id) => townsOf(id).has(town))
+      expect(here.length, `nobody the player knows is ever in ${CITIES[town].name}`).toBeGreaterThan(0)
+    }
+  })
+
+  it('only writes somebody a beat in a town they can be found in', () => {
+    for (const event of EVENTS) {
+      if (event.trigger.kind !== 'talkTo') continue
+      const chapter = event.conditions?.find((c) => c.kind === 'chapter')
+      if (chapter?.kind !== 'chapter') continue
+      const where = townsOf(event.trigger.characterId)
+      for (const town of [chapter.cityId].flat()) {
+        expect(where.has(town), `${event.id} waits for ${event.trigger.characterId} in ${town}, where they never are`).toBe(true)
+      }
+    }
+  })
+
+  it('tells the browser suite which beats a seeded save has already seen', () => {
+    // A beat that fires on walking in or using a fixture would otherwise open
+    // over the first step of every scenario seeded past it.
+    const suite = readFileSync(new URL('../../tests/ui.mjs', import.meta.url), 'utf8')
+    for (const event of EVENTS) {
+      if (event.trigger.kind !== 'enterArea' && event.trigger.kind !== 'interact') continue
+      expect(suite.includes(`'${event.id}'`), `tests/ui.mjs STORY_SEEN does not list ${event.id}`).toBe(true)
+    }
   })
 })

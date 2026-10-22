@@ -16,6 +16,29 @@ const ONLY = process.env.UI_ONLY ? process.env.UI_ONLY.split(',').map((s) => s.t
 const results = []
 let browser
 
+/**
+ * Beats a seeded save has already seen: every one that fires on walking into
+ * an area or using a fixture.
+ *
+ * A save seeded halfway up the ladder stands for a player who climbed it, and
+ * they have met the people on the way. Without this, the first thing many
+ * scenarios met was an arrival card or an introduction over the street, which
+ * is a story scenario's business, not a layout scenario's. `events.test.ts`
+ * holds this list to the events in the game.
+ */
+const STORY_SEEN = [
+  'arrive-silvercreek',
+  'arrive-riverbend',
+  'arrive-crescent',
+  'arrive-palmcay',
+  'arrive-mesa',
+  'arrive-lumina',
+  'hal-first-lesson',
+  'hal-sends-you-on',
+  'hal-mesa-last-stop',
+  'nadia-names-the-match',
+]
+
 function baseSave(overrides = {}) {
   return JSON.stringify({
     day: 1,
@@ -33,6 +56,7 @@ function baseSave(overrides = {}) {
     huntGraceUntilDay: 0,
     flags: { wonPokerNight: true, beatFinalRival: false, hasPenthouse: false },
     stats: { handsWon: 0, biggestPot: 0, tablesPlayed: 0 },
+    completedEventIds: STORY_SEEN,
     ...overrides,
   })
 }

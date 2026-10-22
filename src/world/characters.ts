@@ -275,6 +275,42 @@ export const CHARACTERS: Record<string, CharacterDef> = {
           'Marcus: Still up. Cannot sleep after a session. You know how it is.',
         ] },
       ],
+      // The friend you leave behind, who comes to see whether it is true, and is
+      // at the rail for the match. See docs/STORYBOARD.md.
+      chapters: [
+        {
+          // A week off, at the midpoint. Home again once you have gone on.
+          when: [{ kind: 'chapter', cityId: 'palmCay' }, { kind: 'flag', flag: 'wonPokerNight' }],
+          lines: ['Marcus: Four drinks with umbrellas in. I regret nothing.'],
+          schedule: [
+            { period: 'morning', areaId: 'pc-street', col: 13, row: 7 },
+            { period: 'afternoon', areaId: 'pc-street', col: 13, row: 7 },
+            { period: 'evening', areaId: 'pc-grill', col: 5, row: 3, lines: [
+              'Marcus: They brought me a fish with its face on. I have named him.',
+            ] },
+          ],
+        },
+        {
+          // Nadia sends a car for him once she has named the match.
+          when: [{ kind: 'chapter', cityId: 'portoLumina' }, { kind: 'eventDone', eventId: 'nadia-names-the-match' }],
+          lines: ['Marcus: I am at the rail. That is the rule.'],
+          schedule: [
+            { period: 'afternoon', areaId: 'pl-street', col: 12, row: 6 },
+            { period: 'evening', areaId: 'pl-casino', col: 12, row: 8 },
+            { period: 'night', areaId: 'pl-casino', col: 12, row: 8 },
+          ],
+        },
+        {
+          when: [{ kind: 'flag', flag: 'hasPenthouse' }],
+          lines: ['Marcus: Winner hosts. Those are the rules.'],
+          schedule: [
+            { period: 'morning', areaId: 'pl-lift', col: 4, row: 4 },
+            { period: 'afternoon', areaId: 'pl-lift', col: 4, row: 4 },
+            { period: 'evening', areaId: 'pl-lift', col: 4, row: 4 },
+            { period: 'night', areaId: 'pl-lift', col: 4, row: 4 },
+          ],
+        },
+      ],
     },
   },
   dana: {
@@ -303,6 +339,64 @@ export const CHARACTERS: Record<string, CharacterDef> = {
         { period: 'evening', areaId: 'diner', col: 12, row: 5, lines: [
           'Dana: Coffee. Corner booth. Back to the wall.',
         ] },
+      ],
+      // Wherever you play next, she is already in the corner of it — because she
+      // is writing to Nadia about you. Revealed in Porto Lumina (`dana-reveal`).
+      chapters: [
+        {
+          when: [{ kind: 'chapter', cityId: 'silverCreek' }],
+          lines: ['Dana: I go where the games are.'],
+          schedule: [
+            { period: 'evening', areaId: 'sc-floor', col: 17, row: 7 },
+            { period: 'night', areaId: 'sc-floor', col: 17, row: 7 },
+          ],
+        },
+        {
+          when: [{ kind: 'chapter', cityId: 'riverbend' }],
+          lines: ['Dana: A bar on a boat that does not move. My kind of place.'],
+          schedule: [
+            { period: 'evening', areaId: 'rb-boat', col: 19, row: 3 },
+            { period: 'night', areaId: 'rb-boat', col: 19, row: 3 },
+          ],
+        },
+        {
+          when: [{ kind: 'chapter', cityId: 'crescentHarbor' }],
+          lines: ['Dana: Corner table. Back to the wall. Some things do not change.'],
+          schedule: [
+            { period: 'evening', areaId: 'ch-supper', col: 12, row: 3 },
+            { period: 'night', areaId: 'ch-club', col: 13, row: 4 },
+          ],
+        },
+        {
+          when: [{ kind: 'chapter', cityId: 'palmCay' }],
+          lines: ['Dana: Marcus is here. He does not know I am. Let us keep it that way.'],
+          schedule: [{ period: 'night', areaId: 'pc-casino', col: 16, row: 9 }],
+        },
+        {
+          when: [{ kind: 'chapter', cityId: 'neonMesa' }],
+          lines: ['Dana: Loud in here. Good. Nobody hears anything.'],
+          schedule: [
+            { period: 'evening', areaId: 'nm-club', col: 13, row: 4 },
+            { period: 'night', areaId: 'nm-club', col: 13, row: 4 },
+          ],
+        },
+        {
+          when: [{ kind: 'chapter', cityId: 'portoLumina' }],
+          lines: ['Dana: Go and say hello to her. She has waited a long time for somebody worth it.'],
+          schedule: [
+            { period: 'evening', areaId: 'pl-casino', col: 16, row: 7 },
+            { period: 'night', areaId: 'pl-casino', col: 16, row: 7 },
+          ],
+        },
+        {
+          when: [{ kind: 'flag', flag: 'hasPenthouse' }],
+          lines: ['Dana: Somebody, somewhere, is sitting down at a kitchen table tonight.'],
+          schedule: [
+            { period: 'afternoon', areaId: 'pl-lift', col: 11, row: 4 },
+            { period: 'evening', areaId: 'pl-lift', col: 11, row: 4 },
+            { period: 'night', areaId: 'pl-lift', col: 11, row: 4 },
+          ],
+        },
       ],
     },
   },
@@ -546,6 +640,62 @@ export const CHARACTERS: Record<string, CharacterDef> = {
         },
       },
     },
+    overworld: {
+      // The rival: a town ahead of you, until the debt catches up. Nowhere at the
+      // start — Kit is a rumour in Silver Creek and a face from Riverbend on.
+      lines: ['Kit: Not now.'],
+      schedule: [],
+      chapters: [
+        {
+          when: [{ kind: 'chapter', cityId: 'riverbend' }],
+          lines: ['Kit: The boat leaves when it leaves. So do I.'],
+          schedule: [
+            { period: 'morning', areaId: 'rb-street', col: 26, row: 12 },
+            { period: 'afternoon', areaId: 'rb-street', col: 26, row: 12 },
+          ],
+        },
+        {
+          when: [{ kind: 'chapter', cityId: 'crescentHarbor' }],
+          lines: ['Kit: Still no suit? Brave.'],
+          schedule: [
+            { period: 'evening', areaId: 'ch-street', col: 4, row: 6 },
+            { period: 'night', areaId: 'ch-street', col: 4, row: 6 },
+          ],
+        },
+        {
+          when: [{ kind: 'chapter', cityId: 'palmCay' }],
+          lines: ['Kit: Working. Bernard is working too. He just does not know it.'],
+          schedule: [
+            { period: 'afternoon', areaId: 'pc-casino', col: 12, row: 4 },
+            { period: 'evening', areaId: 'pc-casino', col: 12, row: 4 },
+          ],
+        },
+        {
+          when: [{ kind: 'chapter', cityId: 'neonMesa' }],
+          lines: ['Kit: Not now.'],
+          schedule: [
+            { period: 'morning', areaId: 'nm-street', col: 18, row: 9 },
+            { period: 'night', areaId: 'nm-street', col: 18, row: 9 },
+          ],
+        },
+        {
+          when: [{ kind: 'chapter', cityId: 'portoLumina' }],
+          lines: ['Kit: Next boat. Any boat.'],
+          schedule: [
+            { period: 'morning', areaId: 'pl-street', col: 26, row: 13 },
+            { period: 'afternoon', areaId: 'pl-street', col: 26, row: 13 },
+          ],
+        },
+        {
+          when: [{ kind: 'flag', flag: 'hasPenthouse' }],
+          lines: ['Kit: Remember I asked nicely.'],
+          schedule: [
+            { period: 'morning', areaId: 'pl-street', col: 26, row: 13 },
+            { period: 'afternoon', areaId: 'pl-street', col: 26, row: 13 },
+          ],
+        },
+      ],
+    },
   },
   rosa: {
     name: 'Rosa',
@@ -723,6 +873,35 @@ export const CHARACTERS: Record<string, CharacterDef> = {
       fold: ['Kingsley: Must I?'],
       win: ['Kingsley: HA! Photograph that.'],
       lose: ['Kingsley: Marvellous. Again!'],
+    },
+  },
+  hal: {
+    // The mentor. He sells lessons from a stool on Harbor Boulevard and again on
+    // the Mesa Strip — those are POIs, and they take his face from here by name —
+    // and turns up in Porto Lumina the night before the match, uninvited.
+    name: 'Hal',
+    style: 'Forty years in card rooms.',
+    look: { skin: '#b98a62', hair: '#b8b8b0', hairStyle: 'short', shirt: '#6b5a44', accessory: 'glasses' },
+    // He does not sit down any more. If anybody ever seats him, this is what he says.
+    lines: { greeting: ['Hal: I do not play now. I watch other people play the way I taught them.'] },
+    overworld: {
+      lines: ['Hal: Position. Always position.'],
+      schedule: [],
+      chapters: [
+        {
+          when: [{ kind: 'chapter', cityId: 'portoLumina' }],
+          lines: ['Hal: Position. Pot odds. The person. In that order.'],
+          schedule: [
+            { period: 'evening', areaId: 'pl-street', col: 13, row: 6 },
+            { period: 'night', areaId: 'pl-street', col: 13, row: 6 },
+          ],
+        },
+        {
+          when: [{ kind: 'flag', flag: 'hasPenthouse' }],
+          lines: ['Hal: Well played. I mean that, which I rarely do.'],
+          schedule: [{ period: 'morning', areaId: 'pl-lift', col: 9, row: 5 }],
+        },
+      ],
     },
   },
   nadia: {
