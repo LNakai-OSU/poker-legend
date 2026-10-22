@@ -17,7 +17,7 @@ designed but not written yet.
 **Logline.** You climb from Marcus's kitchen table to Nadia Okonkwo's
 penthouse, and three people come up the ladder with you: the friend you leave
 behind, the woman who has been watching you for somebody else, and the rival
-who is always one town ahead — until he isn't.
+who is always one town ahead — until she isn't.
 
 **Three pulls, at three distances.**
 
@@ -40,13 +40,13 @@ does not rewind the story: Ray is still at Silver Creek, but Dana has moved on.
 | Who | Role | Basin | Silver Creek | Riverbend | Crescent Harbor | Palm Cay | Neon Mesa | Porto Lumina | After |
 |---|---|---|---|---|---|---|---|---|---|
 | **Marcus** | Friend, the heart. Ends at the penthouse. | host | — | — | — | on holiday | — | at the rail | upstairs |
-| **Dana** | The watcher. Nadia's scout; the reveal. | watching | casino corner | riverboat bar | supper club | — | Ultraviolet | casino floor | lift lobby |
+| **Dana** | The watcher. Nadia's scout; the reveal. | watching | casino corner | riverboat bar | supper club | casino, nights, keeping out of Marcus's way | Ultraviolet | casino floor | lift lobby |
 | **Kit** | Rival, one town ahead; the debt made flesh. | — | heard of | on the dock | outside the Harbour Room | at the tables | on the Strip, owing | broke, hunted | asks you for a stake |
 | **Hal** | Mentor. Taught Nadia once. | — | — | — | lessons | — | lessons | the eve of the match | upstairs |
 | **Nadia** | Final rival. | named | — | named | named | — | hinted | the match | — |
 | Sponsors | Cass, Mr. Emeka, the Consortium, Madame Wen | — | — | Cass | Emeka | — | Consortium | Wen | — |
 
-Dana appears in six towns, Kit in five, Marcus in four (counting the
+Dana appears in all seven towns, Kit in five, Marcus in three (and the
 penthouse). Every town has at least one of Dana or Kit; the content tests hold
 it to that.
 
@@ -84,7 +84,7 @@ them.
 | Rent, the note on the table | Your apartment | POI lines | — | `apartment-window`, `apartment-note` (POIs) | built |
 | "Tonight. My place." | Marcus, Basin Street, morning | talkTo marcus | not wonPokerNight, morning | `marcus-reminds-you` (repeatable) | built |
 | The Friday game | Marcus's place, afternoon on | talkTo marcus | not wonPokerNight | `poker-night` → poker night | built |
-| **The casino nudge.** Marcus, cleaned out and proud, sends you to Silver Creek and tells you the Porto Lumina story — the long pull is planted | Marcus | talkTo marcus | wonPokerNight, chapter Basin | `marcus-sends-you-off` | proposed |
+| **The casino nudge.** Marcus, cleaned out and proud, sends you to Silver Creek and tells you the Porto Lumina story — the long pull is planted | Marcus | talkTo marcus | wonPokerNight, chapter Basin | `marcus-sends-you-off` | built |
 | Dana takes your measure; "I'll be around" | Dana | talkTo dana | wonPokerNight, chapter Basin | `dana-takes-your-measure` | built |
 
 ### Act 1 — Silver Creek · gate: $600 for the riverboat
@@ -96,10 +96,10 @@ them.
 
 | Beat | Who / where | Trigger | Conditions | Event id | Status |
 |---|---|---|---|---|---|
-| Arrival card: the table, the buy-in, the $600 that buys the boat | Valet, Silver Creek Approach | enterArea sc-street | — | `arrive-silvercreek` | proposed |
-| Ray's thirty years | Ray, street | talkTo ray | chapter Silver Creek | `ray-is-due` | proposed |
-| Dana in the corner; Kit cleaned this table out last month | Dana, casino floor, evening/night | talkTo dana | chapter Silver Creek | `dana-silvercreek` | proposed |
-| Send-off: "That is boat money." | Ray | talkTo ray | chapter Silver Creek, after `ray-is-due`, cash ≥ $600 | `ray-sees-you-off` | proposed |
+| Arrival card: the table, the buy-in, the $600 that buys the boat | Valet, Silver Creek Approach | enterArea sc-street | — | `arrive-silvercreek` | built |
+| Ray's thirty years | Ray, street | talkTo ray | chapter Silver Creek | `ray-is-due` | built |
+| Dana in the corner; Kit cleaned this table out last month | Dana, casino floor, evening/night | talkTo dana | chapter Silver Creek | `dana-silvercreek` | built |
+| Send-off: "That is boat money." | Ray | talkTo ray | chapter Silver Creek, after `ray-is-due`, cash ≥ $600 | `ray-sees-you-off` | built |
 
 ### Act 2 — Riverbend Landing · gate: $2,500 for the Harbor
 
@@ -110,13 +110,13 @@ them.
 
 | Beat | Who / where | Trigger | Conditions | Event id | Status |
 |---|---|---|---|---|---|
-| Arrival card; "a kid on the dock was asking after Marcus's friend" | Deckhand, the Landing | enterArea rb-street | — | `arrive-riverbend` | proposed |
-| **Kit, on the dock**, leaving: names himself, the ladder, the penthouse; dares you to take Cass's money | Kit, the Landing, morning/afternoon | talkTo kit | chapter Riverbend | `kit-on-the-dock` | proposed |
-| Deb on Kit: "people like that don't stay anywhere" | Deb, the Landing | talkTo deb | chapter Riverbend | `deb-on-kit` | proposed |
+| Arrival card; "a kid on the dock was asking after Marcus's friend" | Deckhand, the Landing | enterArea rb-street | — | `arrive-riverbend` | built |
+| **Kit, on the dock**, leaving: names himself, the ladder, the penthouse; dares you to take Cass's money | Kit, the Landing, morning/afternoon | talkTo kit | chapter Riverbend | `kit-on-the-dock` | built |
+| Deb on Kit: "people like that don't stay anywhere" | Deb, the Landing | talkTo deb | chapter Riverbend | `deb-on-kit` | built |
 | Deb's test: win five pots | Deb, the diner | mission | — | `riverbend-marker` (mission) | built |
 | Cass's stake; the deckhand's warning | Cass, the Landing | sponsor | — | `cass` (sponsor) | built |
-| Dana at the riverboat bar: "I write letters. Someone likes to read about the games." | Dana, riverboat, evening/night | talkTo dana | chapter Riverbend | `dana-riverbend` | proposed |
-| Send-off: "Harbor money." | Deb | talkTo deb | chapter Riverbend, after `deb-on-kit`, cash ≥ $2,500 | `deb-sends-you-on` | proposed |
+| Dana at the riverboat bar: "I write letters. Someone likes to read about the games." | Dana, riverboat, evening/night | talkTo dana | chapter Riverbend | `dana-riverbend` | built |
+| Send-off: "Harbor money." | Deb | talkTo deb | chapter Riverbend, after `deb-on-kit`, cash ≥ $2,500 | `deb-sends-you-on` | built |
 
 ### Act 3 — Crescent Harbor · gate: $8,000 for the island
 
@@ -129,12 +129,12 @@ them.
 
 | Beat | Who / where | Trigger | Conditions | Event id | Status |
 |---|---|---|---|---|---|
-| Arrival card: five-ten, a suit, a name, the Back Room | Woman in a Suit, Harbor Boulevard | enterArea ch-street | — | `arrive-crescent` | proposed |
-| **Hal's first lesson** — he taught Nadia Okonkwo; start with position | Hal | interact hal | — | `hal-first-lesson` | proposed |
-| Kit outside the Harbour Room: already through the Back Room door; practise heads up on Vance | Kit, Harbor Boulevard, evening/night | talkTo kit | chapter Harbor | `kit-harbor` | proposed |
-| Dana at the supper club: Hal taught her too; she stopped playing and started watching | Dana, supper club, evening | talkTo dana | chapter Harbor | `dana-harbor` | proposed |
+| Arrival card: five-ten, a suit, a name, the Back Room | Woman in a Suit, Harbor Boulevard | enterArea ch-street | — | `arrive-crescent` | built |
+| **Hal's first lesson** — he taught Nadia Okonkwo; start with position | Hal | interact hal | — | `hal-first-lesson` | built |
+| Kit outside the Harbour Room: already through the Back Room door; practise heads up on Vance | Kit, Harbor Boulevard, evening/night | talkTo kit | chapter Harbor | `kit-harbor` | built |
+| Dana at the supper club: Hal taught her too; she stopped playing and started watching | Dana, supper club, evening | talkTo dana | chapter Harbor | `dana-harbor` | built |
 | The suit, the doorman, the seamstress; Vance heads up; the Back Room invite | various | missions, venue, tables | — | existing | built |
-| Send-off: "The island will have you. Take the tells lesson before the Mesa." | Hal | interact hal | after `hal-first-lesson`, cash ≥ $8,000 | `hal-sends-you-on` | proposed |
+| Send-off: "The island will have you. Take the tells lesson before the Mesa." | Hal | interact hal | after `hal-first-lesson`, cash ≥ $8,000 | `hal-sends-you-on` | built |
 
 ### Act 4 — Palm Cay · gate: $30,000 for the Mesa
 
@@ -143,15 +143,15 @@ them.
   rival face to face; the friend at the midpoint. **Payoff:** Rosa's cut;
   Marcus goes home believing it.
 - **Turn:** the midpoint mirror — Marcus sees who you have become, and Kit
-  decides to borrow his way to the top.
+  decides to borrow her way to the top.
 
 | Beat | Who / where | Trigger | Conditions | Event id | Status |
 |---|---|---|---|---|---|
-| Arrival card; "somebody from your home town was asking for you" | Lifeguard, Cay Promenade | enterArea pc-street | — | `arrive-palmcay` | proposed |
-| **Marcus on holiday**: "I wanted to see if it was true." | Marcus, promenade / grill | talkTo marcus | wonPokerNight, chapter Palm Cay | `marcus-on-holiday` | proposed |
-| Kit at the tables: has had most of Bernard; short of Lumina money; going to the Consortium | Kit, Cay Room, afternoon/evening (also seated at both tables) | talkTo kit | chapter Palm Cay | `kit-palmcay` | proposed |
+| Arrival card; "somebody from your home town was asking for you" | Lifeguard, Cay Promenade | enterArea pc-street | — | `arrive-palmcay` | built |
+| **Marcus on holiday**: "I wanted to see if it was true." | Marcus, promenade / grill | talkTo marcus | wonPokerNight, chapter Palm Cay | `marcus-on-holiday` | built |
+| Kit at the tables: has had most of Bernard; short of Lumina money; going to the Consortium | Kit, Cay Room, afternoon/evening (also seated at both tables) | talkTo kit | chapter Palm Cay | `kit-palmcay` | built |
 | Rosa's job: stack a real pot off Bernard | Rosa | mission | — | `palmcay-tourist` | built |
-| Send-off: "Thirty grand. I am going home before I start believing in things." | Marcus | talkTo marcus | after `marcus-on-holiday`, cash ≥ $30,000 | `marcus-goes-home` | proposed |
+| Send-off: "Thirty grand. I am going home before I start believing in things." | Marcus | talkTo marcus | after `marcus-on-holiday`, cash ≥ $30,000 | `marcus-goes-home` | built |
 
 ### Act 5 — Neon Mesa · gate: $90,000 for Lumina
 
@@ -164,12 +164,12 @@ them.
 
 | Beat | Who / where | Trigger | Conditions | Event id | Status |
 |---|---|---|---|---|---|
-| Arrival card: ten thousand to sit; ninety and they put you on the plane | Tout, the Strip | enterArea nm-street | — | `arrive-mesa` | proposed |
-| Hal, last stop: "After the Mesa it is just her." | Hal | interact hal-mesa | — | `hal-mesa-last-stop` | proposed |
-| **Kit, owing**: day two, eleven short, going to Lumina to challenge Nadia | Kit, the Strip, morning/night | talkTo kit | chapter Mesa | `kit-mesa` | proposed |
-| Dana at Ultraviolet: August reads her letters too; "she will want to meet you" | Dana, Ultraviolet, evening/night | talkTo dana | chapter Mesa | `dana-mesa` | proposed |
+| Arrival card: ten thousand to sit; ninety and they put you on the plane | Tout, the Strip | enterArea nm-street | — | `arrive-mesa` | built |
+| Hal, last stop: "After the Mesa it is just her." | Hal | interact hal-mesa | — | `hal-mesa-last-stop` | built |
+| **Kit, owing**: day two, eleven short, going to Lumina to challenge Nadia | Kit, the Strip, morning/night | talkTo kit | chapter Mesa | `kit-mesa` | built |
+| Dana at Ultraviolet: August reads her letters too; "she will want to meet you" | Dana, Ultraviolet, evening/night | talkTo dana | chapter Mesa | `dana-mesa` | built |
 | The Fixer's job; Lorna heads up; the Consortium; the Invitational | various | existing | — | existing | built |
-| Send-off: "Ninety. Take the plane." | Dana | talkTo dana | after `dana-mesa`, cash ≥ $90,000 | `dana-sends-you-up` | proposed |
+| Send-off: "Ninety. Take the plane." | Dana | talkTo dana | after `dana-mesa`, cash ≥ $90,000 | `dana-sends-you-up` | built |
 
 ### Act 6 — Porto Lumina · the Challenge, $120,000 heads up
 
@@ -181,12 +181,12 @@ them.
 
 | Beat | Who / where | Trigger | Conditions | Event id | Status |
 |---|---|---|---|---|---|
-| Arrival card: thirty at the nosebleed, a hundred and twenty for the match | Photographer, the waterfront | enterArea pl-street | — | `arrive-lumina` | proposed |
-| **Kit, broken**: forty hands; the Consortium's men; "don't take Wen's money" | Kit, waterfront, morning/afternoon | talkTo kit | chapter Lumina, no penthouse | `kit-lumina` | proposed |
-| **Nadia names the match** — she knows the kitchen table; somebody has been writing to her; she has sent a car for Marcus | Nadia, casino | interact nadia | — | `nadia-names-the-match` | proposed |
-| **Dana's reveal**: "I'm the someone." | Dana, casino floor, evening/night | talkTo dana | chapter Lumina, no penthouse | `dana-reveal` | proposed |
-| Marcus at the rail: "Whatever happens, the kitchen table is still in my kitchen." | Marcus, waterfront / casino | talkTo marcus | after `nadia-names-the-match`, no penthouse | `marcus-at-the-rail` | proposed |
-| Hal on the eve: the heads-up lesson he never sold (button posts the small blind, acts first pre-flop and last after; open wide from it) | Hal, waterfront, evening/night | talkTo hal | chapter Lumina, no penthouse | `hal-on-the-eve` | proposed |
+| Arrival card: thirty at the nosebleed, a hundred and twenty for the match | Photographer, the waterfront | enterArea pl-street | — | `arrive-lumina` | built |
+| **Kit, broken**: forty hands; the Consortium's men; "don't take Wen's money" | Kit, waterfront, morning/afternoon | talkTo kit | chapter Lumina, no penthouse | `kit-lumina` | built |
+| **Nadia names the match** — she knows the kitchen table; somebody has been writing to her; she has sent a car for Marcus | Nadia, casino | interact nadia | — | `nadia-names-the-match` | built |
+| **Dana's reveal**: "I'm the someone." | Dana, casino floor, evening/night | talkTo dana | chapter Lumina, no penthouse | `dana-reveal` | built |
+| Marcus at the rail: "Whatever happens, the kitchen table is still in my kitchen." | Marcus, waterfront / casino | talkTo marcus | after `nadia-names-the-match`, no penthouse | `marcus-at-the-rail` | built |
+| Hal on the eve: the heads-up lesson he never sold (button posts the small blind, acts first pre-flop and last after; open wide from it) | Hal, waterfront, evening/night | talkTo hal | chapter Lumina, no penthouse | `hal-on-the-eve` | built |
 | Madame Wen's stake | Wen | sponsor | — | `wen` (sponsor) | built |
 | The Challenge | Nadia | table | — | `lumina-finale` → ending / loss scene | built |
 
@@ -198,10 +198,10 @@ and the people who got you there.
 
 | Beat | Who / where | Trigger | Conditions | Event id | Status |
 |---|---|---|---|---|---|
-| "Winner hosts. I'll bring the ice." | Marcus, Penthouse Lift | talkTo marcus | hasPenthouse | `marcus-upstairs` | proposed |
-| Nadia's note: "Watch for the next one." Dana stays on as your scout | Dana, Penthouse Lift | talkTo dana | hasPenthouse | `dana-after` | proposed |
-| Kit asks for a stake — you are the sponsor now | Kit, waterfront | talkTo kit | hasPenthouse | `kit-after` | proposed |
-| "I had money on her. Do not tell her." | Hal, Penthouse Lift | talkTo hal | hasPenthouse | `hal-after` | proposed |
+| "Winner hosts. I'll bring the ice." | Marcus, Penthouse Lift | talkTo marcus | hasPenthouse | `marcus-upstairs` | built |
+| Nadia's note: "Watch for the next one." Dana stays on as your scout | Dana, Penthouse Lift | talkTo dana | hasPenthouse | `dana-after` | built |
+| Kit asks for a stake — you are the sponsor now | Kit, waterfront | talkTo kit | hasPenthouse | `kit-after` | built |
+| "I had money on her. Do not tell her." | Hal, Penthouse Lift | talkTo hal | hasPenthouse | `hal-after` | built |
 
 ---
 
@@ -221,7 +221,7 @@ after the bus was mechanics with captions.
   per period, forever. Only `talkTo` triggers were wired; `enterArea`,
   `interact` and `standOn` type-checked and validated but never fired.
 
-### What this pass changes in the content model
+### What changed in the content model
 
 | Gap | Fix |
 |---|---|
