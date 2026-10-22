@@ -721,7 +721,7 @@ await test('the window in the apartment is scenery, not a person', async () => {
   await page.close()
 })
 
-await test('hands end without a panel to dismiss', async () => {
+await test('a hand waits for the player before the next one', async () => {
   const page = await newPage(baseSave())
   await page.goto(BASE)
   await page.waitForSelector('canvas')
@@ -730,8 +730,7 @@ await test('hands end without a panel to dismiss', async () => {
   await talkTo(page, 'Pit Boss')
   assert(await page.locator('[data-testid="pot-value"]').isVisible(), 'never reached the table')
 
-  // Play to the end of a hand, then let it sit: the next one should be dealt
-  // without anything being clicked.
+  // Play to the end of a hand, then let it sit: the next one must wait to be asked for.
   let sawBar = false
   const firstHand = await page.locator('[data-testid="pot-value"]').getAttribute('data-pot')
   for (let i = 0; i < 40; i++) {
@@ -749,23 +748,26 @@ await test('hands end without a panel to dismiss', async () => {
     await page.waitForTimeout(200)
   }
   assert(sawBar, 'never reached the end of a hand')
+  const nextBtn = page.locator('button', { hasText: /Next hand/ })
+  assert(await nextBtn.isVisible(), 'the end of a hand did not offer a Next hand button')
+  // Nothing clicked: the board must stay up so the hand can be read. Longer than
+  // the old auto-deal delay, so a regression to a timer is caught.
+  await page.waitForTimeout(4500)
+  assert(await page.locator('[data-testid="hand-over-bar"]').isVisible(), 'the next hand dealt itself')
   assert(
-    await page.locator('[data-testid="auto-deal-status"]').isVisible(),
-    'the end of a hand did not offer to carry on by itself',
+    (await page.locator('[data-testid="pot-value"]').getAttribute('data-pot')) !== null &&
+      !(await page.locator('button', { hasText: /Fold|Check|^Call/ }).first().isVisible().catch(() => false)),
+    'action buttons appeared before the player asked for the next hand',
   )
-  // Nothing clicked: a new hand should arrive on its own. Polled rather than
-  // slept, because the opponents act on their own timers before it is the
-  // player's turn again, and a single fixed wait races them.
-  let dealtItself = false
-  for (let i = 0; i < 40 && !dealtItself; i++) {
-    dealtItself = await page
-      .locator('button', { hasText: /Fold|Check|^Call/ })
-      .first()
-      .isVisible()
-      .catch(() => false)
-    if (!dealtItself) await page.waitForTimeout(300)
+  await nextBtn.click()
+  // A new hand hides the between-hands bar while it plays. Opponents can fold
+  // round to the player, so the action buttons are not guaranteed to appear.
+  let dealt = false
+  for (let i = 0; i < 60 && !dealt; i++) {
+    dealt = !(await page.locator('[data-testid="hand-over-bar"]').isVisible().catch(() => false))
+    if (!dealt) await page.waitForTimeout(100)
   }
-  assert(dealtItself, 'the next hand was never dealt without being asked')
+  assert(dealt, 'pressing Next hand never dealt a hand')
   assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
   await page.close()
 })

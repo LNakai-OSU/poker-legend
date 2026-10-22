@@ -9,7 +9,7 @@ import { playSound } from '../audio/audio'
 import { TableStage } from './TableStage'
 import { DOCK, buttonHeight, type SceneLayout, type SceneNeeds } from './tableLayout'
 import { TABLE_THEMES } from './tableThemes'
-import { Countdown, Panel, PxButton, PxLine } from './pixel/ui'
+import { Panel, PxButton, PxLine } from './pixel/ui'
 import { PixelText } from './pixel/PixelText'
 import { INK } from './pixel/ink'
 import { describeAction, LOG_LINES } from './actionLog'
@@ -56,7 +56,6 @@ function levelFor(handNumber: number) {
 }
 
 /** How long the next hand waits before dealing itself. */
-const AUTO_DEAL_MS = 3000
 const ANNOUNCE_MS = 2600
 
 function createTable() {
@@ -165,15 +164,8 @@ export function PokerNightScene({ onWin, onLeave }: PokerNightSceneProps) {
     // re-running this effect and silently stall the AI turn.
   }, [tick])
 
-  // Between hands, deal the next one rather than waiting to be asked.
+  // Between hands the board stays up until the player asks for the next deal.
   const handOver = !state.handInProgress && lastResult !== null && !gameOver
-  const [holding, setHolding] = useState(false)
-  useEffect(() => {
-    if (!handOver || holding) return
-    const timer = window.setTimeout(dealNextHand, AUTO_DEAL_MS)
-    return () => window.clearTimeout(timer)
-  }, [handOver, holding, lastResult?.handNumber])
-
   useEffect(() => {
     if (!handOver) return
     const onKey = (e: KeyboardEvent) => {
@@ -284,7 +276,6 @@ export function PokerNightScene({ onWin, onLeave }: PokerNightSceneProps) {
                 } else {
                   tableRef.current = createTable()
                   tableRef.current.startNewHand()
-                  setHolding(false)
                   rerender()
                 }
               }}
@@ -301,34 +292,7 @@ export function PokerNightScene({ onWin, onLeave }: PokerNightSceneProps) {
         <>
           {lastResult && <ShowdownSummary result={lastResult} players={PLAYERS} scale={P} />}
           <div data-testid="hand-over-bar" style={{ ...row, marginTop: DOCK.gap * P }}>
-            {holding ? (
-              <>
-                <span data-testid="auto-deal-status">
-                  <PixelText text="Holding" scale={P} ink={INK.dark} />
-                </span>
-                <PxButton
-                  lines={['Next hand (space)']}
-                  scale={P}
-                  role="primary"
-                  height={one}
-                  onClick={() => {
-                    setHolding(false)
-                    dealNextHand()
-                  }}
-                />
-              </>
-            ) : (
-              <>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 * P }}>
-                  <span data-testid="auto-deal-status">
-                    <PixelText text="Next hand" scale={P} ink={INK.dark} />
-                  </span>
-                  <Countdown scale={P} durationMs={AUTO_DEAL_MS} runKey={lastResult?.handNumber} />
-                </span>
-                <PxButton lines={['Deal now (space)']} scale={P} role="primary" height={one} onClick={dealNextHand} />
-                <PxButton lines={['Hold']} scale={P} role="plain" height={one} onClick={() => setHolding(true)} />
-              </>
-            )}
+            <PxButton lines={['Next hand (space)']} scale={P} role="primary" height={one} onClick={dealNextHand} />
           </div>
         </>
       )
