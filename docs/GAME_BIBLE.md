@@ -90,6 +90,24 @@ deb: {
 - **A persona is the same person somewhere else** — Vance one on one, Kit at the
   second table she finds you at. It is not a second character. Only the fields
   that change are written.
+- **Chapters move people with the story.** `overworld.chapters` is a list of
+  `{ when, schedule, lines? }`: a whole day somewhere else from the moment its
+  conditions hold. The last chapter whose conditions hold replaces `schedule`,
+  so the list reads as a timeline. This is how Dana is in the corner of every
+  room you play and Marcus is at the rail for the match:
+
+  ```ts
+  chapters: [
+    { when: [{ kind: 'chapter', cityId: 'riverbend' }],
+      schedule: [{ period: 'evening', areaId: 'rb-boat', col: 19, row: 3 }] },
+    { when: [{ kind: 'flag', flag: 'hasPenthouse' }],
+      schedule: [{ period: 'night', areaId: 'pl-lift', col: 11, row: 4 }] },
+  ],
+  ```
+
+  A character may keep no usual hours at all (Kit, Hal) and exist only in
+  chapters. A POI whose id or name is a character's is drawn as that character,
+  so Hal's two lesson stools share his face.
 - A table seats characters by id: `opponents: ['deb', 'mack', 'tiny']`, or
   `{ character: 'vance', persona: 'headsUp' }`.
 
@@ -154,11 +172,21 @@ A scripted beat: when it happens, what has to be true, what then occurs.
 }
 ```
 
-**Triggers:** `talkTo` (a character), `interact` (a fixture), `enterArea`,
-`standOn`.
+**Triggers:** `talkTo` (a character), `interact` (a fixture — the beat gets
+first refusal over its action, and the next talk does the usual thing),
+`enterArea` (walking in through a door, off an edge or off a bus; not loading a
+save, not getting up from a table), `standOn` (typed and validated, **not yet
+fired** by the overworld).
 
 **Conditions** (all must hold): `flag`, `period`, `dayAtLeast`, `cashAtLeast`,
-`hasItem`, `hasLesson`, `eventDone`.
+`hasItem`, `hasLesson`, `eventDone`, `chapter`.
+
+**The chapter** is how far up the ladder the run has got: the furthest town set
+foot in, by bus or on foot (`chapterOf` in `state.ts`). `{ kind: 'chapter',
+cityId: 'riverbend' }` holds from the moment you first walk into Riverbend until
+you first walk into Crescent Harbor, whichever way you go afterwards. It is the
+story's clock: town-specific beats ask for it, and characters' chapters key on
+it. [STORYBOARD.md](STORYBOARD.md) is the whole run written against it.
 
 **Actions**, in order: `dialogue`, `moveNpc`, `wait`, `setFlag`, `clearFlag`,
 `giveItem`, `giveCash`, `unlockCity`, `unlockTable`, `startTable`,
@@ -169,8 +197,13 @@ Rules:
 
 - An event fires **once**, ever, unless marked `repeatable`.
 - **At most one event per moment.** Two events sharing a trigger must have
-  conditions that tell them apart; the tests fail otherwise, because
-  declaration order is not a decision anybody made.
+  conditions that tell them apart — a flag one way and the other, hours or
+  chapters that do not overlap, or one waiting on the other with `eventDone` —
+  and the tests fail otherwise, because declaration order is not a decision
+  anybody made. `canBothFire` in `events.ts` is the rule; the tests and the
+  editor share it.
+- **The street holds still while a beat plays.** Nobody moves, including a
+  collector, until the last line is read.
 - Actions that finish by themselves all run in one tick. `dialogue`, `wait` and
   `fade` suspend until something says to carry on.
 - `startTable` and `startPokerNight` end the event — what follows is the table,
@@ -226,6 +259,12 @@ if either stops climbing.
 everything) → the bus out to Silver Creek → the ladder → clubs and private
 invitationals → a heads-up Challenge for the penthouse, which you commit to
 before you see a card and cannot leave.
+
+**The people.** Every town has an arrival card (what its table costs, what
+bankroll moves you on) and a send-off from its face when you have it. Marcus,
+Dana, Kit and Hal come up the ladder with you; somebody you know is in every
+town, and the content tests hold it so. [STORYBOARD.md](STORYBOARD.md) is the
+run act by act.
 
 **The risk axis.** Sponsors stake you. A stake is a loan with a deadline in
 days. Miss it and collectors hunt you in the town you are standing in. Skipping

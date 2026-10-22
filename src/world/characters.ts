@@ -4,6 +4,8 @@ import type { OpponentDef, TableDef } from './types'
 import type { NpcArt } from '../overworld/Npc'
 import type { NpcRole, PersonLook } from '../overworld/characterArt'
 import { TIME_PERIODS, type TimePeriod } from '../game/time'
+import type { GameState } from '../game/state'
+import { allHold, type EventCondition } from './events'
 
 /**
  * Who somebody is, in one place.
@@ -92,6 +94,27 @@ export interface OverworldPresence {
   lines: string[]
   /** Where they are through the day. An empty schedule means they are nowhere. */
   schedule: ScheduleEntry[]
+  /**
+   * Where the story takes them later.
+   *
+   * A schedule used to be forever: Marcus was in Basin on the last day of the
+   * game exactly as on the first, so nobody you met could come up the ladder
+   * with you. A chapter is a whole day somewhere else, from the moment its
+   * conditions hold — usually how far the run has got. The last chapter whose
+   * conditions hold replaces `schedule`, so the list reads as a timeline: later
+   * in the story is lower down.
+   */
+  chapters?: ScheduleChapter[]
+}
+
+/** Part of somebody's story: where they spend their days once it has begun. */
+export interface ScheduleChapter {
+  /** When this part of the story applies. All must hold. */
+  when: EventCondition[]
+  /** Where they are at each hour of it. Hours left out, they are nowhere. */
+  schedule: ScheduleEntry[]
+  /** What they say when the hour has nothing more specific. Falls back to their usual lines. */
+  lines?: string[]
 }
 
 export interface CharacterDef {
@@ -254,6 +277,42 @@ export const CHARACTERS: Record<string, CharacterDef> = {
           'Marcus: Still up. Cannot sleep after a session. You know how it is.',
         ] },
       ],
+      // The friend you leave behind, who comes to see whether it is true, and is
+      // at the rail for the match. See docs/STORYBOARD.md.
+      chapters: [
+        {
+          // A week off, at the midpoint. Home again once you have gone on.
+          when: [{ kind: 'chapter', cityId: 'palmCay' }, { kind: 'flag', flag: 'wonPokerNight' }],
+          lines: ['Marcus: Four drinks with umbrellas in. I regret nothing.'],
+          schedule: [
+            { period: 'morning', areaId: 'pc-street', col: 13, row: 7 },
+            { period: 'afternoon', areaId: 'pc-street', col: 13, row: 7 },
+            { period: 'evening', areaId: 'pc-grill', col: 5, row: 3, lines: [
+              'Marcus: They brought me a fish with its face on. I have named him.',
+            ] },
+          ],
+        },
+        {
+          // Nadia sends a car for him once she has named the match.
+          when: [{ kind: 'chapter', cityId: 'portoLumina' }, { kind: 'eventDone', eventId: 'nadia-names-the-match' }],
+          lines: ['Marcus: I am at the rail. That is the rule.'],
+          schedule: [
+            { period: 'afternoon', areaId: 'pl-street', col: 12, row: 6 },
+            { period: 'evening', areaId: 'pl-casino', col: 12, row: 8 },
+            { period: 'night', areaId: 'pl-casino', col: 12, row: 8 },
+          ],
+        },
+        {
+          when: [{ kind: 'flag', flag: 'hasPenthouse' }],
+          lines: ['Marcus: Winner hosts. Those are the rules.'],
+          schedule: [
+            { period: 'morning', areaId: 'pl-lift', col: 4, row: 4 },
+            { period: 'afternoon', areaId: 'pl-lift', col: 4, row: 4 },
+            { period: 'evening', areaId: 'pl-lift', col: 4, row: 4 },
+            { period: 'night', areaId: 'pl-lift', col: 4, row: 4 },
+          ],
+        },
+      ],
     },
   },
   dana: {
@@ -283,6 +342,64 @@ export const CHARACTERS: Record<string, CharacterDef> = {
         { period: 'evening', areaId: 'diner', col: 12, row: 5, lines: [
           'Dana: Coffee. Corner booth. Back to the wall.',
         ] },
+      ],
+      // Wherever you play next, she is already in the corner of it — because she
+      // is writing to Nadia about you. Revealed in Porto Lumina (`dana-reveal`).
+      chapters: [
+        {
+          when: [{ kind: 'chapter', cityId: 'silverCreek' }],
+          lines: ['Dana: I go where the games are.'],
+          schedule: [
+            { period: 'evening', areaId: 'sc-floor', col: 17, row: 7 },
+            { period: 'night', areaId: 'sc-floor', col: 17, row: 7 },
+          ],
+        },
+        {
+          when: [{ kind: 'chapter', cityId: 'riverbend' }],
+          lines: ['Dana: A bar on a boat that does not move. My kind of place.'],
+          schedule: [
+            { period: 'evening', areaId: 'rb-boat', col: 19, row: 3 },
+            { period: 'night', areaId: 'rb-boat', col: 19, row: 3 },
+          ],
+        },
+        {
+          when: [{ kind: 'chapter', cityId: 'crescentHarbor' }],
+          lines: ['Dana: Corner table. Back to the wall. Some things do not change.'],
+          schedule: [
+            { period: 'evening', areaId: 'ch-supper', col: 12, row: 3 },
+            { period: 'night', areaId: 'ch-club', col: 13, row: 4 },
+          ],
+        },
+        {
+          when: [{ kind: 'chapter', cityId: 'palmCay' }],
+          lines: ['Dana: Marcus is here. He does not know I am. Let us keep it that way.'],
+          schedule: [{ period: 'night', areaId: 'pc-casino', col: 16, row: 9 }],
+        },
+        {
+          when: [{ kind: 'chapter', cityId: 'neonMesa' }],
+          lines: ['Dana: Loud in here. Good. Nobody hears anything.'],
+          schedule: [
+            { period: 'evening', areaId: 'nm-club', col: 13, row: 4 },
+            { period: 'night', areaId: 'nm-club', col: 13, row: 4 },
+          ],
+        },
+        {
+          when: [{ kind: 'chapter', cityId: 'portoLumina' }],
+          lines: ['Dana: Go and say hello to her. She has waited a long time for somebody worth it.'],
+          schedule: [
+            { period: 'evening', areaId: 'pl-casino', col: 16, row: 7 },
+            { period: 'night', areaId: 'pl-casino', col: 16, row: 7 },
+          ],
+        },
+        {
+          when: [{ kind: 'flag', flag: 'hasPenthouse' }],
+          lines: ['Dana: Somebody, somewhere, is sitting down at a kitchen table tonight.'],
+          schedule: [
+            { period: 'afternoon', areaId: 'pl-lift', col: 11, row: 4 },
+            { period: 'evening', areaId: 'pl-lift', col: 11, row: 4 },
+            { period: 'night', areaId: 'pl-lift', col: 11, row: 4 },
+          ],
+        },
       ],
     },
   },
@@ -531,6 +648,62 @@ export const CHARACTERS: Record<string, CharacterDef> = {
         },
       },
     },
+    overworld: {
+      // The rival: a town ahead of you, until the debt catches up. Nowhere at the
+      // start — Kit is a rumour in Silver Creek and a face from Riverbend on.
+      lines: ['Kit: Not now.'],
+      schedule: [],
+      chapters: [
+        {
+          when: [{ kind: 'chapter', cityId: 'riverbend' }],
+          lines: ['Kit: The boat leaves when it leaves. So do I.'],
+          schedule: [
+            { period: 'morning', areaId: 'rb-street', col: 26, row: 12 },
+            { period: 'afternoon', areaId: 'rb-street', col: 26, row: 12 },
+          ],
+        },
+        {
+          when: [{ kind: 'chapter', cityId: 'crescentHarbor' }],
+          lines: ['Kit: Still no suit? Brave.'],
+          schedule: [
+            { period: 'evening', areaId: 'ch-street', col: 4, row: 6 },
+            { period: 'night', areaId: 'ch-street', col: 4, row: 6 },
+          ],
+        },
+        {
+          when: [{ kind: 'chapter', cityId: 'palmCay' }],
+          lines: ['Kit: Working. Bernard is working too. He just does not know it.'],
+          schedule: [
+            { period: 'afternoon', areaId: 'pc-casino', col: 12, row: 4 },
+            { period: 'evening', areaId: 'pc-casino', col: 12, row: 4 },
+          ],
+        },
+        {
+          when: [{ kind: 'chapter', cityId: 'neonMesa' }],
+          lines: ['Kit: Not now.'],
+          schedule: [
+            { period: 'morning', areaId: 'nm-street', col: 18, row: 9 },
+            { period: 'night', areaId: 'nm-street', col: 18, row: 9 },
+          ],
+        },
+        {
+          when: [{ kind: 'chapter', cityId: 'portoLumina' }],
+          lines: ['Kit: Next boat. Any boat.'],
+          schedule: [
+            { period: 'morning', areaId: 'pl-street', col: 26, row: 13 },
+            { period: 'afternoon', areaId: 'pl-street', col: 26, row: 13 },
+          ],
+        },
+        {
+          when: [{ kind: 'flag', flag: 'hasPenthouse' }],
+          lines: ['Kit: Remember I asked nicely.'],
+          schedule: [
+            { period: 'morning', areaId: 'pl-street', col: 26, row: 13 },
+            { period: 'afternoon', areaId: 'pl-street', col: 26, row: 13 },
+          ],
+        },
+      ],
+    },
   },
   rosa: {
     name: 'Rosa',
@@ -710,6 +883,35 @@ export const CHARACTERS: Record<string, CharacterDef> = {
       lose: ['Kingsley: Marvellous. Again!'],
     },
   },
+  hal: {
+    // The mentor. He sells lessons from a stool on Harbor Boulevard and again on
+    // the Mesa Strip — those are POIs, and they take his face from here by name —
+    // and turns up in Porto Lumina the night before the match, uninvited.
+    name: 'Hal',
+    style: 'Forty years in card rooms.',
+    look: { skin: '#b98a62', hair: '#b8b8b0', hairStyle: 'short', shirt: '#6b5a44', accessory: 'glasses' },
+    // He does not sit down any more. If anybody ever seats him, this is what he says.
+    lines: { greeting: ['Hal: I do not play now. I watch other people play the way I taught them.'] },
+    overworld: {
+      lines: ['Hal: Position. Always position.'],
+      schedule: [],
+      chapters: [
+        {
+          when: [{ kind: 'chapter', cityId: 'portoLumina' }],
+          lines: ['Hal: Position. Pot odds. The person. In that order.'],
+          schedule: [
+            { period: 'evening', areaId: 'pl-street', col: 13, row: 6 },
+            { period: 'night', areaId: 'pl-street', col: 13, row: 6 },
+          ],
+        },
+        {
+          when: [{ kind: 'flag', flag: 'hasPenthouse' }],
+          lines: ['Hal: Well played. I mean that, which I rarely do.'],
+          schedule: [{ period: 'morning', areaId: 'pl-lift', col: 9, row: 5 }],
+        },
+      ],
+    },
+  },
   nadia: {
     name: 'Nadia Okonkwo',
     style: 'Four years in the penthouse.',
@@ -796,44 +998,98 @@ export function seatsOf(table: TableDef): OpponentDef[] {
  * walking there. It costs nothing while you are not looking, it cannot drift out
  * of step with the clock, and a save holds the hour rather than everyone's
  * coordinates.
+ *
+ * Given the state, the story counts too: whoever has followed you up the
+ * ladder is where their current chapter puts them. `lines` is what they say
+ * here, with the fallbacks already applied.
  */
-export function charactersIn(areaId: string, period: TimePeriod): Array<{
+export function charactersIn(
+  areaId: string,
+  period: TimePeriod,
+  state?: GameState,
+): Array<{
   id: string
   character: CharacterDef
   at: ScheduleEntry
+  lines: string[]
 }> {
   const here = []
   for (const [id, character] of Object.entries(CHARACTERS)) {
-    const at = character.overworld?.schedule.find(
-      (entry) => entry.areaId === areaId && entry.period === period,
-    )
-    if (at) here.push({ id, character, at })
+    const { schedule, lines } = scheduleFor(character, state)
+    // Where they are this hour first, then whether that is here — so nobody can
+    // be in two rooms at once however their chapters are written.
+    const at = schedule.find((entry) => entry.period === period)
+    if (at && at.areaId === areaId) here.push({ id, character, at, lines: at.lines ?? lines })
   }
   return here
 }
 
-/** Every period a character is somewhere, for checking nobody is in two places. */
+/**
+ * Where somebody spends their days at this point in the story: the last of
+ * their chapters whose conditions hold, or their usual schedule.
+ *
+ * Without a state it is the usual schedule — where they are when the game
+ * begins.
+ */
+export function scheduleFor(
+  character: CharacterDef,
+  state?: GameState,
+): { schedule: ScheduleEntry[]; lines: string[] } {
+  const presence = character.overworld
+  if (!presence) return { schedule: [], lines: [] }
+  const chapter = state
+    ? [...(presence.chapters ?? [])].reverse().find((c) => allHold(c.when, state))
+    : undefined
+  return chapter
+    ? { schedule: chapter.schedule, lines: chapter.lines ?? presence.lines }
+    : { schedule: presence.schedule, lines: presence.lines }
+}
+
+/**
+ * Every schedule a character keeps at any point in the story — their usual
+ * one and each chapter's — for checking every place anybody could ever stand.
+ */
+export function allSchedules(character: CharacterDef): ScheduleEntry[][] {
+  const presence = character.overworld
+  if (!presence) return []
+  return [presence.schedule, ...(presence.chapters ?? []).map((c) => c.schedule)]
+}
+
+/**
+ * Anybody in two places at once, or two people on one tile.
+ *
+ * One place per hour is checked within each schedule — the usual one and each
+ * chapter — because a chapter is somebody's whole day somewhere else. A tile is
+ * checked across every schedule anybody keeps, whatever the story: two people
+ * sharing one would only be fine if their chapters could never overlap, and
+ * that is not worth proving.
+ */
 export function scheduleConflicts(): string[] {
   const seen = new Map<string, string>()
   const problems: string[] = []
   for (const [id, character] of Object.entries(CHARACTERS)) {
-    const periods = new Set<TimePeriod>()
-    for (const entry of character.overworld?.schedule ?? []) {
-      if (periods.has(entry.period)) {
-        problems.push(`${id} is in two places at once in the ${entry.period}`)
+    for (const schedule of allSchedules(character)) {
+      const periods = new Set<TimePeriod>()
+      for (const entry of schedule) {
+        if (periods.has(entry.period)) {
+          problems.push(`${id} is in two places at once in the ${entry.period}`)
+        }
+        periods.add(entry.period)
+        const key = `${entry.areaId}:${entry.period}:${entry.col},${entry.row}`
+        const other = seen.get(key)
+        if (other && other !== id) problems.push(`${id} and ${other} stand on the same tile in the ${entry.period}`)
+        seen.set(key, id)
       }
-      periods.add(entry.period)
-      const key = `${entry.areaId}:${entry.period}:${entry.col},${entry.row}`
-      const other = seen.get(key)
-      if (other) problems.push(`${id} and ${other} stand on the same tile in the ${entry.period}`)
-      seen.set(key, id)
     }
   }
   return problems
 }
 
-/** Periods a character has nowhere to be, so you can tell a gap from an oversight. */
+/**
+ * Periods a character has nowhere to be at any point in the story, so you can
+ * tell a gap from an oversight.
+ */
 export function periodsAway(character: CharacterDef): TimePeriod[] {
-  const scheduled = new Set(character.overworld?.schedule.map((e) => e.period))
+  const scheduled = new Set(allSchedules(character).flat().map((e) => e.period))
   return TIME_PERIODS.filter((period) => !scheduled.has(period))
 }

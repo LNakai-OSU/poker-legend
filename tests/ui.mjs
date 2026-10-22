@@ -16,6 +16,29 @@ const ONLY = process.env.UI_ONLY ? process.env.UI_ONLY.split(',').map((s) => s.t
 const results = []
 let browser
 
+/**
+ * Beats a seeded save has already seen: every one that fires on walking into
+ * an area or using a fixture.
+ *
+ * A save seeded halfway up the ladder stands for a player who climbed it, and
+ * they have met the people on the way. Without this, the first thing many
+ * scenarios met was an arrival card or an introduction over the street, which
+ * is a story scenario's business, not a layout scenario's. `events.test.ts`
+ * holds this list to the events in the game.
+ */
+const STORY_SEEN = [
+  'arrive-silvercreek',
+  'arrive-riverbend',
+  'arrive-crescent',
+  'arrive-palmcay',
+  'arrive-mesa',
+  'arrive-lumina',
+  'hal-first-lesson',
+  'hal-sends-you-on',
+  'hal-mesa-last-stop',
+  'nadia-names-the-match',
+]
+
 function baseSave(overrides = {}) {
   return JSON.stringify({
     day: 1,
@@ -33,6 +56,7 @@ function baseSave(overrides = {}) {
     huntGraceUntilDay: 0,
     flags: { wonPokerNight: true, beatFinalRival: false, hasPenthouse: false },
     stats: { handsWon: 0, biggestPot: 0, tablesPlayed: 0 },
+    completedEventIds: STORY_SEEN,
     ...overrides,
   })
 }
@@ -498,6 +522,63 @@ await test('Marcus is out in the morning, and his game is not on', async () => {
   await page.waitForTimeout(500)
   const here = await poisOf(page)
   assert(!here.some((p) => p.name === 'Marcus'), 'Marcus is home at an hour he should be out')
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+})
+
+/**
+ * Walking into a new town is a beat, and the people who follow you up the
+ * ladder are there when you arrive.
+ *
+ * `enterArea` was in the event vocabulary for a long time without ever firing,
+ * and a schedule could not move anybody from one town to the next. This walks
+ * off the road into Riverbend: the arrival card has to open, the street has to
+ * hold still under it, and once it is read Kit has to be on the dock — because
+ * walking in is what moved the story on.
+ */
+await test('walking into Riverbend stops you with what it costs, and Kit is on the dock', async () => {
+  const page = await newPage(
+    baseSave({
+      cityId: 'riverbend',
+      areaId: 'road-riverbend',
+      period: 'morning',
+      unlockedCityIds: ['apartment', 'silverCreek'],
+      completedEventIds: [],
+    }),
+  )
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(500)
+  assert(
+    !(await page.locator('[data-testid="event-dialogue"]').isVisible()),
+    'loading a save into an area played its arrival, which is for walking in',
+  )
+
+  await walkEdge(page, 'east')
+  await page.waitForTimeout(500)
+  assert(
+    await page.locator('[data-testid="event-dialogue"]').isVisible(),
+    'walking into Riverbend fired no arrival',
+  )
+  const before = await posOf(page)
+  await step(page, 'ArrowLeft')
+  await step(page, 'ArrowLeft')
+  const after = await posOf(page)
+  assert(
+    before.col === after.col && before.row === after.row,
+    `the street kept moving under the arrival (${before.col},${before.row} -> ${after.col},${after.row})`,
+  )
+
+  await talkThrough(page)
+  assert(
+    !(await page.locator('[data-testid="event-dialogue"]').isVisible()),
+    'the arrival never finished',
+  )
+  const here = await poisOf(page)
+  assert(
+    here.some((p) => p.name === 'Kit'),
+    `Kit is not on the dock in the morning (saw: ${here.map((p) => p.name).join(', ')})`,
+  )
   assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
   await page.close()
 })

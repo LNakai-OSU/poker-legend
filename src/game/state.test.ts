@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   advanceDay,
+  arriveAt,
+  chapterOf,
   CAUGHT_GRACE_DAYS,
   caughtByCollectors,
   daysUntilDue,
@@ -228,5 +230,18 @@ describe('the heads-up finale', () => {
     expect(lost.cash).toBe(80000)
     expect(daysUntilRematch(lost)).toBe(FINALE_REMATCH_DAYS)
     expect(daysUntilRematch(advanceDay(lost, FINALE_REMATCH_DAYS))).toBe(0)
+  })
+})
+
+describe('the chapter', () => {
+  it('is the furthest town set foot in, however you got there', () => {
+    const home = initialState()
+    expect(chapterOf(home)).toBe('apartment')
+    // Walking in counts: the road to Riverbend is no less being in Riverbend.
+    const walked = arriveAt(arriveAt(home, 'sc-street', 'silverCreek'), 'rb-street', 'riverbend')
+    expect(walked.unlockedCityIds).toContain('riverbend')
+    expect(chapterOf(walked)).toBe('riverbend')
+    // Going back down the ladder does not rewind the story.
+    expect(chapterOf(arriveAt(walked, 'basin', 'apartment'))).toBe('riverbend')
   })
 })

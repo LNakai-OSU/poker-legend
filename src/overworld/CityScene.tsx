@@ -22,6 +22,8 @@ interface CitySceneProps {
   onEvent?: (event: GameEvent) => void
   /** Anybody an event has stood somewhere other than their scheduled tile. */
   moved?: Record<string, { col: number; row: number }>
+  /** Set while an event has the screen: the street holds still until it is done. */
+  paused?: boolean
 }
 
 export function CityScene({
@@ -32,6 +34,7 @@ export function CityScene({
   onCaught,
   onEvent,
   moved,
+  paused,
 }: CitySceneProps) {
   // Areas resolve globally, not within a city: walking off the edge of a street
   // can take you into the next town, which is the point of the world being one
@@ -53,7 +56,7 @@ export function CityScene({
   // Whoever the hour puts here. A POI is part of the map and is always in it;
   // these are people, and where they are depends on when you came. Each is
   // drawn as themselves: the Marcus in the street is the Marcus at the table.
-  const scheduled = charactersIn(areaId, state.period).map((entry) => ({
+  const scheduled = charactersIn(areaId, state.period, state).map((entry) => ({
     ...entry,
     figure: figureForCharacter(entry.id, entry.character),
   }))
@@ -68,6 +71,10 @@ export function CityScene({
     ...area.pois.map((poi) => {
       const art = artForPoi(poi)
       const role = figures.get(poi.id)?.role
+      // A beat written for this fixture gets first refusal, as it does for a
+      // person: Hal introduces himself before he sells you anything, and the
+      // next time you talk to him he opens the book.
+      const event = onEvent ? eventFor(EVENTS, { kind: 'interact', poiId: poi.id }, state) : undefined
       return {
         id: poi.id,
         name: poi.name,
@@ -86,9 +93,10 @@ export function CityScene({
           poi.action.kind === 'flavor' || isLocked(state, poi)
             ? undefined
             : () => onAction(poi.action, poi),
+        onTalk: event && onEvent ? () => (onEvent(event), true) : undefined,
       }
     }),
-    ...scheduled.map(({ id, character, at, figure }) => {
+    ...scheduled.map(({ id, character, at, lines, figure }) => {
       // Somebody with something scripted to say says that instead of their
       // usual line for the hour.
       const event = onEvent ? eventFor(EVENTS, { kind: 'talkTo', characterId: id }, state) : undefined
@@ -104,7 +112,7 @@ export function CityScene({
         behind: behind(placed.col, placed.row),
         counter: behind(placed.col, placed.row) && behind(placed.col, placed.row - 1),
         restless: !behind(placed.col, placed.row),
-        lines: at.lines ?? character.overworld?.lines ?? [],
+        lines,
         onTalk: event && onEvent ? () => (onEvent(event), true) : undefined,
       }
     }),
@@ -196,6 +204,7 @@ export function CityScene({
         onEnterArea(link.toAreaId, landing.col, landing.row)
       }}
       period={state.period}
+      paused={paused}
       outdoors={outdoors}
       stamps={area.stamps}
       hud={

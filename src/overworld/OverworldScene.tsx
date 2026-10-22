@@ -109,6 +109,12 @@ interface OverworldSceneProps {
    */
   openEdges?: Partial<Record<Edge, true>>
   onLeaveEdge?: (edge: Edge, alongAxis: number) => void
+  /**
+   * Set while a scripted beat has the screen. Nobody moves — not you, not a
+   * collector — and nothing else can be talked to, so a beat that fires as you
+   * walk in is not read while you walk straight out the other side.
+   */
+  paused?: boolean
 }
 
 export function OverworldScene({
@@ -128,6 +134,7 @@ export function OverworldScene({
   theme = 'default',
   openEdges,
   onLeaveEdge,
+  paused = false,
 }: OverworldSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
@@ -149,6 +156,8 @@ export function OverworldScene({
   onExitRef.current = onExit
   const onLeaveEdgeRef = useRef(onLeaveEdge)
   onLeaveEdgeRef.current = onLeaveEdge
+  const pausedRef = useRef(paused)
+  pausedRef.current = paused
   // Touch input drives the same paths as the keyboard rather than synthesising
   // key events, so the Pixi ticker reads it straight from these refs.
   const touchDirRef = useRef<Direction | null>(null)
@@ -411,7 +420,7 @@ export function OverworldScene({
       }
 
       const tryInteract = () => {
-        if (talkingRef.current) return
+        if (talkingRef.current || pausedRef.current) return
         const adjacent = findAdjacent()
         if (!adjacent) return
         const interactable = interactablesRef.current.find((i) => i.id === adjacent.config.id)
@@ -453,7 +462,7 @@ export function OverworldScene({
           wasTalkingTo = talkingRef.current
         }
 
-        if (talkingRef.current) {
+        if (talkingRef.current || pausedRef.current) {
           // Taps aimed at the dialogue box must not become steps once it closes.
           tapQueue.length = 0
         } else {
@@ -475,7 +484,7 @@ export function OverworldScene({
         }
         player.update(ticker.deltaMS)
 
-        if (hunter && !caught) {
+        if (hunter && !caught && !pausedRef.current) {
           sinceHunterStep += ticker.deltaMS
           if (sinceHunterStep >= stepMs && !hunter.moving) {
             sinceHunterStep = 0
