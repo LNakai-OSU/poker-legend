@@ -280,8 +280,7 @@ export function GameApp() {
     // Whoever caught you says their piece first, standing over you in the street,
     // and the shakedown follows the last line.
     const event = eventFor(EVENTS, { kind: 'caught' }, state)
-    if (event) events.run(event, shakedown)
-    else shakedown()
+    if (!event || !events.run(event, shakedown)) shakedown()
   }
 
   /** Gambling a bankroll away below the cheapest seat is a bust, like a session. */

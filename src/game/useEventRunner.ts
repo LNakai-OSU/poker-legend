@@ -172,17 +172,18 @@ export function useEventRunner(
 
   /**
    * Begin an event, and optionally say what happens once it is over. Ignored
-   * while another is already running.
+   * while another is already running, which it says by returning false.
    */
   const run = useCallback(
-    (event: GameEvent, then?: () => void) => {
-      if (runningRef.current) return
+    (event: GameEvent, then?: () => void): boolean => {
+      if (runningRef.current) return false
       runningRef.current = event
       after.current = then ?? null
       queue.current = [...event.actions]
       setRunning(event)
       setStage(EMPTY_STAGE)
       pump(event)
+      return true
     },
     [pump],
   )
