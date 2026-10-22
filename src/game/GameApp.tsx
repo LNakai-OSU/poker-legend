@@ -13,6 +13,7 @@ import { hasFastTravel, missionStatus, tableAccess, travelCostTo } from './progr
 import { clearSave, loadGame, saveGame } from './save'
 import { useEventRunner } from './useEventRunner'
 import { DialogueBox } from './DialogueBox'
+import { ChoiceBox } from './ChoiceBox'
 import { CHARACTERS } from '../world/characters'
 import { EVENTS, eventFor } from '../world/events'
 import { SoundToggle, useAudioUnlock } from '../audio/SoundToggle'
@@ -55,6 +56,8 @@ type View =
       /** Where the bus puts you down. */
       arrive: { cityId?: CityId; areaId?: string; col?: number; row?: number }
     }
+  /** A ride a beat put you on: no skip button, and off when the beat says. */
+  | { kind: 'ride'; destination: string; caption?: string; with: string[] }
   | { kind: 'table'; tableId: string }
   | { kind: 'blocked'; title: string; message: string }
   | { kind: 'bankrollWarning'; tableId: string; warning: string }
@@ -92,26 +95,27 @@ export function GameApp() {
   const [caughtBy, setCaughtBy] = useState<string | null>(null)
   useAudioUnlock()
 
-  // Hub locations are the checkpoints; table and menu state is never persisted.
-  useEffect(() => {
-    if (view.kind === 'city') saveGame(state)
-  }, [state, view.kind])
-
-  const backToCity = () => setView({ kind: 'city' })
-
   /**
    * The runner for scripted beats. Everything it cannot do by itself — changing
    * scene, putting the player somewhere — it hands back here.
    */
-  const events = useEventRunner(setState, {
+  const events = useEventRunner(state, setState, {
     onStartTable: (tableId) => setView({ kind: 'table', tableId }),
     onStartPokerNight: () => setView({ kind: 'pokerNight' }),
-    onTeleport: (areaId, col, row) => {
-      const destination = findArea(areaId)
-      setState((s) => arriveAt(s, areaId, destination?.cityId ?? s.cityId))
-      setEntryTile({ col, row })
-    },
+    onPlace: (col, row) => setEntryTile({ col, row }),
+    onStartRide: (ride) => setView({ kind: 'ride', ...ride }),
+    onEndRide: () => setView({ kind: 'city' }),
   })
+
+  // Hub locations are the checkpoints; table and menu state is never persisted.
+  // Nor is a beat half-played: it is saved once it is over, so a reload in the
+  // middle of one puts you back where it started rather than somewhere it was
+  // carrying you, with nobody beside you and the beat forgotten.
+  useEffect(() => {
+    if (view.kind === 'city' && !events.isRunning) saveGame(state)
+  }, [state, view.kind, events.isRunning])
+
+  const backToCity = () => setView({ kind: 'city' })
 
   /**
    * Walking into somewhere is a moment a beat can be written for.
@@ -123,15 +127,18 @@ export function GameApp() {
    */
   const lastArea = useRef<string | null>(null)
   const runEvent = events.run
+  const clearCast = events.clearCast
   useEffect(() => {
     if (view.kind !== 'city') return
     const areaId = state.areaId ?? CITIES[state.cityId].entryAreaId
     const previous = lastArea.current
     lastArea.current = areaId
     if (previous === null || previous === areaId) return
+    // Whoever a beat left standing in the last place is not standing here.
+    clearCast()
     const event = eventFor(EVENTS, { kind: 'enterArea', areaId }, state)
     if (event) runEvent(event)
-  }, [view.kind, state, runEvent])
+  }, [view.kind, state, runEvent, clearCast])
 
   const handlePoi = (action: PoiAction) => {
     switch (action.kind) {
@@ -341,6 +348,16 @@ export function GameApp() {
         />
       )
     }
+
+    case 'ride':
+      return (
+        <BusTransition
+          destination={view.destination}
+          caption={view.caption}
+          companions={view.with.map((id) => CHARACTERS[id]).filter((c) => c !== undefined)}
+          forced
+        />
+      )
 
     case 'table': {
       const table = TABLES[view.tableId]
@@ -554,7 +571,9 @@ export function GameApp() {
             }}
             onCaught={handleCaught}
             onEvent={events.run}
-            moved={events.stage.moved}
+            cast={events.stage.cast}
+            cues={events.stage.cues}
+            onCueDone={events.cueDone}
             paused={events.isRunning}
           />
         )
@@ -590,6 +609,14 @@ export function GameApp() {
             onFinish={events.advance}
           />
         </div>
+      )}
+      {events.stage.choice && (
+        <ChoiceBox
+          speaker={speakerName(events.stage.choice.speaker)}
+          prompt={events.stage.choice.prompt}
+          options={events.stage.choice.options}
+          onChoose={events.choose}
+        />
       )}
       {!settingsOpen && !lockedInAtTable && (
         <button

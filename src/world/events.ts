@@ -1,4 +1,5 @@
 import type { TimePeriod } from '../game/time'
+import type { StoryFlag } from './flags'
 import {
   challengeStatus,
   chapterOf,
@@ -11,7 +12,6 @@ import {
   type CountOf,
   type DebtStatus,
   type GameState,
-  type StoryFlag,
 } from '../game/state'
 
 /**
@@ -81,6 +81,72 @@ export type EventCondition =
    * `atMost: 0` is "never".
    */
   | { kind: 'count'; of: CountOf; sponsorId?: string; atLeast?: number; atMost?: number }
+  /**
+   * You owe this sponsor something and hold enough to pay all of it now — the
+   * condition on a choice's "pay her back" answer.
+   */
+  | { kind: 'canPay'; sponsorId: string }
+
+/** A tile on the map the beat is playing in. */
+export interface Tile {
+  col: number
+  row: number
+}
+
+/**
+ * Where somebody is moved to: a tile, or `'player'` — the free tile next to the
+ * player nearest to whoever is coming, which is how somebody walks up to you
+ * wherever you happen to be standing.
+ */
+export type Spot = Tile | 'player'
+
+/** How fast a beat moves somebody: a stroll beside you, or running to catch you up. */
+export type Pace = 'walk' | 'run'
+
+/** A text box. `speaker` is a character id, or a plain name, or nothing. */
+export interface DialogueAction {
+  kind: 'dialogue'
+  speaker?: string
+  lines: string[]
+}
+
+/** Things that change the state and nothing else: no movement, no change of scene. */
+export type QuietAction =
+  | DialogueAction
+  | { kind: 'wait'; ms: number }
+  | { kind: 'setFlag'; flag: StoryFlag }
+  | { kind: 'clearFlag'; flag: StoryFlag }
+  | { kind: 'giveItem'; itemId: string }
+  /** Negative takes it away; the wallet never goes below nothing. */
+  | { kind: 'giveCash'; amount: number }
+  | { kind: 'playSound'; sound: string }
+
+/**
+ * What can happen on a ride you do not choose: talk, a pause, a quiet change of
+ * state. Nobody walks and nothing changes scene: you are sat on a bus.
+ */
+export type RideAction = QuietAction
+
+/** One answer the player can give to a `choice`. */
+export interface ChoiceOption {
+  /** What the button says. Short: on a phone it is one line of a button. */
+  label: string
+  /**
+   * Open only while these hold: enough cash to cover it, a debt to pay. A closed
+   * option is shown greyed out, so the player sees the road they cannot take,
+   * unless it is `hidden`. Every choice keeps one option with no conditions, so
+   * there is always a way on.
+   */
+  conditions?: EventCondition[]
+  /** Leave it off the list, rather than grey it out, while it is closed. */
+  hidden?: boolean
+  /**
+   * What picking it does, in order — lines, flags, cash, a stake, a ride, a
+   * table. The event carries on after the choice once these are done, unless
+   * one of them sits you down at a table.
+   */
+  then: EventAction[]
+}
 
 /**
  * What happens, in order.
@@ -90,26 +156,99 @@ export type EventCondition =
  * grow a scripting language nobody can keep in their head.
  */
 export type EventAction =
-  /** A text box. `speaker` is a character id, or a plain name, or nothing. */
-  | { kind: 'dialogue'; speaker?: string; lines: string[] }
-  /** Move somebody who is standing in this area to another tile. */
-  | { kind: 'moveNpc'; characterId: string; col: number; row: number }
-  | { kind: 'wait'; ms: number }
-  | { kind: 'setFlag'; flag: StoryFlag }
-  | { kind: 'clearFlag'; flag: StoryFlag }
-  | { kind: 'giveItem'; itemId: string }
-  /** Negative takes it away; the wallet never goes below nothing. */
-  | { kind: 'giveCash'; amount: number }
+  | QuietAction
+  /**
+   * The player decides: two to four answers, each with what it leads to. The
+   * consequence is written as flags a later beat reads, so a choice changes
+   * more than the next line.
+   */
+  | { kind: 'choice'; speaker?: string; prompt: string; options: ChoiceOption[] }
+  /**
+   * A later beat remembering an earlier one: these actions if the conditions
+   * hold now, those otherwise. How a decision made three towns ago is heard.
+   */
+  | { kind: 'if'; when: EventCondition[]; then: EventAction[]; else?: EventAction[] }
+  /**
+   * Somebody walks (or runs) to a tile, the way a person would go, and the beat
+   * waits until they are there. `from` brings them on from a tile first — the
+   * end of the street — when they were not here. `youFollow` has the player
+   * walk a step behind them; `leaves` has them go once they arrive, through the
+   * door or off the edge they walked to.
+   */
+  | {
+      kind: 'moveNpc'
+      characterId: string
+      to: Spot
+      from?: Tile
+      pace?: Pace
+      youFollow?: boolean
+      leaves?: boolean
+    }
+  /** The player walks to a tile, without the keys. */
+  | { kind: 'movePlayer'; to: Tile; pace?: Pace }
   | { kind: 'unlockCity'; cityId: string }
   | { kind: 'unlockTable'; tableId: string }
   | { kind: 'startTable'; tableId: string }
   | { kind: 'startPokerNight' }
-  /** Put the player somewhere, with no bus and no door. */
-  | { kind: 'teleport'; areaId: string; col: number; row: number }
+  /** Put the player somewhere, with no bus and no door. `with` brings people along, beside you. */
+  | { kind: 'teleport'; areaId: string; col: number; row: number; with?: string[] }
+  /**
+   * A ride on the 14 you do not choose: the bus, with `with` sat beside you and
+   * `during` said on the way, no skip button, and off at the stop at the other
+   * end. It costs the hour a ride across town costs, as the bus always does.
+   */
+  | {
+      kind: 'ride'
+      areaId: string
+      col: number
+      row: number
+      caption?: string
+      with?: string[]
+      during?: RideAction[]
+    }
+  /** Take a sponsor's stake on their usual terms, as their own menu would give it. */
+  | { kind: 'takeStake'; sponsorId: string }
+  /** Pay back everything owed to a sponsor. Nothing happens if you cannot cover it. */
+  | { kind: 'repay'; sponsorId: string }
   | { kind: 'advancePeriod'; steps?: number }
   | { kind: 'advanceDay'; days?: number }
-  | { kind: 'playSound'; sound: string }
   | { kind: 'fade'; to: 'out' | 'in' }
+
+/** Actions after which nothing else runs: the table takes over the screen. */
+export const ENDS_EVENT = new Set<EventAction['kind']>(['startTable', 'startPokerNight'])
+
+/** The lists of actions nested inside one: a choice's answers, an `if`'s two ways, what is said on a ride. */
+export function branchesOf(action: EventAction): EventAction[][] {
+  switch (action.kind) {
+    case 'choice':
+      return action.options.map((option) => option.then)
+    case 'if':
+      return action.else ? [action.then, action.else] : [action.then]
+    case 'ride':
+      return action.during ? [action.during] : []
+    default:
+      return []
+  }
+}
+
+/** Every action in a list and in every branch inside it, in reading order. */
+export function everyAction(actions: EventAction[]): EventAction[] {
+  return actions.flatMap((action) => [action, ...branchesOf(action).flatMap(everyAction)])
+}
+
+/** Every condition an event asks: its own, each answer's, and each `if`'s. */
+export function everyCondition(event: GameEvent): EventCondition[] {
+  return [
+    ...(event.conditions ?? []),
+    ...everyAction(event.actions).flatMap((action) =>
+      action.kind === 'choice'
+        ? action.options.flatMap((option) => option.conditions ?? [])
+        : action.kind === 'if'
+          ? action.when
+          : [],
+    ),
+  ]
+}
 
 export interface GameEvent {
   id: string
@@ -164,7 +303,16 @@ export function conditionHolds(condition: EventCondition, state: GameState): boo
       const n = countOf(state, condition.of, condition.sponsorId)
       return n >= low && n <= high
     }
+    case 'canPay': {
+      const owed = owedTo(state, condition.sponsorId)
+      return owed > 0 && state.cash >= owed
+    }
   }
+}
+
+/** Everything owed to one sponsor, across every stake of theirs still open. */
+export function owedTo(state: GameState, sponsorId: string): number {
+  return state.debts.filter((d) => d.sponsorId === sponsorId).reduce((sum, d) => sum + d.owed, 0)
 }
 
 /** The counts a `count` condition accepts, inclusive. Just `of` means at least once. */
@@ -370,6 +518,107 @@ export function eventsSharing(events: GameEvent[], trigger: EventTrigger): GameE
 }
 
 /**
+ * Every place a beat moves the player into while it is still running — a
+ * `teleport` or a `ride`, down every branch — with what is true at that moment:
+ * the beat's own conditions, as changed by whatever it has done on the way.
+ *
+ * Walking into somewhere is a moment another beat can be written for, and a beat
+ * that carries you there is still holding the screen when you arrive. Only one
+ * of them can have it, so the two must be told apart like any other pair that
+ * share a moment (see `arrivalClashes`). What the beat has done on the way
+ * counts: a flag it set before the move separates it from a beat that needs the
+ * flag clear. Anything whose effect cannot be followed exactly — cash, the
+ * hour, debts, the chapter — stops being something to tell them apart by.
+ */
+export function arrivalsDuring(event: GameEvent): Array<{ areaId: string; conditions: EventCondition[] }> {
+  const arrivals: Array<{ areaId: string; conditions: EventCondition[] }> = []
+  // The beat is under way, so it has not happened yet.
+  const start: EventCondition[] = [...(event.conditions ?? []), { kind: 'eventDone', eventId: event.id, done: false }]
+  const unknown = (cs: EventCondition[], kinds: Array<EventCondition['kind']>) => cs.filter((c) => !kinds.includes(c.kind))
+  const withFlag = (cs: EventCondition[], flag: StoryFlag, set: boolean): EventCondition[] => [
+    ...cs.filter((c) => !(c.kind === 'flag' && c.flag === flag)),
+    { kind: 'flag', flag, set },
+  ]
+
+  const follow = (actions: EventAction[], conditions: EventCondition[]): EventCondition[] | null => {
+    let cs = conditions
+    for (let i = 0; i < actions.length; i++) {
+      const action = actions[i]
+      const rest = actions.slice(i + 1)
+      switch (action.kind) {
+        case 'setFlag':
+        case 'clearFlag':
+          cs = withFlag(cs, action.flag, action.kind === 'setFlag')
+          break
+        case 'giveCash':
+          cs = unknown(cs, ['cashAtLeast', 'cashBelow', 'canPay'])
+          break
+        case 'takeStake':
+        case 'repay':
+          cs = unknown(cs, ['cashAtLeast', 'cashBelow', 'canPay', 'debt', 'hunted', 'count'])
+          break
+        case 'advancePeriod':
+        case 'advanceDay':
+          cs = unknown(cs, ['period', 'dayAtLeast', 'debt', 'hunted', 'challenge'])
+          break
+        case 'unlockCity':
+          cs = unknown(cs, ['chapter'])
+          break
+        case 'teleport':
+          cs = unknown(cs, ['chapter', 'hunted'])
+          arrivals.push({ areaId: action.areaId, conditions: cs })
+          break
+        case 'ride': {
+          const said = follow(action.during ?? [], cs) ?? cs
+          cs = unknown(said, ['chapter', 'hunted', 'period', 'debt'])
+          arrivals.push({ areaId: action.areaId, conditions: cs })
+          break
+        }
+        case 'choice':
+          // Each answer, and then whatever follows the question.
+          for (const option of action.options) follow([...option.then, ...rest], [...cs, ...(option.conditions ?? [])])
+          return null
+        case 'if': {
+          follow([...action.then, ...rest], [...cs, ...action.when])
+          // The other way: only a single flag can be turned round exactly.
+          const [only] = action.when
+          const otherwise =
+            action.when.length === 1 && only.kind === 'flag' ? withFlag(cs, only.flag, !(only.set ?? true)) : cs
+          follow([...(action.else ?? []), ...rest], otherwise)
+          return null
+        }
+        case 'startTable':
+        case 'startPokerNight':
+          return null
+      }
+    }
+    return cs
+  }
+  follow(event.actions, start)
+  return arrivals
+}
+
+/**
+ * Pairs that would fight over walking into somewhere: a beat that carries you
+ * into an area, and a beat for walking into it that could be ready at the same
+ * moment. The beat already holding the screen would win and the other would be
+ * lost, so the content tests fail on it rather than let declaration order
+ * decide.
+ */
+export function arrivalClashes(events: GameEvent[]): Array<[GameEvent, GameEvent]> {
+  const clashes: Array<[GameEvent, GameEvent]> = []
+  for (const carrier of events) {
+    for (const arrival of arrivalsDuring(carrier)) {
+      const underWay: GameEvent = { ...carrier, conditions: arrival.conditions, repeatable: true }
+      for (const other of eventsSharing(events, { kind: 'enterArea', areaId: arrival.areaId })) {
+        if (other.id !== carrier.id && canBothFire(underWay, other)) clashes.push([carrier, other])
+      }
+    }
+  }
+  return clashes
+}
+
+/**
  * Every scripted beat in the game.
  *
  * Ordered roughly as the player meets them. An event fires on its trigger when
@@ -441,9 +690,21 @@ export const EVENTS: GameEvent[] = [
           'Dana: You took Marcus.',
           'Dana: He will tell it like he was unlucky. He was not unlucky.',
           'Dana: Go and lose it somewhere bigger. That is what everyone does.',
-          'Dana: I will be around.',
         ],
       },
+      {
+        kind: 'if',
+        when: [{ kind: 'flag', flag: 'brushedOffDana' }],
+        then: [{ kind: 'dialogue', speaker: 'dana', lines: ['Dana: My own business, you said. You were my business tonight.'] }],
+        else: [
+          {
+            kind: 'if',
+            when: [{ kind: 'flag', flag: 'toldDanaToWatch' }],
+            then: [{ kind: 'dialogue', speaker: 'dana', lines: ['Dana: You told me to watch. I did. So did somebody else, through me.'] }],
+          },
+        ],
+      },
+      { kind: 'dialogue', speaker: 'dana', lines: ['Dana: I will be around.'] },
     ],
   },
   {
@@ -698,6 +959,12 @@ export const EVENTS: GameEvent[] = [
           'Kit: See you on the island. Or do not.',
         ],
       },
+      {
+        kind: 'if',
+        when: [{ kind: 'count', of: 'staked', sponsorId: 'cass' }],
+        then: [{ kind: 'dialogue', speaker: 'kit', lines: ['Kit: And you took Cass’s rope. Good. Now we are the same.'] }],
+        else: [{ kind: 'dialogue', speaker: 'kit', lines: ['Kit: You walked past Cass. Careful. You will get to the top owing nobody, and nobody will believe you.'] }],
+      },
     ],
   },
   {
@@ -950,7 +1217,8 @@ export const EVENTS: GameEvent[] = [
     id: 'nadia-names-the-match',
     about:
       'Meeting the final rival before the table: she knows the kitchen table, somebody ' +
-      'has been writing to her about you, and she sends a car for Marcus.',
+      'has been writing to her about you, and she sends a car for Marcus. What you ask her is ' +
+      'heard again by Dana (`dana-reveal`) and Marcus (`marcus-at-the-rail`).',
     trigger: { kind: 'interact', poiId: 'nadia' },
     actions: [
       {
@@ -961,14 +1229,49 @@ export const EVENTS: GameEvent[] = [
           'Nadia: Somebody I trust has been writing to me about you since Marcus’s game.',
           'Nadia: One match, heads up. A hundred and twenty thousand each. The winner takes the pot and the floor upstairs.',
           'Nadia: I have sent a car for your friend Marcus. A challenger should have somebody at the rail.',
-          'Nadia: Come back when you are ready. You will know.',
         ],
       },
+      {
+        kind: 'choice',
+        speaker: 'nadia',
+        prompt: 'What do you say to her?',
+        options: [
+          {
+            label: 'I will be ready',
+            then: [{ kind: 'dialogue', speaker: 'nadia', lines: ['Nadia: Everybody says that. Come back when it is true.'] }],
+          },
+          {
+            label: 'Who has been writing to you?',
+            then: [
+              { kind: 'setFlag', flag: 'askedNadiaWho' },
+              {
+                kind: 'dialogue',
+                speaker: 'nadia',
+                lines: ['Nadia: Ask her yourself. She is in the corner of this room most nights, with her back to the wall.'],
+              },
+            ],
+          },
+          {
+            label: 'Leave Marcus out of this',
+            then: [
+              { kind: 'setFlag', flag: 'toldNadiaLeaveMarcus' },
+              {
+                kind: 'dialogue',
+                speaker: 'nadia',
+                lines: ['Nadia: He is your rail. Everybody needs a rail. The car has already gone.'],
+              },
+            ],
+          },
+        ],
+      },
+      { kind: 'dialogue', speaker: 'nadia', lines: ['Nadia: Come back when you are ready. You will know.'] },
     ],
   },
   {
     id: 'dana-reveal',
-    about: 'The reveal: Dana has been Nadia’s scout all along, writing to her about you since the first night.',
+    about:
+      'The reveal: Dana has been Nadia’s scout all along, writing to her about you since the first night. ' +
+      'She remembers how you answered her on the 14, and you decide how you take it.',
     trigger: { kind: 'talkTo', characterId: 'dana' },
     conditions: [
       { kind: 'chapter', cityId: 'portoLumina' },
@@ -984,6 +1287,51 @@ export const EVENTS: GameEvent[] = [
           'Dana: I am the somebody. Four years I have gone where the games are, and written her a letter from each one.',
           'Dana: She asked me to find the next one. I found you at Marcus’s kitchen table, raising the river with nothing.',
           'Dana: Do not look at me like that. I told her you were worth watching. I meant it.',
+        ],
+      },
+      {
+        kind: 'if',
+        when: [{ kind: 'flag', flag: 'askedNadiaWho' }],
+        then: [{ kind: 'dialogue', speaker: 'dana', lines: ['Dana: She told you to ask me. She always makes me say it myself.'] }],
+      },
+      {
+        kind: 'if',
+        when: [{ kind: 'flag', flag: 'askedDanaWhy' }],
+        then: [{ kind: 'dialogue', speaker: 'dana', lines: ['Dana: You asked me on the 14 why I watch. I told you. You did not hear it.'] }],
+      },
+      {
+        kind: 'if',
+        when: [{ kind: 'flag', flag: 'toldDanaToWatch' }],
+        then: [{ kind: 'dialogue', speaker: 'dana', lines: ['Dana: You told me to watch, on the 14. So I watched, and I wrote it all down.'] }],
+      },
+      {
+        kind: 'if',
+        when: [{ kind: 'flag', flag: 'brushedOffDana' }],
+        then: [{ kind: 'dialogue', speaker: 'dana', lines: ['Dana: You told me to mind my own business. You were my business.'] }],
+      },
+      {
+        kind: 'choice',
+        speaker: 'dana',
+        prompt: 'How do you take it?',
+        options: [
+          {
+            label: 'I am glad it was you',
+            then: [
+              { kind: 'setFlag', flag: 'trustsDana' },
+              { kind: 'dialogue', speaker: 'dana', lines: ['Dana: ...So am I.', 'Dana: Go and say hello to her. I will be in the corner.'] },
+            ],
+          },
+          {
+            label: 'You could have told me',
+            then: [{ kind: 'dialogue', speaker: 'dana', lines: ['Dana: And you would have played the same? Nobody does.'] }],
+          },
+          {
+            label: 'Stay away from my games',
+            then: [
+              { kind: 'setFlag', flag: 'cutDanaOff' },
+              { kind: 'dialogue', speaker: 'dana', lines: ['Dana: Mm. That is fair.', 'Dana: I will not write to her about you again.'] },
+            ],
+          },
         ],
       },
     ],
@@ -1008,6 +1356,17 @@ export const EVENTS: GameEvent[] = [
           'Marcus: A car. She sent a car, man. The driver called me Mr. Marcus.',
           'Marcus: I am not going to watch. I am absolutely going to watch.',
           'Marcus: Whatever happens up there, the kitchen table is still in my kitchen.',
+        ],
+      },
+      {
+        kind: 'if',
+        when: [{ kind: 'flag', flag: 'toldNadiaLeaveMarcus' }],
+        then: [
+          {
+            kind: 'dialogue',
+            speaker: 'marcus',
+            lines: ['Marcus: The driver said you told her to leave me out of it. Thank you. I came anyway. Obviously I came.'],
+          },
         ],
       },
     ],
@@ -1071,14 +1430,41 @@ export const EVENTS: GameEvent[] = [
         lines: [
           'Dana: She left you a note. It says: Watch for the next one.',
           'Dana: Somebody will sit down at a kitchen table somewhere tonight and take everything. Somebody always does.',
-          'Dana: I could write to you about them. If you like.',
+        ],
+      },
+      {
+        kind: 'if',
+        when: [{ kind: 'flag', flag: 'cutDanaOff' }],
+        then: [
+          {
+            kind: 'dialogue',
+            speaker: 'dana',
+            lines: ['Dana: You told me to stay away from your games. This is me doing it. After tonight.'],
+          },
+        ],
+        else: [
+          {
+            kind: 'if',
+            when: [{ kind: 'flag', flag: 'trustsDana' }],
+            then: [
+              {
+                kind: 'dialogue',
+                speaker: 'dana',
+                lines: [
+                  'Dana: I am going to write to you about them. Whether you like it or not.',
+                  'Dana: The first letter is already under your door.',
+                ],
+              },
+            ],
+            else: [{ kind: 'dialogue', speaker: 'dana', lines: ['Dana: I could write to you about them. If you like.'] }],
+          },
         ],
       },
     ],
   },
   {
     id: 'kit-after',
-    about: 'Aftermath: the rival asks the winner for a stake. You are the sponsor now.',
+    about: 'Aftermath: the rival asks the winner for a stake. You are the sponsor now, and it is your call.',
     trigger: { kind: 'talkTo', characterId: 'kit' },
     conditions: [
       { kind: 'chapter', cityId: 'portoLumina' },
@@ -1091,7 +1477,31 @@ export const EVENTS: GameEvent[] = [
         lines: [
           'Kit: You did it. Of course you did. You were slower.',
           'Kit: I am told you are the one people come to now. For a stake.',
-          'Kit: Not today. But remember I asked nicely.',
+          'Kit: Ten thousand. Eleven days at the nosebleed and the Consortium off my back. You would have it back doubled.',
+        ],
+      },
+      {
+        kind: 'choice',
+        speaker: 'kit',
+        prompt: 'Stake Kit $10,000?',
+        options: [
+          {
+            label: 'Stake him $10,000',
+            conditions: [{ kind: 'cashAtLeast', amount: 10000 }],
+            then: [
+              { kind: 'giveCash', amount: -10000 },
+              { kind: 'setFlag', flag: 'stakedKit' },
+              {
+                kind: 'dialogue',
+                speaker: 'kit',
+                lines: ['Kit: ...You actually did it.', 'Kit: Eleven days. Do not come looking for me. I will come to you.'],
+              },
+            ],
+          },
+          {
+            label: 'Not this time',
+            then: [{ kind: 'dialogue', speaker: 'kit', lines: ['Kit: Fair. I would have said no to me too.', 'Kit: Remember I asked nicely.'] }],
+          },
         ],
       },
     ],
@@ -1147,8 +1557,8 @@ export const EVENTS: GameEvent[] = [
   {
     id: 'marcus-deals-you-back-in',
     about:
-      'The way back from broke: below the cheapest seat on the ladder, Marcus deals the kitchen table ' +
-      'again — the same game that started the run. Wherever the story has got to, while he is home.',
+      'The way back from broke: below the cheapest seat on the ladder, Marcus offers the kitchen table ' +
+      'again — the same game that started the run — and you can say no and climb back alone. Wherever the story has got to.',
     trigger: { kind: 'talkTo', characterId: 'marcus' },
     conditions: [
       { kind: 'flag', flag: 'wonPokerNight' },
@@ -1168,7 +1578,21 @@ export const EVENTS: GameEvent[] = [
           'Marcus: Win it back off me, and then go and do it properly.',
         ],
       },
-      { kind: 'startPokerNight' },
+      {
+        kind: 'choice',
+        speaker: 'marcus',
+        prompt: 'Sit down at the kitchen table?',
+        options: [
+          { label: 'Deal me in', then: [{ kind: 'clearFlag', flag: 'turnedDownMarcus' }, { kind: 'startPokerNight' }] },
+          {
+            label: 'Not tonight. I will climb back myself',
+            then: [
+              { kind: 'setFlag', flag: 'turnedDownMarcus' },
+              { kind: 'dialogue', speaker: 'marcus', lines: ['Marcus: Proud. Fine. The chairs are not going anywhere.', 'Marcus: Neither am I.'] },
+            ],
+          },
+        ],
+      },
     ],
   },
   {
@@ -1191,7 +1615,21 @@ export const EVENTS: GameEvent[] = [
           'Marcus: I brought cards. I always bring cards. Kitchen-table rules, beach edition.',
         ],
       },
-      { kind: 'startPokerNight' },
+      {
+        kind: 'choice',
+        speaker: 'marcus',
+        prompt: 'Play Marcus for it on the beach?',
+        options: [
+          { label: 'Deal me in', then: [{ kind: 'clearFlag', flag: 'turnedDownMarcus' }, { kind: 'startPokerNight' }] },
+          {
+            label: 'Not tonight. I will climb back myself',
+            then: [
+              { kind: 'setFlag', flag: 'turnedDownMarcus' },
+              { kind: 'dialogue', speaker: 'marcus', lines: ['Marcus: Suit yourself. The fish and I will be here.'] },
+            ],
+          },
+        ],
+      },
     ],
   },
   {
@@ -1216,7 +1654,21 @@ export const EVENTS: GameEvent[] = [
           'Marcus: Win it back off me. We will worry about her after.',
         ],
       },
-      { kind: 'startPokerNight' },
+      {
+        kind: 'choice',
+        speaker: 'marcus',
+        prompt: 'Win it back off Marcus first?',
+        options: [
+          { label: 'Deal me in', then: [{ kind: 'clearFlag', flag: 'turnedDownMarcus' }, { kind: 'startPokerNight' }] },
+          {
+            label: 'Not tonight. I will climb back myself',
+            then: [
+              { kind: 'setFlag', flag: 'turnedDownMarcus' },
+              { kind: 'dialogue', speaker: 'marcus', lines: ['Marcus: Your call. I am at the rail either way.'] },
+            ],
+          },
+        ],
+      },
     ],
   },
   {
@@ -1240,7 +1692,21 @@ export const EVENTS: GameEvent[] = [
           'Marcus: Winner hosts. So host. Deal me in.',
         ],
       },
-      { kind: 'startPokerNight' },
+      {
+        kind: 'choice',
+        speaker: 'marcus',
+        prompt: 'Host the kitchen table?',
+        options: [
+          { label: 'Deal me in', then: [{ kind: 'clearFlag', flag: 'turnedDownMarcus' }, { kind: 'startPokerNight' }] },
+          {
+            label: 'Not tonight. I will climb back myself',
+            then: [
+              { kind: 'setFlag', flag: 'turnedDownMarcus' },
+              { kind: 'dialogue', speaker: 'marcus', lines: ['Marcus: A penthouse and too proud to deal. You have changed.', 'Marcus: Not much, though.'] },
+            ],
+          },
+        ],
+      },
     ],
   },
   {
@@ -1282,6 +1748,17 @@ export const EVENTS: GameEvent[] = [
           'Ray: Six hundred. From nothing. I have never once done that.',
           'Ray: Thirty years I have been due, and you went and collected it for me.',
           'Ray: Go on. Riverbend. And this time do not come back.',
+        ],
+      },
+      {
+        kind: 'if',
+        when: [{ kind: 'flag', flag: 'turnedDownMarcus' }],
+        then: [
+          {
+            kind: 'dialogue',
+            speaker: 'ray',
+            lines: ['Ray: And Marcus says you would not even sit at his table. Did it on your own. I would have taken the table.'],
+          },
         ],
       },
       { kind: 'setFlag', flag: 'cameBack' },
@@ -1383,7 +1860,22 @@ export const EVENTS: GameEvent[] = [
         lines: [
           'Cass: Back already? The clock is running.',
           'Cass: That is Dutch by the bollard. He is family. He is also how I collect.',
-          'Cass: Three days means three days. Come and pay me before the third one is out.',
+        ],
+      },
+      {
+        kind: 'choice',
+        speaker: 'cass',
+        prompt: 'Pay Cass back now?',
+        options: [
+          {
+            label: 'Pay her back now',
+            conditions: [{ kind: 'canPay', sponsorId: 'cass' }],
+            then: [
+              { kind: 'repay', sponsorId: 'cass' },
+              { kind: 'dialogue', speaker: 'cass', lines: ['Cass: Early. Nobody pays early.', 'Cass: Dutch! Go and have your tea. This one is square.'] },
+            ],
+          },
+          { label: 'Not yet', then: [{ kind: 'dialogue', speaker: 'cass', lines: ['Cass: Three days means three days.'] }] },
         ],
       },
     ],
@@ -1400,6 +1892,62 @@ export const EVENTS: GameEvent[] = [
         lines: [
           'Cass: You are late. I told you what late means.',
           'Cass: Dutch is out looking for you. Pay me now and I call him in for his tea.',
+        ],
+      },
+      {
+        kind: 'choice',
+        speaker: 'cass',
+        prompt: 'Pay Cass what you owe?',
+        options: [
+          {
+            label: 'Pay what I owe',
+            conditions: [{ kind: 'canPay', sponsorId: 'cass' }],
+            then: [
+              { kind: 'repay', sponsorId: 'cass' },
+              { kind: 'dialogue', speaker: 'cass', lines: ['Cass: Late. But here. Dutch! Tea.'] },
+            ],
+          },
+          { label: 'I cannot. Not yet', then: [{ kind: 'dialogue', speaker: 'cass', lines: ['Cass: Then I would start running, love.'] }] },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'cass-offers',
+    about:
+      'Meeting Cass: her rope, offered once and in person — take it or walk past. Kit, a town on, ' +
+      'remembers which (`kit-harbor`), and the record keeps it.',
+    trigger: { kind: 'interact', poiId: 'cass' },
+    conditions: [
+      { kind: 'debt', sponsorId: 'cass', status: 'none' },
+      { kind: 'count', of: 'staked', sponsorId: 'cass', atMost: 0 },
+      { kind: 'count', of: 'repaid', sponsorId: 'cass', atMost: 0 },
+    ],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'cass',
+        lines: [
+          'Cass: You are the one Kit talks about. Kit talks about everybody.',
+          'Cass: Fifteen hundred. Three days. A quarter on top. Dutch collects, and Dutch is family.',
+        ],
+      },
+      {
+        kind: 'choice',
+        speaker: 'cass',
+        prompt: 'Take Cass’s money?',
+        options: [
+          {
+            label: 'Take the $1,500',
+            then: [
+              { kind: 'takeStake', sponsorId: 'cass' },
+              { kind: 'dialogue', speaker: 'cass', lines: ['Cass: Three days. Dutch will be by the bollard.'] },
+            ],
+          },
+          {
+            label: 'Not today',
+            then: [{ kind: 'dialogue', speaker: 'cass', lines: ['Cass: Rope is free to look at. I am here when you want it.'] }],
+          },
         ],
       },
     ],
@@ -1498,6 +2046,22 @@ export const EVENTS: GameEvent[] = [
           'Mr. Emeka: Abel will be nearby. Abel is always nearby. It is restful, once you are used to it.',
         ],
       },
+      {
+        kind: 'choice',
+        speaker: 'emeka',
+        prompt: 'Pay Mr. Emeka back now?',
+        options: [
+          {
+            label: 'Pay him back now',
+            conditions: [{ kind: 'canPay', sponsorId: 'emeka' }],
+            then: [
+              { kind: 'repay', sponsorId: 'emeka' },
+              { kind: 'dialogue', speaker: 'emeka', lines: ['Mr. Emeka: Before the day. I will tell Abel to sit down. He will not know how.'] },
+            ],
+          },
+          { label: 'Not yet', then: [{ kind: 'dialogue', speaker: 'emeka', lines: ['Mr. Emeka: Then I shall go on being patient.'] }] },
+        ],
+      },
     ],
   },
   {
@@ -1512,6 +2076,22 @@ export const EVENTS: GameEvent[] = [
         lines: [
           'Mr. Emeka: I liked you for your patience. Mine has run out first.',
           'Mr. Emeka: Abel is looking for you. He will be very polite about it, and very thorough.',
+        ],
+      },
+      {
+        kind: 'choice',
+        speaker: 'emeka',
+        prompt: 'Pay Mr. Emeka what you owe?',
+        options: [
+          {
+            label: 'Pay what I owe',
+            conditions: [{ kind: 'canPay', sponsorId: 'emeka' }],
+            then: [
+              { kind: 'repay', sponsorId: 'emeka' },
+              { kind: 'dialogue', speaker: 'emeka', lines: ['Mr. Emeka: Late, and whole. Abel will be disappointed. He enjoys the thorough part.'] },
+            ],
+          },
+          { label: 'I cannot. Not yet', then: [{ kind: 'dialogue', speaker: 'emeka', lines: ['Mr. Emeka: Abel will be very polite about it.'] }] },
         ],
       },
     ],
@@ -1592,6 +2172,22 @@ export const EVENTS: GameEvent[] = [
           'Broker: Mr. Lowe will be about. You will not notice him until it matters.',
         ],
       },
+      {
+        kind: 'choice',
+        speaker: 'Broker',
+        prompt: 'Pay the Consortium back now?',
+        options: [
+          {
+            label: 'Pay them back now',
+            conditions: [{ kind: 'canPay', sponsorId: 'consortium' }],
+            then: [
+              { kind: 'repay', sponsorId: 'consortium' },
+              { kind: 'dialogue', speaker: 'Broker', lines: ['Broker: Closed early. That is a first for this file.'] },
+            ],
+          },
+          { label: 'Not yet', then: [{ kind: 'dialogue', speaker: 'Broker', lines: ['Broker: Your date stands.'] }] },
+        ],
+      },
     ],
   },
   {
@@ -1606,6 +2202,22 @@ export const EVENTS: GameEvent[] = [
         lines: [
           'Broker: Your date has passed. Mr. Lowe has been informed.',
           'Broker: Pay here and the file closes. Do not, and it opens wider.',
+        ],
+      },
+      {
+        kind: 'choice',
+        speaker: 'Broker',
+        prompt: 'Pay the Consortium what you owe?',
+        options: [
+          {
+            label: 'Pay what I owe',
+            conditions: [{ kind: 'canPay', sponsorId: 'consortium' }],
+            then: [
+              { kind: 'repay', sponsorId: 'consortium' },
+              { kind: 'dialogue', speaker: 'Broker', lines: ['Broker: The file closes. Mr. Lowe is informed.'] },
+            ],
+          },
+          { label: 'I cannot. Not yet', then: [{ kind: 'dialogue', speaker: 'Broker', lines: ['Broker: Then the file opens wider.'] }] },
         ],
       },
     ],
@@ -1658,6 +2270,22 @@ export const EVENTS: GameEvent[] = [
           'Madame Wen: Two days. Win upstairs and you will barely notice me. Lose, and you will notice nothing else.',
         ],
       },
+      {
+        kind: 'choice',
+        speaker: 'Madame Wen',
+        prompt: 'Pay Madame Wen back now?',
+        options: [
+          {
+            label: 'Pay her back now',
+            conditions: [{ kind: 'canPay', sponsorId: 'wen' }],
+            then: [
+              { kind: 'repay', sponsorId: 'wen' },
+              { kind: 'dialogue', speaker: 'Madame Wen', lines: ['Madame Wen: Early. Ms. Fong will have to find another page to write small on.'] },
+            ],
+          },
+          { label: 'Not yet', then: [{ kind: 'dialogue', speaker: 'Madame Wen', lines: ['Madame Wen: Two days.'] }] },
+        ],
+      },
     ],
   },
   {
@@ -1672,6 +2300,62 @@ export const EVENTS: GameEvent[] = [
         lines: [
           'Madame Wen: Everyone at your level takes this deal once. Most of them stood where you are standing.',
           'Madame Wen: Ms. Fong is on the waterfront with your page. Pay me, and she closes the book.',
+        ],
+      },
+      {
+        kind: 'choice',
+        speaker: 'Madame Wen',
+        prompt: 'Pay Madame Wen what you owe?',
+        options: [
+          {
+            label: 'Pay what I owe',
+            conditions: [{ kind: 'canPay', sponsorId: 'wen' }],
+            then: [
+              { kind: 'repay', sponsorId: 'wen' },
+              { kind: 'dialogue', speaker: 'Madame Wen', lines: ['Madame Wen: Ms. Fong closes the book. You are one of the few.'] },
+            ],
+          },
+          { label: 'I cannot. Not yet', then: [{ kind: 'dialogue', speaker: 'Madame Wen', lines: ['Madame Wen: Then Ms. Fong keeps writing.'] }] },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'wen-offers',
+    about:
+      'Meeting Madame Wen: the stake Kit begged you not to take, offered once — and Kit, after the match, ' +
+      'knows which you chose (`kit-after-the-loss`, `kit-told-you`).',
+    trigger: { kind: 'interact', poiId: 'wen' },
+    conditions: [
+      { kind: 'debt', sponsorId: 'wen', status: 'none' },
+      { kind: 'count', of: 'staked', sponsorId: 'wen', atMost: 0 },
+      { kind: 'count', of: 'repaid', sponsorId: 'wen', atMost: 0 },
+    ],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'Madame Wen',
+        lines: [
+          'Madame Wen: A hundred and fifty thousand. Two days. Half again on top.',
+          'Madame Wen: Enough for her buy-in and change. Everyone at your level considers it.',
+        ],
+      },
+      {
+        kind: 'choice',
+        speaker: 'Madame Wen',
+        prompt: 'Take Madame Wen’s money?',
+        options: [
+          {
+            label: 'Take the $150,000',
+            then: [
+              { kind: 'takeStake', sponsorId: 'wen' },
+              { kind: 'dialogue', speaker: 'Madame Wen', lines: ['Madame Wen: Ms. Fong has opened your page.'] },
+            ],
+          },
+          {
+            label: 'No. Kit warned me',
+            then: [{ kind: 'dialogue', speaker: 'Madame Wen', lines: ['Madame Wen: Kit. Yes. Kit would know.'] }],
+          },
         ],
       },
     ],
@@ -1967,6 +2651,11 @@ export const EVENTS: GameEvent[] = [
     ],
     actions: [
       {
+        kind: 'if',
+        when: [{ kind: 'flag', flag: 'cutDanaOff' }],
+        then: [{ kind: 'dialogue', speaker: 'dana', lines: ['Dana: You told me to stay away. I came anyway. You need to hear this.'] }],
+      },
+      {
         kind: 'dialogue',
         speaker: 'dana',
         lines: [
@@ -1994,6 +2683,17 @@ export const EVENTS: GameEvent[] = [
         lines: [
           'Dana: She keeps one of my letters on the desk upstairs. The one about the night you went broke, and came back.',
           'Dana: Anybody can win. She wanted to know who comes back.',
+        ],
+      },
+      {
+        kind: 'if',
+        when: [{ kind: 'flag', flag: 'turnedDownMarcus' }],
+        then: [
+          {
+            kind: 'dialogue',
+            speaker: 'dana',
+            lines: ['Dana: The part she underlined was where you turned down Marcus’s table and climbed back without it.'],
+          },
         ],
       },
     ],
@@ -2087,12 +2787,13 @@ export const EVENTS: GameEvent[] = [
   },
   {
     id: 'kit-squares-up',
-    about: 'Aftermath, the debt arc’s end on the winning side: Kit squared the Consortium himself.',
+    about: 'Aftermath, the debt arc’s end on the winning side, if you said no: Kit squared the Consortium himself.',
     trigger: { kind: 'talkTo', characterId: 'kit' },
     conditions: [
       { kind: 'chapter', cityId: 'portoLumina' },
       { kind: 'flag', flag: 'hasPenthouse' },
       { kind: 'eventDone', eventId: 'kit-after' },
+      { kind: 'flag', flag: 'stakedKit', set: false },
     ],
     actions: [
       {
@@ -2103,6 +2804,29 @@ export const EVENTS: GameEvent[] = [
           'Kit: So I do not need your stake after all. I wanted you to know I asked anyway.',
         ],
       },
+    ],
+  },
+  {
+    id: 'kit-pays-you-back',
+    about: 'Aftermath, if you staked him: Kit squares the Consortium on your money and pays you back doubled.',
+    trigger: { kind: 'talkTo', characterId: 'kit' },
+    conditions: [
+      { kind: 'chapter', cityId: 'portoLumina' },
+      { kind: 'flag', flag: 'hasPenthouse' },
+      { kind: 'eventDone', eventId: 'kit-after' },
+      { kind: 'flag', flag: 'stakedKit' },
+    ],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'kit',
+        lines: [
+          'Kit: Twenty thousand. Your ten, and ten for being the only one who said yes.',
+          'Kit: The Consortium is square. So are we. I hated every hand of it.',
+        ],
+      },
+      { kind: 'giveCash', amount: 20000 },
+      { kind: 'dialogue', speaker: 'kit', lines: ['Kit: Next year I am coming for the penthouse. Keep the chairs warm.'] },
     ],
   },
   {

@@ -1,6 +1,17 @@
 import { useMemo, useState } from 'react'
 import { CHARACTERS } from '../world/characters'
-import { EVENTS, type EventAction, type EventCondition, type EventTrigger, type GameEvent } from '../world/events'
+import {
+  EVENTS,
+  type ChoiceOption,
+  type EventAction,
+  type EventCondition,
+  type EventTrigger,
+  type GameEvent,
+  type Pace,
+  type RideAction,
+  type Tile,
+} from '../world/events'
+import { MAX_OPTIONS } from '../world/eventChecks'
 import { AREAS, LESSONS, TABLES, allShopItems } from '../world/content'
 import { TIME_PERIODS, type TimePeriod } from '../game/time'
 import { TOWN_ORDER, type CityId, type CountOf } from '../game/state'
@@ -11,6 +22,7 @@ import {
   COUNT_OF,
   DEBT_STATUSES,
   ENDS_EVENT,
+  RIDE_ACTION_KINDS,
   SPONSOR_COUNTS,
   SOUNDS,
   STORY_FLAGS,
@@ -75,11 +87,18 @@ const CONDITION_LABEL: Record<EventCondition['kind'], string> = {
   hunted: 'collectors are in town',
   challenge: 'where the match stands',
   count: 'how often something has happened',
+  canPay: 'you can pay a sponsor back',
 }
 
 const ACTION_LABEL: Record<EventAction['kind'], string> = {
   dialogue: 'somebody says',
-  moveNpc: 'somebody walks',
+  choice: 'the player decides',
+  if: 'if something is true',
+  moveNpc: 'somebody walks or runs',
+  movePlayer: 'the player walks',
+  ride: 'a ride on the bus, no getting off',
+  takeStake: 'take a sponsor’s stake',
+  repay: 'pay a sponsor back',
   wait: 'pause',
   setFlag: 'set a flag',
   clearFlag: 'clear a flag',
@@ -128,7 +147,9 @@ export function EventEditor({ selected, onClose }: { selected: string | null; on
     item: allShopItems()[0]?.id ?? '',
     lesson: Object.keys(LESSONS)[0] ?? '',
     event: EVENTS[0]?.id ?? '',
+    sponsor: options.sponsors[0]?.[0] ?? '',
   }
+  const ctx: Ctx = { options, firstIds }
 
   const [drafts, setDrafts] = useState<Record<string, GameEvent>>({})
   const [saved, setSaved] = useState<Record<string, GameEvent>>({})
@@ -289,7 +310,10 @@ export function EventEditor({ selected, onClose }: { selected: string | null; on
                   key={i}
                   className={line.more ? 'more' : undefined}
                   title={endsAt >= 0 && line.step - 1 > endsAt ? 'Never happens: the event has already ended at a table' : undefined}
-                  style={endsAt >= 0 && line.step - 1 > endsAt ? { color: '#e05a5a', textDecoration: 'line-through' } : undefined}
+                  style={{
+                    ...(endsAt >= 0 && line.step - 1 > endsAt ? { color: '#e05a5a', textDecoration: 'line-through' } : {}),
+                    ...(line.depth ? { marginLeft: line.depth * 14 } : {}),
+                  }}
                 >
                   {line.text}
                 </li>
@@ -353,91 +377,16 @@ export function EventEditor({ selected, onClose }: { selected: string | null; on
             hint={(event.conditions ?? []).length === 0 ? 'always — nothing has to be true' : 'all of these are true'}
             testid="event-conditions"
           >
-            <div style={{ display: 'grid', gap: 6 }}>
-              {(event.conditions ?? []).map((condition, i) => (
-                <div className="ed-card" key={i} data-testid={`condition-${i}`}>
-                  <div className="head">
-                    <Pick
-                      label="Condition"
-                      testid={`condition-${i}-kind`}
-                      value={condition.kind}
-                      options={CONDITION_KINDS.map((k) => [k, CONDITION_LABEL[k]])}
-                      onChange={(kind) => edit((ev) => void (ev.conditions![i] = blankCondition(kind as EventCondition['kind'], firstIds)))}
-                    />
-                    <ConditionFields
-                      condition={condition}
-                      index={i}
-                      options={options}
-                      onChange={(next) => edit((ev) => void (ev.conditions![i] = next))}
-                    />
-                    <span style={{ flex: 1 }} />
-                    <button
-                      type="button"
-                      className="ed-btn icon danger"
-                      title="Remove this condition"
-                      aria-label="Remove this condition"
-                      data-testid={`condition-${i}-remove`}
-                      onClick={() => edit((ev) => void ev.conditions!.splice(i, 1))}
-                    >
-                      ×
-                    </button>
-                  </div>
-                </div>
-              ))}
-              <div>
-                <Pick
-                  label="Add a condition"
-                  testid="condition-add"
-                  value=""
-                  empty="+ only if…"
-                  options={CONDITION_KINDS.map((k) => [k, CONDITION_LABEL[k]])}
-                  onChange={(kind) =>
-                    kind && edit((ev) => void (ev.conditions = [...(ev.conditions ?? []), blankCondition(kind as EventCondition['kind'], firstIds)]))
-                  }
-                />
-              </div>
-            </div>
+            <ConditionList
+              testid="condition"
+              conditions={event.conditions ?? []}
+              ctx={ctx}
+              onChange={(next) => edit((ev) => void (ev.conditions = next))}
+            />
           </Section>
 
           <Section title="Then" hint="in order — talking and waiting hold the next step until they finish" testid="event-actions">
-            <div style={{ display: 'grid', gap: 6 }}>
-              {actions.map((action, i) => (
-                <div className="ed-card" key={i} data-testid={`action-${i}`} style={endsAt >= 0 && i > endsAt ? { opacity: 0.6 } : undefined}>
-                  <div className="head">
-                    <span className="ed-step">{i + 1}</span>
-                    <Pick
-                      label="Action"
-                      testid={`action-${i}-kind`}
-                      value={action.kind}
-                      options={ACTION_KINDS.map((k) => [k, ACTION_LABEL[k]])}
-                      onChange={(kind) => edit((ev) => void (ev.actions[i] = blankAction(kind as EventAction['kind'], firstIds)))}
-                    />
-                    <span className="say" data-testid={`action-${i}-says`}>
-                      {describeAction(action, names)}
-                    </span>
-                    <Reorder
-                      index={i}
-                      count={actions.length}
-                      what="step"
-                      testid={`action-${i}`}
-                      onMove={(to) => edit((ev) => void (ev.actions = move(ev.actions, i, to)))}
-                      onRemove={() => edit((ev) => void ev.actions.splice(i, 1))}
-                    />
-                  </div>
-                  <ActionFields action={action} index={i} options={options} onChange={(next) => edit((ev) => void (ev.actions[i] = next))} />
-                </div>
-              ))}
-              <div>
-                <Pick
-                  label="Add a step"
-                  testid="action-add"
-                  value=""
-                  empty="+ then…"
-                  options={ACTION_KINDS.map((k) => [k, ACTION_LABEL[k]])}
-                  onChange={(kind) => kind && edit((ev) => void ev.actions.push(blankAction(kind as EventAction['kind'], firstIds)))}
-                />
-              </div>
-            </div>
+            <ActionList testid="action" actions={actions} ctx={ctx} onChange={(next) => edit((ev) => void (ev.actions = next))} />
           </Section>
           <p className="ed-muted ed-small" style={{ margin: 0 }}>
             Saving edits <code>src/world/events.ts</code> directly, changing only what you changed — comments and
@@ -450,6 +399,257 @@ export function EventEditor({ selected, onClose }: { selected: string | null; on
 }
 
 type Options = Record<'characters' | 'areas' | 'tables' | 'cities' | 'items' | 'lessons' | 'events' | 'pois' | 'sponsors', Array<[string, string]>>
+
+/** What every nested list needs: the ids to offer, and the ids a new thing starts with. */
+interface Ctx {
+  options: Options
+  firstIds: {
+    character: string
+    area: string
+    poi: string
+    table: string
+    city: string
+    item: string
+    lesson: string
+    event: string
+    sponsor: string
+  }
+}
+
+/**
+ * A list of conditions, each with its kind and fields and a way to remove it.
+ * The event's own, an answer's, or an `if`'s — the same list wherever it is.
+ */
+function ConditionList({
+  conditions,
+  onChange,
+  ctx,
+  testid,
+}: {
+  conditions: EventCondition[]
+  onChange: (next: EventCondition[]) => void
+  ctx: Ctx
+  testid: string
+}) {
+  const set = (i: number, c: EventCondition) => onChange(conditions.map((old, n) => (n === i ? c : old)))
+  return (
+    <div style={{ display: 'grid', gap: 6 }}>
+      {conditions.map((condition, i) => (
+        <div className="ed-card" key={i} data-testid={`${testid}-${i}`}>
+          <div className="head">
+            <Pick
+              label="Condition"
+              testid={`${testid}-${i}-kind`}
+              value={condition.kind}
+              options={CONDITION_KINDS.map((k) => [k, CONDITION_LABEL[k]])}
+              onChange={(kind) => set(i, blankCondition(kind as EventCondition['kind'], ctx.firstIds))}
+            />
+            <ConditionFields condition={condition} testid={`${testid}-${i}`} options={ctx.options} onChange={(next) => set(i, next)} />
+            <span style={{ flex: 1 }} />
+            <button
+              type="button"
+              className="ed-btn icon danger"
+              title="Remove this condition"
+              aria-label="Remove this condition"
+              data-testid={`${testid}-${i}-remove`}
+              onClick={() => onChange(conditions.filter((_, n) => n !== i))}
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      ))}
+      <div>
+        <Pick
+          label="Add a condition"
+          testid={`${testid}-add`}
+          value=""
+          empty="+ only if…"
+          options={CONDITION_KINDS.map((k) => [k, CONDITION_LABEL[k]])}
+          onChange={(kind) => kind && onChange([...conditions, blankCondition(kind as EventCondition['kind'], ctx.firstIds)])}
+        />
+      </div>
+    </div>
+  )
+}
+
+/**
+ * A list of steps, in order, each with its kind, what it says in words, its
+ * fields, and the arrows that move it. The event's own steps, an answer's, an
+ * `if`'s, a ride's — the same list wherever it is, so a branch is edited
+ * exactly as the event around it.
+ */
+function ActionList({
+  actions,
+  onChange,
+  ctx,
+  testid,
+  kinds = ACTION_KINDS,
+}: {
+  actions: EventAction[]
+  onChange: (next: EventAction[]) => void
+  ctx: Ctx
+  testid: string
+  /** What may be added here: on a bus, only what can happen sitting down. */
+  kinds?: ReadonlyArray<EventAction['kind']>
+}) {
+  const world = useMemo(() => gameWorld(), [])
+  const names = useMemo(() => namesIn(world), [world])
+  const endsAt = actions.findIndex((a) => ENDS_EVENT.has(a.kind))
+  const set = (i: number, a: EventAction) => onChange(actions.map((old, n) => (n === i ? a : old)))
+  return (
+    <div style={{ display: 'grid', gap: 6 }}>
+      {actions.map((action, i) => (
+        <div className="ed-card" key={i} data-testid={`${testid}-${i}`} style={endsAt >= 0 && i > endsAt ? { opacity: 0.6 } : undefined}>
+          <div className="head">
+            <span className="ed-step">{i + 1}</span>
+            <Pick
+              label="Action"
+              testid={`${testid}-${i}-kind`}
+              value={action.kind}
+              options={kinds.map((k) => [k, ACTION_LABEL[k]])}
+              onChange={(kind) => set(i, blankAction(kind as EventAction['kind'], ctx.firstIds))}
+            />
+            <span className="say" data-testid={`${testid}-${i}-says`}>
+              {describeAction(action, names)}
+            </span>
+            <Reorder
+              index={i}
+              count={actions.length}
+              what="step"
+              testid={`${testid}-${i}`}
+              onMove={(to) => onChange(move(actions, i, to))}
+              onRemove={() => onChange(actions.filter((_, n) => n !== i))}
+            />
+          </div>
+          <ActionFields action={action} testid={`${testid}-${i}`} ctx={ctx} onChange={(next) => set(i, next)} />
+        </div>
+      ))}
+      <div>
+        <Pick
+          label="Add a step"
+          testid={`${testid}-add`}
+          value=""
+          empty="+ then…"
+          options={kinds.map((k) => [k, ACTION_LABEL[k]])}
+          onChange={(kind) => kind && onChange([...actions, blankAction(kind as EventAction['kind'], ctx.firstIds)])}
+        />
+      </div>
+    </div>
+  )
+}
+
+/** A choice's answers: each a label, what it needs, and what it leads to. */
+function OptionList({
+  options,
+  onChange,
+  ctx,
+  testid,
+}: {
+  options: ChoiceOption[]
+  onChange: (next: ChoiceOption[]) => void
+  ctx: Ctx
+  testid: string
+}) {
+  const set = (i: number, o: ChoiceOption) => onChange(options.map((old, n) => (n === i ? o : old)))
+  return (
+    <div style={{ display: 'grid', gap: 6 }}>
+      {options.map((option, i) => {
+        const id = `${testid}-option-${i}`
+        return (
+          <div className="ed-card" key={i} data-testid={id} style={{ borderLeft: '3px solid #4a6aa8' }}>
+            <div className="head">
+              <span className="ed-step">{i + 1}</span>
+              <input
+                className="ed-input"
+                style={{ flex: '1 1 200px' }}
+                aria-label="What the answer says"
+                placeholder="What the button says"
+                data-testid={`${id}-label`}
+                value={option.label}
+                onChange={(e) => set(i, { ...option, label: e.target.value })}
+              />
+              <label className="ed-toggle ed-small">
+                <input
+                  type="checkbox"
+                  data-testid={`${id}-hidden`}
+                  checked={!!option.hidden}
+                  onChange={(e) => {
+                    const next = { ...option }
+                    if (e.target.checked) next.hidden = true
+                    else delete next.hidden
+                    set(i, next)
+                  }}
+                />
+                hide it when closed
+              </label>
+              <Reorder
+                index={i}
+                count={options.length}
+                what="answer"
+                testid={id}
+                onMove={(to) => onChange(move(options, i, to))}
+                onRemove={() => onChange(options.filter((_, n) => n !== i))}
+              />
+            </div>
+            <div style={{ display: 'grid', gap: 6, marginTop: 6 }}>
+              <span className="ed-muted ed-small">open only if (leave empty for always)</span>
+              <ConditionList
+                testid={`${id}-condition`}
+                conditions={option.conditions ?? []}
+                ctx={ctx}
+                onChange={(next) => {
+                  const o = { ...option }
+                  if (next.length === 0) delete o.conditions
+                  else o.conditions = next
+                  set(i, o)
+                }}
+              />
+              <span className="ed-muted ed-small">then</span>
+              <ActionList testid={`${id}-action`} actions={option.then} ctx={ctx} onChange={(then) => set(i, { ...option, then })} />
+            </div>
+          </div>
+        )
+      })}
+      {options.length < MAX_OPTIONS && (
+        <div>
+          <button
+            type="button"
+            className="ed-btn small"
+            data-testid={`${testid}-option-add`}
+            onClick={() => onChange([...options, { label: `Answer ${options.length + 1}`, then: [] }])}
+          >
+            + another answer
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** People who come along: a list of characters, each removable, and one more to add. */
+function PeopleList({ ids, options, onChange, testid }: { ids: string[]; options: Options; onChange: (next: string[]) => void; testid: string }) {
+  return (
+    <span className="ed-row" data-testid={testid}>
+      {ids.map((id, i) => (
+        <span key={id} className="ed-chip">
+          {options.characters.find(([c]) => c === id)?.[1] ?? id}
+          <button type="button" className="ed-btn icon danger" aria-label={`Leave ${id} behind`} onClick={() => onChange(ids.filter((_, n) => n !== i))}>
+            ×
+          </button>
+        </span>
+      ))}
+      <Pick
+        label="Bring somebody along"
+        testid={`${testid}-add`}
+        value=""
+        empty="+ with…"
+        options={options.characters.filter(([c]) => !ids.includes(c))}
+        onChange={(id) => id && onChange([...ids, id])}
+      />
+    </span>
+  )
+}
 
 function TriggerTarget({ trigger, options, onChange }: { trigger: EventTrigger; options: Options; onChange: (t: EventTrigger) => void }) {
   switch (trigger.kind) {
@@ -511,16 +711,16 @@ function StatusToggles<T extends string>({ id, all, chosen, onChange }: { id: st
 
 function ConditionFields({
   condition,
-  index,
+  testid,
   options,
   onChange,
 }: {
   condition: EventCondition
-  index: number
+  testid: string
   options: Options
   onChange: (c: EventCondition) => void
 }) {
-  const id = `condition-${index}`
+  const id = testid
   switch (condition.kind) {
     case 'flag':
       return (
@@ -658,6 +858,8 @@ function ConditionFields({
           <NumberBox label="At most" optional width={56} value={condition.atMost} onChange={(atMost) => onChange(withBound(condition, 'atMost', atMost))} />
         </>
       )
+    case 'canPay':
+      return <Pick label="Sponsor" testid={`${id}-sponsor`} value={condition.sponsorId} options={options.sponsors} onChange={(sponsorId) => onChange({ ...condition, sponsorId })} />
   }
 }
 
@@ -704,17 +906,112 @@ function Speaker({ speaker, options, onChange, testid }: { speaker: string | und
   )
 }
 
-function ActionFields({ action, index, options, onChange }: { action: EventAction; index: number; options: Options; onChange: (a: EventAction) => void }) {
-  const id = `action-${index}`
-  const at = (value: { col: number; row: number }, set: (col: number, row: number) => void) => (
+function ActionFields({ action, testid, ctx, onChange }: { action: EventAction; testid: string; ctx: Ctx; onChange: (a: EventAction) => void }) {
+  const id = testid
+  const options = ctx.options
+  const at = (value: { col: number; row: number }, set: (col: number, row: number) => void, prefix = id) => (
     <>
       <span className="ed-muted ed-small">col</span>
-      <NumberBox label="Column" width={56} testid={`${id}-col`} value={value.col} onChange={(col) => set(col ?? 0, value.row)} />
+      <NumberBox label="Column" width={56} testid={`${prefix}-col`} value={value.col} onChange={(col) => set(col ?? 0, value.row)} />
       <span className="ed-muted ed-small">row</span>
-      <NumberBox label="Row" width={56} testid={`${id}-row`} value={value.row} onChange={(row) => set(value.col, row ?? 0)} />
+      <NumberBox label="Row" width={56} testid={`${prefix}-row`} value={value.row} onChange={(row) => set(value.col, row ?? 0)} />
     </>
   )
+  const pace = (value: Pace | undefined, set: (p: Pace | undefined) => void) => (
+    <Pick
+      label="Pace"
+      testid={`${id}-pace`}
+      value={value ?? 'walk'}
+      options={[
+        ['walk', 'walking'],
+        ['run', 'running'],
+      ]}
+      onChange={(p) => set(p === 'walk' ? undefined : (p as Pace))}
+    />
+  )
+  /** An optional field, gone from the object rather than left undefined. */
+  const optional = <A extends EventAction, K extends keyof A>(a: A, key: K, value: A[K] | undefined): A => {
+    const next = { ...a }
+    if (value === undefined || value === false || (Array.isArray(value) && value.length === 0)) delete next[key]
+    else next[key] = value
+    return next
+  }
   switch (action.kind) {
+    case 'choice':
+      return (
+        <div style={{ display: 'grid', gap: 6 }}>
+          <Speaker speaker={action.speaker} options={options} testid={id} onChange={(speaker) => onChange(optional(action, 'speaker', speaker))} />
+          <input
+            className="ed-input"
+            aria-label="The question"
+            placeholder="The question, as the box asks it"
+            data-testid={`${id}-prompt`}
+            value={action.prompt}
+            onChange={(e) => onChange({ ...action, prompt: e.target.value })}
+          />
+          <OptionList testid={id} options={action.options} ctx={ctx} onChange={(next) => onChange({ ...action, options: next })} />
+        </div>
+      )
+    case 'if':
+      return (
+        <div style={{ display: 'grid', gap: 6 }}>
+          <span className="ed-muted ed-small">if all of these are true</span>
+          <ConditionList testid={`${id}-when`} conditions={action.when} ctx={ctx} onChange={(when) => onChange({ ...action, when })} />
+          <span className="ed-muted ed-small">then</span>
+          <ActionList testid={`${id}-then`} actions={action.then} ctx={ctx} onChange={(then) => onChange({ ...action, then })} />
+          <label className="ed-toggle ed-small">
+            <input
+              type="checkbox"
+              data-testid={`${id}-has-else`}
+              checked={action.else !== undefined}
+              onChange={(e) => onChange(e.target.checked ? { ...action, else: [] } : optional(action, 'else', undefined))}
+            />
+            and something else otherwise
+          </label>
+          {action.else && <ActionList testid={`${id}-else`} actions={action.else} ctx={ctx} onChange={(next) => onChange({ ...action, else: next })} />}
+        </div>
+      )
+    case 'movePlayer':
+      return (
+        <div className="ed-row">
+          <span className="ed-muted ed-small">to</span>
+          {at(action.to, (col, row) => onChange({ ...action, to: { col, row } }))}
+          {pace(action.pace, (p) => onChange(optional(action, 'pace', p)))}
+        </div>
+      )
+    case 'ride':
+      return (
+        <div style={{ display: 'grid', gap: 6 }}>
+          <div className="ed-row">
+            <Pick label="Where" testid={`${id}-area`} value={action.areaId} options={options.areas} onChange={(areaId) => onChange({ ...action, areaId })} />
+            {at(action, (col, row) => onChange({ ...action, col, row }))}
+          </div>
+          <input
+            className="ed-input"
+            aria-label="Caption under the window"
+            placeholder="A line under the window (optional)"
+            data-testid={`${id}-caption`}
+            value={action.caption ?? ''}
+            onChange={(e) => onChange(optional(action, 'caption', e.target.value || undefined))}
+          />
+          <PeopleList testid={`${id}-with`} ids={action.with ?? []} options={options} onChange={(ids) => onChange(optional(action, 'with', ids))} />
+          <span className="ed-muted ed-small">on the way</span>
+          <ActionList
+            testid={`${id}-during`}
+            actions={action.during ?? []}
+            kinds={RIDE_ACTION_KINDS}
+            ctx={ctx}
+            onChange={(next) => onChange(optional(action, 'during', next as RideAction[]))}
+          />
+        </div>
+      )
+    case 'takeStake':
+    case 'repay':
+      return (
+        <div className="ed-row">
+          <Pick label="Sponsor" testid={`${id}-sponsor`} value={action.sponsorId} options={options.sponsors} onChange={(sponsorId) => onChange({ ...action, sponsorId })} />
+        </div>
+      )
     case 'dialogue':
       return (
         <div style={{ display: 'grid', gap: 6 }}>
@@ -732,18 +1029,56 @@ function ActionFields({ action, index, options, onChange }: { action: EventActio
           <LineList testid={`${id}-lines`} lines={action.lines} placeholder="Name: what they say" onChange={(lines) => onChange({ ...action, lines })} />
         </div>
       )
-    case 'moveNpc':
+    case 'moveNpc': {
+      const to: Tile = action.to === 'player' ? { col: 1, row: 1 } : action.to
       return (
-        <div className="ed-row">
-          <Pick label="Who" testid={`${id}-character`} value={action.characterId} options={options.characters} onChange={(characterId) => onChange({ ...action, characterId })} />
-          {at(action, (col, row) => onChange({ ...action, col, row }))}
+        <div style={{ display: 'grid', gap: 6 }}>
+          <div className="ed-row">
+            <Pick label="Who" testid={`${id}-character`} value={action.characterId} options={options.characters} onChange={(characterId) => onChange({ ...action, characterId })} />
+            {pace(action.pace, (p) => onChange(optional(action, 'pace', p)))}
+            <Pick
+              label="To"
+              testid={`${id}-to`}
+              value={action.to === 'player' ? 'player' : 'tile'}
+              options={[
+                ['player', 'up to the player'],
+                ['tile', 'to a tile'],
+              ]}
+              onChange={(v) => onChange({ ...action, to: v === 'player' ? 'player' : to })}
+            />
+            {action.to !== 'player' && at(to, (col, row) => onChange({ ...action, to: { col, row } }))}
+          </div>
+          <div className="ed-row">
+            <label className="ed-toggle ed-small">
+              <input
+                type="checkbox"
+                data-testid={`${id}-from-on`}
+                checked={action.from !== undefined}
+                onChange={(e) => onChange(optional(action, 'from', e.target.checked ? { col: 1, row: 1 } : undefined))}
+              />
+              comes on from
+            </label>
+            {action.from && at(action.from, (col, row) => onChange({ ...action, from: { col, row } }), `${id}-from`)}
+            <label className="ed-toggle ed-small">
+              <input type="checkbox" data-testid={`${id}-follow`} checked={!!action.youFollow} onChange={(e) => onChange(optional(action, 'youFollow', e.target.checked || undefined))} />
+              you walk behind
+            </label>
+            <label className="ed-toggle ed-small">
+              <input type="checkbox" data-testid={`${id}-leaves`} checked={!!action.leaves} onChange={(e) => onChange(optional(action, 'leaves', e.target.checked || undefined))} />
+              and leaves
+            </label>
+          </div>
         </div>
       )
+    }
     case 'teleport':
       return (
-        <div className="ed-row">
-          <Pick label="Where" testid={`${id}-area`} value={action.areaId} options={options.areas} onChange={(areaId) => onChange({ ...action, areaId })} />
-          {at(action, (col, row) => onChange({ ...action, col, row }))}
+        <div style={{ display: 'grid', gap: 6 }}>
+          <div className="ed-row">
+            <Pick label="Where" testid={`${id}-area`} value={action.areaId} options={options.areas} onChange={(areaId) => onChange({ ...action, areaId })} />
+            {at(action, (col, row) => onChange({ ...action, col, row }))}
+          </div>
+          <PeopleList testid={`${id}-with`} ids={action.with ?? []} options={options} onChange={(ids) => onChange(optional(action, 'with', ids))} />
         </div>
       )
     case 'wait':

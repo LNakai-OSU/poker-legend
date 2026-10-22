@@ -1,4 +1,4 @@
-import { OverworldScene, type ChaserConfig, type Interactable, type SceneExit } from './OverworldScene'
+import { OverworldScene, type ChaserConfig, type Interactable, type SceneCue, type SceneExit } from './OverworldScene'
 import { AREAS, CITIES, MISSIONS, SPONSORS, collectorSpawn, findArea } from '../world/content'
 import { isWalkable } from './tileRenderer'
 import { missionStatus } from '../game/progression'
@@ -10,6 +10,11 @@ import { PERIOD_LABEL } from '../game/time'
 import { CHARACTERS, charactersIn } from '../world/characters'
 import { EVENTS, eventFor, type GameEvent } from '../world/events'
 import { artForPoi, figureForCharacter, figuresForPois } from './casting'
+import type { CastPlace, Cue } from '../game/eventMachine'
+import { besideTile } from './paths'
+
+/** How fast a beat walks somebody, in pixels a second: a stroll beside you, or a run to catch you. */
+const PACE_SPEED = { walk: 118, run: 250 } as const
 
 interface CitySceneProps {
   state: GameState
@@ -20,8 +25,11 @@ interface CitySceneProps {
   onCaught: () => void
   /** Hand a scripted beat to the runner. Without it, events do not fire. */
   onEvent?: (event: GameEvent) => void
-  /** Anybody an event has stood somewhere other than their scheduled tile. */
-  moved?: Record<string, { col: number; row: number }>
+  /** Where beats have put people: somewhere other than their usual tile, or somewhere they do not usually go. */
+  cast?: Record<string, CastPlace>
+  /** Walks a beat has asked for. */
+  cues?: Cue[]
+  onCueDone?: (id: number, at?: { col: number; row: number }) => void
   /** Set while an event has the screen: the street holds still until it is done. */
   paused?: boolean
 }
@@ -33,7 +41,9 @@ export function CityScene({
   onEnterArea,
   onCaught,
   onEvent,
-  moved,
+  cast = {},
+  cues = [],
+  onCueDone,
   paused,
 }: CitySceneProps) {
   // Areas resolve globally, not within a city: walking off the edge of a street
@@ -56,8 +66,36 @@ export function CityScene({
   // Whoever the hour puts here. A POI is part of the map and is always in it;
   // these are people, and where they are depends on when you came. Each is
   // drawn as themselves: the Marcus in the street is the Marcus at the table.
-  const scheduled = charactersIn(areaId, state.period, state).map((entry) => ({
+  // A beat can take somebody away from their usual place, and bring somebody
+  // who is not usually here: Dana, walking you to the bus.
+  const castHere = Object.entries(cast).filter(([, place]) => place.areaId === areaId)
+  const usual = charactersIn(areaId, state.period, state).filter(
+    (entry) => !cast[entry.id] || cast[entry.id].areaId === areaId,
+  )
+  const visiting = castHere
+    .map(([id]) => id)
+    .filter((id) => !usual.some((entry) => entry.id === id) && CHARACTERS[id])
+    .map((id) => ({ id, character: CHARACTERS[id], at: { col: -1, row: -1 }, lines: CHARACTERS[id].overworld?.lines ?? [] }))
+  // Somebody who came with you stands beside where you land, on a tile nobody
+  // else is standing on.
+  const taken = new Set<string>([
+    ...area.pois.map((p) => `${p.col},${p.row}`),
+    ...usual.map((e) => `${e.at.col},${e.at.row}`),
+    `${landing.col},${landing.row}`,
+  ])
+  const placeOf = (id: string, at: { col: number; row: number }) => {
+    const place = cast[id]
+    if (!place || place.areaId !== areaId) return at
+    if ('beside' in place) {
+      const spot = besideTile(area.map, landing, (c, r) => taken.has(`${c},${r}`))
+      taken.add(`${spot.col},${spot.row}`)
+      return spot
+    }
+    return { col: place.col, row: place.row }
+  }
+  const scheduled = [...usual, ...visiting].map((entry) => ({
     ...entry,
+    at: placeOf(entry.id, entry.at),
     figure: figureForCharacter(entry.id, entry.character),
   }))
   // Everybody standing at a POI, dressed for what they do and made up from
@@ -100,7 +138,7 @@ export function CityScene({
       // Somebody with something scripted to say says that instead of their
       // usual line for the hour.
       const event = onEvent ? eventFor(EVENTS, { kind: 'talkTo', characterId: id }, state) : undefined
-      const placed = moved?.[id] ?? at
+      const placed = at
       return {
         id: `character-${id}`,
         name: character.name,
@@ -214,6 +252,19 @@ export function CityScene({
       }}
       period={state.period}
       paused={paused}
+      cues={cues
+        .filter((cue) => cue.areaId === areaId)
+        .map(
+          (cue): SceneCue => ({
+            id: cue.id,
+            who: cue.who === 'player' ? 'player' : `character-${cue.who}`,
+            to: cue.to,
+            speed: PACE_SPEED[cue.pace],
+            youFollow: cue.youFollow,
+            leaves: cue.leaves,
+          }),
+        )}
+      onCueDone={onCueDone}
       outdoors={outdoors}
       stamps={area.stamps}
       hud={

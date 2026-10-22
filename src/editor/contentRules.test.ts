@@ -159,7 +159,7 @@ describe('an event', () => {
   it('may not name tables, areas or characters that do not exist', () => {
     const e = fresh()
     e.actions = [
-      { kind: 'moveNpc', characterId: 'ghost', col: 1, row: 1 },
+      { kind: 'moveNpc', characterId: 'ghost', to: { col: 1, row: 1 } },
       { kind: 'teleport', areaId: 'atlantis', col: 1, row: 1 },
       { kind: 'dialogue', speaker: 'ghost', lines: ['Boo.'] },
       { kind: 'startTable', tableId: 'nowhere' },

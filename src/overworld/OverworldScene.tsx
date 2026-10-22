@@ -15,6 +15,7 @@ import { TouchControls, useIsTouchDevice } from './TouchControls'
 import { cameraOffset } from './camera'
 import type { Edge } from '../world/types'
 import { Minimap } from './Minimap'
+import { pathBeside, pathTo, type Tile } from './paths'
 
 const MOVE_KEYS: Record<string, Direction> = {
   ArrowUp: 'up', w: 'up', W: 'up',
@@ -58,6 +59,23 @@ export interface Interactable extends NpcConfig {
    * conversation — and this scene should stay out of the way.
    */
   onTalk?: () => boolean
+}
+
+/**
+ * A movement a beat has asked the street for. The scene walks it, and says
+ * when it has landed — and where, when it was "next to the player".
+ */
+export interface SceneCue {
+  id: number
+  /** `'player'`, or the id of the interactable who walks. */
+  who: string
+  to: Tile | 'player'
+  /** CSS-free speed: art pixels a second, at the map's own scale. */
+  speed: number
+  /** The player walks a step behind them. */
+  youFollow: boolean
+  /** Gone once they get there. */
+  leaves: boolean
 }
 
 export interface ChaserConfig {
@@ -114,9 +132,14 @@ interface OverworldSceneProps {
   /**
    * Set while a scripted beat has the screen. Nobody moves — not you, not a
    * collector — and nothing else can be talked to, so a beat that fires as you
-   * walk in is not read while you walk straight out the other side.
+   * walk in is not read while you walk straight out the other side. Nobody but
+   * whoever the beat itself is walking (`cues`).
    */
   paused?: boolean
+  /** Movements a beat has asked for, played in order of id. */
+  cues?: SceneCue[]
+  /** A cue has landed; `at` is where, for somebody who walked up to the player. */
+  onCueDone?: (id: number, at?: Tile) => void
 }
 
 export function OverworldScene({
@@ -137,6 +160,8 @@ export function OverworldScene({
   openEdges,
   onLeaveEdge,
   paused = false,
+  cues,
+  onCueDone,
 }: OverworldSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
@@ -160,6 +185,15 @@ export function OverworldScene({
   onLeaveEdgeRef.current = onLeaveEdge
   const pausedRef = useRef(paused)
   pausedRef.current = paused
+  const onCueDoneRef = useRef(onCueDone)
+  onCueDoneRef.current = onCueDone
+  const cuesRef = useRef(cues ?? [])
+  cuesRef.current = cues ?? []
+  // Set once the Pixi scene is up: bring the people on the map in line with the
+  // list, and start whatever walks a beat has asked for. Until then, no-ops —
+  // the scene catches up with both as soon as it is built.
+  const syncPeopleRef = useRef<(list: Interactable[]) => void>(() => {})
+  const playCuesRef = useRef<(list: SceneCue[]) => void>(() => {})
   // Touch input drives the same paths as the keyboard rather than synthesising
   // key events, so the Pixi ticker reads it straight from these refs.
   const touchDirRef = useRef<Direction | null>(null)
@@ -180,6 +214,13 @@ export function OverworldScene({
   useEffect(() => {
     applyLightRef.current(light)
   }, [light])
+
+  // People come and go while you stand here: a beat brings somebody on, walks
+  // them to you, and they leave. The street follows the list.
+  useEffect(() => {
+    syncPeopleRef.current(interactables)
+    playCuesRef.current(cues ?? [])
+  })
 
   useEffect(() => {
     const container = containerRef.current
@@ -261,19 +302,32 @@ export function OverworldScene({
       world.addChild(signs, actors, overlay)
 
       const player = new GridPlayer(playerStart.col, playerStart.row, { figure: HERO_FIGURE })
-      const npcs = interactables.map((cfg) => new Npc(cfg))
-      actors.addChild(player.sprite, ...npcs.map((n) => n.sprite))
+      actors.addChild(player.sprite)
+      // Everybody standing on the map. Not fixed: a beat can bring somebody on
+      // and walk them off again (see `syncPeople`).
+      const npcs: Npc[] = []
       // Names are not hung over everybody all the time — a street of floating
       // captions reads as a debug view. A name shows over whoever you are
       // standing next to, which is the person "E" would talk to.
       // The whole world is scaled up, which would blow the captions up with it;
       // counter-scale them so they stay a readable size.
-      for (const npc of npcs) {
+      const addNpc = (cfg: Interactable) => {
+        const npc = new Npc({ ...cfg })
+        npcs.push(npc)
+        actors.addChild(npc.sprite)
         npc.label.scale.set(1 / zoom)
         const anchor = npc.captionAnchor()
         npc.label.position.set(anchor.x, anchor.y - 1)
         overlay.addChild(npc.label)
+        return npc
       }
+      const removeNpc = (npc: Npc) => {
+        const at = npcs.indexOf(npc)
+        if (at >= 0) npcs.splice(at, 1)
+        npc.sprite.destroy({ children: true })
+        npc.label.destroy()
+      }
+      for (const cfg of interactables) addNpc(cfg)
       // Signs over the doors. Every exit already carried a label in the content —
       // "Card Room", "Menswear", "Auto Row" — and none of it was ever drawn, so a
       // boulevard was six identical brown rectangles and the only way to find out
@@ -361,9 +415,121 @@ export function OverworldScene({
 
       // Everyone standing in the world occupies their tile. Walking through a
       // person looks broken and makes the crowd feel like scenery.
-      const occupied = new Set(npcs.map((n) => `${n.config.col},${n.config.row}`))
+      const npcAt = (col: number, row: number, except?: Npc) =>
+        npcs.some((n) => n !== except && n.config.col === col && n.config.row === row)
       const isOccupied = (col: number, row: number) =>
-        occupied.has(`${col},${row}`) || (hunter !== null && hunter.col === col && hunter.row === row)
+        npcAt(col, row) || (hunter !== null && hunter.col === col && hunter.row === row)
+      const isDoorTile = (col: number, row: number) => exits.some((e) => e.col === col && e.row === row)
+
+      /** Brings the people on the map in line with the list: newcomers on, the departed off, the moved moved. */
+      const syncPeople = (list: Interactable[]) => {
+        const wanted = new Set(list.map((cfg) => cfg.id))
+        for (const npc of [...npcs]) if (!wanted.has(npc.config.id) && !npc.walking) removeNpc(npc)
+        for (const cfg of list) {
+          const npc = npcs.find((n) => n.config.id === cfg.id)
+          if (!npc) addNpc(cfg)
+          else if (!npc.walking && (npc.config.col !== cfg.col || npc.config.row !== cfg.row)) npc.place(cfg.col, cfg.row)
+        }
+      }
+      syncPeopleRef.current = syncPeople
+
+      // A beat walking people about. One walk at a time is what the content
+      // asks for, but nothing here depends on it.
+      const started = new Set<number>()
+      /** Where the player is being walked, a tile at a time, and what to say once there. */
+      let playerWalk: { trail: Tile[]; leader: Npc | null; leaderHome: boolean; done: () => void } | null = null
+      const towards = (from: Tile, to: Tile): Direction =>
+        to.col > from.col ? 'right' : to.col < from.col ? 'left' : to.row > from.row ? 'down' : 'up'
+
+      const startCue = (cue: SceneCue) => {
+        started.add(cue.id)
+        const report = (at?: Tile) => onCueDoneRef.current?.(cue.id, at)
+        const here = { col: player.col, row: player.row }
+        if (cue.who === 'player') {
+          if (cue.to === 'player') return report()
+          const path = pathTo(map, here, cue.to, (c, r) => isOccupied(c, r), isDoorTile)
+          if (!path) {
+            player.place(cue.to.col, cue.to.row)
+            return report()
+          }
+          player.speedPxPerSec = cue.speed
+          playerWalk = { trail: path, leader: null, leaderHome: true, done: () => report() }
+          return
+        }
+        const npc = npcs.find((n) => n.config.id === cue.who)
+        if (!npc) return report()
+        const from = { col: npc.config.col, row: npc.config.row }
+        const blocked = (c: number, r: number) => npcAt(c, r, npc) || (c === player.col && r === player.row)
+        const path =
+          cue.to === 'player'
+            ? pathBeside(map, from, here, (c, r) => npcAt(c, r, npc), isDoorTile)
+            : pathTo(map, from, cue.to, blocked, isDoorTile)
+        const arrive = () => {
+          if (cue.to === 'player') {
+            // Face to face, as anybody does who has run to catch you up.
+            npc.turn(towards({ col: npc.config.col, row: npc.config.row }, here))
+            player.face(towards(here, { col: npc.config.col, row: npc.config.row }))
+          }
+          const at = { col: npc.config.col, row: npc.config.row }
+          if (cue.leaves) removeNpc(npc)
+          report(cue.leaves ? undefined : at)
+        }
+        if (!path) {
+          // Nowhere to walk: stand them where they were going rather than hang the beat.
+          if (cue.to !== 'player' && isWalkable(map, cue.to.col, cue.to.row)) npc.place(cue.to.col, cue.to.row)
+          return arrive()
+        }
+        if (cue.youFollow) {
+          player.speedPxPerSec = cue.speed
+          const walk = { trail: [] as Tile[], leader: npc, leaderHome: false, done: arrive }
+          playerWalk = walk
+          npc.onStep = (left) => walk.trail.push(left)
+          npc.walk(path, cue.speed, () => {
+            npc.onStep = null
+            walk.leaderHome = true
+          })
+          return
+        }
+        npc.walk(path, cue.speed, arrive)
+      }
+      playCuesRef.current = (list: SceneCue[]) => {
+        for (const cue of [...list].sort((a, b) => a.id - b.id)) if (!started.has(cue.id)) startCue(cue)
+      }
+
+      /** One frame of the player being walked: the next tile of the trail, once the last step has landed. */
+      const walkPlayer = () => {
+        const walk = playerWalk
+        if (!walk || player.moving) return
+        const next = walk.trail[0]
+        if (!next) {
+          if (!walk.leaderHome) return
+          playerWalk = null
+          player.speedPxPerSec = PLAYER_SPEED
+          walk.done()
+          return
+        }
+        if (next.col === player.col && next.row === player.row) {
+          walk.trail.shift()
+          return
+        }
+        if (!player.isAdjacentTo(next.col, next.row)) {
+          // Not a step away: find the way to it, through whoever is not in it.
+          const way = pathTo(map, { col: player.col, row: player.row }, next, (c, r) => npcAt(c, r), isDoorTile)
+          if (way && way.length > 0) walk.trail.splice(0, 1, ...way)
+          else {
+            player.place(next.col, next.row)
+            walk.trail.shift()
+          }
+          return
+        }
+        player.tryMove(towards({ col: player.col, row: player.row }, next), map, (c, r) => npcAt(c, r))
+        if (player.moving) walk.trail.shift()
+        else {
+          // Somebody in the way of a scripted walk: step through rather than stand there forever.
+          player.place(next.col, next.row)
+          walk.trail.shift()
+        }
+      }
 
       const findAdjacent = () => npcs.find((n) => player.isAdjacentTo(n.config.col, n.config.row))
 
@@ -484,6 +650,7 @@ export function OverworldScene({
             step(tapQueue.shift()!)
           }
         }
+        walkPlayer()
         player.update(ticker.deltaMS)
 
         if (hunter && !caught && !pausedRef.current) {
@@ -563,10 +730,16 @@ export function OverworldScene({
         }
         setPrompt(adjacent ? adjacent.config.name : null)
       })
+
+      // Whatever arrived while the scene was being built.
+      syncPeople(interactablesRef.current)
+      playCuesRef.current(cuesRef.current)
     })()
 
     return () => {
       cancelled = true
+      syncPeopleRef.current = () => {}
+      playCuesRef.current = () => {}
       window.removeEventListener('keydown', keydown)
       window.removeEventListener('keyup', keyup)
       lightMapToFree?.destroy()
@@ -683,6 +856,9 @@ export function OverworldScene({
     </div>
   )
 }
+
+/** How fast the player walks under their own steam, which a scripted walk sets back. */
+const PLAYER_SPEED = 220
 
 /** Greedy pursuit: close the bigger gap first, fall back to the other axis when blocked. */
 function stepToward(hunter: GridPlayer, targetCol: number, targetRow: number, map: TileGrid) {

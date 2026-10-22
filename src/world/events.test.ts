@@ -1,5 +1,20 @@
 import { describe, expect, it } from 'vitest'
-import { EVENTS, canBothFire, conditionHolds, eventFor, eventsSharing, type GameEvent } from './events'
+import {
+  EVENTS,
+  arrivalClashes,
+  arrivalsDuring,
+  canBothFire,
+  conditionHolds,
+  eventFor,
+  eventsSharing,
+  everyAction,
+  everyCondition,
+  type EventAction,
+  type GameEvent,
+} from './events'
+import { actionProblems, type StoryWorld } from './eventChecks'
+import { LESSONS, allShopItems } from './content'
+import { STORY_FLAG_IDS, type StoryFlag } from './flags'
 import { readFileSync } from 'node:fs'
 import { CHARACTERS, allSchedules, scheduleFor } from './characters'
 import { AREAS, CITIES, CITY_ORDER, SPONSORS, TABLES } from './content'
@@ -71,7 +86,7 @@ const SAY_HELLO: GameEvent = {
 
 describe('conditions', () => {
   it('reads a flag both ways round', () => {
-    const won = at({ flags: { wonPokerNight: true, beatFinalRival: false, hasPenthouse: false, cameBack: false } })
+    const won = at({ flags: { ...initialState().flags, wonPokerNight: true } })
     expect(conditionHolds({ kind: 'flag', flag: 'wonPokerNight' }, won)).toBe(true)
     expect(conditionHolds({ kind: 'flag', flag: 'wonPokerNight', set: false }, won)).toBe(false)
     expect(conditionHolds({ kind: 'flag', flag: 'wonPokerNight', set: false }, at())).toBe(true)
@@ -188,6 +203,68 @@ describe('telling two events apart', () => {
   })
 })
 
+/**
+ * A beat that carries you somewhere is still holding the screen when you walk
+ * in, so it and any beat for walking in must be told apart — by what it has
+ * done on the way, down whichever branch it went.
+ */
+describe('a beat that carries you into somewhere', () => {
+  const carry = (actions: EventAction[], conditions: GameEvent['conditions'] = []): GameEvent => ({
+    id: 'carry',
+    about: 'test',
+    trigger: { kind: 'talkTo', characterId: 'dana' },
+    conditions,
+    actions,
+  })
+  const arrival = (conditions: GameEvent['conditions']): GameEvent => ({
+    id: 'arrival',
+    about: 'test',
+    trigger: { kind: 'enterArea', areaId: 'depot' },
+    conditions,
+    actions: [{ kind: 'dialogue', lines: ['Here.'] }],
+  })
+
+  it('clashes with a beat for walking in that could be ready as it arrives', () => {
+    const into = carry([{ kind: 'teleport', areaId: 'depot', col: 6, row: 2 }])
+    expect(arrivalClashes([into, arrival([])])).toHaveLength(1)
+  })
+
+  it('is told apart by a flag it sets on the way, down the branch that moves you', () => {
+    const into = carry([
+      {
+        kind: 'choice',
+        prompt: 'Come?',
+        options: [
+          { label: 'Yes', then: [{ kind: 'setFlag', flag: 'metDana' }, { kind: 'teleport', areaId: 'depot', col: 6, row: 2 }] },
+          { label: 'No', then: [] },
+        ],
+      },
+    ])
+    expect(arrivalsDuring(into)).toHaveLength(1)
+    expect(arrivalClashes([into, arrival([{ kind: 'flag', flag: 'metDana', set: false }])])).toEqual([])
+    // Set on the other branch only, it tells nothing apart.
+    const wrongWay = carry([
+      {
+        kind: 'choice',
+        prompt: 'Come?',
+        options: [
+          { label: 'Yes', then: [{ kind: 'teleport', areaId: 'depot', col: 6, row: 2 }] },
+          { label: 'No', then: [{ kind: 'setFlag', flag: 'metDana' }] },
+        ],
+      },
+    ])
+    expect(arrivalClashes([wrongWay, arrival([{ kind: 'flag', flag: 'metDana', set: false }])])).toHaveLength(1)
+  })
+
+  it('is told apart from a beat that waits for it, since it is not over yet', () => {
+    const into = carry([{ kind: 'ride', areaId: 'depot', col: 6, row: 2 }])
+    expect(arrivalClashes([into, arrival([{ kind: 'eventDone', eventId: 'carry' }])])).toEqual([])
+    // A ride costs the hour, so the hour it started in tells nothing apart.
+    const hourly = carry([{ kind: 'ride', areaId: 'depot', col: 6, row: 2 }], [{ kind: 'period', period: 'morning' }])
+    expect(arrivalClashes([hourly, arrival([{ kind: 'period', period: 'afternoon' }])])).toHaveLength(1)
+  })
+})
+
 describe('picking the event for a moment', () => {
   it('matches a trigger exactly, not loosely', () => {
     const trigger = { kind: 'talkTo', characterId: 'marcus' } as const
@@ -258,7 +335,7 @@ describe('the events in the game', () => {
 
   it('names characters and tables that exist in its actions', () => {
     for (const event of EVENTS) {
-      for (const action of event.actions) {
+      for (const action of everyAction(event.actions)) {
         if (action.kind === 'dialogue' && action.speaker) {
           // A speaker is a character id or a plain name; an id that nearly
           // matches one is the bug worth catching.
@@ -290,6 +367,60 @@ describe('the events in the game', () => {
         ).toBe(true)
       }
     }
+  })
+
+  it('makes sense down every branch: who it names, where it walks people, every question with a way on', () => {
+    const world: StoryWorld = {
+      characters: CHARACTERS,
+      areas: AREAS,
+      tables: TABLES,
+      cityIds: Object.keys(CITIES),
+      itemIds: allShopItems().map((item) => item.id),
+      lessonIds: Object.keys(LESSONS),
+      sponsorIds: Object.keys(SPONSORS),
+      eventIds: EVENTS.map((e) => e.id),
+    }
+    for (const event of EVENTS) {
+      expect(actionProblems(event, world), event.id).toEqual([])
+    }
+  })
+
+  it('never carries the player into somewhere another beat is waiting for them to walk into', () => {
+    const clashes = arrivalClashes(EVENTS).map(([a, b]) => `${a.id} carries you to where ${b.id} fires`)
+    expect(clashes).toEqual([])
+  })
+
+  it('remembers every choice: a flag an answer sets is read by some other beat or person', () => {
+    // A choice whose flag nobody reads changed nothing but the next line.
+    const read = new Map<StoryFlag, Set<string>>()
+    const note = (flag: StoryFlag, by: string) => read.set(flag, new Set([...(read.get(flag) ?? []), by]))
+    for (const event of EVENTS) {
+      for (const c of everyCondition(event)) if (c.kind === 'flag') note(c.flag, event.id)
+    }
+    for (const [id, character] of Object.entries(CHARACTERS)) {
+      for (const chapter of character.overworld?.chapters ?? []) {
+        for (const c of chapter.when) if (c.kind === 'flag') note(c.flag, `character:${id}`)
+      }
+    }
+    for (const { area } of Object.values(AREAS)) for (const poi of area.pois) if (poi.requiresFlag) note(poi.requiresFlag as StoryFlag, `poi:${poi.id}`)
+
+    let choices = 0
+    for (const event of EVENTS) {
+      for (const action of everyAction(event.actions)) {
+        if (action.kind !== 'choice') continue
+        choices++
+        for (const option of action.options) {
+          for (const set of everyAction(option.then)) {
+            if (set.kind !== 'setFlag' && set.kind !== 'clearFlag') continue
+            const readers = [...(read.get(set.flag) ?? [])].filter((by) => by !== event.id)
+            expect(readers.length, `${event.id}: “${option.label}” sets ${set.flag}, which nothing else reads`).toBeGreaterThan(0)
+          }
+        }
+      }
+    }
+    expect(choices, 'no beat lets the player decide anything').toBeGreaterThan(0)
+    // And every flag the game knows is about something.
+    expect(STORY_FLAG_IDS.length).toBeGreaterThan(4)
   })
 
   it('ends the first poker night at a table rather than nowhere', () => {
@@ -385,7 +516,8 @@ describe('losing is part of the story', () => {
     for (let i = 0; i < 4; i++) {
       const event = eventFor(EVENTS, { kind: 'talkTo', characterId: 'marcus' }, s)
       if (!event) return false
-      if (event.actions.some((a) => a.kind === 'startPokerNight')) return true
+      // Any answer that deals you in will do: the player can always pick it.
+      if (everyAction(event.actions).some((a) => a.kind === 'startPokerNight')) return true
       if (event.repeatable) return false
       s = { ...s, completedEventIds: [...s.completedEventIds, event.id] }
     }
@@ -404,7 +536,7 @@ describe('losing is part of the story', () => {
         cash: 0,
         day: 12,
         unlockedCityIds: upTo(town),
-        flags: { wonPokerNight: true, beatFinalRival: false, hasPenthouse: false, cameBack: false },
+        flags: { ...initialState().flags, wonPokerNight: true },
         ...extra,
       })
     for (const town of TOWN_ORDER) {
@@ -417,7 +549,7 @@ describe('losing is part of the story', () => {
       'broke after losing the match',
     ).toBe(true)
     expect(
-      dealtBackIn(broke('portoLumina', { completedEventIds: named, flags: { wonPokerNight: true, beatFinalRival: true, hasPenthouse: true, cameBack: false } })),
+      dealtBackIn(broke('portoLumina', { completedEventIds: named, flags: { ...initialState().flags, wonPokerNight: true, beatFinalRival: true, hasPenthouse: true } })),
       'broke in the penthouse',
     ).toBe(true)
     // Losing the very first night and walking out is not the end either.
@@ -479,7 +611,7 @@ describe('losing is part of the story', () => {
         period: 'evening',
         unlockedCityIds: upTo('portoLumina'),
         finaleRematchDay: rematch ? 18 : 25,
-        flags: { wonPokerNight: true, beatFinalRival: false, hasPenthouse: false, cameBack: false },
+        flags: { ...initialState().flags, wonPokerNight: true },
         completedEventIds: ['nadia-names-the-match', 'marcus-at-the-rail', 'dana-reveal', 'hal-on-the-eve', 'kit-lumina'],
         record: { busted: 0, challengeLost: 1, sponsors: {} },
       })
@@ -508,7 +640,7 @@ describe('losing is part of the story', () => {
   })
 
   it('pays off the rent: the receipt is under the door when you come home', () => {
-    const home = at({ unlockedCityIds: upTo('riverbend'), flags: { wonPokerNight: true, beatFinalRival: false, hasPenthouse: false, cameBack: false } })
+    const home = at({ unlockedCityIds: upTo('riverbend'), flags: { ...initialState().flags, wonPokerNight: true } })
     expect(eventFor(EVENTS, { kind: 'enterArea', areaId: 'home' }, home)?.id).toBe('rent-receipt')
     expect(eventFor(EVENTS, { kind: 'interact', poiId: 'apartment-window' }, at({ day: 10 }))?.id).toBe('rent-day')
   })
