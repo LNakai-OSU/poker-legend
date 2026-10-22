@@ -1,6 +1,6 @@
 import {
-  CARPET, CARPET_GREEN, CARPET_NEON, CARPET_ROYAL, CARPET_TEAL, CARPET_VIOLET, CHECKER, DECK, DOOR,
-  LINO, MARBLE, PANEL_WOOD, PAPER_DAMASK, PAPER_STRIPE, SALTILLO, SEAGRASS, SHOWROOM, SLATE, TILE_FLOOR, VINYL,
+  CARPET, CARPET_GREEN, CARPET_NAVY, CARPET_NEON, CARPET_ROYAL, CARPET_TEAL, CARPET_VIOLET, CHECKER, DECK, DINER_LINO, DOOR,
+  LINO, MARBLE, PANEL_WOOD, PAPER_DAMASK, PAPER_STRIPE, PARQUET, SALTILLO, SEAGRASS, SHAG, SHOWROOM, SLATE, TILE_FLOOR, VINYL,
   WALL_BAIZE, WALL_BAMBOO, WALL_CABIN, WALL_MARBLE, WALL_NEON, WALL_PAINT, WALL_TILED, WALL_TOP, WOOD_FLOOR,
 } from './tiles'
 import { mix, speck, type Px } from './pixelArt'
@@ -644,6 +644,53 @@ const carpetViolet = motif((x, y) => {
   return band % 2 === 0 ? '#1e1034' : '#221238'
 })
 
+/**
+ * Dark oak parquet laid in a chevron: strips three pixels wide running down to
+ * the right in one band and down to the left in the next, a seam between each.
+ * The Harbour Room, where the floor is older than the members.
+ */
+const parquet = motif((x, y) => {
+  const band = Math.floor(x / 8)
+  const across = band % 2 === 0 ? x % 8 : 7 - (x % 8)
+  const run = y + across
+  if (x % 8 === 0) return '#3e2414'
+  if (run % 3 === 0) return '#4a2a16'
+  const strip = Math.floor(run / 3) + band * 2
+  return ['#7a4a28', '#6c4022', '#84522e', '#724626'][strip % 4]
+})
+
+/** Mint and cream lino in diamonds, scuffed where the stools turn: the Landing Diner. */
+const dinerLino = motif((x, y) => {
+  const a = Math.floor((x + y) / 8)
+  const b = Math.floor((x - y + 32) / 8)
+  const mint = (a + b) % 2 === 0
+  if ((x + y) % 8 === 0 || (x - y + 32) % 8 === 0) return mint ? '#86b8a0' : '#d6cfb8'
+  if (speck(x, y, 5, 29)) return mint ? '#b2dcc6' : '#f6f0de'
+  return mint ? '#9ccab2' : '#e8e1cb'
+})
+
+/**
+ * Wall-to-wall carpet in a brown that was orange once, a darker trellis in it
+ * and the pile flecked: Marcus's front room.
+ */
+const shag = motif((x, y) => {
+  if ((x + y) % 16 === 0 || (x - y + 32) % 16 === 0) return '#6a4226'
+  if ((x + y) % 16 === 8 && (x - y + 32) % 16 === 8) return '#a8743e'
+  if (speck(x, y, 11, 7)) return '#8e5e34'
+  if (speck(x, y, 4, 13)) return '#6e4628'
+  return '#7c5030'
+})
+
+/** The riverboat saloon: navy pile, a gold lattice, a fleuron in every diamond. */
+const carpetNavy = motif((x, y) => {
+  const d = wrap(x - 8) + wrap(y - 8)
+  const e = wrap(x - 24) + wrap(y - 24)
+  if ((x + y) % 16 === 0 || (x - y + 32) % 16 === 0) return '#2e3c6a'
+  if (d < 2 || e < 2) return '#d8b058'
+  if (d === 2 || e === 2) return '#8a6a2e'
+  return (x * 7 + y * 3) % 23 === 0 ? '#22305a' : '#1c2850'
+})
+
 // ---------------------------------------------------------------------------
 // The table the renderer reads
 // ---------------------------------------------------------------------------
@@ -684,6 +731,10 @@ export const INTERIOR_TILES: Record<number, TileVariants> = {
   [CARPET_NEON]: { draws: carpetNeon, pick: quarter },
   [CARPET_ROYAL]: { draws: carpetRoyal, pick: quarter },
   [CARPET_VIOLET]: { draws: carpetViolet, pick: quarter },
+  [CARPET_NAVY]: { draws: carpetNavy, pick: quarter },
+  [PARQUET]: { draws: parquet, pick: quarter },
+  [DINER_LINO]: { draws: dinerLino, pick: quarter },
+  [SHAG]: { draws: shag, pick: quarter },
 }
 
 /** The band of a carpet's border: the outer line, the inner line, and the shade inside them. */
@@ -694,4 +745,5 @@ export const CARPET_BORDERS: Record<number, [string, string, string]> = {
   [CARPET_NEON]: ['#0e0a14', '#a03894', '#1c1426'],
   [CARPET_ROYAL]: ['#2e0810', '#d8b060', '#4a0e1c'],
   [CARPET_VIOLET]: ['#120820', '#b46cff', '#2e1450'],
+  [CARPET_NAVY]: ['#0e1428', '#c8a048', '#18223e'],
 }

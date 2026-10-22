@@ -5,6 +5,7 @@ import { currentGlow, type Glow, type Px } from './pixelArt'
 import { BUILDING_ART } from './art/buildingArt'
 import { CASINO_ART } from './art/casinoArt'
 import { FURNITURE_ART } from './art/furnitureArt'
+import { PROPS_ART } from './art/propsArt'
 import { STREET_ART } from './art/streetArt'
 import { STREET_FURNITURE } from './art/streetFurniture'
 
@@ -103,6 +104,7 @@ const ART: Record<string, StampArt> = {
   ...BUILDING_ART,
   ...CASINO_ART,
   ...FURNITURE_ART,
+  ...PROPS_ART,
   ...STREET_ART,
   ...STREET_FURNITURE,
 }
