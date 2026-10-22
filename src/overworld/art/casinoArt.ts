@@ -693,69 +693,70 @@ const velvetRope: StampArt = {
  */
 const prizeCar: StampArt = {
   frames: 2,
-  bleed: { top: 13 },
+  bleed: { top: 17 },
   standsUp: 10,
   draw: (px, c) => {
     const { w, h, frame } = c
     // The sign, on two chrome posts behind the car.
-    for (const x of [7, w - 8]) {
-      px(x, -2, 2, 18, '#8a8e98')
-      px(x, -2, 1, 18, '#d8dce4')
+    for (const x of [5, w - 7]) {
+      px(x, -6, 2, 22, '#8a8e98')
+      px(x, -6, 1, 22, '#d8dce4')
     }
-    px(4, -13, w - 8, 12, INK)
-    px(5, -12, w - 10, 10, '#3a0a3a')
-    bulbBorder(px, 5, -12, w - 10, 10, frame, '#ffe680', '#6a3a20')
-    glow('neon', () => textCentred(px, 'WIN ME', w / 2, -10, frame ? '#ff6ae0' : '#ffe066'))
+    px(4, -17, w - 8, 12, INK)
+    px(5, -16, w - 10, 10, '#3a0a3a')
+    bulbBorder(px, 5, -16, w - 10, 10, frame, '#ffe680', '#6a3a20')
+    glow('neon', () => textCentred(px, 'WIN ME', w / 2, -14, frame ? '#ff6ae0' : '#ffe066'))
     // The drum: its side in shadow, a neon band round the rim, the turning top.
     shadow(px, 1, h - 4, w - 2, 4, 0.4)
     oval(px, 1, 17, w - 2, 14, '#100c18')
     glow('neon', () => oval(px, 1, 15, w - 2, 13, frame ? '#4fe8ff' : '#2ab8d8'))
     oval(px, 2, 16, w - 4, 11, '#2a2238')
     oval(px, 6, 17, w - 12, 8, '#352c46')
-    // The car, side-on, nose to the right.
-    const x0 = 5
+    // The car, side-on, nose to the right: an inked silhouette, then the paint.
+    const x0 = 4
     const body = '#e8303a'
-    const dark = tint(body, -0.35)
-    // Tail fin, rear deck, the open cabin, the long bonnet.
-    px(x0, 11, 6, 3, body)
-    px(x0, 11, 6, 1, tint(body, 0.4))
-    px(x0 + 1, 10, 3, 1, body)
-    px(x0, 13, 38, 8, body)
-    px(x0, 13, 38, 1, tint(body, 0.35))
-    px(x0 + 27, 12, 10, 1, body)
-    px(x0 + 27, 12, 10, 1, tint(body, 0.25))
-    px(x0, 19, 38, 2, dark)
-    // Cream leather seats behind the windscreen.
-    px(x0 + 9, 9, 4, 5, '#ece0c4')
-    px(x0 + 9, 9, 4, 1, '#ffffff')
-    px(x0 + 16, 9, 4, 5, '#ece0c4')
-    px(x0 + 16, 9, 4, 1, '#ffffff')
-    px(x0 + 8, 13, 14, 1, '#7a1a20')
-    // Windscreen, chrome frame, the steering wheel behind it.
-    px(x0 + 22, 8, 1, 6, '#d8dce4')
-    px(x0 + 23, 8, 3, 5, '#9fd4ec')
-    px(x0 + 23, 8, 1, 5, '#e8f6fc')
-    px(x0 + 20, 10, 2, 3, '#2a2a30')
-    // Chrome strip and bumpers, head and tail lights.
-    px(x0 + 1, 16, 36, 1, '#f4f6f8')
-    px(x0 + 37, 15, 2, 5, '#d8dce4')
-    px(x0 - 1, 15, 2, 5, '#d8dce4')
-    glow('lamp', () => px(x0 + 37, 14, 2, 2, '#fff4c8'))
-    px(x0, 12, 2, 2, '#ff6a4a')
-    // Whitewall tyres.
+    const hi = tint(body, 0.4)
+    const dark = tint(body, -0.4)
+    px(x0 + 10, 1, 18, 2, INK)
+    px(x0 + 8, 3, 23, 8, INK)
+    px(x0 - 1, 9, 42, 13, INK)
+    // Roof and glass, with the pillar between the doors.
+    px(x0 + 11, 2, 16, 2, body)
+    px(x0 + 11, 2, 16, 1, hi)
+    px(x0 + 9, 4, 21, 6, '#7fb8d8')
+    px(x0 + 9, 4, 21, 1, '#c8ecfa')
+    px(x0 + 10, 5, 3, 1, '#ffffff')
+    px(x0 + 19, 4, 2, 6, body)
+    px(x0 + 9, 4, 1, 6, body)
+    px(x0 + 29, 4, 1, 6, dark)
+    // The body: bonnet and boot lid lit along the top, the sills in shadow.
+    px(x0, 10, 40, 11, body)
+    px(x0, 10, 40, 1, hi)
+    px(x0 + 30, 11, 10, 1, tint(body, 0.2))
+    px(x0, 18, 40, 3, dark)
+    px(x0 + 20, 11, 1, 7, dark)
+    px(x0 + 23, 13, 3, 1, '#f4f6f8')
+    // Chrome strip, bumpers, head and tail lights.
+    px(x0, 15, 40, 1, '#f4f6f8')
+    px(x0 + 39, 14, 2, 6, '#d8dce4')
+    px(x0 - 1, 14, 2, 6, '#d8dce4')
+    glow('lamp', () => px(x0 + 38, 11, 2, 3, '#fff4c8'))
+    px(x0, 11, 2, 3, '#ff6a4a')
+    // Whitewall tyres in their arches.
     for (const wx of [x0 + 5, x0 + 27]) {
-      px(wx, 18, 7, 7, '#1a1a1e')
-      px(wx + 1, 19, 5, 5, '#e8e8ec')
-      px(wx + 2, 20, 3, 3, '#a8b0b8')
-      px(wx + 3, 21, 1, 1, '#4a4e54')
+      px(wx - 1, 16, 10, 3, INK)
+      px(wx, 17, 8, 8, '#1a1a1e')
+      px(wx + 1, 18, 6, 6, '#e8e8ec')
+      px(wx + 2, 19, 4, 4, '#a8b0b8')
+      px(wx + 3, 20, 2, 2, '#4a4e54')
     }
-    // The bow on the bonnet.
-    px(x0 + 29, 9, 3, 3, '#ff3a5a')
-    px(x0 + 33, 9, 3, 3, '#ff3a5a')
-    px(x0 + 32, 10, 1, 2, '#c81a3a')
-    px(x0 + 29, 9, 1, 1, '#ff9ab0')
-    px(x0 + 31, 12, 1, 2, '#c81a3a')
-    px(x0 + 33, 12, 1, 2, '#c81a3a')
+    // A bow on the roof, ribbon down the glass.
+    px(x0 + 18, 4, 2, 6, '#ff3a5a')
+    px(x0 + 13, -2, 5, 4, '#ff3a5a')
+    px(x0 + 20, -2, 5, 4, '#ff3a5a')
+    px(x0 + 13, -2, 2, 1, '#ff9ab0')
+    px(x0 + 20, -2, 2, 1, '#ff9ab0')
+    px(x0 + 17, -1, 4, 3, '#c81a3a')
   },
 }
 

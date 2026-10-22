@@ -373,13 +373,13 @@ const MESA_FLOOR = parseMap(`
 ^FFFFFFnnnnnnnnnFFFFF^
 ^FFFFFF!FFF!FFF!FFFFF^
 ^!!!!!!!!!!!!!!!!!!!!^
+^F!!!!!!!!!!!!!!!!!!F^
 ^!!!!!!!!!!!!!!!!!!!!^
-^!!!!!!!!!!!!!!!!!!!!^
-^!!FFF!!!!FF!!!!FFF!!^
+^!!FFF!!FF!!FF!!FFF!!^
 ^!!FFF!!!!!!!!!!FFF!!^
 ^!!!!!!!!!!!!!!!!!!!!^
-^!!!!!!!!F!!F!!FFFFF!^
-^!!!FF!!!F!!F!!FFFFF!^
+^FFFFFFFFF!!FFFFFFFFF^
+^FFFFFFFFF!!FFFFFFFFF^
 ^!!!!!!!!!!!!!!!!!!!!^
 ^!!!!!!!!!!!!!!!!!!!!^
 ^^^^^^^^^^^D^^^^^^^^^^
@@ -1902,11 +1902,52 @@ const neonMesa: CityDef = {
         {
           id: 'mesa-headsup',
           name: 'Heads-Up Table',
-          col: 5,
-          row: 9,
+          col: 9,
+          row: 5,
           color: COLORS.dealer,
           lines: ['Dealer: Fifty-hundred, one-on-one. Lorna plays here most nights.'],
           action: { kind: 'table', tableId: 'mesa-headsup' },
+        },
+        {
+          id: 'mesa-croupier',
+          name: 'Croupier',
+          col: 13,
+          row: 5,
+          color: COLORS.local,
+          role: 'dealer',
+          look: { hairStyle: 'bun' },
+          lines: ['Croupier: No more bets.', 'Croupier: Seventeen, black. It is always seventeen when you are not on it.'],
+          action: { kind: 'flavor' },
+        },
+        {
+          id: 'mesa-cashier',
+          name: 'Change Booth',
+          col: 7,
+          row: 10,
+          color: COLORS.local,
+          role: 'dealer',
+          lines: ['Cashier: Chips in, cash out. Count it at the window, not on the floor.'],
+          action: { kind: 'flavor' },
+        },
+        {
+          id: 'mesa-tourist',
+          name: 'Tourist',
+          col: 14,
+          row: 11,
+          color: COLORS.local,
+          lines: ['Tourist: I have played that bank for six hours. I am going to win that car.', 'Tourist: Take my picture with it? Just in case.'],
+          action: { kind: 'flavor' },
+        },
+        {
+          id: 'mesa-waitress',
+          name: 'Cocktail Waitress',
+          col: 6,
+          row: 4,
+          color: COLORS.local,
+          role: 'waiter',
+          look: { lower: 'skirt', hairStyle: 'long' },
+          lines: ['Waitress: Drinks are free while you play. Nothing else is.'],
+          action: { kind: 'flavor' },
         },
         {
           id: 'highroller',
@@ -2272,13 +2313,18 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'velvet-rope', col: 8, row: 2 },
     { stampId: 'velvet-rope', col: 12, row: 2 },
     { stampId: 'slot-bank-neon', col: 16, row: 1 },
+    { stampId: 'cactus', col: 1, row: 4 },
+    { stampId: 'cactus', col: 20, row: 4 },
     { stampId: 'poker-table-neon', col: 2, row: 5 },
-    { stampId: 'roulette', col: 9, row: 5 },
+    { stampId: 'poker-table-neon-4', col: 7, row: 5 },
+    { stampId: 'roulette', col: 11, row: 5 },
     { stampId: 'craps-table-neon', col: 15, row: 5 },
-    { stampId: 'poker-table-neon-4', col: 3, row: 9 },
+    { stampId: 'slot-bank-neon', col: 1, row: 9 },
+    { stampId: 'change-booth', col: 6, row: 9 },
     { stampId: 'pillar-neon', col: 9, row: 9 },
     { stampId: 'pillar-neon', col: 12, row: 9 },
-    { stampId: 'slot-bank-neon', col: 15, row: 9 },
+    { stampId: 'prize-car', col: 13, row: 9 },
+    { stampId: 'slot-bank-neon', col: 16, row: 9 },
   ],
   'pl-casino': [
     { stampId: 'slot-bank-gold', col: 1, row: 1 },
