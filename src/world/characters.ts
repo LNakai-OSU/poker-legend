@@ -373,7 +373,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
         {
           when: [{ kind: 'chapter', cityId: 'palmCay' }],
           lines: ['Dana: Marcus is here. He does not know I am. Let us keep it that way.'],
-          schedule: [{ period: 'night', areaId: 'pc-casino', col: 16, row: 9 }],
+          schedule: [{ period: 'night', areaId: 'pc-casino', col: 9, row: 8 }],
         },
         {
           when: [{ kind: 'chapter', cityId: 'neonMesa' }],
