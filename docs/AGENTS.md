@@ -12,6 +12,14 @@ scripts/worktree-setup.sh <port>     # private node_modules + dev server on <por
 Ports: the main checkout serves :5173. Give each concurrent agent its own port
 (5174, 5175, …), and never stop a server you didn't start.
 
+**A worktree's dev server does not see your edits.** Vite ignores `.claude/`
+(so the main checkout's server doesn't reload on agents' files), and a
+worktree lives under `.claude/worktrees/`, so its own server never reloads
+either. After editing, restart it before shooting or running the browser
+suite: `kill $(lsof -tiTCP:<port> -sTCP:LISTEN)`, then
+`scripts/worktree-setup.sh <port>` again. Screenshots of a stale server show
+the code as it was when the server started.
+
 ## Commands
 
 ```
