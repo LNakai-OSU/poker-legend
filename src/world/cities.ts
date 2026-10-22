@@ -861,9 +861,18 @@ const apartmentCity: CityDef = {
           color: COLORS.local,
           art: 'none',
           labelled: false,
-          lines: [
+          // The rent is the first thing the run asks of you. Until the Friday game
+          // is won it counts down (and `rent-day` lands on day ten); after it,
+          // Marcus has said he will cover it, and `rent-receipt` is under the door
+          // when you come home.
+          requiresFlag: 'wonPokerNight',
+          lockedLines: [
             'The window faces a brick wall about four feet away.',
             'Rent is due in nine days. You have been not thinking about it.',
+          ],
+          lines: [
+            'The window faces a brick wall about four feet away.',
+            'The rent is Marcus’s problem till you are back. He told the landlord so, loudly, on the stairs.',
           ],
           action: { kind: 'flavor' },
         },

@@ -1,11 +1,66 @@
 import { describe, expect, it } from 'vitest'
 import { EVENTS, canBothFire, conditionHolds, eventFor, eventsSharing, type GameEvent } from './events'
 import { readFileSync } from 'node:fs'
-import { CHARACTERS, allSchedules } from './characters'
-import { AREAS, CITIES, CITY_ORDER, TABLES } from './content'
-import { TOWN_ORDER, initialState, type GameState } from '../game/state'
+import { CHARACTERS, allSchedules, scheduleFor } from './characters'
+import { AREAS, CITIES, CITY_ORDER, SPONSORS, TABLES } from './content'
+import { TOWN_ORDER, initialState, type CityId, type GameState } from '../game/state'
 
 const at = (overrides: Partial<GameState> = {}): GameState => ({ ...initialState(), ...overrides })
+
+/**
+ * The story as an event asks for it: its chapter, its flags, the beats it waits
+ * on, what is owed, where the match stands and the record. The hour and the cash
+ * are left alone — they decide when, not where.
+ */
+function storyStateFor(event: GameEvent, town: CityId): GameState {
+  let state = at({ day: 10, unlockedCityIds: TOWN_ORDER.slice(0, TOWN_ORDER.indexOf(town) + 1) })
+  for (const c of event.conditions ?? []) {
+    switch (c.kind) {
+      case 'flag':
+        state = { ...state, flags: { ...state.flags, [c.flag]: c.set ?? true } }
+        break
+      case 'eventDone':
+        if (c.done ?? true) state = { ...state, completedEventIds: [...state.completedEventIds, c.eventId] }
+        break
+      case 'count': {
+        const n = c.atLeast ?? (c.atMost === undefined ? 1 : 0)
+        const record = state.record
+        const sponsor = c.sponsorId ?? 'cass'
+        const before = record.sponsors[sponsor] ?? { staked: 0, repaid: 0, missed: 0, caught: 0 }
+        state =
+          c.of === 'busted' || c.of === 'challengeLost'
+            ? { ...state, record: { ...record, [c.of]: n } }
+            : {
+                ...state,
+                record: {
+                  ...record,
+                  sponsors: {
+                    ...record.sponsors,
+                    [sponsor]: { ...before, [c.of]: n },
+                  },
+                },
+              }
+        break
+      }
+      case 'challenge': {
+        const want = [c.status].flat()[0]
+        if (want === 'won') state = { ...state, flags: { ...state.flags, hasPenthouse: true } }
+        if (want === 'lost' || want === 'rematch') {
+          state = { ...state, finaleRematchDay: want === 'lost' ? 15 : 0, record: { ...state.record, challengeLost: 1 } }
+        }
+        break
+      }
+      case 'debt': {
+        const want = [c.status].flat()[0]
+        if (want === 'none' || !c.sponsorId) break
+        const debt = { id: c.sponsorId, sponsorId: c.sponsorId, sponsorName: c.sponsorId, principal: 1, owed: 1, cityId: town }
+        state = { ...state, debts: [...state.debts, { ...debt, dueOnDay: want === 'owing' ? 12 : 5 }] }
+        break
+      }
+    }
+  }
+  return state
+}
 
 const SAY_HELLO: GameEvent = {
   id: 'say-hello',
@@ -286,14 +341,19 @@ describe('the run is carried by people', () => {
     }
   })
 
-  it('only writes somebody a beat in a town they can be found in', () => {
+  it('only writes somebody a beat for a chapter in which they can be found', () => {
+    // The chapter is how far the run has got, not where you are standing:
+    // Marcus stays in Basin while you are up in Riverbend, and the kitchen table
+    // he deals there when you go broke is a beat for the Riverbend chapter. What
+    // is wrong is a beat for a chapter in which the person is nowhere at all.
     for (const event of EVENTS) {
       if (event.trigger.kind !== 'talkTo') continue
       const chapter = event.conditions?.find((c) => c.kind === 'chapter')
       if (chapter?.kind !== 'chapter') continue
-      const where = townsOf(event.trigger.characterId)
+      const id = event.trigger.characterId
       for (const town of [chapter.cityId].flat()) {
-        expect(where.has(town), `${event.id} waits for ${event.trigger.characterId} in ${town}, where they never are`).toBe(true)
+        const { schedule } = scheduleFor(CHARACTERS[id], storyStateFor(event, town))
+        expect(schedule.length, `${event.id} waits for ${id} in the ${town} chapter, where they are nowhere`).toBeGreaterThan(0)
       }
     }
   })
@@ -306,5 +366,150 @@ describe('the run is carried by people', () => {
       if (event.trigger.kind !== 'enterArea' && event.trigger.kind !== 'interact') continue
       expect(suite.includes(`'${event.id}'`), `tests/ui.mjs STORY_SEEN does not list ${event.id}`).toBe(true)
     }
+  })
+})
+
+/**
+ * Losing is part of the story, not a dead end: every setback is met by
+ * somebody, and every one of them leaves a way on. docs/STORYBOARD.md, "When it
+ * goes wrong".
+ */
+describe('losing is part of the story', () => {
+  const TIMES = ['morning', 'afternoon', 'evening', 'night'] as const
+  const marcus = CHARACTERS.marcus
+  const upTo = (town: CityId) => TOWN_ORDER.slice(0, TOWN_ORDER.indexOf(town) + 1)
+
+  /** Talks to somebody until a beat starts the kitchen table, as a player would. */
+  function talkUntilTheGame(state: GameState): boolean {
+    let s = state
+    for (let i = 0; i < 4; i++) {
+      const event = eventFor(EVENTS, { kind: 'talkTo', characterId: 'marcus' }, s)
+      if (!event) return false
+      if (event.actions.some((a) => a.kind === 'startPokerNight')) return true
+      if (event.repeatable) return false
+      s = { ...s, completedEventIds: [...s.completedEventIds, event.id] }
+    }
+    return false
+  }
+
+  /** Whether, at some hour Marcus can be found, talking to him gets you dealt back in. */
+  function dealtBackIn(state: GameState): boolean {
+    const { schedule } = scheduleFor(marcus, state)
+    return TIMES.some((period) => schedule.some((e) => e.period === period) && talkUntilTheGame({ ...state, period }))
+  }
+
+  it('never strands a broke player: the kitchen table is open in every chapter', () => {
+    const broke = (town: CityId, extra: Partial<GameState> = {}) =>
+      at({
+        cash: 0,
+        day: 12,
+        unlockedCityIds: upTo(town),
+        flags: { wonPokerNight: true, beatFinalRival: false, hasPenthouse: false, cameBack: false },
+        ...extra,
+      })
+    for (const town of TOWN_ORDER) {
+      expect(dealtBackIn(broke(town)), `broke in the ${town} chapter, and Marcus will not deal`).toBe(true)
+    }
+    const named = ['nadia-names-the-match']
+    expect(dealtBackIn(broke('portoLumina', { completedEventIds: named })), 'broke at the rail').toBe(true)
+    expect(
+      dealtBackIn(broke('portoLumina', { completedEventIds: named, finaleRematchDay: 15, record: { busted: 1, challengeLost: 1, sponsors: {} } })),
+      'broke after losing the match',
+    ).toBe(true)
+    expect(
+      dealtBackIn(broke('portoLumina', { completedEventIds: named, flags: { wonPokerNight: true, beatFinalRival: true, hasPenthouse: true, cameBack: false } })),
+      'broke in the penthouse',
+    ).toBe(true)
+    // Losing the very first night and walking out is not the end either.
+    const walkedOut = at({ cash: 0, completedEventIds: ['poker-night'] })
+    expect(dealtBackIn(walkedOut), 'walked out of the first night and cannot get back in').toBe(true)
+  })
+
+  it('can always get a broke player home, and pass the hours there for free', () => {
+    // Marcus keeps hours; a player with nothing has to be able to reach them.
+    expect(CITIES.apartment.travelCost).toBe(0)
+    expect(CITIES.apartment.stops?.length ?? 0).toBeGreaterThan(0)
+  })
+
+  it('gives every sponsor a collector with a face and something to say when they catch you', () => {
+    for (const sponsor of Object.values(SPONSORS)) {
+      const collector = CHARACTERS[sponsor.collector]
+      expect(collector, `${sponsor.name} sends nobody`).toBeDefined()
+      const hunted = (caught: number) =>
+        at({
+          day: 9,
+          cityId: 'riverbend',
+          huntedInCityId: 'riverbend',
+          debts: [{ id: 'd', sponsorId: sponsor.id, sponsorName: sponsor.name, principal: 1, owed: 2, dueOnDay: 5, cityId: 'riverbend' }],
+          record: { busted: 0, challengeLost: 0, sponsors: { [sponsor.id]: { staked: 1, repaid: 0, missed: 1, caught } } },
+        })
+      for (const times of [0, 1, 4]) {
+        const beat = eventFor(EVENTS, { kind: 'caught' }, hunted(times))
+        const speaker = beat?.actions.find((a) => a.kind === 'dialogue')
+        expect(speaker?.kind === 'dialogue' && speaker.speaker, `${sponsor.name}'s collector is silent the ${times + 1}th time`).toBe(sponsor.collector)
+      }
+    }
+  })
+
+  it('has every sponsor notice you owing, late, square on time and square late', () => {
+    for (const sponsor of Object.values(SPONSORS)) {
+      const debt = (dueOnDay: number) => [{ id: 'd', sponsorId: sponsor.id, sponsorName: sponsor.name, principal: 1, owed: 2, dueOnDay, cityId: 'riverbend' as const }]
+      const record = (missed: number) => ({ busted: 0, challengeLost: 0, sponsors: { [sponsor.id]: { staked: 1, repaid: 1, missed, caught: missed } } })
+      const states: Array<[string, GameState]> = [
+        ['owing', at({ day: 3, debts: debt(5) })],
+        ['late', at({ day: 7, debts: debt(5) })],
+        ['square', at({ day: 7, record: record(0) })],
+        ['square after being late', at({ day: 7, record: record(1) })],
+      ]
+      const seen = new Set<string>()
+      for (const [what, state] of states) {
+        const beat = eventFor(EVENTS, { kind: 'interact', poiId: sponsor.id }, state)
+        expect(beat, `${sponsor.name} says nothing when you are ${what}`).toBeDefined()
+        seen.add(beat!.id)
+      }
+      expect(seen.size, `${sponsor.name} says the same thing whatever you did`).toBe(states.length)
+    }
+  })
+
+  it('meets a lost match with the people who followed you up, and the rematch', () => {
+    const lost = (rematch: boolean) =>
+      at({
+        cash: 5000,
+        day: 20,
+        period: 'evening',
+        unlockedCityIds: upTo('portoLumina'),
+        finaleRematchDay: rematch ? 18 : 25,
+        flags: { wonPokerNight: true, beatFinalRival: false, hasPenthouse: false, cameBack: false },
+        completedEventIds: ['nadia-names-the-match', 'marcus-at-the-rail', 'dana-reveal', 'hal-on-the-eve', 'kit-lumina'],
+        record: { busted: 0, challengeLost: 1, sponsors: {} },
+      })
+    for (const who of ['marcus', 'dana', 'hal', 'kit']) {
+      const beat = eventFor(EVENTS, { kind: 'talkTo', characterId: who }, lost(false))
+      expect(beat?.id, `${who} has nothing to say about the lost match`).toMatch(/loss|told-you/)
+    }
+    expect(eventFor(EVENTS, { kind: 'interact', poiId: 'nadia' }, lost(false))?.id).toBe('nadia-makes-you-wait')
+    expect(eventFor(EVENTS, { kind: 'interact', poiId: 'nadia' }, lost(true))?.id).toBe('nadia-rematch')
+    const ready = { ...lost(true), cash: 130000, completedEventIds: [...lost(true).completedEventIds, 'marcus-after-the-loss'] }
+    expect(eventFor(EVENTS, { kind: 'talkTo', characterId: 'marcus' }, ready)?.id).toBe('marcus-rematch-night')
+  })
+
+  it('pays off Kit’s warning about Wen either way', () => {
+    const lost = (wen: boolean) =>
+      at({
+        day: 20,
+        unlockedCityIds: upTo('portoLumina'),
+        finaleRematchDay: 25,
+        completedEventIds: ['kit-lumina'],
+        record: { busted: 0, challengeLost: 1, sponsors: {} },
+        debts: wen ? [{ id: 'w', sponsorId: 'wen', sponsorName: 'Madame Wen', principal: 1, owed: 2, dueOnDay: 22, cityId: 'portoLumina' }] : [],
+      })
+    expect(eventFor(EVENTS, { kind: 'talkTo', characterId: 'kit' }, lost(false))?.id).toBe('kit-after-the-loss')
+    expect(eventFor(EVENTS, { kind: 'talkTo', characterId: 'kit' }, lost(true))?.id).toBe('kit-told-you')
+  })
+
+  it('pays off the rent: the receipt is under the door when you come home', () => {
+    const home = at({ unlockedCityIds: upTo('riverbend'), flags: { wonPokerNight: true, beatFinalRival: false, hasPenthouse: false, cameBack: false } })
+    expect(eventFor(EVENTS, { kind: 'enterArea', areaId: 'home' }, home)?.id).toBe('rent-receipt')
+    expect(eventFor(EVENTS, { kind: 'interact', poiId: 'apartment-window' }, at({ day: 10 }))?.id).toBe('rent-day')
   })
 })

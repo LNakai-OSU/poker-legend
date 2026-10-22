@@ -37,6 +37,28 @@ const STORY_SEEN = [
   'hal-sends-you-on',
   'hal-mesa-last-stop',
   'nadia-names-the-match',
+  // When it goes wrong: beats for owing, going broke and the lost match.
+  'hal-short-for-the-harbor',
+  'rent-day',
+  'rent-receipt',
+  'cass-owing',
+  'cass-overdue',
+  'cass-repaid',
+  'cass-repaid-late',
+  'emeka-owing',
+  'emeka-overdue',
+  'emeka-repaid',
+  'emeka-repaid-late',
+  'consortium-owing',
+  'consortium-overdue',
+  'consortium-repaid',
+  'consortium-repaid-late',
+  'wen-owing',
+  'wen-overdue',
+  'wen-repaid',
+  'wen-repaid-late',
+  'nadia-makes-you-wait',
+  'nadia-rematch',
 ]
 
 function baseSave(overrides = {}) {
