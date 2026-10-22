@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { CityScene } from '../overworld/CityScene'
 import { PokerNightScene } from './PokerNightScene'
 import { BusTransition } from './BusTransition'
@@ -14,6 +14,7 @@ import { clearSave, loadGame, saveGame } from './save'
 import { useEventRunner } from './useEventRunner'
 import { DialogueBox } from './DialogueBox'
 import { CHARACTERS } from '../world/characters'
+import { EVENTS, eventFor } from '../world/events'
 import { SoundToggle, useAudioUnlock } from '../audio/SoundToggle'
 import { playSound } from '../audio/audio'
 import {
@@ -106,6 +107,26 @@ export function GameApp() {
       setEntryTile({ col, row })
     },
   })
+
+  /**
+   * Walking into somewhere is a moment a beat can be written for.
+   *
+   * Fired when the area changes — through a door, off the edge of a street, off
+   * a bus — and not when a save is loaded into one or when you get up from a
+   * table in the room you were already in: that is being somewhere, not
+   * arriving.
+   */
+  const lastArea = useRef<string | null>(null)
+  const runEvent = events.run
+  useEffect(() => {
+    if (view.kind !== 'city') return
+    const areaId = state.areaId ?? CITIES[state.cityId].entryAreaId
+    const previous = lastArea.current
+    lastArea.current = areaId
+    if (previous === null || previous === areaId) return
+    const event = eventFor(EVENTS, { kind: 'enterArea', areaId }, state)
+    if (event) runEvent(event)
+  }, [view.kind, state, runEvent])
 
   const handlePoi = (action: PoiAction) => {
     switch (action.kind) {
@@ -511,6 +532,7 @@ export function GameApp() {
             onCaught={handleCaught}
             onEvent={events.run}
             moved={events.stage.moved}
+            paused={events.isRunning}
           />
         )
     }
