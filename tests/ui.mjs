@@ -605,6 +605,157 @@ await test('walking into Riverbend stops you with what it costs, and Kit is on t
   await page.close()
 })
 
+/**
+ * Losing is part of the story (docs/STORYBOARD.md, "When it goes wrong").
+ *
+ * The collectors used to be a man in a suit and a full-screen apology, and
+ * nobody in the world knew you had lost anything. These walk the losing paths
+ * in a real page: the collector is somebody and speaks before the shakedown;
+ * a sponsor's collector stands beside her while you owe on time; broke, Marcus
+ * deals you back in; and a lost match is met by Nadia and by Marcus.
+ */
+const LOSING_ROAD = ['apartment', 'silverCreek', 'riverbend']
+const CASS_DEBT = (dueOnDay) => ({
+  id: 'cass-1-0',
+  sponsorId: 'cass',
+  sponsorName: 'Cass',
+  principal: 1500,
+  owed: 1875,
+  dueOnDay,
+  cityId: 'riverbend',
+})
+// The box shows one line at a time; this is the speaker and the first.
+const dialogueText = (page) => page.locator('[data-testid="event-dialogue"]').innerText().catch(() => '')
+
+await test('the collector who catches you has a face, and says their piece before the shakedown', async () => {
+  const page = await newPage(
+    baseSave({
+      cityId: 'riverbend',
+      areaId: 'rb-street',
+      day: 6,
+      period: 'afternoon',
+      cash: 1000,
+      unlockedCityIds: LOSING_ROAD,
+      debts: [{ ...CASS_DEBT(4), missed: true }],
+      huntedInCityId: 'riverbend',
+    }),
+  )
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  // Stand still and let him come.
+  await page.locator('[data-testid="event-dialogue"]').waitFor({ state: 'visible', timeout: 25000 })
+  const said = await dialogueText(page)
+  assert(/Dutch/.test(said), `the collector is nobody in particular (saw: ${said.slice(0, 120)})`)
+  assert(/Cash: \$1,000/.test(await page.locator('body').innerText()), 'the money went before he had said a word')
+  await talkThrough(page)
+  await page.locator('[data-testid="caught-by"]').waitFor()
+  const who = await page.locator('[data-testid="caught-by"]').innerText()
+  assert(/Dutch caught up with you/.test(who), `the shakedown does not say who (saw: ${who})`)
+  await page.locator('button', { hasText: 'Pick yourself up' }).click()
+  await page.waitForTimeout(600)
+  const body = await page.locator('body').innerText()
+  assert(/Cash: \$250\b/.test(body), `they did not take three quarters (saw: ${body.match(/Cash: \$[\d,]+/)?.[0]})`)
+  assert(/Owed: \$1,875/.test(body), 'the debt moved when they caught you')
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+})
+
+await test('while you owe Cass on time, Dutch stands beside her, and she says who he is', async () => {
+  const page = await newPage(
+    baseSave({
+      cityId: 'riverbend',
+      areaId: 'rb-street',
+      day: 2,
+      period: 'morning',
+      unlockedCityIds: LOSING_ROAD,
+      debts: [CASS_DEBT(5)],
+      completedEventIds: STORY_SEEN.filter((id) => id !== 'cass-owing'),
+    }),
+  )
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(500)
+  const here = await poisOf(page)
+  assert(here.some((p) => p.name === 'Dutch'), `Dutch is not by the bollard (saw: ${here.map((p) => p.name).join(', ')})`)
+  await approach(page, 'Cass')
+  await page.keyboard.press('e')
+  await page.waitForTimeout(400)
+  const said = await dialogueText(page)
+  assert(/clock is running/.test(said), `Cass did not notice you owe her (saw: ${said.replace(/\n/g, ' | ').slice(0, 120)})`)
+  await talkThrough(page)
+  // Once said, the next talk is the stake menu again, so the debt can be paid.
+  await page.keyboard.press('e')
+  await page.waitForTimeout(400)
+  await talkThrough(page)
+  assert(/Pay it back|Not enough cash/.test(await page.locator('body').innerText()), 'the beat stood between you and paying her')
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+})
+
+await test('broke, Marcus deals you back in at the kitchen table', async () => {
+  // Up the ladder as far as the Harbor, before anybody in Porto Lumina has
+  // named a match: Marcus is at home, and deals.
+  const page = await newPage(
+    baseSave({
+      cityId: 'apartment',
+      areaId: 'marcus-house',
+      period: 'evening',
+      cash: 40,
+      completedEventIds: STORY_SEEN.filter((id) => id !== 'nadia-names-the-match'),
+    }),
+  )
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(500)
+  await approach(page, 'Marcus')
+  await page.keyboard.press('e')
+  await page.waitForTimeout(400)
+  const said = await dialogueText(page)
+  assert(/first night/.test(said), `Marcus did not notice you are broke (saw: ${said.slice(0, 120)})`)
+  await talkThrough(page)
+  await page.waitForTimeout(600)
+  assert((await page.locator('[data-testid="overworld"]').count()) === 0, 'still in the street: the game never started')
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+})
+
+await test('a lost match: Nadia makes you wait, and Marcus says build it back', async () => {
+  const page = await newPage(
+    baseSave({
+      cityId: 'portoLumina',
+      day: 20,
+      period: 'evening',
+      // Enough for the buy-in, so what stops you is her week and not the money.
+      cash: 130000,
+      unlockedCityIds: ['apartment', 'portoLumina'],
+      ownedItemIds: ['tuxedo'],
+      finaleRematchDay: 25,
+      record: { busted: 0, challengeLost: 1, sponsors: {} },
+      completedEventIds: [...STORY_SEEN.filter((id) => id !== 'nadia-makes-you-wait'), 'marcus-at-the-rail', 'dana-reveal'],
+    }),
+  )
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(400)
+  await enterDoor(page, 'Casino')
+  await approach(page, 'Nadia Okonkwo')
+  await page.keyboard.press('e')
+  await page.waitForTimeout(400)
+  const nadia = await dialogueText(page)
+  assert(/Not tonight/.test(nadia), `Nadia did not notice she beat you (saw: ${nadia.slice(0, 120)})`)
+  await talkThrough(page)
+  await page.keyboard.press('e')
+  await page.waitForTimeout(400)
+  await talkThrough(page)
+  assert(/Come back in 5 days/.test(await page.locator('body').innerText()), 'the rematch is not a week out')
+  await page.locator('button', { hasText: 'Step away' }).click()
+  await page.waitForTimeout(500)
+  await approach(page, 'Marcus')
+  await page.keyboard.press('e')
+  await page.waitForTimeout(400)
+  const marcus = await dialogueText(page)
+  assert(/better tonight/.test(marcus), `Marcus said nothing about the match (saw: ${marcus.slice(0, 120)})`)
+  await talkThrough(page)
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+})
+
 await test('the town is one continuous place', async () => {
   const page = await newPage(null)
   await page.goto(BASE)
