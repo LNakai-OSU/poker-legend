@@ -1,4 +1,4 @@
-import { initialState, type GameState } from './state'
+import { emptyRecord, initialState, type GameState, type RunRecord } from './state'
 import { TIME_PERIODS, type TimePeriod } from './time'
 
 const SAVE_KEY = 'poker-legend-save-v2'
@@ -50,7 +50,23 @@ function reconcile(parsed: unknown): GameState | null {
     debts: Array.isArray(saved.debts) ? saved.debts : base.debts,
     flags: { ...base.flags, ...(saved.flags ?? {}) },
     completedEventIds: Array.isArray(saved.completedEventIds) ? saved.completedEventIds : base.completedEventIds,
+    record: reconcileRecord(saved),
     stats: { ...base.stats, ...(saved.stats ?? {}) },
+  }
+}
+
+/**
+ * The run's record of losing arrived after saves did. A save from before it has
+ * no record, but one fact is still in it: a rematch day means the match was lost.
+ */
+function reconcileRecord(saved: Partial<GameState>): RunRecord {
+  const base = emptyRecord()
+  const record = typeof saved.record === 'object' && saved.record !== null ? saved.record : null
+  const lostBefore = typeof saved.finaleRematchDay === 'number' && saved.finaleRematchDay > 0 ? 1 : 0
+  return {
+    busted: typeof record?.busted === 'number' ? record.busted : base.busted,
+    challengeLost: typeof record?.challengeLost === 'number' ? record.challengeLost : lostBefore,
+    sponsors: typeof record?.sponsors === 'object' && record.sponsors !== null ? record.sponsors : base.sponsors,
   }
 }
 

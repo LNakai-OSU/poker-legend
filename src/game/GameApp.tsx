@@ -18,10 +18,13 @@ import { EVENTS, eventFor } from '../world/events'
 import { SoundToggle, useAudioUnlock } from '../audio/SoundToggle'
 import { playSound } from '../audio/audio'
 import {
+  BUST_LINE,
   advanceDay,
   advancePeriod,
   arriveAt,
   caughtByCollectors,
+  huntingSponsorId,
+  recordBust,
   daysUntilRematch,
   initialState,
   lostFinalChallenge,
@@ -85,6 +88,8 @@ export function GameApp() {
    * back exactly where you were.
    */
   const [settingsOpen, setSettingsOpen] = useState(false)
+  /** Whose collectors it was, for the shakedown screen; the hunt is over by the time it shows. */
+  const [caughtBy, setCaughtBy] = useState<string | null>(null)
   useAudioUnlock()
 
   // Hub locations are the checkpoints; table and menu state is never persisted.
@@ -249,10 +254,13 @@ export function GameApp() {
       if (result.finaleWon) {
         return { ...next, flags: { ...next.flags, beatFinalRival: true, hasPenthouse: true } }
       }
+      // Getting up with less than the cheapest seat costs is going broke, and
+      // the people who know you will say so.
+      const settled = next.cash < BUST_LINE ? recordBust(next) : next
       // Losing the match is its own outcome, not a cash-game session that
       // happened to go badly: the buy-in stays with her and so does the table.
-      if (table.isFinale) return lostFinalChallenge(next)
-      return next
+      if (table.isFinale) return lostFinalChallenge(settled)
+      return settled
     })
     if (table.isFinale) setView({ kind: result.finaleWon ? 'ending' : 'finaleLost' })
     else backToCity()
@@ -263,10 +271,25 @@ export function GameApp() {
     // caught must never be cheaper than paying. You keep what you've learned and
     // what you own, and they give you a few days before they come looking again,
     // so there is still a game to climb back out with.
-    setState(caughtByCollectors)
-    playSound('lose')
-    setView({ kind: 'caught' })
+    const shakedown = () => {
+      setCaughtBy(huntingSponsorId(state))
+      setState(caughtByCollectors)
+      playSound('lose')
+      setView({ kind: 'caught' })
+    }
+    // Whoever caught you says their piece first, standing over you in the street,
+    // and the shakedown follows the last line.
+    const event = eventFor(EVENTS, { kind: 'caught' }, state)
+    if (!event || !events.run(event, shakedown)) shakedown()
   }
+
+  /** Gambling a bankroll away below the cheapest seat is a bust, like a session. */
+  const settleGamble = (delta: number) =>
+    setState((s) => {
+      const cash = Math.max(0, s.cash + delta)
+      const next = { ...s, cash }
+      return s.cash >= BUST_LINE && cash < BUST_LINE ? recordBust(next) : next
+    })
 
   const scene = (() => {
     switch (view.kind) {
@@ -473,7 +496,7 @@ export function GameApp() {
       return (
         <SlotsScene
           state={state}
-          onResult={(delta) => setState((s) => ({ ...s, cash: Math.max(0, s.cash + delta) }))}
+          onResult={settleGamble}
           onBack={backToCity}
         />
       )
@@ -482,7 +505,7 @@ export function GameApp() {
       return (
         <CrapsScene
           state={state}
-          onResult={(delta) => setState((s) => ({ ...s, cash: Math.max(0, s.cash + delta) }))}
+          onResult={settleGamble}
           onBack={backToCity}
         />
       )
@@ -508,7 +531,7 @@ export function GameApp() {
       return <PenthouseScene state={state} onBack={backToCity} />
 
     case 'caught':
-      return <CaughtScene onRestart={backToCity} />
+      return <CaughtScene sponsorId={caughtBy} onRestart={backToCity} />
 
     case 'ending':
       return <EndingScene state={state} onContinue={backToCity} />

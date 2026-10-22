@@ -1,5 +1,18 @@
 import type { TimePeriod } from '../game/time'
-import { chapterOf, type CityId, type GameState, type StoryFlag } from '../game/state'
+import {
+  challengeStatus,
+  chapterOf,
+  countOf,
+  debtStatus,
+  huntingSponsorId,
+  isHunted,
+  type ChallengeStatus,
+  type CityId,
+  type CountOf,
+  type DebtStatus,
+  type GameState,
+  type StoryFlag,
+} from '../game/state'
 
 /**
  * Scripted moments, written as data.
@@ -26,6 +39,11 @@ export type EventTrigger =
   | { kind: 'talkTo'; characterId: string }
   /** Talking to a fixture on the map, by its POI id. */
   | { kind: 'interact'; poiId: string }
+  /**
+   * The collectors catch you. The beat plays with them standing over you, and
+   * the shakedown follows its last line; `hunted` says whose they are.
+   */
+  | { kind: 'caught' }
 
 /** What has to be true for it to fire. All of them must hold. */
 export type EventCondition =
@@ -42,6 +60,27 @@ export type EventCondition =
    * town to town and keeps each town's beats in its own part of the story.
    */
   | { kind: 'chapter'; cityId: CityId | CityId[] }
+  /** Holding less than this: broke, or too short for the room you are in. */
+  | { kind: 'cashBelow'; amount: number }
+  /**
+   * Where you stand with a sponsor — or with every sponsor, when none is named:
+   * `none` (owe nothing), `owing` (on time) or `overdue` (the stake was missed).
+   */
+  | { kind: 'debt'; sponsorId?: string; status: DebtStatus | DebtStatus[] }
+  /** Collectors are working this town — anybody's, or one sponsor's. */
+  | { kind: 'hunted'; sponsorId?: string; set?: boolean }
+  /**
+   * The heads-up match: `unplayed`, `lost` (she has made you wait), `rematch`
+   * (lost, and she will play you again now) or `won`.
+   */
+  | { kind: 'challenge'; status: ChallengeStatus | ChallengeStatus[] }
+  /**
+   * How often something has happened over the run: `busted`, `challengeLost`,
+   * or a sponsor's `staked`, `repaid`, `missed` and `caught` (one sponsor's, or
+   * everybody's). At least once unless `atLeast`/`atMost` say otherwise;
+   * `atMost: 0` is "never".
+   */
+  | { kind: 'count'; of: CountOf; sponsorId?: string; atLeast?: number; atMost?: number }
 
 /**
  * What happens, in order.
@@ -110,7 +149,28 @@ export function conditionHolds(condition: EventCondition, state: GameState): boo
       const chapter = chapterOf(state)
       return Array.isArray(condition.cityId) ? condition.cityId.includes(chapter) : condition.cityId === chapter
     }
+    case 'cashBelow':
+      return state.cash < condition.amount
+    case 'debt':
+      return [condition.status].flat().includes(debtStatus(state, condition.sponsorId))
+    case 'hunted': {
+      const hunted = isHunted(state) && (!condition.sponsorId || huntingSponsorId(state) === condition.sponsorId)
+      return hunted === (condition.set ?? true)
+    }
+    case 'challenge':
+      return [condition.status].flat().includes(challengeStatus(state))
+    case 'count': {
+      const [low, high] = countRange(condition)
+      const n = countOf(state, condition.of, condition.sponsorId)
+      return n >= low && n <= high
+    }
   }
+}
+
+/** The counts a `count` condition accepts, inclusive. Just `of` means at least once. */
+function countRange(condition: Extract<EventCondition, { kind: 'count' }>): [number, number] {
+  const low = condition.atLeast ?? (condition.atMost === undefined ? 1 : 0)
+  return [low, condition.atMost ?? Infinity]
 }
 
 /** Whether every one of these holds. No conditions at all always holds. */
@@ -131,7 +191,9 @@ export function allHold(conditions: EventCondition[] | undefined, state: GameSta
  * - hours, or chapters, that do not overlap;
  * - an earlier beat one needs done and the other needs not done;
  * - one waiting on the other, which only fires once — the commonest way to
- *   give a character a second thing to say.
+ *   give a character a second thing to say;
+ * - cash at least one amount and below another; where the match stands; owing
+ *   a sponsor and not; whose collectors are in town; counts that do not meet.
  *
  * Shared by the content tests and the editor, so they cannot disagree.
  */
@@ -171,6 +233,97 @@ export function canBothFire(a: GameEvent, b: GameEvent): boolean {
   if (!overlap((c) => (c.kind === 'period' ? c.period : undefined))) return false
   if (!overlap((c) => (c.kind === 'chapter' ? c.cityId : undefined))) return false
 
+  // Cash: at least one amount and below another cannot both hold.
+  const [loA, hiA] = cashRange(ca)
+  const [loB, hiB] = cashRange(cb)
+  if (loA >= hiB || loB >= hiA) return false
+
+  // The match: an explicit status, narrowed by whether the penthouse is yours.
+  const statusesA = challengeStatuses(ca)
+  const statusesB = challengeStatuses(cb)
+  if (![...statusesA].some((s) => statusesB.has(s))) return false
+
+  if (!debtsCanAgree(ca, cb)) return false
+  if (!huntsCanAgree(ca, cb)) return false
+
+  // The same count, in ranges that do not meet.
+  for (const x of ca) {
+    if (x.kind !== 'count') continue
+    for (const y of cb) {
+      if (y.kind !== 'count' || y.of !== x.of || y.sponsorId !== x.sponsorId) continue
+      const [lx, hx] = countRange(x)
+      const [ly, hy] = countRange(y)
+      if (lx > hy || ly > hx) return false
+    }
+  }
+
+  return true
+}
+
+/** The cash an event's conditions allow, as [at least, below). */
+function cashRange(cs: EventCondition[]): [number, number] {
+  let low = 0
+  let high = Infinity
+  for (const c of cs) {
+    if (c.kind === 'cashAtLeast') low = Math.max(low, c.amount)
+    if (c.kind === 'cashBelow') high = Math.min(high, c.amount)
+  }
+  return [low, high]
+}
+
+const ALL_CHALLENGE: ChallengeStatus[] = ['unplayed', 'lost', 'rematch', 'won']
+
+/** Where the match can stand for these conditions to hold. The penthouse is the match won. */
+function challengeStatuses(cs: EventCondition[]): Set<ChallengeStatus> {
+  let allowed = new Set(ALL_CHALLENGE)
+  for (const c of cs) {
+    if (c.kind === 'challenge') allowed = new Set([c.status].flat().filter((s) => allowed.has(s)))
+    if (c.kind === 'flag' && c.flag === 'hasPenthouse') {
+      const won = c.set ?? true
+      allowed = new Set([...allowed].filter((s) => (s === 'won') === won))
+    }
+  }
+  return allowed
+}
+
+/**
+ * Whether two sets of debt conditions could hold at once. Statuses for the same
+ * sponsor (or both for everyone) must share one; owing nobody anything rules out
+ * owing anybody, and nobody being overdue rules out any one sponsor being.
+ */
+function debtsCanAgree(ca: EventCondition[], cb: EventCondition[]): boolean {
+  const of = (cs: EventCondition[]) =>
+    cs.flatMap((c) => (c.kind === 'debt' ? [{ sponsor: c.sponsorId ?? null, status: [c.status].flat() }] : []))
+  // What one sponsor's status allows of everyone's, and the other way round.
+  const fits = (all: DebtStatus, one: DebtStatus) =>
+    all === 'overdue' || (all === 'owing' ? one !== 'overdue' : one === 'none')
+  for (const x of of(ca)) {
+    for (const y of of(cb)) {
+      if (x.sponsor === y.sponsor) {
+        if (!x.status.some((s) => y.status.includes(s))) return false
+      } else if (x.sponsor === null || y.sponsor === null) {
+        const [all, one] = x.sponsor === null ? [x, y] : [y, x]
+        if (!all.status.some((a) => one.status.some((o) => fits(a, o)))) return false
+      }
+    }
+  }
+  return true
+}
+
+/** One hunt at a time, by one sponsor's people: hunted and not, or by two different sponsors, cannot both hold. */
+function huntsCanAgree(ca: EventCondition[], cb: EventCondition[]): boolean {
+  const of = (cs: EventCondition[]) =>
+    cs.flatMap((c) => (c.kind === 'hunted' ? [{ sponsor: c.sponsorId ?? null, set: c.set ?? true }] : []))
+  for (const x of of(ca)) {
+    for (const y of of(cb)) {
+      if (x.set && y.set && x.sponsor && y.sponsor && x.sponsor !== y.sponsor) return false
+      if (x.set !== y.set) {
+        const [yes, no] = x.set ? [x, y] : [y, x]
+        // Not hunted at all rules out hunted by anybody; not hunted by X rules out hunted by X.
+        if (no.sponsor === null || no.sponsor === yes.sponsor) return false
+      }
+    }
+  }
   return true
 }
 
@@ -186,6 +339,8 @@ function sameTrigger(a: EventTrigger, b: EventTrigger): boolean {
       return b.kind === 'talkTo' && a.characterId === b.characterId
     case 'interact':
       return b.kind === 'interact' && a.poiId === b.poiId
+    case 'caught':
+      return b.kind === 'caught'
   }
 }
 
@@ -300,6 +455,9 @@ export const EVENTS: GameEvent[] = [
     conditions: [
       { kind: 'flag', flag: 'wonPokerNight' },
       { kind: 'chapter', cityId: 'apartment' },
+      // Always true straight after his game; it keeps this apart from the
+      // kitchen table he deals again if you are ever broke.
+      { kind: 'cashAtLeast', amount: 100 },
     ],
     actions: [
       {
@@ -310,6 +468,7 @@ export const EVENTS: GameEvent[] = [
           'Marcus: Do not stay here. The 14 runs out to Silver Creek. Real table, small money.',
           'Marcus: You know the Porto Lumina story? A woman lives in a penthouse over the casino.',
           'Marcus: Every so often she puts it on the table, heads up. Four years, and nobody has taken it.',
+          'Marcus: Your rent is covered till you are back. Do not argue. It goes on your tab.',
           'Marcus: Go and be a story I can tell.',
         ],
       },
@@ -836,6 +995,9 @@ export const EVENTS: GameEvent[] = [
     conditions: [
       { kind: 'flag', flag: 'wonPokerNight' },
       { kind: 'chapter', cityId: 'portoLumina' },
+      // He is only in Porto Lumina once she has sent the car; saying so keeps
+      // this apart from the kitchen table he deals in Basin before then.
+      { kind: 'eventDone', eventId: 'nadia-names-the-match' },
       { kind: 'flag', flag: 'hasPenthouse', set: false },
     ],
     actions: [
@@ -948,6 +1110,1023 @@ export const EVENTS: GameEvent[] = [
         speaker: 'hal',
         lines: ['Hal: I had money on her. Do not tell her.', 'Hal: Then again, I taught you both. I was always going to win something.'],
       },
+    ],
+  },
+
+  // ---------------------------------------------------------------------------
+  // When it goes wrong. Losing is part of the run, not the end of it: every
+  // setback is noticed by somebody who knows you, and every one of them says
+  // what to do next. docs/STORYBOARD.md, "When it goes wrong", is the map.
+  // ---------------------------------------------------------------------------
+
+  // Going broke. Below the cheapest seat on the ladder there is always the
+  // kitchen table: Marcus deals you back in wherever he is, and the bus home
+  // costs nothing.
+  {
+    id: 'poker-night-again',
+    about: 'Walked out of the first poker night a loser: Marcus deals you back in whenever you come back.',
+    trigger: { kind: 'talkTo', characterId: 'marcus' },
+    conditions: [
+      { kind: 'flag', flag: 'wonPokerNight', set: false },
+      { kind: 'eventDone', eventId: 'poker-night' },
+      { kind: 'period', period: ['afternoon', 'evening', 'night'] },
+    ],
+    repeatable: true,
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'marcus',
+        lines: [
+          'Marcus: Back for more? Good. The chairs are still warm.',
+          'Marcus: Same rule. Everything on the table, winner takes the lot.',
+        ],
+      },
+      { kind: 'startPokerNight' },
+    ],
+  },
+  {
+    id: 'marcus-deals-you-back-in',
+    about:
+      'The way back from broke: below the cheapest seat on the ladder, Marcus deals the kitchen table ' +
+      'again — the same game that started the run. Wherever the story has got to, while he is home.',
+    trigger: { kind: 'talkTo', characterId: 'marcus' },
+    conditions: [
+      { kind: 'flag', flag: 'wonPokerNight' },
+      { kind: 'cashBelow', amount: 100 },
+      { kind: 'chapter', cityId: ['apartment', 'silverCreek', 'riverbend', 'crescentHarbor', 'neonMesa', 'portoLumina'] },
+      { kind: 'eventDone', eventId: 'nadia-names-the-match', done: false },
+      { kind: 'flag', flag: 'hasPenthouse', set: false },
+    ],
+    repeatable: true,
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'marcus',
+        lines: [
+          'Marcus: Look at you. You look like the first night.',
+          'Marcus: Nobody stays broke at my table. Sit down. Same rule as always.',
+          'Marcus: Win it back off me, and then go and do it properly.',
+        ],
+      },
+      { kind: 'startPokerNight' },
+    ],
+  },
+  {
+    id: 'marcus-deals-on-holiday',
+    about: 'Broke at the midpoint: Marcus, on holiday, brought cards. He always brings cards.',
+    trigger: { kind: 'talkTo', characterId: 'marcus' },
+    conditions: [
+      { kind: 'flag', flag: 'wonPokerNight' },
+      { kind: 'chapter', cityId: 'palmCay' },
+      { kind: 'eventDone', eventId: 'marcus-on-holiday' },
+      { kind: 'cashBelow', amount: 100 },
+    ],
+    repeatable: true,
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'marcus',
+        lines: [
+          'Marcus: Cleaned out? On an island? That takes talent.',
+          'Marcus: I brought cards. I always bring cards. Kitchen-table rules, beach edition.',
+        ],
+      },
+      { kind: 'startPokerNight' },
+    ],
+  },
+  {
+    id: 'marcus-deals-at-the-rail',
+    about: 'Broke in Porto Lumina, with the match still to play: back to the kitchen table, at the rail.',
+    trigger: { kind: 'talkTo', characterId: 'marcus' },
+    conditions: [
+      { kind: 'flag', flag: 'wonPokerNight' },
+      { kind: 'chapter', cityId: 'portoLumina' },
+      { kind: 'eventDone', eventId: 'nadia-names-the-match' },
+      { kind: 'eventDone', eventId: 'marcus-at-the-rail' },
+      { kind: 'flag', flag: 'hasPenthouse', set: false },
+      { kind: 'cashBelow', amount: 100 },
+    ],
+    repeatable: true,
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'marcus',
+        lines: [
+          'Marcus: Nothing left? Then it is the kitchen table. It is always the kitchen table.',
+          'Marcus: Win it back off me. We will worry about her after.',
+        ],
+      },
+      { kind: 'startPokerNight' },
+    ],
+  },
+  {
+    id: 'marcus-deals-upstairs',
+    about: 'Broke after the penthouse: winner hosts, so Marcus makes you host.',
+    trigger: { kind: 'talkTo', characterId: 'marcus' },
+    conditions: [
+      { kind: 'flag', flag: 'wonPokerNight' },
+      { kind: 'chapter', cityId: 'portoLumina' },
+      { kind: 'flag', flag: 'hasPenthouse' },
+      { kind: 'eventDone', eventId: 'marcus-upstairs' },
+      { kind: 'cashBelow', amount: 100 },
+    ],
+    repeatable: true,
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'marcus',
+        lines: [
+          'Marcus: Broke, in a penthouse. You are a legend in two directions.',
+          'Marcus: Winner hosts. So host. Deal me in.',
+        ],
+      },
+      { kind: 'startPokerNight' },
+    ],
+  },
+  {
+    id: 'ray-busted',
+    about: 'Broke at Silver Creek: Ray, thirty years broke, tells you the one thing he never did — go home.',
+    trigger: { kind: 'talkTo', characterId: 'ray' },
+    conditions: [
+      { kind: 'eventDone', eventId: 'ray-is-due' },
+      { kind: 'cashBelow', amount: 100 },
+    ],
+    repeatable: true,
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'ray',
+        lines: [
+          'Ray: Cleaned out? Welcome. I have been a member thirty years.',
+          'Ray: Here is what I never did: go home. The bus home costs nothing. Nobody charges you to go home.',
+          'Ray: Marcus still deals, does he not? Win it off him again and come back up the road with something to sit down with.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'ray-sees-you-back',
+    about: 'The comeback: broke once, back at boat money, and Ray has never once managed it.',
+    trigger: { kind: 'talkTo', characterId: 'ray' },
+    conditions: [
+      { kind: 'eventDone', eventId: 'ray-is-due' },
+      { kind: 'eventDone', eventId: 'ray-sees-you-off' },
+      { kind: 'count', of: 'busted' },
+      { kind: 'cashAtLeast', amount: 600 },
+    ],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'ray',
+        lines: [
+          'Ray: Six hundred. From nothing. I have never once done that.',
+          'Ray: Thirty years I have been due, and you went and collected it for me.',
+          'Ray: Go on. Riverbend. And this time do not come back.',
+        ],
+      },
+      { kind: 'setFlag', flag: 'cameBack' },
+    ],
+  },
+  {
+    id: 'dana-silvercreek-broke',
+    about: 'Dana, in the corner of the casino, on going broke at the first real table: everyone does once.',
+    trigger: { kind: 'talkTo', characterId: 'dana' },
+    conditions: [
+      { kind: 'chapter', cityId: 'silverCreek' },
+      { kind: 'eventDone', eventId: 'dana-silvercreek' },
+      { kind: 'cashBelow', amount: 100 },
+    ],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'dana',
+        lines: [
+          'Dana: Everyone goes broke at that table once. Kit did not. That is the most annoying thing about Kit.',
+          'Dana: Marcus still deals. He would deal for you on a Tuesday.',
+          'Dana: Go home. Win it back. I will write it down either way.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'hal-short-for-the-harbor',
+    about: 'Short of the Harbor Room’s buy-in: Hal’s bankroll lesson, and the way back down the ladder.',
+    trigger: { kind: 'interact', poiId: 'hal' },
+    conditions: [
+      { kind: 'eventDone', eventId: 'hal-first-lesson' },
+      { kind: 'cashBelow', amount: 1000 },
+    ],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'hal',
+        lines: [
+          'Hal: Short of the Harbor Room? Then you were playing too big for your roll.',
+          'Hal: Twenty buy-ins for the game you sit in. Nobody believes that until tonight.',
+          'Hal: Take the boat back down to Riverbend. Three hundred to sit. Win the Harbor back at stakes you can afford to lose.',
+        ],
+      },
+    ],
+  },
+
+  // The rent, from the window on day one to the receipt under the door.
+  {
+    id: 'rent-day',
+    about: 'Nine days on and the Friday game still unwon: rent day comes, and Marcus has vouched for you.',
+    trigger: { kind: 'interact', poiId: 'apartment-window' },
+    conditions: [
+      { kind: 'dayAtLeast', day: 10 },
+      { kind: 'flag', flag: 'wonPokerNight', set: false },
+    ],
+    actions: [
+      { kind: 'dialogue', lines: ['Rent day came and went. Nobody knocked.'] },
+      {
+        kind: 'dialogue',
+        lines: [
+          'Under the door, a note from the landlord. Under that, in Marcus’s handwriting:',
+          'TOLD HIM YOU ARE GOOD FOR IT. COME AND WIN IT OFF ME.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'rent-receipt',
+    about:
+      'Home again after leaving Basin — usually broke: the rent is paid, every week since you went. ' +
+      'Marcus said he would cover it, and the flat is still yours to come back to.',
+    trigger: { kind: 'enterArea', areaId: 'home' },
+    conditions: [
+      { kind: 'flag', flag: 'wonPokerNight' },
+      { kind: 'chapter', cityId: ['silverCreek', 'riverbend', 'crescentHarbor', 'palmCay', 'neonMesa', 'portoLumina'] },
+    ],
+    actions: [
+      { kind: 'dialogue', lines: ['Under the door: a rent receipt, stamped PAID, for every week since you left.'] },
+      {
+        kind: 'dialogue',
+        lines: ['On the back, in Marcus’s handwriting: YOUR ROOM IS HERE WHEN YOU WANT IT. SO IS THE GAME.'],
+      },
+    ],
+  },
+
+  // Sponsors. A stake used to be a menu and nothing else; now the sponsor
+  // notices whether you are owing, late, or square — and their collector is a
+  // person, who stands beside them while you owe on time.
+  {
+    id: 'cass-owing',
+    about: 'Back at Cass’s pitch while her clock runs: she introduces Dutch.',
+    trigger: { kind: 'interact', poiId: 'cass' },
+    conditions: [{ kind: 'debt', sponsorId: 'cass', status: 'owing' }],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'cass',
+        lines: [
+          'Cass: Back already? The clock is running.',
+          'Cass: That is Dutch by the bollard. He is family. He is also how I collect.',
+          'Cass: Three days means three days. Come and pay me before the third one is out.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'cass-overdue',
+    about: 'Cass, once the stake has run out: Dutch is looking for you, and paying calls him off.',
+    trigger: { kind: 'interact', poiId: 'cass' },
+    conditions: [{ kind: 'debt', sponsorId: 'cass', status: 'overdue' }],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'cass',
+        lines: [
+          'Cass: You are late. I told you what late means.',
+          'Cass: Dutch is out looking for you. Pay me now and I call him in for his tea.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'cass-repaid',
+    about: 'Cass, paid on the day: nobody comes back. She wants to see the top.',
+    trigger: { kind: 'interact', poiId: 'cass' },
+    conditions: [
+      { kind: 'debt', sponsorId: 'cass', status: 'none' },
+      { kind: 'count', of: 'repaid', sponsorId: 'cass' },
+      { kind: 'count', of: 'missed', sponsorId: 'cass', atMost: 0 },
+    ],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'cass',
+        lines: [
+          'Cass: You came back. Nobody comes back.',
+          'Cass: Paid on the day. I am going to tell people about you.',
+          'Cass: If you ever get to the top, I want to see it. I have never seen the top.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'cass-repaid-late',
+    about: 'Cass, paid after Dutch had to come looking: late, but square, and she still wants to see the top.',
+    trigger: { kind: 'interact', poiId: 'cass' },
+    conditions: [
+      { kind: 'debt', sponsorId: 'cass', status: 'none' },
+      { kind: 'count', of: 'repaid', sponsorId: 'cass' },
+      { kind: 'count', of: 'missed', sponsorId: 'cass' },
+    ],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'cass',
+        lines: [
+          'Cass: Late. But here, which is more than most.',
+          'Cass: Dutch says you run like a deer. From Dutch that is fond.',
+          'Cass: Get to the top and I might come and watch. I have never seen the top.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'cass-at-the-top',
+    about: 'Paid her back, and Cass has come to Porto Lumina to see what the top looks like.',
+    trigger: { kind: 'talkTo', characterId: 'cass' },
+    conditions: [
+      { kind: 'chapter', cityId: 'portoLumina' },
+      { kind: 'count', of: 'repaid', sponsorId: 'cass' },
+      { kind: 'flag', flag: 'hasPenthouse', set: false },
+    ],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'cass',
+        lines: [
+          'Cass: Nobody pays me back, and nobody I have backed ever got this far. You did both.',
+          'Cass: I came to see what the top looks like. It looks expensive.',
+          'Cass: Win, and I tell the whole river I staked you.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'cass-after-you-won',
+    about: 'Aftermath: Cass tells the river she staked the player who took the penthouse.',
+    trigger: { kind: 'talkTo', characterId: 'cass' },
+    conditions: [
+      { kind: 'chapter', cityId: 'portoLumina' },
+      { kind: 'count', of: 'repaid', sponsorId: 'cass' },
+      { kind: 'flag', flag: 'hasPenthouse' },
+    ],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'cass',
+        lines: ['Cass: I tell everybody on the river I staked you.', 'Cass: I leave out that it was fifteen hundred.'],
+      },
+    ],
+  },
+  {
+    id: 'emeka-owing',
+    about: 'Back at Mr. Emeka’s table while his three days run: Abel is never far away.',
+    trigger: { kind: 'interact', poiId: 'emeka' },
+    conditions: [{ kind: 'debt', sponsorId: 'emeka', status: 'owing' }],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'emeka',
+        lines: [
+          'Mr. Emeka: Three days is a long time to be patient. I am being patient now.',
+          'Mr. Emeka: Abel will be nearby. Abel is always nearby. It is restful, once you are used to it.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'emeka-overdue',
+    about: 'Mr. Emeka, once the stake has run out: his patience has gone before yours, and Abel is out.',
+    trigger: { kind: 'interact', poiId: 'emeka' },
+    conditions: [{ kind: 'debt', sponsorId: 'emeka', status: 'overdue' }],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'emeka',
+        lines: [
+          'Mr. Emeka: I liked you for your patience. Mine has run out first.',
+          'Mr. Emeka: Abel is looking for you. He will be very polite about it, and very thorough.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'emeka-repaid',
+    about: 'Mr. Emeka, paid to the dollar on the day: he will see you on the Mesa.',
+    trigger: { kind: 'interact', poiId: 'emeka' },
+    conditions: [
+      { kind: 'debt', sponsorId: 'emeka', status: 'none' },
+      { kind: 'count', of: 'repaid', sponsorId: 'emeka' },
+      { kind: 'count', of: 'missed', sponsorId: 'emeka', atMost: 0 },
+    ],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'emeka',
+        lines: [
+          'Mr. Emeka: On the day, to the dollar. You would be surprised how rare that is.',
+          'Mr. Emeka: I go out to the Mesa when the season turns. If you are there, I will buy you a terrible coffee.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'emeka-repaid-late',
+    about: 'Mr. Emeka, paid after Abel had to find you: square, and still patient with you.',
+    trigger: { kind: 'interact', poiId: 'emeka' },
+    conditions: [
+      { kind: 'debt', sponsorId: 'emeka', status: 'none' },
+      { kind: 'count', of: 'repaid', sponsorId: 'emeka' },
+      { kind: 'count', of: 'missed', sponsorId: 'emeka' },
+    ],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'emeka',
+        lines: [
+          'Mr. Emeka: Late, and lighter than you were, I hear. But paid.',
+          'Mr. Emeka: Abel says you took it well. He respects people who take it well.',
+          'Mr. Emeka: I am out on the Mesa when the season turns. Come and be patient there.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'emeka-at-the-mesa',
+    about: 'Paid him back, and Mr. Emeka turns up on the Strip with a new player and some advice.',
+    trigger: { kind: 'talkTo', characterId: 'emeka' },
+    conditions: [
+      { kind: 'chapter', cityId: 'neonMesa' },
+      { kind: 'count', of: 'repaid', sponsorId: 'emeka' },
+    ],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'emeka',
+        lines: [
+          'Mr. Emeka: You found me. Or I found you. At my age it is the same thing.',
+          'Mr. Emeka: My new player is not patient. I keep telling him about you.',
+          'Mr. Emeka: The Consortium’s broker is along the Strip. Do not borrow from people who say “line item”.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'consortium-owing',
+    about: 'The Broker while the Consortium’s two days run: you are a line item, and so is Kit.',
+    trigger: { kind: 'interact', poiId: 'consortium' },
+    conditions: [{ kind: 'debt', sponsorId: 'consortium', status: 'owing' }],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'Broker',
+        lines: [
+          'Broker: You are a line item now. Line items have dates.',
+          'Broker: Your friend Kit has the same date. Kit is not going to make it. Be a better line.',
+          'Broker: Mr. Lowe will be about. You will not notice him until it matters.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'consortium-overdue',
+    about: 'The Broker once the date has passed: Mr. Lowe has been informed.',
+    trigger: { kind: 'interact', poiId: 'consortium' },
+    conditions: [{ kind: 'debt', sponsorId: 'consortium', status: 'overdue' }],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'Broker',
+        lines: [
+          'Broker: Your date has passed. Mr. Lowe has been informed.',
+          'Broker: Pay here and the file closes. Do not, and it opens wider.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'consortium-repaid',
+    about: 'The Consortium, paid on the date: a short file, which is a compliment.',
+    trigger: { kind: 'interact', poiId: 'consortium' },
+    conditions: [
+      { kind: 'debt', sponsorId: 'consortium', status: 'none' },
+      { kind: 'count', of: 'repaid', sponsorId: 'consortium' },
+      { kind: 'count', of: 'missed', sponsorId: 'consortium', atMost: 0 },
+    ],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'Broker',
+        lines: ['Broker: Paid, on the date. We will put that in the file.', 'Broker: It is a short file. That is a compliment.'],
+      },
+    ],
+  },
+  {
+    id: 'consortium-repaid-late',
+    about: 'The Consortium, paid after Mr. Lowe had to collect: the file is complete.',
+    trigger: { kind: 'interact', poiId: 'consortium' },
+    conditions: [
+      { kind: 'debt', sponsorId: 'consortium', status: 'none' },
+      { kind: 'count', of: 'repaid', sponsorId: 'consortium' },
+      { kind: 'count', of: 'missed', sponsorId: 'consortium' },
+    ],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'Broker',
+        lines: ['Broker: Late, collected on, paid. The file is complete.', 'Broker: Mr. Lowe says you were reasonable. He does not say that often.'],
+      },
+    ],
+  },
+  {
+    id: 'wen-owing',
+    about: 'Madame Wen while her two days run: Ms. Fong has opened your page.',
+    trigger: { kind: 'interact', poiId: 'wen' },
+    conditions: [{ kind: 'debt', sponsorId: 'wen', status: 'owing' }],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'Madame Wen',
+        lines: [
+          'Madame Wen: Ms. Fong has opened your page. She writes small.',
+          'Madame Wen: Two days. Win upstairs and you will barely notice me. Lose, and you will notice nothing else.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'wen-overdue',
+    about: 'Madame Wen once the stake has run out: everyone takes this deal once, and Ms. Fong is on the waterfront.',
+    trigger: { kind: 'interact', poiId: 'wen' },
+    conditions: [{ kind: 'debt', sponsorId: 'wen', status: 'overdue' }],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'Madame Wen',
+        lines: [
+          'Madame Wen: Everyone at your level takes this deal once. Most of them stood where you are standing.',
+          'Madame Wen: Ms. Fong is on the waterfront with your page. Pay me, and she closes the book.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'wen-repaid',
+    about: 'Madame Wen, paid on time: almost nobody pays it, and she will remember your face.',
+    trigger: { kind: 'interact', poiId: 'wen' },
+    conditions: [
+      { kind: 'debt', sponsorId: 'wen', status: 'none' },
+      { kind: 'count', of: 'repaid', sponsorId: 'wen' },
+      { kind: 'count', of: 'missed', sponsorId: 'wen', atMost: 0 },
+    ],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'Madame Wen',
+        lines: [
+          'Madame Wen: On time. Everyone takes this deal once. Almost nobody pays it.',
+          'Madame Wen: I will remember your face. That is not a threat any more.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'wen-repaid-late',
+    about: 'Madame Wen, paid in the end: Kit was right, and you are still standing.',
+    trigger: { kind: 'interact', poiId: 'wen' },
+    conditions: [
+      { kind: 'debt', sponsorId: 'wen', status: 'none' },
+      { kind: 'count', of: 'repaid', sponsorId: 'wen' },
+      { kind: 'count', of: 'missed', sponsorId: 'wen' },
+    ],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'Madame Wen',
+        lines: [
+          'Madame Wen: Paid, in the end. Ms. Fong has closed the book and underlined the total.',
+          'Madame Wen: Kit told you not to take my money. Kit was right, and you are still standing. That is rarer than being right.',
+        ],
+      },
+    ],
+  },
+
+  // The collectors catch you. Each sponsor's person says their piece standing
+  // over you; the shakedown follows the last line and costs three quarters of
+  // what you carry. The debt stays where it was.
+  {
+    id: 'caught-by-dutch',
+    about: 'Cass’s collector, the first time: apologetic, thorough, and he leaves you bus fare.',
+    trigger: { kind: 'caught' },
+    conditions: [
+      { kind: 'hunted', sponsorId: 'cass' },
+      { kind: 'count', of: 'caught', sponsorId: 'cass', atMost: 0 },
+    ],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'dutch',
+        lines: [
+          'Dutch: Sorry. Sorry about this. She is my wife’s sister.',
+          'Dutch: Pockets out for me? I will leave you bus fare. I always leave bus fare.',
+          'Dutch: You still owe her, mind. This is just what late costs.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'caught-by-dutch-again',
+    about: 'Cass’s collector, every time after the first.',
+    trigger: { kind: 'caught' },
+    conditions: [
+      { kind: 'hunted', sponsorId: 'cass' },
+      { kind: 'count', of: 'caught', sponsorId: 'cass' },
+    ],
+    repeatable: true,
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'dutch',
+        lines: ['Dutch: Again? I am starting to think we are friends.', 'Dutch: Same as last time. Pockets. Bus fare stays. The debt stays.'],
+      },
+    ],
+  },
+  {
+    id: 'caught-by-abel',
+    about: 'Mr. Emeka’s collector, the first time: perfectly polite, and he takes most of it.',
+    trigger: { kind: 'caught' },
+    conditions: [
+      { kind: 'hunted', sponsorId: 'emeka' },
+      { kind: 'count', of: 'caught', sponsorId: 'emeka', atMost: 0 },
+    ],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'abel',
+        lines: [
+          'Abel: Good evening. Mr. Emeka sends his regards, and me.',
+          'Abel: I will take most of what you are carrying. Not all. He wants you able to pay him.',
+          'Abel: The debt remains. Please do not make me find you twice.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'caught-by-abel-again',
+    about: 'Mr. Emeka’s collector, every time after the first.',
+    trigger: { kind: 'caught' },
+    conditions: [
+      { kind: 'hunted', sponsorId: 'emeka' },
+      { kind: 'count', of: 'caught', sponsorId: 'emeka' },
+    ],
+    repeatable: true,
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'abel',
+        lines: ['Abel: Twice. I did ask.', 'Abel: Mr. Emeka still believes in you. I am beginning to think he is the only one.'],
+      },
+    ],
+  },
+  {
+    id: 'caught-by-lowe',
+    about: 'The Consortium’s man, the first time: the same men who are hunting Kit.',
+    trigger: { kind: 'caught' },
+    conditions: [
+      { kind: 'hunted', sponsorId: 'consortium' },
+      { kind: 'count', of: 'caught', sponsorId: 'consortium', atMost: 0 },
+    ],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'lowe',
+        lines: [
+          'Mr. Lowe: We said we do not lose track of people.',
+          'Mr. Lowe: Three quarters of what you carry. The balance stands.',
+          'Mr. Lowe: Your friend Kit did not believe in the balance either.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'caught-by-lowe-again',
+    about: 'The Consortium’s man, every time after the first.',
+    trigger: { kind: 'caught' },
+    conditions: [
+      { kind: 'hunted', sponsorId: 'consortium' },
+      { kind: 'count', of: 'caught', sponsorId: 'consortium' },
+    ],
+    repeatable: true,
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'lowe',
+        lines: ['Mr. Lowe: Again. The file is getting thick.', 'Mr. Lowe: Pay the Broker. It is cheaper than us.'],
+      },
+    ],
+  },
+  {
+    id: 'caught-by-fong',
+    about: 'Madame Wen’s bookkeeper, the first time: an entry against your page.',
+    trigger: { kind: 'caught' },
+    conditions: [
+      { kind: 'hunted', sponsorId: 'wen' },
+      { kind: 'count', of: 'caught', sponsorId: 'wen', atMost: 0 },
+    ],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'fong',
+        lines: [
+          'Ms. Fong: I keep the book. Today I am also the bailiff.',
+          'Ms. Fong: Three quarters, entered against your page. The total has not moved.',
+          'Ms. Fong: Madame Wen wants her money, not your misery. Pay her and I stop visiting.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'caught-by-fong-again',
+    about: 'Madame Wen’s bookkeeper, every time after the first.',
+    trigger: { kind: 'caught' },
+    conditions: [
+      { kind: 'hunted', sponsorId: 'wen' },
+      { kind: 'count', of: 'caught', sponsorId: 'wen' },
+    ],
+    repeatable: true,
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'fong',
+        lines: ['Ms. Fong: Another entry. Yours is the longest page in the book this month.', 'Ms. Fong: Madame Wen is a patient woman. The book is not.'],
+      },
+    ],
+  },
+
+  // The match lost. She makes you wait a week; everyone who followed you up
+  // says what to do with it; the rematch is the comeback.
+  {
+    id: 'nadia-makes-you-wait',
+    about: 'Lost the match: Nadia will not play the same person twice in a week. Come back as somebody else.',
+    trigger: { kind: 'interact', poiId: 'nadia' },
+    conditions: [
+      { kind: 'eventDone', eventId: 'nadia-names-the-match' },
+      { kind: 'challenge', status: 'lost' },
+    ],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'nadia',
+        lines: [
+          'Nadia: Not tonight. I do not play the same person twice in one week.',
+          'Nadia: Come back as somebody else. Somebody I have not read about.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'nadia-rematch',
+    about: 'The week is up: Nadia will put the penthouse on the table again. Most do not come back.',
+    trigger: { kind: 'interact', poiId: 'nadia' },
+    conditions: [
+      { kind: 'eventDone', eventId: 'nadia-names-the-match' },
+      { kind: 'challenge', status: 'rematch' },
+    ],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'nadia',
+        lines: [
+          'Nadia: You came back. They mostly do not.',
+          'Nadia: Same terms. A hundred and twenty thousand each, and the floor upstairs. Sit down when you are ready.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'marcus-after-the-loss',
+    about: 'Marcus after the lost match: not unlucky, she was better tonight — build it back, like after his kitchen table.',
+    trigger: { kind: 'talkTo', characterId: 'marcus' },
+    conditions: [
+      { kind: 'flag', flag: 'wonPokerNight' },
+      { kind: 'chapter', cityId: 'portoLumina' },
+      { kind: 'eventDone', eventId: 'marcus-at-the-rail' },
+      { kind: 'challenge', status: ['lost', 'rematch'] },
+      { kind: 'flag', flag: 'hasPenthouse', set: false },
+      { kind: 'cashAtLeast', amount: 100 },
+    ],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'marcus',
+        lines: [
+          'Marcus: I watched every hand. You were not unlucky. She was better tonight.',
+          'Marcus: You know what you do now. Same as after my kitchen table: build it back, come back better.',
+          'Marcus: A hundred and twenty to sit down again, and a week before she will. I have taken the week off. Again.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'marcus-rematch-night',
+    about: 'The rematch is on and the buy-in is in your pocket: Marcus has the ice.',
+    trigger: { kind: 'talkTo', characterId: 'marcus' },
+    conditions: [
+      { kind: 'flag', flag: 'wonPokerNight' },
+      { kind: 'chapter', cityId: 'portoLumina' },
+      { kind: 'eventDone', eventId: 'marcus-at-the-rail' },
+      { kind: 'eventDone', eventId: 'marcus-after-the-loss' },
+      { kind: 'challenge', status: 'rematch' },
+      { kind: 'cashAtLeast', amount: 120000 },
+    ],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'marcus',
+        lines: [
+          'Marcus: She has racked it up again. You have the money. I have the ice.',
+          'Marcus: Nobody remembers who won the first time. Everybody remembers the second.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'dana-after-the-loss',
+    about: 'Dana after the lost match: Nadia knew your game because Dana wrote it down — so play the other game.',
+    trigger: { kind: 'talkTo', characterId: 'dana' },
+    conditions: [
+      { kind: 'chapter', cityId: 'portoLumina' },
+      { kind: 'eventDone', eventId: 'dana-reveal' },
+      { kind: 'challenge', status: ['lost', 'rematch'] },
+    ],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'dana',
+        lines: [
+          'Dana: I did not write to her about tonight. She was there.',
+          'Dana: She knew your river raise before you made it. I told her about it a year ago.',
+          'Dana: So stop doing it. Everything I ever wrote down, do the other thing. She has never read about that player.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'dana-the-letter-she-kept',
+    about: 'Before the match, if you came back from going broke: the letter Nadia kept was that one.',
+    trigger: { kind: 'talkTo', characterId: 'dana' },
+    conditions: [
+      { kind: 'chapter', cityId: 'portoLumina' },
+      { kind: 'eventDone', eventId: 'dana-reveal' },
+      { kind: 'challenge', status: 'unplayed' },
+      { kind: 'flag', flag: 'cameBack' },
+    ],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'dana',
+        lines: [
+          'Dana: She keeps one of my letters on the desk upstairs. The one about the night you went broke, and came back.',
+          'Dana: Anybody can win. She wanted to know who comes back.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'hal-after-the-loss',
+    about: 'Hal after the lost match: what she did to you, and the heads-up adjustments that answer it.',
+    trigger: { kind: 'talkTo', characterId: 'hal' },
+    conditions: [
+      { kind: 'chapter', cityId: 'portoLumina' },
+      { kind: 'eventDone', eventId: 'hal-on-the-eve' },
+      { kind: 'challenge', status: ['lost', 'rematch'] },
+    ],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'hal',
+        lines: [
+          'Hal: She did to you what she did to me. She raised your big blind every time you let her.',
+          'Hal: Heads up you are getting a price in the big blind. Defend it wide, and three-bet her back sometimes, or she owns it.',
+          'Hal: And stop limping the button. Raise it or fold it. A limp tells her you have a hand you do not want to play.',
+          'Hal: A week. Play heads up somewhere, anywhere, until those are habits.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'kit-caught',
+    about: 'Kit’s debt comes due on Kit: the Consortium’s men caught him, took three quarters, and the debt did not move.',
+    trigger: { kind: 'talkTo', characterId: 'kit' },
+    conditions: [
+      { kind: 'chapter', cityId: 'portoLumina' },
+      { kind: 'eventDone', eventId: 'kit-lumina' },
+      { kind: 'challenge', status: 'unplayed' },
+    ],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'kit',
+        lines: [
+          'Kit: They let me reach the boat. Then they got off it with me.',
+          'Kit: Three quarters of everything I had, and the debt did not move a cent. Nobody tells you that part.',
+          'Kit: So I am playing the nosebleed until it is square. Do not take Wen’s money.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'kit-after-the-loss',
+    about: 'Kit after your lost match, if you heeded him about Wen: you can come back from this, which he could not.',
+    trigger: { kind: 'talkTo', characterId: 'kit' },
+    conditions: [
+      { kind: 'chapter', cityId: 'portoLumina' },
+      { kind: 'eventDone', eventId: 'kit-lumina' },
+      { kind: 'challenge', status: ['lost', 'rematch'] },
+      { kind: 'debt', sponsorId: 'wen', status: 'none' },
+    ],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'kit',
+        lines: [
+          'Kit: Forty hands for me. How many for you?',
+          'Kit: She knew what you would do. Like somebody had written it down for her. Ask your friend in the corner about that.',
+          'Kit: You did not take Wen’s money, though. So you can come back from this. I could not.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'kit-told-you',
+    about: 'Kit after your lost match, if you took Wen’s money: he told you, and here is how the debt works from inside it.',
+    trigger: { kind: 'talkTo', characterId: 'kit' },
+    conditions: [
+      { kind: 'chapter', cityId: 'portoLumina' },
+      { kind: 'eventDone', eventId: 'kit-lumina' },
+      { kind: 'challenge', status: ['lost', 'rematch'] },
+      { kind: 'debt', sponsorId: 'wen', status: ['owing', 'overdue'] },
+    ],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'kit',
+        lines: [
+          'Kit: You took Wen’s money. I said do not be me.',
+          'Kit: Listen, then, because I know this part. Skip town and they lose you for a day. Get caught and they take three quarters and leave the debt.',
+          'Kit: Pay her first, then the match. Nadia waits a week. Wen does not wait at all.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'kit-squares-up',
+    about: 'Aftermath, the debt arc’s end on the winning side: Kit squared the Consortium himself.',
+    trigger: { kind: 'talkTo', characterId: 'kit' },
+    conditions: [
+      { kind: 'chapter', cityId: 'portoLumina' },
+      { kind: 'flag', flag: 'hasPenthouse' },
+      { kind: 'eventDone', eventId: 'kit-after' },
+    ],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'kit',
+        lines: [
+          'Kit: I squared the Consortium. Eleven days at the nosebleed, every hand like it was my last, because it was.',
+          'Kit: So I do not need your stake after all. I wanted you to know I asked anyway.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'marcus-second-time',
+    about: 'Aftermath of a rematch won: Marcus has the version he is telling, and sets the comeback down as one.',
+    trigger: { kind: 'talkTo', characterId: 'marcus' },
+    conditions: [
+      { kind: 'flag', flag: 'wonPokerNight' },
+      { kind: 'chapter', cityId: 'portoLumina' },
+      { kind: 'flag', flag: 'hasPenthouse' },
+      { kind: 'eventDone', eventId: 'marcus-upstairs' },
+      { kind: 'count', of: 'challengeLost' },
+      { kind: 'cashAtLeast', amount: 100 },
+    ],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'marcus',
+        lines: [
+          'Marcus: Lost it, came back for it, took it. That is the version I am telling.',
+          'Marcus: Nobody wants to hear about somebody who won the first time.',
+        ],
+      },
+      { kind: 'setFlag', flag: 'cameBack' },
     ],
   },
 ]

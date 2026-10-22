@@ -25,6 +25,7 @@ who is always one town ahead — until she isn't.
 |---|---|---|
 | Short — this town | The bankroll that buys the next ticket, stated when you arrive and acknowledged when you have it | an arrival beat and a send-off beat in every town |
 | Mid — a thread | A rival (Kit), a debt (Cass → Emeka → Consortium → Wen, worn by Kit), a mentor (Hal) | at least one in every town |
+| When it goes wrong | A setback with a next goal: broke → the kitchen table; owing → the sponsor and their collector; the match lost → a week and a rematch | §4, wherever it happens |
 | Long — the Challenge | The penthouse in Porto Lumina, and the woman who has kept it four years | named in Basin by Marcus, again by Kit, Hal, Dana, and every arrival card from the Mesa on |
 
 **The chapter.** The story's clock is how far up the ladder the run has got:
@@ -45,6 +46,8 @@ does not rewind the story: Ray is still at Silver Creek, but Dana has moved on.
 | **Hal** | Mentor. Taught Nadia once. | — | — | — | lessons | — | lessons | the eve of the match | upstairs |
 | **Nadia** | Final rival. | named | — | named | named | — | hinted | the match | — |
 | Sponsors | Cass, Mr. Emeka, the Consortium, Madame Wen | — | — | Cass | Emeka | — | Consortium | Wen | — |
+| Collectors | Dutch, Abel, Mr. Lowe, Ms. Fong — the sponsors' people | — | — | Dutch | Abel | — | Mr. Lowe | Ms. Fong | — |
+| Repaid sponsors | Cass and Mr. Emeka, back once you have paid them | — | — | — | — | — | Mr. Emeka | Cass, at the rail | Cass |
 
 Dana appears in all seven towns, Kit in five, Marcus in three (and the
 penthouse). Every town has at least one of Dana or Kit; the content tests hold
@@ -76,12 +79,15 @@ them.
 ### Act 0 — Basin (home) · gate: win Marcus's game
 
 - **Face:** Marcus. **Want:** the Friday game. **Problem:** broke, rent due in
-  nine days. **Thread:** Dana watching. **Payoff:** you take the whole table.
+  nine days. **Thread:** Dana watching. **Payoff:** you take the whole table,
+  and Marcus covers the rent while you are gone (the receipt is under the door
+  when you come home — §4).
 - **Turn:** stuck → leaving.
 
 | Beat | Who / where | Trigger | Conditions | Event id | Status |
 |---|---|---|---|---|---|
 | Rent, the note on the table | Your apartment | POI lines | — | `apartment-window`, `apartment-note` (POIs) | built |
+| Rent day, if the game is still unwon on day ten: Marcus has vouched for you | Your apartment | interact window | day ≥ 10, not wonPokerNight | `rent-day` | built |
 | "Tonight. My place." | Marcus, Basin Street, morning | talkTo marcus | not wonPokerNight, morning | `marcus-reminds-you` (repeatable) | built |
 | The Friday game | Marcus's place, afternoon on | talkTo marcus | not wonPokerNight | `poker-night` → poker night | built |
 | **The casino nudge.** Marcus, cleaned out and proud, sends you to Silver Creek and tells you the Porto Lumina story — the long pull is planted | Marcus | talkTo marcus | wonPokerNight, chapter Basin | `marcus-sends-you-off` | built |
@@ -205,7 +211,110 @@ and the people who got you there.
 
 ---
 
-## 4. What the audit found (2026-10-21)
+## 4. When it goes wrong — the losing paths
+
+Losing is part of the run, not the end of it. Every setback is noticed by
+somebody who knows you, costs something real (the mechanics are unchanged: a
+shakedown takes three quarters and leaves the debt; a lost match keeps the
+buy-in and makes you wait a week), and leaves a **next goal and a way back**.
+Nothing soft-locks: the content tests hold the kitchen table open in every
+chapter, and the bus home is free.
+
+Conditions these beats use (GAME_BIBLE §2): `cashBelow`, `debt`, `hunted`,
+`challenge`, `count`, the `caught` trigger and the `cameBack` flag. The run's
+`record` remembers busts, matches lost, and each sponsor's stakes taken, repaid,
+missed and collected on.
+
+### The paths in one line each
+
+| Setback | What it costs | Who meets it | Next goal | Way back |
+|---|---|---|---|---|
+| **Broke** — below the cheapest seat ($100) | the roll | Ray (Silver Creek), Dana (Silver Creek), Marcus (wherever he is) | win the kitchen table | Marcus deals his home game again: the bus home is free, and the win is a roll to climb from |
+| **Short for the room** — Harbor Room needs $1,000 | the town you are in | Hal | twenty buy-ins | back down to the riverboat ($300), climb again |
+| **Owing** — a stake running | days | the sponsor, and their collector standing beside them | pay before the day | pay at the sponsor |
+| **A stake missed** | the hunt | the sponsor ("he is out looking for you") | pay, or skip town | paying calls the hunt off; skipping town buys a day |
+| **Caught** | three quarters of what you carry; the debt stands | the sponsor's collector, in person | the debt, three days of grace | rebuild, pay; the sponsor notices you paid late |
+| **The match lost** | the $120,000, and a week | Nadia, Marcus, Dana, Hal, Kit | $120,000 again and seven days | the rematch; win it and Marcus tells the comeback |
+| **The first poker night lost** | nothing but pride | Marcus | win it | he deals you back in, as often as it takes |
+
+### Broke — Basin and Silver Creek
+
+| Beat | Who / where | Trigger | Conditions | Event id | Status |
+|---|---|---|---|---|---|
+| Walked out of the first night a loser: "the chairs are still warm" | Marcus, his place | talkTo marcus | not wonPokerNight, after `poker-night`, afternoon on | `poker-night-again` (repeatable) | built |
+| "Cleaned out? Welcome. Thirty years a member" — go home, Marcus still deals, the bus home is free | Ray, Silver Creek | talkTo ray | after `ray-is-due`, cash below $100 | `ray-busted` (repeatable) | built |
+| "Everyone goes broke at that table once. Go home. Win it back" | Dana, Silver Creek floor | talkTo dana | chapter Silver Creek, after `dana-silvercreek`, cash below $100 | `dana-silvercreek-broke` | built |
+| Home again: the rent receipt under the door — Marcus has paid every week; the room and the game are still yours | your apartment | enterArea home | wonPokerNight, chapter past Basin | `rent-receipt` | built |
+| **The kitchen table.** "You look like the first night. Nobody stays broke at my table" → the home game | Marcus, Basin | talkTo marcus | wonPokerNight, cash below $100, any chapter he is home (not Palm Cay; Lumina only before Nadia sends the car), no penthouse | `marcus-deals-you-back-in` (repeatable) | built |
+| …on holiday: "I brought cards. I always bring cards" | Marcus, Palm Cay | talkTo marcus | chapter Palm Cay, after `marcus-on-holiday`, cash below $100 | `marcus-deals-on-holiday` (repeatable) | built |
+| …at the rail: "It is always the kitchen table" | Marcus, Porto Lumina | talkTo marcus | chapter Lumina, after `marcus-at-the-rail`, no penthouse, cash below $100 | `marcus-deals-at-the-rail` (repeatable) | built |
+| …in the penthouse: "Winner hosts. So host" | Marcus, lift lobby | talkTo marcus | penthouse, after `marcus-upstairs`, cash below $100 | `marcus-deals-upstairs` (repeatable) | built |
+| **Comeback**: "Six hundred. From nothing. I have never once done that." Sets `cameBack` | Ray | talkTo ray | after `ray-sees-you-off`, busted at least once, cash ≥ $600 | `ray-sees-you-back` | built |
+| Short of the Harbor Room: Hal's bankroll rule (twenty buy-ins) and the boat back down | Hal, Harbor Boulevard | interact hal | after `hal-first-lesson`, cash below $1,000 | `hal-short-for-the-harbor` | built |
+
+### The rent — Basin's first line, paid off
+
+| Beat | Trigger | Conditions | Event id | Status |
+|---|---|---|---|---|
+| Day one: "Rent is due in nine days" | window | before the Friday game is won | `apartment-window` (POI `lockedLines`) | built |
+| Day ten, still unwon: "Rent day came and went" — Marcus has vouched for you: COME AND WIN IT OFF ME | interact apartment-window | day ≥ 10, not wonPokerNight | `rent-day` | built |
+| Marcus covers it when he sends you off ("It goes on your tab"); the window says so after | talkTo marcus / window | wonPokerNight | `marcus-sends-you-off`, `apartment-window` | built |
+| The receipt under the door when you come home | enterArea home | chapter past Basin | `rent-receipt` | built |
+
+### Owing, missed, caught — the sponsors and their people
+
+Each sponsor names a collector (`collector` in `npcs.ts`), who is a character
+with a face. While you owe on time they stand beside the sponsor (a chapter
+keyed on `debt … owing`); once the stake runs out they are the one chasing you
+down the street, and when they catch you they speak before the shakedown
+(`caught` beats, first time and every time after).
+
+| Sponsor (town) | Collector | Owing | Overdue | Repaid on time | Repaid after being late | Caught (first / again) | Returns later |
+|---|---|---|---|---|---|---|---|
+| Cass (Riverbend) | **Dutch** — her brother-in-law, yellow slicker, leaves you bus fare | `cass-owing` | `cass-overdue` | `cass-repaid` "You came back. Nobody comes back." | `cass-repaid-late` | `caught-by-dutch` / `-again` | at the Lumina rail: `cass-at-the-top`, `cass-after-you-won` |
+| Mr. Emeka (Harbor) | **Abel** — very polite, very thorough | `emeka-owing` | `emeka-overdue` | `emeka-repaid` | `emeka-repaid-late` | `caught-by-abel` / `-again` | on the Mesa Strip: `emeka-at-the-mesa` |
+| The Consortium (Mesa) | **Mr. Lowe** — one of the two men hunting Kit | `consortium-owing` | `consortium-overdue` | `consortium-repaid` | `consortium-repaid-late` | `caught-by-lowe` / `-again` | — |
+| Madame Wen (Lumina) | **Ms. Fong** — her bookkeeper; a ledger, not a bat | `wen-owing` | `wen-overdue` | `wen-repaid` | `wen-repaid-late` | `caught-by-fong` / `-again` | — |
+
+All sponsor beats are `interact` on the sponsor and fire once: the next talk is
+the stake menu, so a beat never stands between you and paying.
+
+### The match lost — the rematch path to the penthouse
+
+| Beat | Who / where | Trigger | Conditions | Event id | Status |
+|---|---|---|---|---|---|
+| The loss screen: the buy-in is gone, the rematch is a week out | — | the table | — | `FinaleLostScene` | built |
+| "Not tonight. Come back as somebody else. Somebody I have not read about." | Nadia, casino | interact nadia | match `lost` | `nadia-makes-you-wait` | built |
+| "I watched every hand. You were not unlucky. She was better tonight." Build it back: $120,000 and a week | Marcus, at the rail | talkTo marcus | after `marcus-at-the-rail`, match lost/rematch, cash ≥ $100 | `marcus-after-the-loss` | built |
+| "She knew your river raise before you made it. I told her. So do the other thing." | Dana, casino | talkTo dana | after `dana-reveal`, match lost/rematch | `dana-after-the-loss` | built |
+| The heads-up lesson that answers her: defend the big blind wide, three-bet back, stop limping the button | Hal, waterfront | talkTo hal | after `hal-on-the-eve`, match lost/rematch | `hal-after-the-loss` | built |
+| Kit: "You did not take Wen's money, so you can come back from this. I could not." | Kit, waterfront | talkTo kit | after `kit-lumina`, match lost/rematch, owe Wen nothing | `kit-after-the-loss` | built |
+| Kit: "You took Wen's money. I said do not be me" — and how the debt works from inside it | Kit, waterfront | talkTo kit | after `kit-lumina`, match lost/rematch, owe Wen | `kit-told-you` | built |
+| The week is up: "You came back. They mostly do not." | Nadia | interact nadia | match `rematch` | `nadia-rematch` | built |
+| "She has racked it up again. You have the money. I have the ice." | Marcus | talkTo marcus | after `marcus-after-the-loss`, match rematch, cash ≥ $120,000 | `marcus-rematch-night` | built |
+| **Comeback**: "Lost it, came back for it, took it. That is the version I am telling." Sets `cameBack` | Marcus, lift lobby | talkTo marcus | penthouse, after `marcus-upstairs`, lost the match at least once | `marcus-second-time` | built |
+
+### Kit's debt arc pays off either way
+
+Kit is what the debt looks like when it happens to somebody. His arc now ends
+whichever way the match goes:
+
+- **Before the match**, after `kit-lumina`: the Consortium's men caught him off
+  the boat — three quarters of everything, and the debt did not move
+  (`kit-caught`). The mechanic, shown on somebody else first.
+- **You lose**: his warning about Madame Wen pays off both ways — heeded
+  (`kit-after-the-loss`) or not (`kit-told-you`).
+- **You win**: he asks you for a stake (`kit-after`), then squares the
+  Consortium himself at the nosebleed (`kit-squares-up`).
+
+### The comeback, read back
+
+`cameBack` is set by the comeback beats (Ray's, Marcus's second time). Before
+the match, Dana tells you the letter Nadia kept on her desk was the one about
+the night you went broke and came back (`dana-the-letter-she-kept`): the
+setback is part of why the top is interested in you.
+
+## 5. What the audit found (2026-10-21)
 
 Before this pass the run had three scripted beats, all in Basin. Everything
 after the bus was mechanics with captions.
@@ -234,17 +343,8 @@ after the bus was mechanics with captions.
 
 ---
 
-## 5. Still missing (proposed)
+## 6. Still missing (proposed)
 
-- **Losses have no story.** A beat can ask for cash at least *n* but not at
-  most, nor about debts, being caught, or a lost Challenge. Wanted: a `debt`
-  condition (owing a sponsor, overdue) so Cass's collector can have lines, and
-  a flag for a lost Challenge so Marcus and Hal can say something to it.
-- **Sponsors are a menu.** Cass, Emeka and Wen never return. A paid-off Cass
-  ("You came back. Nobody comes back.") needs the debt condition above.
-- **The rent.** "Rent is due in nine days" has no payoff. Proposed: the
-  neighbour's line changes once you have left Basin, and Marcus mentions the
-  landlord on holiday.
 - **Palm Cay has no sponsor**, and Silver Creek no mission. Ray could ask you to
   sit in for him for one session (a mission: play one table).
 - **The on-foot route has no bankroll gate.** You can walk from Basin to Porto
@@ -253,3 +353,24 @@ after the bus was mechanics with captions.
   design call for the user.
 - **Editor.** The character tab edits a schedule, not chapters; chapters survive
   a save untouched but cannot be edited there yet.
+- **Choices.** An event cannot offer a choice, so "you are the sponsor now"
+  cannot let you actually stake Kit; Kit squares himself. A `choice` action
+  would let a beat branch (stake him or not, pay Cass now or later).
+- **The kitchen table pays the same at every stage.** The comeback home game is
+  the opening game ($1,500 to the winner), which is a real climb from broke in
+  Silver Creek and pocket change at the Mesa. A stake-sized home game would
+  need `startPokerNight` to take a size.
+- **Collectors only work the street you arrive on.** A hunted player in a shop
+  or casino is safe until they step back out; Dutch cannot walk into a room.
+- **Losing below Silver Creek is the only bust beat with a town face.** Deb
+  (Riverbend), Rosa (Palm Cay) and the Fixer (Mesa) say nothing when you go
+  broke in their towns; Marcus does, wherever he is.
+
+### Done since the audit (2026-10-22)
+
+- Losses have a story (§4): `debt`, `hunted`, `cashBelow`, `challenge` and
+  `count` conditions, the `caught` trigger, the run's record and `cameBack`.
+- Sponsors return: each notices you owing, late and square; their collectors
+  are people; Cass and Mr. Emeka turn up later once repaid.
+- The rent pays off.
+- Walking out of the first poker night a loser is no longer a soft-lock.

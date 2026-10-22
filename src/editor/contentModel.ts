@@ -1,6 +1,6 @@
 import type { Accessory, AvatarLook, HairStyle } from '../game/avatars'
 import type { Archetype, SkillTier } from '../engine/types'
-import { TOWN_ORDER, type StoryFlag } from '../game/state'
+import { TOWN_ORDER, type ChallengeStatus, type CountOf, type DebtStatus, type StoryFlag } from '../game/state'
 import type { SoundName } from '../audio/audio'
 import { TIME_PERIODS, type TimePeriod } from '../game/time'
 import type { CharacterDef, Persona, ScheduleEntry, TableLines } from '../world/characters'
@@ -58,7 +58,12 @@ export const ACCESSORIES = keysOf<Accessory>({
   visor: true,
   earring: true,
 })
-export const STORY_FLAGS = keysOf<StoryFlag>({ wonPokerNight: true, beatFinalRival: true, hasPenthouse: true })
+export const STORY_FLAGS = keysOf<StoryFlag>({ wonPokerNight: true, beatFinalRival: true, hasPenthouse: true, cameBack: true })
+export const DEBT_STATUSES = keysOf<DebtStatus>({ none: true, owing: true, overdue: true })
+export const CHALLENGE_STATUSES = keysOf<ChallengeStatus>({ unplayed: true, lost: true, rematch: true, won: true })
+export const COUNT_OF = keysOf<CountOf>({ busted: true, challengeLost: true, staked: true, repaid: true, missed: true, caught: true })
+/** Counts that belong to a sponsor, and can name one. */
+export const SPONSOR_COUNTS: CountOf[] = ['staked', 'repaid', 'missed', 'caught']
 export const SOUNDS = keysOf<SoundName>({
   deal: true,
   chip: true,
@@ -72,7 +77,7 @@ export const SOUNDS = keysOf<SoundName>({
   cash: true,
 })
 
-export const TRIGGER_KINDS = keysOf<EventTrigger['kind']>({ talkTo: true, interact: true, enterArea: true, standOn: true })
+export const TRIGGER_KINDS = keysOf<EventTrigger['kind']>({ talkTo: true, interact: true, enterArea: true, standOn: true, caught: true })
 export const CONDITION_KINDS = keysOf<EventCondition['kind']>({
   flag: true,
   period: true,
@@ -82,6 +87,11 @@ export const CONDITION_KINDS = keysOf<EventCondition['kind']>({
   hasLesson: true,
   eventDone: true,
   chapter: true,
+  cashBelow: true,
+  debt: true,
+  hunted: true,
+  challenge: true,
+  count: true,
 })
 export const ACTION_KINDS = keysOf<EventAction['kind']>({
   dialogue: true,
@@ -119,6 +129,8 @@ export function blankTrigger(kind: EventTrigger['kind'], ids: { character: strin
       return { kind, areaId: ids.area }
     case 'standOn':
       return { kind, areaId: ids.area, col: 1, row: 1 }
+    case 'caught':
+      return { kind }
   }
 }
 
@@ -140,6 +152,16 @@ export function blankCondition(kind: EventCondition['kind'], ids: { item: string
       return { kind, eventId: ids.event }
     case 'chapter':
       return { kind, cityId: 'silverCreek' }
+    case 'cashBelow':
+      return { kind, amount: 100 }
+    case 'debt':
+      return { kind, status: 'owing' }
+    case 'hunted':
+      return { kind }
+    case 'challenge':
+      return { kind, status: 'lost' }
+    case 'count':
+      return { kind, of: 'busted' }
   }
 }
 
@@ -487,6 +509,9 @@ function triggerShape(value: unknown, path: string, problems: Problems) {
       integer(value.col, `${path}.col`, problems, 0)
       integer(value.row, `${path}.row`, problems, 0)
       return
+    case 'caught':
+      keys(value, path, ['kind'], [], problems)
+      return
     default:
       problems.push(`${path}.kind should be one of ${TRIGGER_KINDS.join(', ')}`)
   }
@@ -538,6 +563,35 @@ function conditionShape(value: unknown, path: string, problems: Problems) {
       towns.forEach((t, i) => oneOf(t, TOWN_ORDER, `${path}.cityId[${i}]`, problems))
       return
     }
+    case 'cashBelow':
+      keys(value, path, ['kind', 'amount'], [], problems)
+      integer(value.amount, `${path}.amount`, problems, 1)
+      return
+    case 'debt':
+    case 'challenge': {
+      keys(value, path, ['kind', 'status'], value.kind === 'debt' ? ['sponsorId'] : [], problems)
+      if (value.sponsorId !== undefined) string(value.sponsorId, `${path}.sponsorId`, problems, true)
+      const statuses = Array.isArray(value.status) ? value.status : [value.status]
+      if (statuses.length === 0) problems.push(`${path} names no status`)
+      const allowed = value.kind === 'debt' ? DEBT_STATUSES : CHALLENGE_STATUSES
+      statuses.forEach((s, i) => oneOf(s, allowed, `${path}.status[${i}]`, problems))
+      return
+    }
+    case 'hunted':
+      keys(value, path, ['kind'], ['sponsorId', 'set'], problems)
+      if (value.sponsorId !== undefined) string(value.sponsorId, `${path}.sponsorId`, problems, true)
+      if (value.set !== undefined && typeof value.set !== 'boolean') problems.push(`${path}.set should be true or false`)
+      return
+    case 'count':
+      keys(value, path, ['kind', 'of'], ['sponsorId', 'atLeast', 'atMost'], problems)
+      oneOf(value.of, COUNT_OF, `${path}.of`, problems)
+      if (value.sponsorId !== undefined) {
+        string(value.sponsorId, `${path}.sponsorId`, problems, true)
+        if (!SPONSOR_COUNTS.includes(value.of as CountOf)) problems.push(`${path}.sponsorId only goes with a sponsor's count`)
+      }
+      if (value.atLeast !== undefined) integer(value.atLeast, `${path}.atLeast`, problems, 0)
+      if (value.atMost !== undefined) integer(value.atMost, `${path}.atMost`, problems, 0)
+      return
     default:
       problems.push(`${path}.kind should be one of ${CONDITION_KINDS.join(', ')}`)
   }
@@ -644,18 +698,45 @@ export interface Names {
   item: (id: string) => string
   lesson: (id: string) => string
   city: (id: string) => string
+  /** Optional, so older callers still describe a sponsor by id. */
+  sponsor?: (id: string) => string
 }
 
 const FLAG_WORDS: Record<StoryFlag, string> = {
   wonPokerNight: 'you have won the first poker night',
   beatFinalRival: 'you have beaten the final rival',
   hasPenthouse: 'you own the penthouse',
+  cameBack: 'you have come back from a setback',
 }
 
 const NOT_FLAG_WORDS: Record<StoryFlag, string> = {
   wonPokerNight: 'you have not won the first poker night yet',
   beatFinalRival: 'you have not beaten the final rival yet',
   hasPenthouse: 'you do not own the penthouse',
+  cameBack: 'you have not come back from a setback yet',
+}
+
+const DEBT_WORDS: Record<DebtStatus, string> = { none: 'owe nothing', owing: 'owe, on time', overdue: 'are past due' }
+const CHALLENGE_WORDS: Record<ChallengeStatus, string> = {
+  unplayed: 'not played yet',
+  lost: 'lost, and she is making you wait',
+  rematch: 'lost, and she will play you again now',
+  won: 'won',
+}
+const COUNT_WORDS: Record<CountOf, string> = {
+  busted: 'gone broke',
+  challengeLost: 'lost the match',
+  staked: 'taken a stake',
+  repaid: 'paid a stake back',
+  missed: 'missed a stake',
+  caught: 'been caught by collectors',
+}
+
+function timesWords(atLeast: number | undefined, atMost: number | undefined): string {
+  if (atMost === 0) return 'never'
+  const low = atLeast ?? (atMost === undefined ? 1 : 0)
+  if (atMost === undefined) return low <= 1 ? 'at least once' : `at least ${low} times`
+  return low === atMost ? `exactly ${low} times` : `${low} to ${atMost} times`
 }
 
 const listOf = (items: string[]) =>
@@ -671,6 +752,8 @@ export function describeTrigger(trigger: EventTrigger, names: Names): string {
       return `When you walk into ${names.area(trigger.areaId)}`
     case 'standOn':
       return `When you step on (${trigger.col},${trigger.row}) in ${names.area(trigger.areaId)}`
+    case 'caught':
+      return 'When the collectors catch you'
   }
 }
 
@@ -697,6 +780,22 @@ export function describeCondition(condition: EventCondition, names: Names): stri
     case 'chapter': {
       const towns = Array.isArray(condition.cityId) ? condition.cityId : [condition.cityId]
       return `the furthest you have got is ${listOf(towns.map(names.city))}`
+    }
+    case 'cashBelow':
+      return `you have less than $${condition.amount.toLocaleString('en-US')}`
+    case 'debt': {
+      const who = condition.sponsorId ? (names.sponsor?.(condition.sponsorId) ?? condition.sponsorId) : 'everybody'
+      return `to ${who} you ${listOf([condition.status].flat().map((s) => DEBT_WORDS[s]))}`
+    }
+    case 'hunted': {
+      const whose = condition.sponsorId ? `${names.sponsor?.(condition.sponsorId) ?? condition.sponsorId}'s collectors are` : 'collectors are'
+      return (condition.set ?? true) ? `${whose} working this town` : `${whose} not working this town`
+    }
+    case 'challenge':
+      return `the match is ${listOf([condition.status].flat().map((s) => CHALLENGE_WORDS[s]))}`
+    case 'count': {
+      const whose = condition.sponsorId ? ` with ${names.sponsor?.(condition.sponsorId) ?? condition.sponsorId}` : ''
+      return `you have ${COUNT_WORDS[condition.of]}${whose} ${timesWords(condition.atLeast, condition.atMost)}`
     }
   }
 }

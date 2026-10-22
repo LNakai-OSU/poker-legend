@@ -49,6 +49,9 @@ export function useEventRunner(
   // remaining actions.
   const runningRef = useRef<GameEvent | null>(null)
   const timer = useRef<number | null>(null)
+  // What to do once the running event's last action is done — the shakedown
+  // after the collector has had his say.
+  const after = useRef<(() => void) | null>(null)
   const handlersRef = useRef(handlers)
   handlersRef.current = handlers
 
@@ -64,6 +67,9 @@ export function useEventRunner(
             : { ...s, completedEventIds: [...s.completedEventIds, event.id] },
         )
       }
+      const then = after.current
+      after.current = null
+      then?.()
     },
     [setState],
   )
@@ -164,15 +170,20 @@ export function useEventRunner(
     [finish, setState],
   )
 
-  /** Begin an event. Ignored while another is already running. */
+  /**
+   * Begin an event, and optionally say what happens once it is over. Ignored
+   * while another is already running, which it says by returning false.
+   */
   const run = useCallback(
-    (event: GameEvent) => {
-      if (runningRef.current) return
+    (event: GameEvent, then?: () => void): boolean => {
+      if (runningRef.current) return false
       runningRef.current = event
+      after.current = then ?? null
       queue.current = [...event.actions]
       setRunning(event)
       setStage(EMPTY_STAGE)
       pump(event)
+      return true
     },
     [pump],
   )

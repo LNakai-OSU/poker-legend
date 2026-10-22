@@ -1,8 +1,8 @@
 import { OverworldScene, type ChaserConfig, type Interactable, type SceneExit } from './OverworldScene'
-import { AREAS, CITIES, MISSIONS, collectorSpawn, findArea } from '../world/content'
+import { AREAS, CITIES, MISSIONS, SPONSORS, collectorSpawn, findArea } from '../world/content'
 import { isWalkable } from './tileRenderer'
 import { missionStatus } from '../game/progression'
-import { daysUntilDue, totalOwed, type GameState, type StoryFlag } from '../game/state'
+import { daysUntilDue, huntingSponsorId, totalOwed, type GameState, type StoryFlag } from '../game/state'
 import type { PoiAction, PoiDef } from '../world/types'
 import type { NpcArt } from './Npc'
 import { useAmbientMusic } from '../audio/SoundToggle'
@@ -131,10 +131,19 @@ export function CityScene({
   // door puts you straight back out where they are. Where they are, though, is
   // the far end of the street from the way out of town — the chase has to be one
   // the player can actually win by running for the bus.
+  // They are somebody: the sponsor's own collector, the face that stands over
+  // you when they catch you.
   const spawnTile = landing
+  const collectorId = hunted ? SPONSORS[huntingSponsorId(state) ?? '']?.collector : undefined
+  const collector = collectorId ? CHARACTERS[collectorId] : undefined
   const chaser: ChaserConfig | undefined =
     hunted && areaId === city.entryAreaId
-      ? { name: 'Collector', ...collectorSpawn(area, spawnTile), stepMs: 430 }
+      ? {
+          name: collector?.name ?? 'Collector',
+          figure: collector && collectorId ? figureForCharacter(collectorId, collector) : undefined,
+          ...collectorSpawn(area, spawnTile),
+          stepMs: 430,
+        }
       : undefined
 
   const owed = totalOwed(state)
