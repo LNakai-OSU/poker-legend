@@ -241,7 +241,7 @@ export function canonicalCharacter(character: CharacterDef): CharacterDef {
                 ordered(entry, ['period', 'areaId', 'col', 'row', 'lines'] satisfies Array<keyof ScheduleEntry>),
               ),
             },
-            ['art', 'color', 'lines', 'schedule'],
+            ['art', 'color', 'role', 'look', 'lines', 'schedule'],
           )
         : undefined,
     },
@@ -410,8 +410,11 @@ export function characterShapeProblems(value: unknown, path = 'character'): Prob
     if (!isObj(value.overworld)) problems.push(`${path}.overworld should be an overworld presence`)
     else {
       const presence = value.overworld
-      keys(presence, `${path}.overworld`, ['lines', 'schedule'], ['art', 'color'], problems)
+      keys(presence, `${path}.overworld`, ['lines', 'schedule'], ['art', 'color', 'role', 'look'], problems)
       lineList(presence.lines, `${path}.overworld.lines`, problems)
+      // The street clothes: a uniform, and what the portrait never shows.
+      if (presence.role !== undefined) string(presence.role, `${path}.overworld.role`, problems, true)
+      if (presence.look !== undefined && !isObj(presence.look)) problems.push(`${path}.overworld.look should be a look`)
       if (presence.color !== undefined) integer(presence.color, `${path}.overworld.color`, problems, 0)
       if (!Array.isArray(presence.schedule)) problems.push(`${path}.overworld.schedule should be a list`)
       else {
