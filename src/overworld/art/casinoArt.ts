@@ -69,6 +69,43 @@ const BURGUNDY: Colourway = {
   cabinet: '#5a1222', cabinetHi: '#7a2234', cabinetLo: '#3a0a14', trim: '#f2c84a',
 }
 
+const PURPLE: Colourway = {
+  topper: '#9a5ae0', topperHi: '#d0b0ff', topperLo: '#6a3aa8',
+  cabinet: '#4a2a7a', cabinetHi: '#6a4a9c', cabinetLo: '#2e1a50', trim: '#f2c84a',
+}
+const ORANGE: Colourway = {
+  topper: '#ff9a2a', topperHi: '#ffd08a', topperLo: '#c86a1a',
+  cabinet: '#2a2a34', cabinetHi: '#44444e', cabinetLo: '#16161c', trim: '#ff9a2a',
+}
+const SADDLE: Colourway = {
+  topper: '#e8b04a', topperHi: '#fff0a8', topperLo: '#a87a2a',
+  cabinet: '#7a4a24', cabinetHi: '#9a6a3a', cabinetLo: '#4e2e14', trim: '#e8d8b0',
+}
+const NAVY: Colourway = {
+  topper: '#e8e4dc', topperHi: '#ffffff', topperLo: '#a8a49c',
+  cabinet: '#1e2e5a', cabinetHi: '#34487a', cabinetLo: '#121c3a', trim: '#c8a040',
+}
+const LAGOON: Colourway = {
+  topper: '#3ac8e8', topperHi: '#b0f0ff', topperLo: '#2a8aa8',
+  cabinet: '#e8e0c8', cabinetHi: '#fbf6e6', cabinetLo: '#bcb094', trim: '#ff7a6a',
+}
+const EMERALD: Colourway = {
+  topper: '#f2c84a', topperHi: '#fff0a8', topperLo: '#b08a20',
+  cabinet: '#1e5a3e', cabinetHi: '#3a7a5a', cabinetLo: '#103a26', trim: '#d8b048',
+}
+const NEON_LIME: Colourway = {
+  topper: '#b8ff4a', topperHi: '#e8ffb0', topperLo: '#78b02a',
+  cabinet: '#16201a', cabinetHi: '#2a3a2e', cabinetLo: '#0a100c', trim: '#ff4fd8',
+}
+const NEON_ORANGE: Colourway = {
+  topper: '#ffa04a', topperHi: '#ffd8b0', topperLo: '#c8642a',
+  cabinet: '#2a1418', cabinetHi: '#4a2a2e', cabinetLo: '#14080a', trim: '#4fe8ff',
+}
+const NEON_VIOLET: Colourway = {
+  topper: '#a07aff', topperHi: '#d8c8ff', topperLo: '#6a4ad0',
+  cabinet: '#1a1430', cabinetHi: '#2e2650', cabinetLo: '#0c0a1a', trim: '#b8ff4a',
+}
+
 type Reel = '7' | 'cherry' | 'bar' | 'bell'
 
 const SYMBOLS: Record<Reel, string[]> = {
@@ -199,26 +236,74 @@ const REEL_SETS: Array<[Reel, Reel, Reel]> = [
   ['7', '7', '7'], ['bell', 'cherry', 'cherry'], ['bar', '7', 'bell'],
 ]
 
+/** How many looks a bank has: which colours, which games, which sign over it. */
+const BANK_VARIANTS = 6
+
+/** The game a bank is, lit over its toppers: the name, the board, the lettering. */
+const MARQUEES: Array<{ words: string; ink: string }> = [
+  { words: 'LUCKY 7', ink: '#ffe066' },
+  { words: 'WILD', ink: '#ffffff' },
+  { words: 'BONUS', ink: '#ffe066' },
+  { words: 'HOT', ink: '#fff4c8' },
+  { words: 'DIAMOND', ink: '#e8f6ff' },
+  { words: 'TRIPLE', ink: '#ffe066' },
+]
+
+/** How far a bank's marquee rises above its footprint, in art units. */
+const MARQUEE_TOP = 17
+
+/**
+ * The sign across the top of a bank: a bulb-lit board on two struts over the
+ * toppers, the game's name on it. Its board takes the bank's own colours, so a
+ * WILD bank of pink machines and a WILD bank of cyan ones are two banks.
+ */
+function marquee(px: Px, w: number, way: Colourway, words: string, ink: string, frame: number) {
+  for (const x of [10, w - 12]) {
+    px(x, -9, 2, 2, '#8a8e98')
+    px(x, -9, 1, 2, '#d8dce4')
+  }
+  px(3, -17, w - 6, 9, INK)
+  px(4, -16, w - 8, 7, way.cabinetLo)
+  px(4, -16, w - 8, 1, way.cabinet)
+  bulbBorder(px, 4, -16, w - 8, 7, frame, '#ffe680', tint(way.cabinetLo, 0.2))
+  glow('neon', () => text(px, words, Math.round((w - textWidth(words)) / 2), -14, frame ? ink : way.topperHi))
+}
+
 /**
  * A bank of machines in a row with a stool in front of each. Footprint: two
  * solid rows, then the stools. The toppers stand above the footprint, and are
  * drawn in front of whoever walks behind the bank.
+ *
+ * `pool` is the bank's palette and `take` how many of it one bank wears. Each
+ * look starts the pool somewhere else, deals the games out from somewhere else
+ * and lights a different sign, so a room with two of the same bank in it has
+ * two different banks.
  */
-function slotBank(colourways: Colourway[], seat = '#c82a2a'): StampArt {
+function slotBank(pool: Colourway[], take: number, seat = '#c82a2a', sign = true): StampArt {
   return {
     frames: 2,
-    bleed: { top: TOPPER },
+    variants: BANK_VARIANTS,
+    variantGroup: 'slot-bank',
+    bleed: { top: sign ? MARQUEE_TOP : TOPPER },
     standsUp: 0,
     draw: (px, c: ArtContext) => {
+      const v = c.variant
+      const ways = Array.from({ length: take }, (_, k) => pool[(k + v) % pool.length])
       for (let i = 0; i < c.cols; i++) {
-        const way = colourways[i % colourways.length]
-        const emblem = (['7', 'star', 'cherry', 'bar'] as const)[i % 4]
-        slotMachine(px, i * 16, 0, way, REEL_SETS[(i * 5 + c.cols) % REEL_SETS.length], c.frame + i, emblem)
+        // Odd looks pair the machines up rather than alternating them.
+        const way = ways[(v % 2 ? Math.floor(i / 2) : i) % ways.length]
+        const emblem = (['7', 'star', 'cherry', 'bar', 'bell'] as const)[(i + v * 2) % 5]
+        const reels = REEL_SETS[(i * 5 + c.cols + v * 2) % REEL_SETS.length]
+        slotMachine(px, i * 16, 0, way, reels, c.frame + i, emblem)
         if (c.rows > 2) stool(px, i * 16, 32, seat)
       }
       // A chrome kick rail along the foot of the bank, and its shadow.
       px(0, 31, c.w, 1, '#8a8e98')
       shadow(px, 0, 32, c.w, 1, 0.4)
+      if (sign) {
+        const { words, ink } = MARQUEES[v % MARQUEES.length]
+        marquee(px, c.w, ways[0], words, ink, c.frame)
+      }
     },
   }
 }
@@ -227,10 +312,12 @@ function slotBank(colourways: Colourway[], seat = '#c82a2a'): StampArt {
  * The progressive: a bank with a light-board over it counting up a jackpot,
  * hung across the toppers of the machines.
  */
-function jackpotBank(colourways: Colourway[], board: string, seat: string): StampArt {
-  const bank = slotBank(colourways, seat)
+function jackpotBank(pool: Colourway[], take: number, board: string, seat: string): StampArt {
+  const bank = slotBank(pool, take, seat, false)
   return {
     frames: 2,
+    variants: BANK_VARIANTS,
+    variantGroup: 'slot-bank',
     bleed: { top: 14 },
     standsUp: 0,
     draw: (px, c) => {
@@ -823,16 +910,16 @@ const lightPool: StampArt = {
 }
 
 export const CASINO_ART: Record<string, StampArt> = {
-  'slot-bank': slotBank([RED, BLUE, GREEN]),
-  'slot-bank-6': slotBank([RED, BLUE, GREEN]),
-  'slot-bank-western': slotBank([RED, GREEN], '#8a5a2a'),
-  'slot-bank-brass': slotBank([GREEN, RED, BURGUNDY], '#6a3a2a'),
-  'slot-bank-island': slotBank([BLUE, GREEN, RED], '#e8d8b0'),
-  'slot-bank-reef': slotBank([CORAL, SEAFOAM, SUNSHINE], '#e8d8b0'),
-  'slot-bank-ivory': slotBank([IVORY, BURGUNDY], '#a81c2c'),
-  'slot-bank-neon': slotBank([NEON_PINK, NEON_CYAN], '#4fe8ff'),
-  'slot-bank-jackpot': jackpotBank([NEON_CYAN, NEON_PINK], '#2a0a3a', '#ff4fd8'),
-  'slot-bank-gold': jackpotBank([IVORY, BURGUNDY], '#3a0a14', '#a81c2c'),
+  'slot-bank': slotBank([RED, BLUE, GREEN, PURPLE, ORANGE], 3),
+  'slot-bank-6': slotBank([RED, BLUE, GREEN, PURPLE, ORANGE], 3),
+  'slot-bank-western': slotBank([RED, GREEN, SADDLE, BURGUNDY], 2, '#8a5a2a'),
+  'slot-bank-brass': slotBank([GREEN, RED, BURGUNDY, NAVY], 3, '#6a3a2a'),
+  'slot-bank-island': slotBank([BLUE, GREEN, RED, LAGOON], 3, '#e8d8b0'),
+  'slot-bank-reef': slotBank([CORAL, SEAFOAM, SUNSHINE, LAGOON], 3, '#e8d8b0'),
+  'slot-bank-ivory': slotBank([IVORY, BURGUNDY, EMERALD, NAVY], 2, '#a81c2c'),
+  'slot-bank-neon': slotBank([NEON_PINK, NEON_CYAN, NEON_LIME, NEON_ORANGE, NEON_VIOLET], 2, '#4fe8ff'),
+  'slot-bank-jackpot': jackpotBank([NEON_CYAN, NEON_PINK, NEON_VIOLET], 2, '#2a0a3a', '#ff4fd8'),
+  'slot-bank-gold': jackpotBank([IVORY, BURGUNDY, EMERALD], 2, '#3a0a14', '#a81c2c'),
   'poker-table': pokerTable4(CLASSIC),
   'poker-table-6': pokerTable6(CLASSIC),
   'poker-table-brass': pokerTable6(BRASS),
