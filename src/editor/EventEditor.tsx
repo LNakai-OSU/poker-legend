@@ -3,11 +3,15 @@ import { CHARACTERS } from '../world/characters'
 import { EVENTS, type EventAction, type EventCondition, type EventTrigger, type GameEvent } from '../world/events'
 import { AREAS, LESSONS, TABLES, allShopItems } from '../world/content'
 import { TIME_PERIODS, type TimePeriod } from '../game/time'
-import { TOWN_ORDER, type CityId } from '../game/state'
+import { TOWN_ORDER, type CityId, type CountOf } from '../game/state'
 import {
   ACTION_KINDS,
+  CHALLENGE_STATUSES,
   CONDITION_KINDS,
+  COUNT_OF,
+  DEBT_STATUSES,
   ENDS_EVENT,
+  SPONSOR_COUNTS,
   SOUNDS,
   STORY_FLAGS,
   TRIGGER_KINDS,
@@ -28,6 +32,7 @@ import {
   itemOptions,
   lastSave,
   lessonOptions,
+  sponsorOptions,
   move,
   names as namesIn,
   poiOptions,
@@ -53,6 +58,7 @@ const TRIGGER_LABEL: Record<EventTrigger['kind'], string> = {
   interact: 'you use a fixture',
   enterArea: 'you walk into an area',
   standOn: 'you step on a tile',
+  caught: 'the collectors catch you',
 }
 
 const CONDITION_LABEL: Record<EventCondition['kind'], string> = {
@@ -64,6 +70,11 @@ const CONDITION_LABEL: Record<EventCondition['kind'], string> = {
   hasLesson: 'you have a lesson',
   eventDone: 'another event',
   chapter: 'how far the run has got',
+  cashBelow: 'cash is below',
+  debt: 'what you owe a sponsor',
+  hunted: 'collectors are in town',
+  challenge: 'where the match stands',
+  count: 'how often something has happened',
 }
 
 const ACTION_LABEL: Record<EventAction['kind'], string> = {
@@ -96,6 +107,7 @@ export function EventEditor({ selected, onClose }: { selected: string | null; on
       cities: cityOptions(),
       items: itemOptions(),
       lessons: lessonOptions(),
+      sponsors: sponsorOptions(),
       events: eventOptions(),
       pois: poiOptions(world),
     }),
@@ -437,7 +449,7 @@ export function EventEditor({ selected, onClose }: { selected: string | null; on
   )
 }
 
-type Options = Record<'characters' | 'areas' | 'tables' | 'cities' | 'items' | 'lessons' | 'events' | 'pois', Array<[string, string]>>
+type Options = Record<'characters' | 'areas' | 'tables' | 'cities' | 'items' | 'lessons' | 'events' | 'pois' | 'sponsors', Array<[string, string]>>
 
 function TriggerTarget({ trigger, options, onChange }: { trigger: EventTrigger; options: Options; onChange: (t: EventTrigger) => void }) {
   switch (trigger.kind) {
@@ -457,7 +469,44 @@ function TriggerTarget({ trigger, options, onChange }: { trigger: EventTrigger; 
           <NumberBox label="Row" width={56} value={trigger.row} onChange={(row) => onChange({ ...trigger, row: row ?? 0 })} />
         </>
       )
+    case 'caught':
+      return <span className="ed-muted ed-small">whoever&rsquo;s collectors they are: add a &ldquo;collectors are in town&rdquo; condition</span>
   }
+}
+
+/** A sponsor, or everybody when none is picked. */
+function SponsorPick({ value, options, onChange, everybody = 'any sponsor' }: { value: string | undefined; options: Options; onChange: (id: string | undefined) => void; everybody?: string }) {
+  return (
+    <Pick
+      label="Sponsor"
+      value={value ?? ''}
+      options={[['', everybody], ...options.sponsors]}
+      onChange={(id) => onChange(id === '' ? undefined : id)}
+    />
+  )
+}
+
+/** Toggle buttons for a status that may be one value or several, as the hours are picked. */
+function StatusToggles<T extends string>({ id, all, chosen, onChange }: { id: string; all: readonly T[]; chosen: T[]; onChange: (next: T | T[]) => void }) {
+  return (
+    <span className="ed-periods" data-testid={`${id}-statuses`}>
+      {all.map((status) => (
+        <button
+          key={status}
+          type="button"
+          className="ed-btn small"
+          aria-pressed={chosen.includes(status)}
+          data-testid={`${id}-${status}`}
+          onClick={() => {
+            const next = chosen.includes(status) ? chosen.filter((s) => s !== status) : all.filter((s) => s === status || chosen.includes(s))
+            if (next.length > 0) onChange(next.length === 1 ? next[0] : next)
+          }}
+        >
+          {status}
+        </button>
+      ))}
+    </span>
+  )
 }
 
 function ConditionFields({
@@ -567,7 +616,64 @@ function ConditionFields({
         </span>
       )
     }
+    case 'cashBelow':
+      return <NumberBox label="Cash" width={90} testid={`${id}-amount`} value={condition.amount} onChange={(amount) => onChange({ ...condition, amount: amount ?? 1 })} />
+    case 'debt':
+      return (
+        <>
+          <SponsorPick value={condition.sponsorId} options={options} everybody="everybody" onChange={(sponsorId) => onChange(withSponsor(condition, sponsorId))} />
+          <StatusToggles id={id} all={DEBT_STATUSES} chosen={[condition.status].flat()} onChange={(status) => onChange({ ...condition, status })} />
+        </>
+      )
+    case 'hunted':
+      return (
+        <>
+          <SponsorPick value={condition.sponsorId} options={options} onChange={(sponsorId) => onChange(withSponsor(condition, sponsorId))} />
+          <Pick
+            label="Are they"
+            value={(condition.set ?? true) ? 'set' : 'unset'}
+            options={[
+              ['set', 'are here'],
+              ['unset', 'are not here'],
+            ]}
+            onChange={(v) => {
+              const next = { ...condition }
+              if (v === 'set') delete next.set
+              else next.set = false
+              onChange(next)
+            }}
+          />
+        </>
+      )
+    case 'challenge':
+      return <StatusToggles id={id} all={CHALLENGE_STATUSES} chosen={[condition.status].flat()} onChange={(status) => onChange({ ...condition, status })} />
+    case 'count':
+      return (
+        <>
+          <Pick label="What" value={condition.of} options={COUNT_OF.map((c) => [c, c])} onChange={(of) => onChange(SPONSOR_COUNTS.includes(of as CountOf) ? { ...condition, of: of as CountOf } : withSponsor({ ...condition, of: of as CountOf }, undefined))} />
+          {SPONSOR_COUNTS.includes(condition.of) && <SponsorPick value={condition.sponsorId} options={options} onChange={(sponsorId) => onChange(withSponsor(condition, sponsorId))} />}
+          <span className="ed-muted ed-small">at least</span>
+          <NumberBox label="At least" optional width={56} value={condition.atLeast} onChange={(atLeast) => onChange(withBound(condition, 'atLeast', atLeast))} />
+          <span className="ed-muted ed-small">at most</span>
+          <NumberBox label="At most" optional width={56} value={condition.atMost} onChange={(atMost) => onChange(withBound(condition, 'atMost', atMost))} />
+        </>
+      )
   }
+}
+
+/** A condition with its sponsor set, or the field gone rather than left undefined. */
+function withSponsor<C extends { sponsorId?: string }>(condition: C, sponsorId: string | undefined): C {
+  const next = { ...condition }
+  if (sponsorId === undefined) delete next.sponsorId
+  else next.sponsorId = sponsorId
+  return next
+}
+
+function withBound<C extends { atLeast?: number; atMost?: number }>(condition: C, bound: 'atLeast' | 'atMost', value: number | undefined): C {
+  const next = { ...condition }
+  if (value === undefined) delete next[bound]
+  else next[bound] = value
+  return next
 }
 
 /** A speaker is a character id, a plain name, or nobody. */

@@ -912,6 +912,153 @@ export const CHARACTERS: Record<string, CharacterDef> = {
       ],
     },
   },
+  // ---------------------------------------------------------------------------
+  // The sponsors and the people they send. A sponsor is a menu at a fixture —
+  // these give Cass and Mr. Emeka a face that turns up again once you have paid
+  // them, and give each collector a face before the chase. While you owe a
+  // sponsor on time, their collector stands beside them; once the stake runs out
+  // they are the one coming down the street (`collector` in npcs.ts), and the
+  // `caught` beats in events.ts are their lines. See docs/STORYBOARD.md.
+  // ---------------------------------------------------------------------------
+  cass: {
+    name: 'Cass',
+    style: 'Stakes players off the Riverbend dock.',
+    look: { skin: '#c68e62', hair: '#2a1a12', hairStyle: 'tied', shirt: '#2f5d62', accessory: 'earring' },
+    // They never sit down; if anybody ever seats them, this is what they say.
+    lines: { greeting: ['Cass: I do not play. I back people who do.'] },
+    overworld: {
+      // A river woman's coat, not a banker's suit. She lends from a bait shed.
+      role: 'local',
+      look: { garment: 'jacket', garmentColor: '#3a3a2e', trousers: '#2e2e26', sleeves: 'long' },
+      lines: ['Cass: Nobody pays me back. You did.'],
+      schedule: [],
+      chapters: [
+        {
+          // Paid her back, and she comes to watch what that looks like at the top.
+          when: [{ kind: 'chapter', cityId: 'portoLumina' }, { kind: 'count', of: 'repaid', sponsorId: 'cass' }],
+          lines: ['Cass: Watching my investment. It is a long way from the dock.'],
+          schedule: [
+            { period: 'evening', areaId: 'pl-casino', col: 8, row: 8 },
+            { period: 'night', areaId: 'pl-casino', col: 8, row: 8 },
+          ],
+        },
+      ],
+    },
+  },
+  emeka: {
+    name: 'Mr. Emeka',
+    style: 'Backs patient players.',
+    look: { skin: '#4a2c1a', hair: '#1a1a1a', hairStyle: 'bald', shirt: '#e8e2d0', accessory: 'glasses' },
+    // They never sit down; if anybody ever seats them, this is what they say.
+    lines: { greeting: ['Mr. Emeka: I do not sit down. I invest in people who do.'] },
+    overworld: {
+      role: 'suit',
+      lines: ['Mr. Emeka: Patient. I said I liked patient.'],
+      schedule: [],
+      chapters: [
+        {
+          // Paid back, he turns up on the Strip with a new player and an opinion.
+          when: [{ kind: 'chapter', cityId: 'neonMesa' }, { kind: 'count', of: 'repaid', sponsorId: 'emeka' }],
+          lines: ['Mr. Emeka: My new player is not patient. I am working on him.'],
+          schedule: [
+            { period: 'afternoon', areaId: 'nm-street', col: 22, row: 8 },
+            { period: 'evening', areaId: 'nm-street', col: 22, row: 8 },
+          ],
+        },
+      ],
+    },
+  },
+  dutch: {
+    name: 'Dutch',
+    style: "Cass's brother-in-law. Collects for her.",
+    look: { skin: '#e0b088', hair: '#9a6a32', hairStyle: 'short', shirt: '#5a6a3a', accessory: 'cap' },
+    // They never sit down; if anybody ever seats them, this is what they say.
+    lines: { greeting: ['Dutch: Me? No. I just hold the coats.'] },
+    overworld: {
+      // A yellow slicker in all weathers: the river is always about to happen.
+      look: { garment: 'jacket', garmentColor: '#d4a51c', trousers: '#3a3a30', sleeves: 'long' },
+      lines: ['Dutch: Just here for the view. Lovely day for it. Three days, she said?'],
+      schedule: [],
+      chapters: [
+        {
+          when: [{ kind: 'debt', sponsorId: 'cass', status: 'owing' }],
+          schedule: [
+            { period: 'morning', areaId: 'rb-street', col: 6, row: 8 },
+            { period: 'afternoon', areaId: 'rb-street', col: 6, row: 8 },
+            { period: 'evening', areaId: 'rb-street', col: 6, row: 8 },
+          ],
+        },
+      ],
+    },
+  },
+  abel: {
+    name: 'Abel',
+    style: "Mr. Emeka's man. Very polite.",
+    look: { skin: '#6b4226', hair: '#141414', hairStyle: 'short', shirt: '#3a4a6a', accessory: 'none' },
+    // They never sit down; if anybody ever seats them, this is what they say.
+    lines: { greeting: ['Abel: I do not play, thank you. I keep count.'] },
+    overworld: {
+      role: 'suit',
+      lines: ['Abel: Mr. Emeka hopes you are well. He asked me to hope it too.'],
+      schedule: [],
+      chapters: [
+        {
+          when: [{ kind: 'debt', sponsorId: 'emeka', status: 'owing' }],
+          schedule: [
+            { period: 'afternoon', areaId: 'ch-street', col: 8, row: 12 },
+            { period: 'evening', areaId: 'ch-street', col: 8, row: 12 },
+            { period: 'night', areaId: 'ch-street', col: 8, row: 12 },
+          ],
+        },
+      ],
+    },
+  },
+  lowe: {
+    name: 'Mr. Lowe',
+    style: 'One of the Consortium’s two men. The one who talks.',
+    look: { skin: '#d8b49a', hair: '#5a5a5a', hairStyle: 'short', shirt: '#2a2a32', accessory: 'shades' },
+    // They never sit down; if anybody ever seats them, this is what they say.
+    lines: { greeting: ['Mr. Lowe: We do not play. We collect.'] },
+    overworld: {
+      // The Consortium's men dress identically. That is the point of them.
+      role: 'collector',
+      lines: ['Mr. Lowe: We are not here. You will know when we are here.'],
+      schedule: [],
+      chapters: [
+        {
+          when: [{ kind: 'debt', sponsorId: 'consortium', status: 'owing' }],
+          schedule: [
+            { period: 'morning', areaId: 'nm-street', col: 25, row: 9 },
+            { period: 'evening', areaId: 'nm-street', col: 25, row: 9 },
+            { period: 'night', areaId: 'nm-street', col: 25, row: 9 },
+          ],
+        },
+      ],
+    },
+  },
+  fong: {
+    name: 'Ms. Fong',
+    style: "Madame Wen's bookkeeper. Carries a ledger, not a bat.",
+    look: { skin: '#e8c4a0', hair: '#0e0e10', hairStyle: 'tied', shirt: '#6a1a2a', accessory: 'glasses' },
+    // They never sit down; if anybody ever seats them, this is what they say.
+    lines: { greeting: ['Ms. Fong: I keep the book. I do not write in it at the table.'] },
+    overworld: {
+      role: 'suit',
+      look: { lower: 'skirt' },
+      lines: ['Ms. Fong: I keep the book. Your page is short so far.'],
+      schedule: [],
+      chapters: [
+        {
+          when: [{ kind: 'debt', sponsorId: 'wen', status: 'owing' }],
+          schedule: [
+            { period: 'afternoon', areaId: 'pl-street', col: 6, row: 9 },
+            { period: 'evening', areaId: 'pl-street', col: 6, row: 9 },
+            { period: 'night', areaId: 'pl-street', col: 6, row: 9 },
+          ],
+        },
+      ],
+    },
+  },
   nadia: {
     name: 'Nadia Okonkwo',
     style: 'Four years in the penthouse.',

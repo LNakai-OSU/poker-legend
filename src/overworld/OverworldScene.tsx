@@ -9,7 +9,7 @@ import { DELTAS, GridPlayer, type Direction } from './GridPlayer'
 import { Npc, type NpcConfig } from './Npc'
 import { COLLECTOR_FIGURE, HERO_FIGURE } from './casting'
 import { alertBubbleTexture } from './objectArt'
-import { PERSON_RISE } from './characterArt'
+import { PERSON_RISE, type Figure } from './characterArt'
 import { DialogueBox } from '../game/DialogueBox'
 import { TouchControls, useIsTouchDevice } from './TouchControls'
 import { cameraOffset } from './camera'
@@ -67,6 +67,8 @@ export interface ChaserConfig {
   color?: number
   /** Milliseconds between steps — keep above the player's to leave room to escape. */
   stepMs?: number
+  /** Who it is: the collector the sponsor sent, drawn as themselves. Defaults to a man in a suit. */
+  figure?: Figure
 }
 
 export interface SceneExit {
@@ -304,7 +306,7 @@ export function OverworldScene({
       let hunter: GridPlayer | null = null
       let alert: Sprite | null = null
       if (chaser) {
-        hunter = new GridPlayer(chaser.col, chaser.row, { figure: COLLECTOR_FIGURE, speedPxPerSec: 150 })
+        hunter = new GridPlayer(chaser.col, chaser.row, { figure: chaser.figure ?? COLLECTOR_FIGURE, speedPxPerSec: 150 })
         actors.addChild(hunter.sprite)
         // A "!" over his head instead of a name: he has seen you.
         alert = new Sprite(alertBubbleTexture())

@@ -16,7 +16,7 @@ const SAY_HELLO: GameEvent = {
 
 describe('conditions', () => {
   it('reads a flag both ways round', () => {
-    const won = at({ flags: { wonPokerNight: true, beatFinalRival: false, hasPenthouse: false } })
+    const won = at({ flags: { wonPokerNight: true, beatFinalRival: false, hasPenthouse: false, cameBack: false } })
     expect(conditionHolds({ kind: 'flag', flag: 'wonPokerNight' }, won)).toBe(true)
     expect(conditionHolds({ kind: 'flag', flag: 'wonPokerNight', set: false }, won)).toBe(false)
     expect(conditionHolds({ kind: 'flag', flag: 'wonPokerNight', set: false }, at())).toBe(true)
@@ -43,6 +43,27 @@ describe('conditions', () => {
     expect(conditionHolds({ kind: 'eventDone', eventId: 'poker-night' }, after)).toBe(true)
     expect(conditionHolds({ kind: 'eventDone', eventId: 'poker-night', done: false }, after)).toBe(false)
     expect(conditionHolds({ kind: 'eventDone', eventId: 'poker-night', done: false }, at())).toBe(true)
+  })
+
+  it('reads what you owe, whose collectors are in town, the match and the record', () => {
+    const owing = at({ day: 2, cityId: 'riverbend', debts: [{ id: 'd', sponsorId: 'cass', sponsorName: 'Cass', principal: 1, owed: 2, dueOnDay: 4, cityId: 'riverbend' }] })
+    expect(conditionHolds({ kind: 'debt', sponsorId: 'cass', status: 'owing' }, owing)).toBe(true)
+    expect(conditionHolds({ kind: 'debt', sponsorId: 'emeka', status: 'none' }, owing)).toBe(true)
+    expect(conditionHolds({ kind: 'debt', status: ['overdue', 'none'] }, owing)).toBe(false)
+    const hunted = { ...owing, day: 6, huntedInCityId: 'riverbend' as const }
+    expect(conditionHolds({ kind: 'debt', status: 'overdue' }, hunted)).toBe(true)
+    expect(conditionHolds({ kind: 'hunted', sponsorId: 'cass' }, hunted)).toBe(true)
+    expect(conditionHolds({ kind: 'hunted', sponsorId: 'wen' }, hunted)).toBe(false)
+    expect(conditionHolds({ kind: 'hunted', set: false }, owing)).toBe(true)
+    expect(conditionHolds({ kind: 'cashBelow', amount: 100 }, at({ cash: 99 }))).toBe(true)
+    expect(conditionHolds({ kind: 'cashBelow', amount: 100 }, at({ cash: 100 }))).toBe(false)
+    const lost = at({ day: 3, finaleRematchDay: 9, record: { busted: 2, challengeLost: 1, sponsors: { cass: { staked: 1, repaid: 1, missed: 0, caught: 0 } } } })
+    expect(conditionHolds({ kind: 'challenge', status: 'lost' }, lost)).toBe(true)
+    expect(conditionHolds({ kind: 'challenge', status: ['rematch', 'won'] }, lost)).toBe(false)
+    expect(conditionHolds({ kind: 'count', of: 'busted' }, lost)).toBe(true)
+    expect(conditionHolds({ kind: 'count', of: 'busted', atLeast: 3 }, lost)).toBe(false)
+    expect(conditionHolds({ kind: 'count', of: 'missed', sponsorId: 'cass', atMost: 0 }, lost)).toBe(true)
+    expect(conditionHolds({ kind: 'count', of: 'repaid', sponsorId: 'emeka' }, lost)).toBe(false)
   })
 
   it('reads the chapter as the furthest town set foot in, not the one you are in', () => {
@@ -74,6 +95,23 @@ describe('telling two events apart', () => {
     expect(canBothFire(event('a', [{ kind: 'chapter', cityId: 'riverbend' }]), event('b', [{ kind: 'cashAtLeast', amount: 600 }]))).toBe(true)
     // An hour that differs does not help when the other has no hour at all.
     expect(canBothFire(event('a', [{ kind: 'period', period: 'morning' }]), event('b', [{ kind: 'chapter', cityId: 'riverbend' }]))).toBe(true)
+  })
+
+  it('separates them by what you hold, owe and have been through', () => {
+    const apart = (a: GameEvent['conditions'], b: GameEvent['conditions']) => !canBothFire(event('a', a), event('b', b))
+    expect(apart([{ kind: 'cashAtLeast', amount: 600 }], [{ kind: 'cashBelow', amount: 100 }])).toBe(true)
+    expect(apart([{ kind: 'cashAtLeast', amount: 50 }], [{ kind: 'cashBelow', amount: 100 }])).toBe(false)
+    expect(apart([{ kind: 'debt', sponsorId: 'cass', status: 'owing' }], [{ kind: 'debt', sponsorId: 'cass', status: ['none', 'overdue'] }])).toBe(true)
+    expect(apart([{ kind: 'debt', status: 'none' }], [{ kind: 'debt', sponsorId: 'cass', status: 'owing' }])).toBe(true)
+    expect(apart([{ kind: 'debt', status: 'owing' }], [{ kind: 'debt', sponsorId: 'cass', status: 'overdue' }])).toBe(true)
+    // Two sponsors can each be owed at once.
+    expect(apart([{ kind: 'debt', sponsorId: 'cass', status: 'owing' }], [{ kind: 'debt', sponsorId: 'wen', status: 'owing' }])).toBe(false)
+    expect(apart([{ kind: 'hunted', sponsorId: 'cass' }], [{ kind: 'hunted', sponsorId: 'wen' }])).toBe(true)
+    expect(apart([{ kind: 'hunted' }], [{ kind: 'hunted', set: false }])).toBe(true)
+    expect(apart([{ kind: 'challenge', status: ['lost', 'rematch'] }], [{ kind: 'flag', flag: 'hasPenthouse' }])).toBe(true)
+    expect(apart([{ kind: 'challenge', status: 'unplayed' }], [{ kind: 'challenge', status: ['unplayed', 'lost'] }])).toBe(false)
+    expect(apart([{ kind: 'count', of: 'caught', sponsorId: 'cass', atMost: 0 }], [{ kind: 'count', of: 'caught', sponsorId: 'cass' }])).toBe(true)
+    expect(apart([{ kind: 'count', of: 'caught', sponsorId: 'cass', atMost: 0 }], [{ kind: 'count', of: 'caught', sponsorId: 'wen' }])).toBe(false)
   })
 
   it('separates a beat from the one that waits for it', () => {

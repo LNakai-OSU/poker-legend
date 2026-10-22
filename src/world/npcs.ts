@@ -7,6 +7,7 @@ import type { MissionDef, SponsorDef } from './types'
 export const SPONSORS: Record<string, SponsorDef> = {
   cass: {
     id: 'cass',
+    collector: 'dutch',
     name: 'Cass',
     principal: 1500,
     interestRate: 0.25,
@@ -19,6 +20,7 @@ export const SPONSORS: Record<string, SponsorDef> = {
   },
   emeka: {
     id: 'emeka',
+    collector: 'abel',
     name: 'Mr. Emeka',
     principal: 6000,
     interestRate: 0.3,
@@ -31,6 +33,7 @@ export const SPONSORS: Record<string, SponsorDef> = {
   },
   consortium: {
     id: 'consortium',
+    collector: 'lowe',
     name: 'The Consortium',
     principal: 40000,
     interestRate: 0.4,
@@ -43,6 +46,7 @@ export const SPONSORS: Record<string, SponsorDef> = {
   },
   wen: {
     id: 'wen',
+    collector: 'fong',
     name: 'Madame Wen',
     principal: 150000,
     interestRate: 0.5,

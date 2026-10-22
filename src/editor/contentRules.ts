@@ -1,6 +1,6 @@
 import { CHARACTERS, allSchedules, type CharacterDef } from '../world/characters'
 import { EVENTS, canBothFire, eventsSharing, type GameEvent } from '../world/events'
-import { AREAS, CITIES, LESSONS, TABLES, allShopItems } from '../world/content'
+import { AREAS, CITIES, LESSONS, SPONSORS, TABLES, allShopItems } from '../world/content'
 import { isWalkable } from '../overworld/tileRenderer'
 import type { AreaDef, TableDef } from '../world/types'
 import { ENDS_EVENT, characterShapeProblems, eventShapeProblems } from './contentModel'
@@ -26,6 +26,7 @@ export interface World {
   cityIds: string[]
   itemIds: string[]
   lessonIds: string[]
+  sponsorIds: string[]
 }
 
 /** The world as the game has it now. */
@@ -38,6 +39,7 @@ export function gameWorld(): World {
     cityIds: Object.keys(CITIES),
     itemIds: allShopItems().map((item) => item.id),
     lessonIds: Object.keys(LESSONS),
+    sponsorIds: Object.keys(SPONSORS),
   }
 }
 
@@ -218,6 +220,13 @@ function eventRules(event: GameEvent, originalId: string | null, world: World): 
     }
     if (condition.kind === 'hasLesson' && !world.lessonIds.includes(condition.lessonId)) {
       problems.push(`it asks for "${condition.lessonId}", which is not a lesson`)
+    }
+    if (
+      (condition.kind === 'debt' || condition.kind === 'hunted' || condition.kind === 'count') &&
+      condition.sponsorId !== undefined &&
+      !world.sponsorIds.includes(condition.sponsorId)
+    ) {
+      problems.push(`it asks about "${condition.sponsorId}", who is not a sponsor`)
     }
   }
 

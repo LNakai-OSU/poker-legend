@@ -1,6 +1,6 @@
 import { CHARACTERS } from '../world/characters'
 import { EVENTS } from '../world/events'
-import { AREAS, CITIES, LESSONS, TABLES, allShopItems, findItem } from '../world/content'
+import { AREAS, CITIES, LESSONS, SPONSORS, TABLES, allShopItems, findItem } from '../world/content'
 import { poisOf, type World } from './contentRules'
 import type { Names } from './contentModel'
 
@@ -60,7 +60,12 @@ export function names(world: World): Names {
     item: (id) => findItem(id)?.name ?? id,
     lesson: (id) => LESSONS[id]?.name ?? id,
     city: (id) => CITIES[id]?.name ?? id,
+    sponsor: (id) => SPONSORS[id]?.name ?? id,
   }
+}
+
+export function sponsorOptions(): Array<[string, string]> {
+  return Object.values(SPONSORS).map((sponsor) => [sponsor.id, sponsor.name])
 }
 
 /** Moves one entry of a list to another position. */

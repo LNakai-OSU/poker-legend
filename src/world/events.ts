@@ -1,5 +1,18 @@
 import type { TimePeriod } from '../game/time'
-import { chapterOf, type CityId, type GameState, type StoryFlag } from '../game/state'
+import {
+  challengeStatus,
+  chapterOf,
+  countOf,
+  debtStatus,
+  huntingSponsorId,
+  isHunted,
+  type ChallengeStatus,
+  type CityId,
+  type CountOf,
+  type DebtStatus,
+  type GameState,
+  type StoryFlag,
+} from '../game/state'
 
 /**
  * Scripted moments, written as data.
@@ -26,6 +39,11 @@ export type EventTrigger =
   | { kind: 'talkTo'; characterId: string }
   /** Talking to a fixture on the map, by its POI id. */
   | { kind: 'interact'; poiId: string }
+  /**
+   * The collectors catch you. The beat plays with them standing over you, and
+   * the shakedown follows its last line; `hunted` says whose they are.
+   */
+  | { kind: 'caught' }
 
 /** What has to be true for it to fire. All of them must hold. */
 export type EventCondition =
@@ -42,6 +60,27 @@ export type EventCondition =
    * town to town and keeps each town's beats in its own part of the story.
    */
   | { kind: 'chapter'; cityId: CityId | CityId[] }
+  /** Holding less than this: broke, or too short for the room you are in. */
+  | { kind: 'cashBelow'; amount: number }
+  /**
+   * Where you stand with a sponsor — or with every sponsor, when none is named:
+   * `none` (owe nothing), `owing` (on time) or `overdue` (the stake was missed).
+   */
+  | { kind: 'debt'; sponsorId?: string; status: DebtStatus | DebtStatus[] }
+  /** Collectors are working this town — anybody's, or one sponsor's. */
+  | { kind: 'hunted'; sponsorId?: string; set?: boolean }
+  /**
+   * The heads-up match: `unplayed`, `lost` (she has made you wait), `rematch`
+   * (lost, and she will play you again now) or `won`.
+   */
+  | { kind: 'challenge'; status: ChallengeStatus | ChallengeStatus[] }
+  /**
+   * How often something has happened over the run: `busted`, `challengeLost`,
+   * or a sponsor's `staked`, `repaid`, `missed` and `caught` (one sponsor's, or
+   * everybody's). At least once unless `atLeast`/`atMost` say otherwise;
+   * `atMost: 0` is "never".
+   */
+  | { kind: 'count'; of: CountOf; sponsorId?: string; atLeast?: number; atMost?: number }
 
 /**
  * What happens, in order.
@@ -110,7 +149,28 @@ export function conditionHolds(condition: EventCondition, state: GameState): boo
       const chapter = chapterOf(state)
       return Array.isArray(condition.cityId) ? condition.cityId.includes(chapter) : condition.cityId === chapter
     }
+    case 'cashBelow':
+      return state.cash < condition.amount
+    case 'debt':
+      return [condition.status].flat().includes(debtStatus(state, condition.sponsorId))
+    case 'hunted': {
+      const hunted = isHunted(state) && (!condition.sponsorId || huntingSponsorId(state) === condition.sponsorId)
+      return hunted === (condition.set ?? true)
+    }
+    case 'challenge':
+      return [condition.status].flat().includes(challengeStatus(state))
+    case 'count': {
+      const [low, high] = countRange(condition)
+      const n = countOf(state, condition.of, condition.sponsorId)
+      return n >= low && n <= high
+    }
   }
+}
+
+/** The counts a `count` condition accepts, inclusive. Just `of` means at least once. */
+function countRange(condition: Extract<EventCondition, { kind: 'count' }>): [number, number] {
+  const low = condition.atLeast ?? (condition.atMost === undefined ? 1 : 0)
+  return [low, condition.atMost ?? Infinity]
 }
 
 /** Whether every one of these holds. No conditions at all always holds. */
@@ -131,7 +191,9 @@ export function allHold(conditions: EventCondition[] | undefined, state: GameSta
  * - hours, or chapters, that do not overlap;
  * - an earlier beat one needs done and the other needs not done;
  * - one waiting on the other, which only fires once — the commonest way to
- *   give a character a second thing to say.
+ *   give a character a second thing to say;
+ * - cash at least one amount and below another; where the match stands; owing
+ *   a sponsor and not; whose collectors are in town; counts that do not meet.
  *
  * Shared by the content tests and the editor, so they cannot disagree.
  */
@@ -171,6 +233,97 @@ export function canBothFire(a: GameEvent, b: GameEvent): boolean {
   if (!overlap((c) => (c.kind === 'period' ? c.period : undefined))) return false
   if (!overlap((c) => (c.kind === 'chapter' ? c.cityId : undefined))) return false
 
+  // Cash: at least one amount and below another cannot both hold.
+  const [loA, hiA] = cashRange(ca)
+  const [loB, hiB] = cashRange(cb)
+  if (loA >= hiB || loB >= hiA) return false
+
+  // The match: an explicit status, narrowed by whether the penthouse is yours.
+  const statusesA = challengeStatuses(ca)
+  const statusesB = challengeStatuses(cb)
+  if (![...statusesA].some((s) => statusesB.has(s))) return false
+
+  if (!debtsCanAgree(ca, cb)) return false
+  if (!huntsCanAgree(ca, cb)) return false
+
+  // The same count, in ranges that do not meet.
+  for (const x of ca) {
+    if (x.kind !== 'count') continue
+    for (const y of cb) {
+      if (y.kind !== 'count' || y.of !== x.of || y.sponsorId !== x.sponsorId) continue
+      const [lx, hx] = countRange(x)
+      const [ly, hy] = countRange(y)
+      if (lx > hy || ly > hx) return false
+    }
+  }
+
+  return true
+}
+
+/** The cash an event's conditions allow, as [at least, below). */
+function cashRange(cs: EventCondition[]): [number, number] {
+  let low = 0
+  let high = Infinity
+  for (const c of cs) {
+    if (c.kind === 'cashAtLeast') low = Math.max(low, c.amount)
+    if (c.kind === 'cashBelow') high = Math.min(high, c.amount)
+  }
+  return [low, high]
+}
+
+const ALL_CHALLENGE: ChallengeStatus[] = ['unplayed', 'lost', 'rematch', 'won']
+
+/** Where the match can stand for these conditions to hold. The penthouse is the match won. */
+function challengeStatuses(cs: EventCondition[]): Set<ChallengeStatus> {
+  let allowed = new Set(ALL_CHALLENGE)
+  for (const c of cs) {
+    if (c.kind === 'challenge') allowed = new Set([c.status].flat().filter((s) => allowed.has(s)))
+    if (c.kind === 'flag' && c.flag === 'hasPenthouse') {
+      const won = c.set ?? true
+      allowed = new Set([...allowed].filter((s) => (s === 'won') === won))
+    }
+  }
+  return allowed
+}
+
+/**
+ * Whether two sets of debt conditions could hold at once. Statuses for the same
+ * sponsor (or both for everyone) must share one; owing nobody anything rules out
+ * owing anybody, and nobody being overdue rules out any one sponsor being.
+ */
+function debtsCanAgree(ca: EventCondition[], cb: EventCondition[]): boolean {
+  const of = (cs: EventCondition[]) =>
+    cs.flatMap((c) => (c.kind === 'debt' ? [{ sponsor: c.sponsorId ?? null, status: [c.status].flat() }] : []))
+  // What one sponsor's status allows of everyone's, and the other way round.
+  const fits = (all: DebtStatus, one: DebtStatus) =>
+    all === 'overdue' || (all === 'owing' ? one !== 'overdue' : one === 'none')
+  for (const x of of(ca)) {
+    for (const y of of(cb)) {
+      if (x.sponsor === y.sponsor) {
+        if (!x.status.some((s) => y.status.includes(s))) return false
+      } else if (x.sponsor === null || y.sponsor === null) {
+        const [all, one] = x.sponsor === null ? [x, y] : [y, x]
+        if (!all.status.some((a) => one.status.some((o) => fits(a, o)))) return false
+      }
+    }
+  }
+  return true
+}
+
+/** One hunt at a time, by one sponsor's people: hunted and not, or by two different sponsors, cannot both hold. */
+function huntsCanAgree(ca: EventCondition[], cb: EventCondition[]): boolean {
+  const of = (cs: EventCondition[]) =>
+    cs.flatMap((c) => (c.kind === 'hunted' ? [{ sponsor: c.sponsorId ?? null, set: c.set ?? true }] : []))
+  for (const x of of(ca)) {
+    for (const y of of(cb)) {
+      if (x.set && y.set && x.sponsor && y.sponsor && x.sponsor !== y.sponsor) return false
+      if (x.set !== y.set) {
+        const [yes, no] = x.set ? [x, y] : [y, x]
+        // Not hunted at all rules out hunted by anybody; not hunted by X rules out hunted by X.
+        if (no.sponsor === null || no.sponsor === yes.sponsor) return false
+      }
+    }
+  }
   return true
 }
 
@@ -186,6 +339,8 @@ function sameTrigger(a: EventTrigger, b: EventTrigger): boolean {
       return b.kind === 'talkTo' && a.characterId === b.characterId
     case 'interact':
       return b.kind === 'interact' && a.poiId === b.poiId
+    case 'caught':
+      return b.kind === 'caught'
   }
 }
 
