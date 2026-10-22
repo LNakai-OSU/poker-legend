@@ -80,7 +80,10 @@ deb: {
 - `seat` is omitted for people who never play.
 - `overworld` is omitted for people who only ever sit at a table. Its optional
   `role` puts them in a uniform in the street, and `look` adds what a table
-  portrait never shows (`trousers`, `shoes`, `lower: 'skirt'`, `sleeves`).
+  portrait never shows (`trousers`, `shoes`, `lower: 'skirt'`, `sleeves`, and
+  their own clothes: `garment: 'jacket' | 'vest' | 'hoodie' | 'overalls' |
+  'stripes' | 'cardigan'` with `garmentColor`, `hat` with `hatColor`). A
+  uniform covers a garment and decides its own hat.
 - A point of interest on a map can say who stands there the same way:
   `role: 'bartender'`, `look: { hairStyle: 'bun' }`. Without them, the role
   comes from what the POI does and the look is made up from its id.
@@ -123,6 +126,13 @@ own tiles into the map (the `FFFF` above is a slot bank) and is drawn as one
 object over them. A wall on a street must belong to a building, a furniture tile
 must belong to an object, and a door tile must lead somewhere; the content tests
 fail otherwise.
+
+Some stamps have several looks — every slot bank does — and two placed in one
+room are drawn differently without being told to (`placementVariants` in
+`src/overworld/stampArt.ts`). Placing the same bank twice gives two banks.
+A room should not be one rug on a bare floor: the content tests fail on a
+five-by-five square of floor with nothing on it, and its floor should not be
+the same floor as another room in its town.
 
 ### Events — `src/world/events.ts`
 
