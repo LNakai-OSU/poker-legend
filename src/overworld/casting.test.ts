@@ -118,3 +118,49 @@ describe('looks', () => {
     }
   })
 })
+
+describe('what people wear', () => {
+  /** Everybody standing at a POI in the game, as drawn. */
+  const everyone = Object.values(CITIES).flatMap((city) =>
+    allAreas(city).flatMap((area) => {
+      const figures = figuresForPois(area.pois, CHARACTERS)
+      return area.pois.filter((poi) => artForPoi(poi) === 'person').map((poi) => figures.get(poi.id)!)
+    }),
+  )
+
+  it('does not put half the town in the same hat', () => {
+    // Eight people across the game wore one navy cap, so the street read as one
+    // man in different shirts. A hat is a person's own now, in their own colour.
+    const hats = new Map<string, number>()
+    for (const { role, look } of everyone) {
+      // A cap from the portrait accessories shows on anybody whose job has no hat of its own.
+      const own = role === 'local' || role === 'kid' ? look.hat : undefined
+      const hat = own ?? (look.accessory === 'cap' || look.accessory === 'visor' ? look.accessory : undefined)
+      if (!hat) continue
+      const key = `${hat} ${look.hatColor ?? 'default'}`
+      hats.set(key, (hats.get(key) ?? 0) + 1)
+    }
+    const common = [...hats.entries()].filter(([, n]) => n > 3)
+    expect(common, 'the same hat in the same colour on more than three heads').toEqual([])
+  })
+
+  it('dresses people in their own clothes in more than a shirt', () => {
+    const own = everyone.filter(({ role }) => role === 'local')
+    const garments = new Set(own.map(({ look }) => look.garment).filter(Boolean))
+    const hairs = new Set(own.map(({ look }) => look.hairStyle))
+    expect(garments.size, 'kinds of thing worn over the shirt').toBeGreaterThanOrEqual(4)
+    expect(hairs.size, 'haircuts').toBeGreaterThanOrEqual(9)
+  })
+
+  it('keeps a uniform a uniform', () => {
+    // A dealer in a hoodie is not a dealer. Garments and hats of one's own are
+    // for people in their own clothes; the job's clothes cover them.
+    const look = lookFromId('somebody')
+    const plain = visualKey({ role: 'dealer', look: { ...look, garment: undefined, hat: undefined } })
+    const dressed = visualKey({
+      role: 'dealer',
+      look: { ...look, garment: 'hoodie', garmentColor: '#c83a3a', hat: 'cowboy' },
+    })
+    expect(dressed).toBe(plain)
+  })
+})
