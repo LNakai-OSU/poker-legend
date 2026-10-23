@@ -31,8 +31,12 @@ import {
 
 /** What makes an event fire. */
 export type EventTrigger =
-  /** Walking into an area, however you got there. */
-  | { kind: 'enterArea'; areaId: string }
+  /**
+   * Walking into an area, however you got there. With `onLoad`, also loading a
+   * save that stands there: a beat that has to happen before anything else in
+   * the area — the opening — is not skipped by a reload in the middle of it.
+   */
+  | { kind: 'enterArea'; areaId: string; onLoad?: boolean }
   /** Standing on one specific tile of one area. */
   | { kind: 'standOn'; areaId: string; col: number; row: number }
   /** Talking to a scheduled character, by their character id. */
@@ -670,6 +674,175 @@ export const EVENTS: GameEvent[] = [
           'Marcus: Bring money. That is the only part that matters.',
         ],
       },
+    ],
+  },
+  // The opening. The first time you step out of your door, Dana runs up the
+  // street to catch you, walks you to the 14 and rides it with you to Marcus's
+  // block, so the run starts at his door rather than wherever you wandered.
+  // Anybody who gets as far as the depot without her (a save from before this
+  // was written) is met there instead. docs/STORYBOARD.md, Act 0.
+  {
+    id: 'dana-walks-you-to-the-bus',
+    about:
+      'The opening: Dana runs to catch you outside your door, walks you to the depot and rides the 14 with ' +
+      'you to Marcus’s door. How you answer her is remembered (`dana-reveal`).',
+    trigger: { kind: 'enterArea', areaId: 'basin', onLoad: true },
+    conditions: [
+      { kind: 'flag', flag: 'wonPokerNight', set: false },
+      { kind: 'eventDone', eventId: 'poker-night', done: false },
+      { kind: 'flag', flag: 'metDana', set: false },
+      { kind: 'period', period: ['morning', 'afternoon', 'evening'] },
+    ],
+    actions: [
+      { kind: 'wait', ms: 300 },
+      { kind: 'dialogue', lines: ['Somebody is calling after you from the end of the street.'] },
+      { kind: 'moveNpc', characterId: 'dana', from: { col: 27, row: 7 }, to: 'player', pace: 'run' },
+      { kind: 'setFlag', flag: 'metDana' },
+      {
+        kind: 'dialogue',
+        speaker: 'dana',
+        lines: [
+          'Dana: You walk fast for somebody with nowhere to be.',
+          'Dana: Dana. From the laundromat. Marcus asked me to make sure you get to his tonight.',
+          'Dana: He says you will walk it, get lost, and turn up at midnight. He has set out chairs.',
+          'Dana: I watched you play on Tuesday. You raised the river with nothing.',
+        ],
+      },
+      {
+        kind: 'choice',
+        speaker: 'dana',
+        prompt: 'What do you say to her?',
+        options: [
+          {
+            label: 'Why were you watching?',
+            then: [
+              { kind: 'setFlag', flag: 'askedDanaWhy' },
+              { kind: 'dialogue', speaker: 'dana', lines: ['Dana: Somebody likes to read about the games. I write them down.'] },
+            ],
+          },
+          {
+            label: 'Then watch tonight',
+            then: [
+              { kind: 'setFlag', flag: 'toldDanaToWatch' },
+              { kind: 'dialogue', speaker: 'dana', lines: ['Dana: Mm. I will.'] },
+            ],
+          },
+          {
+            label: 'Mind your own business',
+            then: [
+              { kind: 'setFlag', flag: 'brushedOffDana' },
+              { kind: 'dialogue', speaker: 'dana', lines: ['Dana: This is my business. Come on.'] },
+            ],
+          },
+        ],
+      },
+      { kind: 'dialogue', speaker: 'dana', lines: ['Dana: The 14 goes from the depot. Walk with me.'] },
+      { kind: 'moveNpc', characterId: 'dana', to: { col: 26, row: 7 }, youFollow: true },
+      { kind: 'fade', to: 'out' },
+      { kind: 'teleport', areaId: 'depot', col: 6, row: 2, with: ['dana'] },
+      { kind: 'fade', to: 'in' },
+      { kind: 'dialogue', speaker: 'dana', lines: ['Dana: There. Get on. I am going your way.'] },
+      {
+        kind: 'ride',
+        areaId: 'eastgate',
+        col: 9,
+        row: 13,
+        with: ['dana'],
+        caption: 'Dana takes the window seat and watches the town go past like she is counting it.',
+        during: [
+          {
+            kind: 'dialogue',
+            speaker: 'dana',
+            lines: [
+              'Dana: Marcus thinks he is going to win tonight. He is not.',
+              'Dana: Everything on the table, winner takes the lot. His rule.',
+              'Dana: Win it, and you have a bankroll. Lose it, and he deals you in again. He always does.',
+            ],
+          },
+        ],
+      },
+      { kind: 'dialogue', speaker: 'dana', lines: ['Dana: Middle door. He has been setting out chairs since lunch.'] },
+      { kind: 'moveNpc', characterId: 'dana', to: { col: 11, row: 3 }, youFollow: true, leaves: true },
+      { kind: 'dialogue', lines: ['Dana goes in ahead of you. The front room is lit, and somebody is shuffling a deck.'] },
+    ],
+  },
+  {
+    id: 'dana-at-the-depot',
+    about:
+      'The opening, for anybody who reached the depot before Dana found them: she is waiting at the stop, ' +
+      'and rides the 14 with you to Marcus’s door. Walking to his before the opening cannot get past here.',
+    trigger: { kind: 'enterArea', areaId: 'depot', onLoad: true },
+    conditions: [
+      { kind: 'flag', flag: 'wonPokerNight', set: false },
+      { kind: 'eventDone', eventId: 'poker-night', done: false },
+      { kind: 'flag', flag: 'metDana', set: false },
+      { kind: 'period', period: ['morning', 'afternoon', 'evening'] },
+    ],
+    actions: [
+      { kind: 'wait', ms: 300 },
+      { kind: 'moveNpc', characterId: 'dana', from: { col: 7, row: 2 }, to: 'player', pace: 'run' },
+      { kind: 'setFlag', flag: 'metDana' },
+      {
+        kind: 'dialogue',
+        speaker: 'dana',
+        lines: [
+          'Dana: There you are. Marcus said you would walk it.',
+          'Dana: Dana. From the laundromat. He asked me to put you on the 14, so I am putting you on the 14.',
+          'Dana: I watched you play on Tuesday. You raised the river with nothing.',
+        ],
+      },
+      {
+        kind: 'choice',
+        speaker: 'dana',
+        prompt: 'What do you say to her?',
+        options: [
+          {
+            label: 'Why were you watching?',
+            then: [
+              { kind: 'setFlag', flag: 'askedDanaWhy' },
+              { kind: 'dialogue', speaker: 'dana', lines: ['Dana: Somebody likes to read about the games. I write them down.'] },
+            ],
+          },
+          {
+            label: 'Then watch tonight',
+            then: [
+              { kind: 'setFlag', flag: 'toldDanaToWatch' },
+              { kind: 'dialogue', speaker: 'dana', lines: ['Dana: Mm. I will.'] },
+            ],
+          },
+          {
+            label: 'Mind your own business',
+            then: [
+              { kind: 'setFlag', flag: 'brushedOffDana' },
+              { kind: 'dialogue', speaker: 'dana', lines: ['Dana: This is my business. Come on.'] },
+            ],
+          },
+        ],
+      },
+      { kind: 'dialogue', speaker: 'dana', lines: ['Dana: Here it comes.'] },
+      { kind: 'moveNpc', characterId: 'dana', to: { col: 7, row: 2 }, youFollow: true },
+      {
+        kind: 'ride',
+        areaId: 'eastgate',
+        col: 9,
+        row: 13,
+        with: ['dana'],
+        caption: 'Dana takes the window seat and watches the town go past like she is counting it.',
+        during: [
+          {
+            kind: 'dialogue',
+            speaker: 'dana',
+            lines: [
+              'Dana: Marcus thinks he is going to win tonight. He is not.',
+              'Dana: Everything on the table, winner takes the lot. His rule.',
+              'Dana: Win it, and you have a bankroll. Lose it, and he deals you in again. He always does.',
+            ],
+          },
+        ],
+      },
+      { kind: 'dialogue', speaker: 'dana', lines: ['Dana: Middle door. He has been setting out chairs since lunch.'] },
+      { kind: 'moveNpc', characterId: 'dana', to: { col: 11, row: 3 }, youFollow: true, leaves: true },
+      { kind: 'dialogue', lines: ['Dana goes in ahead of you. The front room is lit, and somebody is shuffling a deck.'] },
     ],
   },
   {

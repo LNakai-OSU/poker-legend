@@ -123,7 +123,8 @@ export function GameApp() {
    * Fired when the area changes — through a door, off the edge of a street, off
    * a bus — and not when a save is loaded into one or when you get up from a
    * table in the room you were already in: that is being somewhere, not
-   * arriving.
+   * arriving. A beat can ask to fire on a load too (`onLoad`): the opening,
+   * which a reload half-way through must not skip.
    */
   const lastArea = useRef<string | null>(null)
   const runEvent = events.run
@@ -133,7 +134,12 @@ export function GameApp() {
     const areaId = state.areaId ?? CITIES[state.cityId].entryAreaId
     const previous = lastArea.current
     lastArea.current = areaId
-    if (previous === null || previous === areaId) return
+    if (previous === null) {
+      const event = eventFor(EVENTS, { kind: 'enterArea', areaId }, state)
+      if (event?.trigger.kind === 'enterArea' && event.trigger.onLoad) runEvent(event)
+      return
+    }
+    if (previous === areaId) return
     // Whoever a beat left standing in the last place is not standing here.
     clearCast()
     const event = eventFor(EVENTS, { kind: 'enterArea', areaId }, state)

@@ -101,7 +101,7 @@ export function ChoiceBox({ speaker, prompt, options, onChoose }: ChoiceBoxProps
           boxSizing: 'border-box',
           maxHeight: '100%',
           overflowY: 'auto',
-          background: 'rgba(10, 10, 16, 0.94)',
+          background: 'rgba(10, 10, 16, 0.98)',
           border: '2px solid #4a4a66',
           borderRadius: 8,
           padding: `14px ${INSET - 2}px max(14px, env(safe-area-inset-bottom))`,

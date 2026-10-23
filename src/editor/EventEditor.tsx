@@ -658,7 +658,25 @@ function TriggerTarget({ trigger, options, onChange }: { trigger: EventTrigger; 
     case 'interact':
       return <Pick label="Which fixture" testid="trigger-poi" value={trigger.poiId} options={options.pois} onChange={(poiId) => onChange({ ...trigger, poiId })} />
     case 'enterArea':
-      return <Pick label="Which area" testid="trigger-area" value={trigger.areaId} options={options.areas} onChange={(areaId) => onChange({ ...trigger, areaId })} />
+      return (
+        <>
+          <Pick label="Which area" testid="trigger-area" value={trigger.areaId} options={options.areas} onChange={(areaId) => onChange({ ...trigger, areaId })} />
+          <label className="ed-toggle ed-small">
+            <input
+              type="checkbox"
+              data-testid="trigger-on-load"
+              checked={!!trigger.onLoad}
+              onChange={(e) => {
+                const next = { ...trigger }
+                if (e.target.checked) next.onLoad = true
+                else delete next.onLoad
+                onChange(next)
+              }}
+            />
+            or when a save is loaded there
+          </label>
+        </>
+      )
     case 'standOn':
       return (
         <>

@@ -327,6 +327,7 @@ const PART_ORDER = [
   'eventId',
   'done',
   'areaId',
+  'onLoad',
   'col',
   'row',
   'ms',
@@ -587,8 +588,9 @@ function triggerShape(value: unknown, path: string, problems: Problems) {
       string(value.poiId, `${path}.poiId`, problems, true)
       return
     case 'enterArea':
-      keys(value, path, ['kind', 'areaId'], [], problems)
+      keys(value, path, ['kind', 'areaId'], ['onLoad'], problems)
       string(value.areaId, `${path}.areaId`, problems, true)
+      if (value.onLoad !== undefined && typeof value.onLoad !== 'boolean') problems.push(`${path}.onLoad should be true or false`)
       return
     case 'standOn':
       keys(value, path, ['kind', 'areaId', 'col', 'row'], [], problems)
@@ -921,7 +923,7 @@ export function describeTrigger(trigger: EventTrigger, names: Names): string {
     case 'interact':
       return `When you use ${names.poi(trigger.poiId)}`
     case 'enterArea':
-      return `When you walk into ${names.area(trigger.areaId)}`
+      return `When you walk into ${names.area(trigger.areaId)}${trigger.onLoad ? ', or a save is loaded there' : ''}`
     case 'standOn':
       return `When you step on (${trigger.col},${trigger.row}) in ${names.area(trigger.areaId)}`
     case 'caught':

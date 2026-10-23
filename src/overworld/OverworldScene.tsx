@@ -812,7 +812,8 @@ export function OverworldScene({
           {hud}
         </div>
       )}
-      {prompt && (
+      {/* Nothing to press while a beat has the screen: its own box says what to do. */}
+      {prompt && !paused && (
         <div
           style={{
             position: 'absolute',
@@ -837,7 +838,7 @@ export function OverworldScene({
           {isTouch ? `Tap E to talk to ${prompt}` : `Press E to talk to ${prompt}`}
         </div>
       )}
-      {isTouch && !talking && (
+      {isTouch && !talking && !paused && (
         <TouchControls
           onHold={(direction) => { touchDirRef.current = direction }}
           onAction={() => interactRef.current()}

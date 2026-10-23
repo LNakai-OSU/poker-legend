@@ -27,6 +27,9 @@ let browser
  * holds this list to the events in the game.
  */
 const STORY_SEEN = [
+  // The opening: Dana walks you to the 14.
+  'dana-walks-you-to-the-bus',
+  'dana-at-the-depot',
   'arrive-silvercreek',
   'arrive-riverbend',
   'arrive-crescent',
@@ -425,6 +428,12 @@ async function test(name, fn) {
   }
 }
 
+/** Saves a screenshot when UI_SHOTS names a folder, for looking at what a scenario saw. */
+async function shot(page, name) {
+  if (!process.env.UI_SHOTS) return
+  await page.screenshot({ path: `${process.env.UI_SHOTS}/${name.replace(/[^a-z0-9-]+/gi, '-')}.png` })
+}
+
 function assert(condition, message) {
   if (!condition) throw new Error(message)
 }
@@ -628,6 +637,15 @@ const CASS_DEBT = (dueOnDay) => ({
 })
 // The box shows one line at a time; this is the speaker and the first.
 const dialogueText = (page) => page.locator('[data-testid="event-dialogue"]').innerText().catch(() => '')
+const choiceBox = (page) => page.locator('[data-testid="event-choice"]')
+/** Waits for a question and answers it by its number, as a player at a keyboard would. */
+async function answer(page, n) {
+  await choiceBox(page).waitFor({ state: 'visible' })
+  await page.keyboard.press(String(n))
+  await page.waitForTimeout(250)
+}
+/** What the save in the browser says now. */
+const savedState = (page) => page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? 'null'), SAVE_KEY)
 
 await test('the collector who catches you has a face, and says their piece before the shakedown', async () => {
   const page = await newPage(
@@ -684,6 +702,9 @@ await test('while you owe Cass on time, Dutch stands beside her, and she says wh
   const said = await dialogueText(page)
   assert(/clock is running/.test(said), `Cass did not notice you owe her (saw: ${said.replace(/\n/g, ' | ').slice(0, 120)})`)
   await talkThrough(page)
+  // She asks whether you will pay now; not yet.
+  await answer(page, 2)
+  await talkThrough(page)
   // Once said, the next talk is the stake menu again, so the debt can be paid.
   await page.keyboard.press('e')
   await page.waitForTimeout(400)
@@ -713,8 +734,140 @@ await test('broke, Marcus deals you back in at the kitchen table', async () => {
   const said = await dialogueText(page)
   assert(/first night/.test(said), `Marcus did not notice you are broke (saw: ${said.slice(0, 120)})`)
   await talkThrough(page)
+  await answer(page, 1)
   await page.waitForTimeout(600)
   assert((await page.locator('[data-testid="overworld"]').count()) === 0, 'still in the street: the game never started')
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+})
+
+/**
+ * A beat can ask the player something. The question is the table's own pixel
+ * buttons over the street, answered by number, by arrows and Enter, or by a
+ * tap; what you answer is remembered, and a road you cannot take is shown shut.
+ */
+const BROKE_AT_HOME = () =>
+  baseSave({
+    cityId: 'apartment',
+    areaId: 'marcus-house',
+    period: 'evening',
+    cash: 40,
+    completedEventIds: STORY_SEEN.filter((id) => id !== 'nadia-names-the-match'),
+  })
+
+for (const [label, size, device] of [
+  ['laptop', { width: 1100, height: 800 }, null],
+  ['short laptop', { width: 1366, height: 500 }, null],
+  ['phone', null, { ...devices['iPhone 13'], viewport: { width: 390, height: 844 }, screen: { width: 390, height: 844 } }],
+]) {
+  await test(`a question fits the screen and every answer can be pressed (${label})`, async () => {
+    const page = await newPage(BROKE_AT_HOME(), device)
+    if (size) await page.setViewportSize(size)
+    await page.goto(BASE)
+    await page.waitForSelector('canvas')
+    await page.waitForTimeout(500)
+    await approach(page, 'Marcus')
+    await page.keyboard.press('e')
+    await page.waitForTimeout(400)
+    await talkThrough(page)
+    await choiceBox(page).waitFor({ state: 'visible' })
+    const box = await page.evaluate(() => {
+      const options = [...document.querySelectorAll('[data-testid^="choice-option-"]')]
+      return {
+        width: window.innerWidth,
+        height: window.innerHeight,
+        scrollWidth: document.documentElement.scrollWidth,
+        options: options.map((el) => {
+          const r = el.getBoundingClientRect()
+          // What is actually on top in the middle of the button: it, not something laid over it.
+          const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)
+          return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, height: r.height, onTop: !!hit && el.contains(hit) }
+        }),
+      }
+    })
+    await shot(page, `choice-${label}`)
+    assert(box.options.length === 2, `expected two answers, saw ${box.options.length}`)
+    for (const [i, o] of box.options.entries()) {
+      assert(o.left >= 0 && o.right <= box.width + 0.5, `answer ${i + 1} runs off the side (${o.left}..${o.right} of ${box.width})`)
+      assert(o.top >= 0 && o.bottom <= box.height + 0.5, `answer ${i + 1} runs off the bottom (${o.top}..${o.bottom} of ${box.height})`)
+      assert(o.onTop, `answer ${i + 1} is covered by something else`)
+      if (device) assert(o.height >= 38, `answer ${i + 1} is ${o.height}px tall: too small for a finger`)
+    }
+    assert(box.scrollWidth <= box.width, 'the question makes the page scroll sideways')
+    // A tap works as well as a key: "Not tonight".
+    await page.locator('[data-testid="choice-option-1"]').click()
+    await page.waitForTimeout(300)
+    assert(/Proud/.test(await dialogueText(page)), 'tapping an answer did nothing')
+    assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  })
+}
+
+await test('the keys answer a question, and the answer is remembered', async () => {
+  const page = await newPage(BROKE_AT_HOME())
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(500)
+  await approach(page, 'Marcus')
+  await page.keyboard.press('e')
+  await page.waitForTimeout(400)
+  await talkThrough(page)
+  await choiceBox(page).waitFor({ state: 'visible' })
+  const prompt = await page.locator('[data-testid="choice-prompt"]').innerText()
+  assert(/kitchen table/.test(prompt), `the question is not asked (saw: ${prompt})`)
+  // The pointer starts on the first answer; down, then Enter, picks the second.
+  const focused = await page.evaluate(() => document.activeElement?.getAttribute('data-testid'))
+  assert(focused === 'choice-option-0', `the first answer does not have the focus (${focused})`)
+  await page.keyboard.press('ArrowDown')
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(300)
+  assert(/Proud/.test(await dialogueText(page)), `Enter did not give the answer the pointer was on (saw: ${await dialogueText(page)})`)
+  await talkThrough(page)
+  await page.waitForTimeout(300)
+  const saved = await savedState(page)
+  assert(saved?.flags?.turnedDownMarcus === true, 'turning Marcus down was not remembered')
+  // Asked again, and this time a number deals you in.
+  await page.keyboard.press('e')
+  await page.waitForTimeout(400)
+  await talkThrough(page)
+  await answer(page, 1)
+  await page.waitForTimeout(600)
+  assert((await page.locator('[data-testid="overworld"]').count()) === 0, 'pressing 1 did not deal you in')
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+})
+
+await test('an answer you cannot give is shown shut, and cannot be given', async () => {
+  // Owing Cass on time, with nowhere near enough to pay her back.
+  const page = await newPage(
+    baseSave({
+      cityId: 'riverbend',
+      areaId: 'rb-street',
+      day: 2,
+      period: 'morning',
+      cash: 100,
+      unlockedCityIds: LOSING_ROAD,
+      debts: [CASS_DEBT(5)],
+      completedEventIds: STORY_SEEN.filter((id) => id !== 'cass-owing'),
+    }),
+  )
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(500)
+  await approach(page, 'Cass')
+  await page.keyboard.press('e')
+  await page.waitForTimeout(400)
+  await talkThrough(page)
+  await choiceBox(page).waitFor({ state: 'visible' })
+  const pay = page.locator('[data-testid="choice-option-0"]')
+  await shot(page, 'choice-shut')
+  assert(await pay.isDisabled(), 'paying her back is open with $100 in your pocket')
+  assert(/cannot cover it/.test(await pay.innerText()), `it does not say why (saw: ${await pay.innerText()})`)
+  await page.keyboard.press('1')
+  await pay.click({ force: true }).catch(() => {})
+  await page.waitForTimeout(300)
+  assert(await choiceBox(page).isVisible(), 'a shut answer closed the question')
+  const saved = await savedState(page)
+  assert(saved?.debts?.length === 1, 'the debt was paid without the money')
+  await answer(page, 2)
+  assert(/Three days/.test(await dialogueText(page)), 'the open answer did not play')
   assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
 })
 
