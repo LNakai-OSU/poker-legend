@@ -140,3 +140,22 @@ a lost match is met by Nadia, Marcus, Dana, Hal and Kit with a rematch path;
 the rent pays off. STORYBOARD.md §4 is the map; GAME_BIBLE §2 the vocabulary.
 Left: see STORYBOARD.md §6 (choices, a stake-sized home game, bust beats for
 Deb/Rosa/the Fixer, collectors indoors).
+
+## Choices and the opening (2026-10-22, branch worktree-agent-a4689be2c4f7c6fbb, not merged)
+
+Events can ask the player something: `choice` (2–4 answers, each with
+conditions and a branch) and `if` (a later beat reading the answer), with
+`takeStake`/`repay` actions and a `canPay` condition. Answers are the table's
+pixel buttons (number keys, ↑↓ + Enter, taps). The machine that plays beats is
+`src/game/eventMachine.ts` (React-free, unit-tested); a beat is saved only when
+it is over. Branch-aware content checks live in `src/world/eventChecks.ts` and
+`arrivalClashes` in `events.ts`; flags are data in `src/world/flags.ts`. The
+editor edits answers, ifs, walks and rides as nested lists.
+
+The opening: Dana runs up Basin Street the first time you step outside, walks
+you to the depot and rides the 14 with you to Marcus's door (`moveNpc` walks
+now — pace, `from`, `youFollow`, `leaves` — plus `movePlayer`, `with` on
+`teleport`/`ride`, and the forced `ride`). The depot catches anybody who got
+there first; `enterArea` can fire `onLoad`. STORYBOARD.md has the choices table
+and §6 what is left (legacy saves already at Eastgate skip the opening; more
+choices: the first poker night, Emeka/Consortium offers).

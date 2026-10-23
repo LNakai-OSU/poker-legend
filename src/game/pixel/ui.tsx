@@ -28,6 +28,12 @@ interface PxButtonProps {
   onClick: () => void
   testId?: string
   style?: CSSProperties
+  /** Shown but not pressable: an answer the player cannot give yet. */
+  disabled?: boolean
+  /** Ink for the second and later lines; a pale grey by default. */
+  subInk?: Ink
+  /** The button element, for whoever has to move the focus onto it. */
+  buttonRef?: (el: HTMLButtonElement | null) => void
 }
 
 /**
@@ -35,14 +41,17 @@ interface PxButtonProps {
  * letters are drawn over the same words kept in the document — so a test or a
  * screen reader finds "Call 20" exactly where a player sees it.
  */
-export function PxButton({ lines, scale, role = 'plain', width, height, onClick, testId, style }: PxButtonProps) {
+export function PxButton({ lines, scale, role = 'plain', width, height, onClick, testId, style, disabled, subInk, buttonRef }: PxButtonProps) {
   const w = width ?? buttonWidth(lines)
   return (
     <button
       type="button"
+      ref={buttonRef}
       data-testid={testId}
       className="px-btn"
       onClick={onClick}
+      disabled={disabled}
+      aria-disabled={disabled || undefined}
       style={{
         ...frameStyle(buttonFrame(role), scale),
         width: w * scale,
@@ -51,7 +60,8 @@ export function PxButton({ lines, scale, role = 'plain', width, height, onClick,
         padding: 0,
         margin: 0,
         background: 'none',
-        cursor: 'pointer',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled ? 0.72 : 1,
         display: 'inline-flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -77,7 +87,7 @@ export function PxButton({ lines, scale, role = 'plain', width, height, onClick,
           key={i}
           text={line}
           scale={scale}
-          ink={i === 0 ? INK.light : { color: '#e0e0e8', shadow: '#2a2a36' }}
+          ink={i === 0 ? INK.light : (subInk ?? { color: '#e0e0e8', shadow: '#2a2a36' })}
         />
       ))}
     </button>

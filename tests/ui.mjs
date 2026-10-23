@@ -27,6 +27,9 @@ let browser
  * holds this list to the events in the game.
  */
 const STORY_SEEN = [
+  // The opening: Dana walks you to the 14.
+  'dana-walks-you-to-the-bus',
+  'dana-at-the-depot',
   'arrive-silvercreek',
   'arrive-riverbend',
   'arrive-crescent',
@@ -41,6 +44,7 @@ const STORY_SEEN = [
   'hal-short-for-the-harbor',
   'rent-day',
   'rent-receipt',
+  'cass-offers',
   'cass-owing',
   'cass-overdue',
   'cass-repaid',
@@ -53,6 +57,7 @@ const STORY_SEEN = [
   'consortium-overdue',
   'consortium-repaid',
   'consortium-repaid-late',
+  'wen-offers',
   'wen-owing',
   'wen-overdue',
   'wen-repaid',
@@ -79,6 +84,20 @@ function baseSave(overrides = {}) {
     flags: { wonPokerNight: true, beatFinalRival: false, hasPenthouse: false },
     stats: { handsWon: 0, biggestPot: 0, tablesPlayed: 0 },
     completedEventIds: STORY_SEEN,
+    ...overrides,
+  })
+}
+
+/**
+ * A run on day one that has already had its opening — Dana has walked it to
+ * the 14 — for scenarios about walking the town rather than about her.
+ */
+function openedSave(overrides = {}) {
+  return baseSave({
+    cash: 0,
+    cityId: 'apartment',
+    unlockedCityIds: ['apartment'],
+    flags: { wonPokerNight: false, beatFinalRival: false, hasPenthouse: false, metDana: true },
     ...overrides,
   })
 }
@@ -423,6 +442,12 @@ async function test(name, fn) {
   }
 }
 
+/** Saves a screenshot when UI_SHOTS names a folder, for looking at what a scenario saw. */
+async function shot(page, name) {
+  if (!process.env.UI_SHOTS) return
+  await page.screenshot({ path: `${process.env.UI_SHOTS}/${name.replace(/[^a-z0-9-]+/gi, '-')}.png` })
+}
+
 function assert(condition, message) {
   if (!condition) throw new Error(message)
 }
@@ -441,7 +466,7 @@ await test('fresh save starts in the apartment', async () => {
 })
 
 await test('a door is opened from in front of it, not stood on', async () => {
-  const page = await newPage(null)
+  const page = await newPage(openedSave())
   await page.goto(BASE)
   await page.waitForSelector('canvas')
   await page.waitForTimeout(400)
@@ -462,7 +487,7 @@ await test('a door is opened from in front of it, not stood on', async () => {
 })
 
 await test('the bus runs across town to the game', async () => {
-  const page = await newPage(null)
+  const page = await newPage(openedSave())
   await page.goto(BASE)
   await page.waitForSelector('canvas')
   await page.waitForTimeout(400)
@@ -626,6 +651,15 @@ const CASS_DEBT = (dueOnDay) => ({
 })
 // The box shows one line at a time; this is the speaker and the first.
 const dialogueText = (page) => page.locator('[data-testid="event-dialogue"]').innerText().catch(() => '')
+const choiceBox = (page) => page.locator('[data-testid="event-choice"]')
+/** Waits for a question and answers it by its number, as a player at a keyboard would. */
+async function answer(page, n) {
+  await choiceBox(page).waitFor({ state: 'visible' })
+  await page.keyboard.press(String(n))
+  await page.waitForTimeout(250)
+}
+/** What the save in the browser says now. */
+const savedState = (page) => page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? 'null'), SAVE_KEY)
 
 await test('the collector who catches you has a face, and says their piece before the shakedown', async () => {
   const page = await newPage(
@@ -682,6 +716,9 @@ await test('while you owe Cass on time, Dutch stands beside her, and she says wh
   const said = await dialogueText(page)
   assert(/clock is running/.test(said), `Cass did not notice you owe her (saw: ${said.replace(/\n/g, ' | ').slice(0, 120)})`)
   await talkThrough(page)
+  // She asks whether you will pay now; not yet.
+  await answer(page, 2)
+  await talkThrough(page)
   // Once said, the next talk is the stake menu again, so the debt can be paid.
   await page.keyboard.press('e')
   await page.waitForTimeout(400)
@@ -711,8 +748,353 @@ await test('broke, Marcus deals you back in at the kitchen table', async () => {
   const said = await dialogueText(page)
   assert(/first night/.test(said), `Marcus did not notice you are broke (saw: ${said.slice(0, 120)})`)
   await talkThrough(page)
+  await answer(page, 1)
   await page.waitForTimeout(600)
   assert((await page.locator('[data-testid="overworld"]').count()) === 0, 'still in the street: the game never started')
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+})
+
+/**
+ * The opening. The first time you step outside, Dana runs up the street to
+ * you, walks you to the 14 and rides it with you to Marcus's door — and you
+ * cannot walk off in the middle of it, skip the bus, or reload your way past
+ * it. Then Marcus's game starts the way it always has.
+ */
+/** The line up now, without waiting for one to appear: a beat walking somebody shows no box. */
+const dialogueNow = (page) =>
+  page.evaluate(() => document.querySelector('[data-testid="event-dialogue"]')?.innerText ?? '')
+/** Where somebody is drawn, from the scene's own published positions. */
+async function drawnAt(page, id) {
+  const people = await page.evaluate(() => document.querySelector('[data-testid="overworld"]')?.dataset.people ?? '')
+  const found = people.split(';').find((p) => p.startsWith(`${id}@`))
+  if (!found) return null
+  const [col, row] = found.split('@')[1].split(',').map(Number)
+  return { col, row }
+}
+/** Waits for a line of a beat matching `re`, clicking through any before it. */
+async function untilSaid(page, re, budget = 20000) {
+  for (let waited = 0; waited < budget; waited += 150) {
+    const said = await dialogueNow(page)
+    if (re.test(said)) return said
+    await page.waitForTimeout(150)
+  }
+  throw new Error(`never said ${re} (last: ${(await dialogueNow(page)).slice(0, 100)})`)
+}
+/** Clicks the text box on until a line matching `re` is up. */
+async function readUntil(page, re, budget = 25000) {
+  for (let waited = 0; waited < budget; waited += 200) {
+    // Read and click in one go inside the page: a click that waited for a box
+    // could land on the next one, unread.
+    const said = await page.evaluate((source) => {
+      const box = document.querySelector('[data-testid="event-dialogue"]')
+      const text = box?.innerText ?? ''
+      if (new RegExp(source).test(text)) return text
+      box?.querySelector('[data-testid="dialogue-advance"]')?.click()
+      return null
+    }, re.source)
+    if (said !== null) return said
+    await page.waitForTimeout(200)
+  }
+  await shot(page, `stuck-before-${String(re).slice(1, 20)}`)
+  const at = await posOf(page)
+  throw new Error(`never got to ${re} (last: ${(await dialogueNow(page)).slice(0, 100)}; at ${JSON.stringify(at)} in ${await areaNameOf(page)})`)
+}
+
+await test('the opening: Dana runs to you, walks you to the 14 and rides it with you to Marcus', async () => {
+  const page = await newPage(null)
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(400)
+  await enterDoor(page, 'Outside')
+  await untilSaid(page, /calling after you/)
+  const start = await posOf(page)
+  await page.locator('[data-testid="dialogue-advance"]').click()
+
+  // She comes on at the far end of the street and runs: seen on tile after tile.
+  const seen = new Set()
+  let first = null
+  for (let i = 0; i < 80 && !(await dialogueNow(page)).includes('Dana:'); i++) {
+    const dana = await drawnAt(page, 'character-dana')
+    if (dana) {
+      first ??= dana
+      seen.add(`${dana.col},${dana.row}`)
+    }
+    await page.keyboard.press('ArrowLeft')
+    await page.waitForTimeout(70)
+  }
+  await shot(page, 'opening-dana-arrives')
+  assert(first && first.col >= 20, `Dana did not come from the end of the street (first seen ${JSON.stringify(first)})`)
+  assert(seen.size >= 5, `Dana appeared rather than ran (seen on ${seen.size} tiles)`)
+  const met = await drawnAt(page, 'character-dana')
+  const here = await posOf(page)
+  assert(here.col === start.col && here.row === start.row, 'the player walked off while she was running')
+  assert(Math.abs(met.col - here.col) + Math.abs(met.row - here.row) === 1, `she stopped short of you (${JSON.stringify(met)} vs ${JSON.stringify(here)})`)
+
+  // What you say to her: mind your own business.
+  await readUntil(page, /raised the river/)
+  await page.locator('[data-testid="dialogue-advance"]').click()
+  await answer(page, 3)
+  await readUntil(page, /Walk with me/)
+  await page.locator('[data-testid="dialogue-advance"]').click()
+
+  // She leads, you follow — and the keys do nothing.
+  for (let i = 0; i < 12; i++) {
+    await page.keyboard.press('ArrowLeft')
+    await page.waitForTimeout(120)
+  }
+  await untilSaid(page, /Get on/)
+  assert((await areaNameOf(page)).includes('Depot'), `not at the depot (${await areaNameOf(page)})`)
+  const beside = await drawnAt(page, 'character-dana')
+  const atStop = await posOf(page)
+  assert(beside && Math.abs(beside.col - atStop.col) + Math.abs(beside.row - atStop.row) === 1, 'Dana did not come with you to the stop')
+  await page.locator('[data-testid="dialogue-advance"]').click()
+
+  // The ride: nobody gets off.
+  await page.locator('[data-testid="bus-ride"]').waitFor({ state: 'visible' })
+  await shot(page, 'opening-ride')
+  assert(await page.locator('[data-testid="bus-ride"][data-forced]').isVisible(), 'the ride is not a forced one')
+  assert((await page.locator('button', { hasText: /Skip the ride|Step off/ }).count()) === 0, 'the ride can be skipped')
+  assert(await page.locator('[data-testid="bus-companion"]').isVisible(), 'Dana is not sat with you')
+  await readUntil(page, /Middle door/)
+  assert((await areaNameOf(page)).includes('Eastgate'), `the bus did not put you down at Eastgate (${await areaNameOf(page)})`)
+  await page.locator('[data-testid="dialogue-advance"]').click()
+  await readUntil(page, /goes in ahead of you/)
+  await page.locator('[data-testid="dialogue-advance"]').click()
+  await page.waitForTimeout(400)
+  const door = (await exitsOf(page)).find((e) => e.label === "Marcus's")
+  const atDoor = await posOf(page)
+  assert(atDoor.col === door.col && atDoor.row === door.row + 1, `not stood at Marcus's door (${JSON.stringify(atDoor)})`)
+
+  const saved = await savedState(page)
+  assert(saved.completedEventIds.includes('dana-walks-you-to-the-bus'), 'the opening was not saved as over')
+  assert(saved.flags.brushedOffDana === true && saved.flags.metDana === true, 'what you said to Dana was not remembered')
+  assert(saved.period === 'afternoon', `the ride did not cost the hour (${saved.period})`)
+
+  // And Marcus's game starts as it always has.
+  await enterDoor(page, "Marcus's")
+  await approach(page, 'Marcus')
+  await page.keyboard.press('e')
+  await page.waitForTimeout(400)
+  await talkThrough(page)
+  await page.waitForTimeout(600)
+  const body = await page.locator('body').innerText()
+  assert(/winner takes|Poker Night|Sit down/i.test(body), `the game never started (saw: ${body.slice(0, 160)})`)
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+})
+
+await test('a reload in the middle of the opening starts it again rather than skipping it', async () => {
+  const page = await newPage(null)
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(400)
+  await enterDoor(page, 'Outside')
+  await readUntil(page, /What you|raised the river/)
+  await page.locator('[data-testid="dialogue-advance"]').click()
+  await answer(page, 1)
+  await readUntil(page, /Get on/)
+  await page.locator('[data-testid="dialogue-advance"]').click()
+  await page.locator('[data-testid="bus-ride"]').waitFor({ state: 'visible' })
+  // Half-way across town, the page goes.
+  const saved = await savedState(page)
+  assert(saved.areaId === 'basin' && !saved.completedEventIds.includes('dana-walks-you-to-the-bus'), 'half a beat was saved')
+  // Opened again on what was saved (newPage's own save would be put back on a reload).
+  const again = await newPage(JSON.stringify(saved))
+  await again.goto(BASE)
+  await again.waitForSelector('canvas')
+  await untilSaid(again, /calling after you/)
+  assert((await areaNameOf(again)).includes('Basin Street'), 'not back on Basin Street')
+  assert(page.__errors.length === 0 && again.__errors.length === 0, `console errors: ${[...page.__errors, ...again.__errors][0]}`)
+})
+
+await test('walking to Marcus before Dana finds you is caught at the depot', async () => {
+  // A run from before the opening was written, already on its way on foot.
+  const page = await newPage(
+    baseSave({
+      cash: 0,
+      cityId: 'apartment',
+      areaId: 'seventh',
+      unlockedCityIds: ['apartment'],
+      flags: { wonPokerNight: false, beatFinalRival: false, hasPenthouse: false },
+      completedEventIds: STORY_SEEN.filter((id) => id !== 'dana-at-the-depot' && id !== 'dana-walks-you-to-the-bus'),
+    }),
+  )
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(500)
+  await walkUntil(page, 'east', 'Depot')
+  await readUntil(page, /There you are/)
+  await readUntil(page, /raised the river/)
+  await page.locator('[data-testid="dialogue-advance"]').click()
+  await answer(page, 2)
+  await readUntil(page, /Here it comes/)
+  await page.locator('[data-testid="dialogue-advance"]').click()
+  await page.locator('[data-testid="bus-ride"][data-forced]').waitFor({ state: 'visible' })
+  await readUntil(page, /goes in ahead of you/)
+  await page.locator('[data-testid="dialogue-advance"]').click()
+  await page.waitForTimeout(400)
+  assert((await areaNameOf(page)).includes('Eastgate'), 'the depot did not put you on the bus to Marcus')
+  const saved = await savedState(page)
+  assert(saved.flags.toldDanaToWatch === true, 'what you said to Dana at the depot was not remembered')
+  assert(saved.completedEventIds.includes('dana-at-the-depot'), 'the depot beat was not saved as over')
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+})
+
+await test('a beat remembers what you said, and every line of it is read out', async () => {
+  // Told Dana to mind her own business on the 14; she brings it up after the
+  // first night. Her lines come as two boxes back to back, and the second used
+  // to open on the first one's last page: blank, and impossible to close.
+  const page = await newPage(
+    openedSave({
+      areaId: 'laundromat',
+      cash: 1500,
+      flags: { wonPokerNight: true, beatFinalRival: false, hasPenthouse: false, metDana: true, brushedOffDana: true },
+    }),
+  )
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(500)
+  await approach(page, 'Dana')
+  await page.keyboard.press('e')
+  await page.waitForTimeout(400)
+  await readUntil(page, /Go and lose it somewhere bigger/)
+  await readUntil(page, /You were my business tonight/)
+  await readUntil(page, /I will be around/)
+  await page.locator('[data-testid="dialogue-advance"]').click()
+  await page.waitForTimeout(400)
+  assert((await dialogueNow(page)) === '', 'the beat did not end')
+  const saved = await savedState(page)
+  assert(saved.completedEventIds.includes('dana-takes-your-measure'), 'the beat was not saved as over')
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+})
+
+/**
+ * A beat can ask the player something. The question is the table's own pixel
+ * buttons over the street, answered by number, by arrows and Enter, or by a
+ * tap; what you answer is remembered, and a road you cannot take is shown shut.
+ */
+const BROKE_AT_HOME = () =>
+  baseSave({
+    cityId: 'apartment',
+    areaId: 'marcus-house',
+    period: 'evening',
+    cash: 40,
+    completedEventIds: STORY_SEEN.filter((id) => id !== 'nadia-names-the-match'),
+  })
+
+for (const [label, size, device] of [
+  ['laptop', { width: 1100, height: 800 }, null],
+  ['short laptop', { width: 1366, height: 500 }, null],
+  ['phone', null, { ...devices['iPhone 13'], viewport: { width: 390, height: 844 }, screen: { width: 390, height: 844 } }],
+]) {
+  await test(`a question fits the screen and every answer can be pressed (${label})`, async () => {
+    const page = await newPage(BROKE_AT_HOME(), device)
+    if (size) await page.setViewportSize(size)
+    await page.goto(BASE)
+    await page.waitForSelector('canvas')
+    await page.waitForTimeout(500)
+    await approach(page, 'Marcus')
+    await page.keyboard.press('e')
+    await page.waitForTimeout(400)
+    await talkThrough(page)
+    await choiceBox(page).waitFor({ state: 'visible' })
+    const box = await page.evaluate(() => {
+      const options = [...document.querySelectorAll('[data-testid^="choice-option-"]')]
+      return {
+        width: window.innerWidth,
+        height: window.innerHeight,
+        scrollWidth: document.documentElement.scrollWidth,
+        options: options.map((el) => {
+          const r = el.getBoundingClientRect()
+          // What is actually on top in the middle of the button: it, not something laid over it.
+          const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)
+          return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, height: r.height, onTop: !!hit && el.contains(hit) }
+        }),
+      }
+    })
+    await shot(page, `choice-${label}`)
+    assert(box.options.length === 2, `expected two answers, saw ${box.options.length}`)
+    for (const [i, o] of box.options.entries()) {
+      assert(o.left >= 0 && o.right <= box.width + 0.5, `answer ${i + 1} runs off the side (${o.left}..${o.right} of ${box.width})`)
+      assert(o.top >= 0 && o.bottom <= box.height + 0.5, `answer ${i + 1} runs off the bottom (${o.top}..${o.bottom} of ${box.height})`)
+      assert(o.onTop, `answer ${i + 1} is covered by something else`)
+      if (device) assert(o.height >= 38, `answer ${i + 1} is ${o.height}px tall: too small for a finger`)
+    }
+    assert(box.scrollWidth <= box.width, 'the question makes the page scroll sideways')
+    // A tap works as well as a key: "Not tonight".
+    await page.locator('[data-testid="choice-option-1"]').click()
+    await page.waitForTimeout(300)
+    assert(/Proud/.test(await dialogueText(page)), 'tapping an answer did nothing')
+    assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  })
+}
+
+await test('the keys answer a question, and the answer is remembered', async () => {
+  const page = await newPage(BROKE_AT_HOME())
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(500)
+  await approach(page, 'Marcus')
+  await page.keyboard.press('e')
+  await page.waitForTimeout(400)
+  await talkThrough(page)
+  await choiceBox(page).waitFor({ state: 'visible' })
+  const prompt = await page.locator('[data-testid="choice-prompt"]').innerText()
+  assert(/kitchen table/.test(prompt), `the question is not asked (saw: ${prompt})`)
+  // The pointer starts on the first answer; down, then Enter, picks the second.
+  const focused = await page.evaluate(() => document.activeElement?.getAttribute('data-testid'))
+  assert(focused === 'choice-option-0', `the first answer does not have the focus (${focused})`)
+  await page.keyboard.press('ArrowDown')
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(300)
+  assert(/Proud/.test(await dialogueText(page)), `Enter did not give the answer the pointer was on (saw: ${await dialogueText(page)})`)
+  await talkThrough(page)
+  await page.waitForTimeout(300)
+  const saved = await savedState(page)
+  assert(saved?.flags?.turnedDownMarcus === true, 'turning Marcus down was not remembered')
+  // Asked again, and this time a number deals you in.
+  await page.keyboard.press('e')
+  await page.waitForTimeout(400)
+  await talkThrough(page)
+  await answer(page, 1)
+  await page.waitForTimeout(600)
+  assert((await page.locator('[data-testid="overworld"]').count()) === 0, 'pressing 1 did not deal you in')
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+})
+
+await test('an answer you cannot give is shown shut, and cannot be given', async () => {
+  // Owing Cass on time, with nowhere near enough to pay her back.
+  const page = await newPage(
+    baseSave({
+      cityId: 'riverbend',
+      areaId: 'rb-street',
+      day: 2,
+      period: 'morning',
+      cash: 100,
+      unlockedCityIds: LOSING_ROAD,
+      debts: [CASS_DEBT(5)],
+      completedEventIds: STORY_SEEN.filter((id) => id !== 'cass-owing'),
+    }),
+  )
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(500)
+  await approach(page, 'Cass')
+  await page.keyboard.press('e')
+  await page.waitForTimeout(400)
+  await talkThrough(page)
+  await choiceBox(page).waitFor({ state: 'visible' })
+  const pay = page.locator('[data-testid="choice-option-0"]')
+  await shot(page, 'choice-shut')
+  assert(await pay.isDisabled(), 'paying her back is open with $100 in your pocket')
+  assert(/cannot cover it/.test(await pay.innerText()), `it does not say why (saw: ${await pay.innerText()})`)
+  await page.keyboard.press('1')
+  await pay.click({ force: true }).catch(() => {})
+  await page.waitForTimeout(300)
+  assert(await choiceBox(page).isVisible(), 'a shut answer closed the question')
+  const saved = await savedState(page)
+  assert(saved?.debts?.length === 1, 'the debt was paid without the money')
+  await answer(page, 2)
+  assert(/Three days/.test(await dialogueText(page)), 'the open answer did not play')
   assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
 })
 
@@ -757,7 +1139,7 @@ await test('a lost match: Nadia makes you wait, and Marcus says build it back', 
 })
 
 await test('the town is one continuous place', async () => {
-  const page = await newPage(null)
+  const page = await newPage(openedSave())
   await page.goto(BASE)
   await page.waitForSelector('canvas')
   await page.waitForTimeout(400)
@@ -1342,7 +1724,7 @@ for (const [width, height] of [
 }
 
 await test('the bus ride fits the window', async () => {
-  const page = await newPage(null)
+  const page = await newPage(openedSave())
   await page.setViewportSize({ width: 1024, height: 560 })
   await page.goto(BASE)
   await page.waitForSelector('canvas')
@@ -2229,6 +2611,36 @@ await test('the events tab catches two events fighting over one moment', async (
   await page.locator('[data-testid="condition-1-remove"]').click()
   await page.locator('[data-testid="condition-0-remove"]').click()
   assert(/share a trigger/.test(await problemsOf(page)), 'an unconditional rival passed')
+  assertNoSaving(page)
+  await page.close()
+})
+
+await test('the events tab edits a choice: its answers, what they need, and where they lead', async () => {
+  const page = await editorPage('#editor/events/kit-after')
+  await page.waitForSelector('[data-testid="event-detail"][data-event="kit-after"]')
+  assert((await problemCount(page)) === 'no problems', `kit-after already has problems: ${await problemsOf(page)}`)
+  // The choice is the second step; its answers are cards inside it.
+  const script = await page.locator('[data-testid="script"]').innerText()
+  assert(/answer “Stake him \$10,000”, open if you have at least \$10,000/.test(script), `the script does not read the answers (saw: ${script.slice(0, 400)})`)
+  assert(await page.locator('[data-testid="action-1-option-0"]').isVisible(), 'the first answer is not shown')
+  assert((await page.inputValue('[data-testid="action-1-option-1-label"]')) === 'Not this time', 'the second answer’s label is not editable')
+
+  // Closing the only answer with no conditions leaves the player with no way on.
+  await page.locator('[data-testid="action-1-option-1-condition-add"]').selectOption('cashAtLeast')
+  assert(/no answer/.test(await problemsOf(page)), `a choice with no way on passed: ${await problemsOf(page)}`)
+  await page.locator('[data-testid="action-1-option-1-condition-0-remove"]').click()
+  assert((await problemCount(page)) === 'no problems', 'taking the condition back off did not clear it')
+
+  // A line said on one answer is a step inside it, edited like any other.
+  await page.locator('[data-testid="action-1-option-1-action-add"]').selectOption('setFlag')
+  assert(await page.locator('[data-testid="action-1-option-1-action-1"]').isVisible(), 'the new step in the answer is not shown')
+  // A fifth answer is one too many to offer.
+  await page.locator('[data-testid="action-1-option-add"]').click()
+  await page.locator('[data-testid="action-1-option-add"]').click()
+  assert((await page.locator('[data-testid="action-1-option-add"]').count()) === 0, 'a choice can be given a fifth answer')
+  // Two blank-named answers say the same thing.
+  await page.fill('[data-testid="action-1-option-2-label"]', 'Not this time')
+  assert(/says the same as another answer/.test(await problemsOf(page)), 'two answers saying the same passed')
   assertNoSaving(page)
   await page.close()
 })

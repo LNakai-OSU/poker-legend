@@ -1,12 +1,11 @@
 import { periodAfter, type TimePeriod } from './time'
+import { clearFlags, type StoryFlag } from '../world/flags'
 
 /**
- * Something true about the world that content can ask about.
- *
- * Named rather than free-form strings so a typo in an event is a type error
- * instead of a condition that is quietly never satisfied.
+ * Something true about the world that content can ask about. The list is data,
+ * in `src/world/flags.ts`.
  */
-export type StoryFlag = 'wonPokerNight' | 'beatFinalRival' | 'hasPenthouse' | 'cameBack'
+export type { StoryFlag }
 
 export type CityId =
   | 'apartment'
@@ -182,7 +181,7 @@ export function initialState(): GameState {
     huntGraceUntilDay: 0,
     restedUntilDay: 0,
     finaleRematchDay: 0,
-    flags: { wonPokerNight: false, beatFinalRival: false, hasPenthouse: false, cameBack: false },
+    flags: clearFlags(),
     completedEventIds: [],
     record: emptyRecord(),
     stats: { handsWon: 0, biggestPot: 0, tablesPlayed: 0 },

@@ -79,19 +79,22 @@ them.
 ### Act 0 — Basin (home) · gate: win Marcus's game
 
 - **Face:** Marcus. **Want:** the Friday game. **Problem:** broke, rent due in
-  nine days. **Thread:** Dana watching. **Payoff:** you take the whole table,
-  and Marcus covers the rent while you are gone (the receipt is under the door
-  when you come home — §4).
+  nine days. **Thread:** Dana watching — and the first time you step outside,
+  she is the one who runs up the street to fetch you. **Payoff:** you take the
+  whole table, and Marcus covers the rent while you are gone (the receipt is
+  under the door when you come home — §4).
 - **Turn:** stuck → leaving.
 
 | Beat | Who / where | Trigger | Conditions | Event id | Status |
 |---|---|---|---|---|---|
 | Rent, the note on the table | Your apartment | POI lines | — | `apartment-window`, `apartment-note` (POIs) | built |
 | Rent day, if the game is still unwon on day ten: Marcus has vouched for you | Your apartment | interact window | day ≥ 10, not wonPokerNight | `rent-day` | built |
-| "Tonight. My place." | Marcus, Basin Street, morning | talkTo marcus | not wonPokerNight, morning | `marcus-reminds-you` (repeatable) | built |
-| The Friday game | Marcus's place, afternoon on | talkTo marcus | not wonPokerNight | `poker-night` → poker night | built |
+| **The opening.** The first time you step out of your door, Dana runs up Basin Street to catch you ("You walk fast for somebody with nowhere to be"), you answer her (**choice**: why do you watch / then watch tonight / mind your own business), she walks you to the end of the street, and rides the 14 with you to Eastgate (a forced ride: no skip, the hour passes, it is afternoon) and goes in at Marcus's door ahead of you | Dana, Basin Street → depot → the 14 → Eastgate | enterArea basin (also on load) | not wonPokerNight, first night not played, Dana not met, not night | `dana-walks-you-to-the-bus` | built |
+| …or, for a run that reached the depot without her: she is waiting at the stop, and the same ride | Dana, the depot | enterArea depot (also on load) | as above | `dana-at-the-depot` | built |
+| "Tonight. My place." | Marcus, Basin Street, morning | talkTo marcus | not wonPokerNight, morning (from day 2; on the day of the opening he is out for ice) | `marcus-reminds-you` (repeatable) | built |
+| The Friday game | Marcus's place, afternoon on — where Dana has just left you | talkTo marcus | not wonPokerNight | `poker-night` → poker night | built |
 | **The casino nudge.** Marcus, cleaned out and proud, sends you to Silver Creek and tells you the Porto Lumina story — the long pull is planted | Marcus | talkTo marcus | wonPokerNight, chapter Basin | `marcus-sends-you-off` | built |
-| Dana takes your measure; "I'll be around" | Dana | talkTo dana | wonPokerNight, chapter Basin | `dana-takes-your-measure` | built |
+| Dana takes your measure; "I'll be around" — and if you told her to mind her own business on the 14, "you were my business tonight" | Dana | talkTo dana | wonPokerNight, chapter Basin | `dana-takes-your-measure` | built |
 
 ### Act 1 — Silver Creek · gate: $600 for the riverboat
 
@@ -206,7 +209,8 @@ and the people who got you there.
 |---|---|---|---|---|---|
 | "Winner hosts. I'll bring the ice." | Marcus, Penthouse Lift | talkTo marcus | hasPenthouse | `marcus-upstairs` | built |
 | Nadia's note: "Watch for the next one." Dana stays on as your scout | Dana, Penthouse Lift | talkTo dana | hasPenthouse | `dana-after` | built |
-| Kit asks for a stake — you are the sponsor now | Kit, waterfront | talkTo kit | hasPenthouse | `kit-after` | built |
+| Kit asks for a stake — you are the sponsor now, and you decide (**choice**: stake him $10,000, if you have it / not this time) | Kit, waterfront | talkTo kit | hasPenthouse | `kit-after` | built |
+| Staked: "Twenty thousand. Your ten, and ten for being the only one who said yes." (+$20,000) | Kit | talkTo kit | after `kit-after`, stakedKit | `kit-pays-you-back` | built |
 | "I had money on her. Do not tell her." | Hal, Penthouse Lift | talkTo hal | hasPenthouse | `hal-after` | built |
 
 ---
@@ -245,7 +249,7 @@ missed and collected on.
 | "Cleaned out? Welcome. Thirty years a member" — go home, Marcus still deals, the bus home is free | Ray, Silver Creek | talkTo ray | after `ray-is-due`, cash below $100 | `ray-busted` (repeatable) | built |
 | "Everyone goes broke at that table once. Go home. Win it back" | Dana, Silver Creek floor | talkTo dana | chapter Silver Creek, after `dana-silvercreek`, cash below $100 | `dana-silvercreek-broke` | built |
 | Home again: the rent receipt under the door — Marcus has paid every week; the room and the game are still yours | your apartment | enterArea home | wonPokerNight, chapter past Basin | `rent-receipt` | built |
-| **The kitchen table.** "You look like the first night. Nobody stays broke at my table" → the home game | Marcus, Basin | talkTo marcus | wonPokerNight, cash below $100, any chapter he is home (not Palm Cay; Lumina only before Nadia sends the car), no penthouse | `marcus-deals-you-back-in` (repeatable) | built |
+| **The kitchen table.** "You look like the first night. Nobody stays broke at my table" → **choice**: deal me in (the home game) / not tonight, I will climb back myself (sets `turnedDownMarcus`, which Ray and Dana remember) | Marcus, Basin | talkTo marcus | wonPokerNight, cash below $100, any chapter he is home (not Palm Cay; Lumina only before Nadia sends the car), no penthouse | `marcus-deals-you-back-in` (repeatable) | built |
 | …on holiday: "I brought cards. I always bring cards" | Marcus, Palm Cay | talkTo marcus | chapter Palm Cay, after `marcus-on-holiday`, cash below $100 | `marcus-deals-on-holiday` (repeatable) | built |
 | …at the rail: "It is always the kitchen table" | Marcus, Porto Lumina | talkTo marcus | chapter Lumina, after `marcus-at-the-rail`, no penthouse, cash below $100 | `marcus-deals-at-the-rail` (repeatable) | built |
 | …in the penthouse: "Winner hosts. So host" | Marcus, lift lobby | talkTo marcus | penthouse, after `marcus-upstairs`, cash below $100 | `marcus-deals-upstairs` (repeatable) | built |
@@ -304,8 +308,10 @@ whichever way the match goes:
   (`kit-caught`). The mechanic, shown on somebody else first.
 - **You lose**: his warning about Madame Wen pays off both ways — heeded
   (`kit-after-the-loss`) or not (`kit-told-you`).
-- **You win**: he asks you for a stake (`kit-after`), then squares the
-  Consortium himself at the nosebleed (`kit-squares-up`).
+- **You win**: he asks you for a stake (`kit-after`) and you decide. Stake him
+  and he squares the Consortium on your money and pays you back doubled
+  (`kit-pays-you-back`); say no and he squares it himself at the nosebleed
+  (`kit-squares-up`).
 
 ### The comeback, read back
 
@@ -313,6 +319,24 @@ whichever way the match goes:
 the match, Dana tells you the letter Nadia kept on her desk was the one about
 the night you went broke and came back (`dana-the-letter-she-kept`): the
 setback is part of why the top is interested in you.
+
+### The choices, and who remembers them
+
+A choice is only worth putting to the player if something later is different
+because of it. Each of these sets a flag (or a line in the record) that a later
+beat reads; `events.test.ts` fails on a flag an answer sets that nothing reads.
+
+| Beat | The question | Answers | What it sets | Who remembers |
+|---|---|---|---|---|
+| `dana-walks-you-to-the-bus` / `dana-at-the-depot` | What do you say to Dana? | Why were you watching? · Then watch tonight · Mind your own business | `askedDanaWhy` · `toldDanaToWatch` · `brushedOffDana` | Dana after the first night (`dana-takes-your-measure`), Dana's reveal in Lumina (`dana-reveal`) |
+| `cass-offers` | Take Cass's money? | Take the $1,500 · Not today | the record (`staked`) | Kit at the Harbor (`kit-harbor`); every Cass beat after |
+| `cass-owing`, `emeka-owing`, `consortium-owing`, `wen-owing` | Pay them back now? | Pay now (only if you can cover it) · Not yet | the record (`repaid` on time) | the sponsor's repaid beats, Cass and Mr. Emeka later up the ladder |
+| `cass-overdue`, `emeka-overdue`, `consortium-overdue`, `wen-overdue` | Pay what you owe? | Pay what I owe (only if you can) · I cannot. Not yet | the record (`repaid`, after `missed`) — and the hunt is called off | the sponsor's repaid-late beats |
+| `wen-offers` | Take Madame Wen's money? | Take the $150,000 · No. Kit warned me | the record (`staked`), a debt | Kit after a lost match (`kit-after-the-loss` / `kit-told-you`) |
+| `marcus-deals-you-back-in` and the three like it | Sit down at the kitchen table? | Deal me in · Not tonight. I will climb back myself | `turnedDownMarcus` (cleared if you later sit down) | Ray's comeback (`ray-sees-you-back`), the letter Nadia kept (`dana-the-letter-she-kept`) |
+| `nadia-names-the-match` | What do you say to her? | I will be ready · Who has been writing to you? · Leave Marcus out of this | `askedNadiaWho` · `toldNadiaLeaveMarcus` | Dana's reveal; Marcus at the rail |
+| `dana-reveal` | How do you take it? | I am glad it was you · You could have told me · Stay away from my games | `trustsDana` · — · `cutDanaOff` | Dana after the win (`dana-after`), after a loss (`dana-after-the-loss`) |
+| `kit-after` | Stake Kit $10,000? | Stake him (only with $10,000) · Not this time | `stakedKit`, −$10,000 | `kit-pays-you-back` (+$20,000) or `kit-squares-up` |
 
 ## 5. What the audit found (2026-10-21)
 
@@ -353,9 +377,16 @@ after the bus was mechanics with captions.
   design call for the user.
 - **Editor.** The character tab edits a schedule, not chapters; chapters survive
   a save untouched but cannot be edited there yet.
-- **Choices.** An event cannot offer a choice, so "you are the sponsor now"
-  cannot let you actually stake Kit; Kit squares himself. A `choice` action
-  would let a beat branch (stake him or not, pay Cass now or later).
+- **The opening only catches the depot.** A save from before the opening that
+  is already in Eastgate or Marcus's place, or one at night (the 14 at night
+  would put you there next morning, with Marcus out), skips it. New runs always
+  have it.
+- **More choices.** The first poker night is still not a question ("You in?"),
+  Mr. Emeka and the Consortium have no first-meeting offer beat (their menu is
+  the offer), and Nadia does not remember after the match what you asked her.
+- **The opening is two beats with the same answers written twice**
+  (`dana-walks-you-to-the-bus`, `dana-at-the-depot`), because the editor writes
+  events as plain literals and cannot keep a shared constant.
 - **The kitchen table pays the same at every stage.** The comeback home game is
   the opening game ($1,500 to the winner), which is a real climb from broke in
   Silver Creek and pocket change at the Mesa. A stake-sized home game would
@@ -374,3 +405,14 @@ after the bus was mechanics with captions.
   are people; Cass and Mr. Emeka turn up later once repaid.
 - The rent pays off.
 - Walking out of the first poker night a loser is no longer a soft-lock.
+
+### Done since (2026-10-22, choices and the opening)
+
+- **Choices** (`choice`, with `if` for a later beat to read them), stakes and
+  repayments as actions, and the table above. The editor edits them.
+- **The opening**: Dana runs to you, walks you to the 14 and rides it with you
+  to Marcus's door. The content model can now walk people (`moveNpc` with a
+  pace, `from`, `youFollow`, `leaves`; `movePlayer`), bring them along
+  (`teleport`/`ride` `with`), and put you on a bus you cannot get off (`ride`).
+- A beat is saved only once it is over, and the opening fires on a load as
+  well, so a reload in the middle of it starts it again.

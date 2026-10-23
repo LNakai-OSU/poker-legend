@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import type { CharacterDef } from '../world/characters'
 
 /**
  * Inside the bus, rather than a caption about one.
@@ -15,13 +16,22 @@ interface BusTransitionProps {
   destination?: string
   /** A line to sit under the window while it moves. */
   caption?: string
-  onArrive: () => void
+  /** Called when the ride is over. A forced ride has no end of its own: the beat that started it ends it. */
+  onArrive?: () => void
+  /** People sat beside you, in the seats either side of yours. */
+  companions?: CharacterDef[]
+  /**
+   * A ride a beat put you on. Nobody gets off it early: there is no skip
+   * button, and it does not end by itself — the beat ends it once what is said
+   * on the way has been said.
+   */
+  forced?: boolean
 }
 
 /** How long the ride lasts. Long enough to feel like distance, short enough to sit through. */
 const RIDE_MS = 4200
 
-export function BusTransition({ destination, caption, onArrive }: BusTransitionProps) {
+export function BusTransition({ destination, caption, onArrive, companions = [], forced = false }: BusTransitionProps) {
   const [done, setDone] = useState(false)
 
   useEffect(() => {
@@ -32,7 +42,7 @@ export function BusTransition({ destination, caption, onArrive }: BusTransitionP
   // Arriving is automatic; the button is there for anyone who would rather not
   // wait, which is the same bargain the table makes between hands.
   useEffect(() => {
-    if (!done) return
+    if (!done || forced || !onArrive) return
     const timer = window.setTimeout(onArrive, 450)
     return () => window.clearTimeout(timer)
   }, [done])
@@ -40,6 +50,7 @@ export function BusTransition({ destination, caption, onArrive }: BusTransitionP
   return (
     <div
       data-testid="bus-ride"
+      data-forced={forced || undefined}
       style={{
         width: '100vw',
         height: '100vh',
@@ -91,9 +102,9 @@ export function BusTransition({ destination, caption, onArrive }: BusTransitionP
 
         {/* The near row: the backs of two seats, and you in the aisle one. */}
         <div style={nearSeatRowStyle}>
-          <SeatBack />
+          {companions[1] ? <Beside who={companions[1]} /> : <SeatBack />}
           <You />
-          <SeatBack />
+          {companions[0] ? <Beside who={companions[0]} /> : <SeatBack />}
         </div>
       </div>
 
@@ -108,9 +119,11 @@ export function BusTransition({ destination, caption, onArrive }: BusTransitionP
         />
       </div>
 
-      <button onClick={onArrive} style={skipButtonStyle}>
-        {done ? 'Step off' : 'Skip the ride'}
-      </button>
+      {!forced && (
+        <button onClick={onArrive} style={skipButtonStyle}>
+          {done ? 'Step off' : 'Skip the ride'}
+        </button>
+      )}
     </div>
   )
 }
@@ -310,6 +323,58 @@ function Passenger({
           borderRadius: '4px 4px 0 0',
           background: seat,
           border: '2px solid #15151c',
+        }}
+      />
+    </div>
+  )
+}
+
+/** Somebody you are riding with, in the seat beside yours, in their own colours. */
+function Beside({ who }: { who: CharacterDef }) {
+  const { skin, hair, shirt } = who.look
+  return (
+    <div
+      className="bus-bob"
+      data-testid="bus-companion"
+      title={who.name}
+      style={{ position: 'relative', width: 64, height: 58, animationDelay: '240ms' }}
+    >
+      <div
+        style={{
+          position: 'absolute',
+          left: 20,
+          top: 0,
+          width: 24,
+          height: 20,
+          borderRadius: 5,
+          background: skin,
+          border: '2px solid #15151c',
+        }}
+      />
+      <div style={{ position: 'absolute', left: 18, top: -3, width: 28, height: 9, background: hair }} />
+      <div
+        style={{
+          position: 'absolute',
+          left: 9,
+          top: 20,
+          width: 46,
+          height: 18,
+          borderRadius: '6px 6px 0 0',
+          background: shirt,
+          border: '2px solid #15151c',
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          left: 0,
+          bottom: 0,
+          width: 64,
+          height: 22,
+          borderRadius: '6px 6px 0 0',
+          background: 'linear-gradient(180deg, #4a3f6b 0%, #332b4c 100%)',
+          border: '2px solid #15151c',
+          borderBottom: 'none',
         }}
       />
     </div>

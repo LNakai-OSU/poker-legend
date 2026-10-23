@@ -281,6 +281,28 @@ export const CHARACTERS: Record<string, CharacterDef> = {
       // at the rail for the match. See docs/STORYBOARD.md.
       chapters: [
         {
+          // The day of the first game, before Dana has brought you: he has the
+          // morning off to get the front room ready and is out for ice, so he
+          // is not standing in the street Dana runs up.
+          when: [
+            { kind: 'eventDone', eventId: 'dana-walks-you-to-the-bus', done: false },
+            { kind: 'eventDone', eventId: 'dana-at-the-depot', done: false },
+            { kind: 'flag', flag: 'wonPokerNight', set: false },
+            { kind: 'eventDone', eventId: 'poker-night', done: false },
+          ],
+          schedule: [
+            { period: 'afternoon', areaId: 'marcus-house', col: 5, row: 6, lines: [
+              'Marcus: You made it! Dana found you, then. She finds everybody.',
+            ] },
+            { period: 'evening', areaId: 'marcus-house', col: 5, row: 6, lines: [
+              'Marcus: Door is open. Chairs are out.',
+            ] },
+            { period: 'night', areaId: 'marcus-house', col: 5, row: 6, lines: [
+              'Marcus: Still up. Cannot sleep before a session. You know how it is.',
+            ] },
+          ],
+        },
+        {
           // A week off, at the midpoint. Home again once you have gone on.
           when: [{ kind: 'chapter', cityId: 'palmCay' }, { kind: 'flag', flag: 'wonPokerNight' }],
           lines: ['Marcus: Four drinks with umbrellas in. I regret nothing.'],
