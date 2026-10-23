@@ -89,6 +89,20 @@ function baseSave(overrides = {}) {
 }
 
 /**
+ * A run on day one that has already had its opening — Dana has walked it to
+ * the 14 — for scenarios about walking the town rather than about her.
+ */
+function openedSave(overrides = {}) {
+  return baseSave({
+    cash: 0,
+    cityId: 'apartment',
+    unlockedCityIds: ['apartment'],
+    flags: { wonPokerNight: false, beatFinalRival: false, hasPenthouse: false, metDana: true },
+    ...overrides,
+  })
+}
+
+/**
  * Pages opened by the scenario currently running, so the runner can close them
  * even when it fails part-way.
  *
@@ -452,7 +466,7 @@ await test('fresh save starts in the apartment', async () => {
 })
 
 await test('a door is opened from in front of it, not stood on', async () => {
-  const page = await newPage(null)
+  const page = await newPage(openedSave())
   await page.goto(BASE)
   await page.waitForSelector('canvas')
   await page.waitForTimeout(400)
@@ -473,7 +487,7 @@ await test('a door is opened from in front of it, not stood on', async () => {
 })
 
 await test('the bus runs across town to the game', async () => {
-  const page = await newPage(null)
+  const page = await newPage(openedSave())
   await page.goto(BASE)
   await page.waitForSelector('canvas')
   await page.waitForTimeout(400)
@@ -741,6 +755,219 @@ await test('broke, Marcus deals you back in at the kitchen table', async () => {
 })
 
 /**
+ * The opening. The first time you step outside, Dana runs up the street to
+ * you, walks you to the 14 and rides it with you to Marcus's door — and you
+ * cannot walk off in the middle of it, skip the bus, or reload your way past
+ * it. Then Marcus's game starts the way it always has.
+ */
+/** The line up now, without waiting for one to appear: a beat walking somebody shows no box. */
+const dialogueNow = (page) =>
+  page.evaluate(() => document.querySelector('[data-testid="event-dialogue"]')?.innerText ?? '')
+/** Where somebody is drawn, from the scene's own published positions. */
+async function drawnAt(page, id) {
+  const people = await page.evaluate(() => document.querySelector('[data-testid="overworld"]')?.dataset.people ?? '')
+  const found = people.split(';').find((p) => p.startsWith(`${id}@`))
+  if (!found) return null
+  const [col, row] = found.split('@')[1].split(',').map(Number)
+  return { col, row }
+}
+/** Waits for a line of a beat matching `re`, clicking through any before it. */
+async function untilSaid(page, re, budget = 20000) {
+  for (let waited = 0; waited < budget; waited += 150) {
+    const said = await dialogueNow(page)
+    if (re.test(said)) return said
+    await page.waitForTimeout(150)
+  }
+  throw new Error(`never said ${re} (last: ${(await dialogueNow(page)).slice(0, 100)})`)
+}
+/** Clicks the text box on until a line matching `re` is up. */
+async function readUntil(page, re, budget = 25000) {
+  for (let waited = 0; waited < budget; waited += 200) {
+    // Read and click in one go inside the page: a click that waited for a box
+    // could land on the next one, unread.
+    const said = await page.evaluate((source) => {
+      const box = document.querySelector('[data-testid="event-dialogue"]')
+      const text = box?.innerText ?? ''
+      if (new RegExp(source).test(text)) return text
+      box?.querySelector('[data-testid="dialogue-advance"]')?.click()
+      return null
+    }, re.source)
+    if (said !== null) return said
+    await page.waitForTimeout(200)
+  }
+  await shot(page, `stuck-before-${String(re).slice(1, 20)}`)
+  const at = await posOf(page)
+  throw new Error(`never got to ${re} (last: ${(await dialogueNow(page)).slice(0, 100)}; at ${JSON.stringify(at)} in ${await areaNameOf(page)})`)
+}
+
+await test('the opening: Dana runs to you, walks you to the 14 and rides it with you to Marcus', async () => {
+  const page = await newPage(null)
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(400)
+  await enterDoor(page, 'Outside')
+  await untilSaid(page, /calling after you/)
+  const start = await posOf(page)
+  await page.locator('[data-testid="dialogue-advance"]').click()
+
+  // She comes on at the far end of the street and runs: seen on tile after tile.
+  const seen = new Set()
+  let first = null
+  for (let i = 0; i < 80 && !(await dialogueNow(page)).includes('Dana:'); i++) {
+    const dana = await drawnAt(page, 'character-dana')
+    if (dana) {
+      first ??= dana
+      seen.add(`${dana.col},${dana.row}`)
+    }
+    await page.keyboard.press('ArrowLeft')
+    await page.waitForTimeout(70)
+  }
+  await shot(page, 'opening-dana-arrives')
+  assert(first && first.col >= 20, `Dana did not come from the end of the street (first seen ${JSON.stringify(first)})`)
+  assert(seen.size >= 5, `Dana appeared rather than ran (seen on ${seen.size} tiles)`)
+  const met = await drawnAt(page, 'character-dana')
+  const here = await posOf(page)
+  assert(here.col === start.col && here.row === start.row, 'the player walked off while she was running')
+  assert(Math.abs(met.col - here.col) + Math.abs(met.row - here.row) === 1, `she stopped short of you (${JSON.stringify(met)} vs ${JSON.stringify(here)})`)
+
+  // What you say to her: mind your own business.
+  await readUntil(page, /raised the river/)
+  await page.locator('[data-testid="dialogue-advance"]').click()
+  await answer(page, 3)
+  await readUntil(page, /Walk with me/)
+  await page.locator('[data-testid="dialogue-advance"]').click()
+
+  // She leads, you follow — and the keys do nothing.
+  for (let i = 0; i < 12; i++) {
+    await page.keyboard.press('ArrowLeft')
+    await page.waitForTimeout(120)
+  }
+  await untilSaid(page, /Get on/)
+  assert((await areaNameOf(page)).includes('Depot'), `not at the depot (${await areaNameOf(page)})`)
+  const beside = await drawnAt(page, 'character-dana')
+  const atStop = await posOf(page)
+  assert(beside && Math.abs(beside.col - atStop.col) + Math.abs(beside.row - atStop.row) === 1, 'Dana did not come with you to the stop')
+  await page.locator('[data-testid="dialogue-advance"]').click()
+
+  // The ride: nobody gets off.
+  await page.locator('[data-testid="bus-ride"]').waitFor({ state: 'visible' })
+  await shot(page, 'opening-ride')
+  assert(await page.locator('[data-testid="bus-ride"][data-forced]').isVisible(), 'the ride is not a forced one')
+  assert((await page.locator('button', { hasText: /Skip the ride|Step off/ }).count()) === 0, 'the ride can be skipped')
+  assert(await page.locator('[data-testid="bus-companion"]').isVisible(), 'Dana is not sat with you')
+  await readUntil(page, /Middle door/)
+  assert((await areaNameOf(page)).includes('Eastgate'), `the bus did not put you down at Eastgate (${await areaNameOf(page)})`)
+  await page.locator('[data-testid="dialogue-advance"]').click()
+  await readUntil(page, /goes in ahead of you/)
+  await page.locator('[data-testid="dialogue-advance"]').click()
+  await page.waitForTimeout(400)
+  const door = (await exitsOf(page)).find((e) => e.label === "Marcus's")
+  const atDoor = await posOf(page)
+  assert(atDoor.col === door.col && atDoor.row === door.row + 1, `not stood at Marcus's door (${JSON.stringify(atDoor)})`)
+
+  const saved = await savedState(page)
+  assert(saved.completedEventIds.includes('dana-walks-you-to-the-bus'), 'the opening was not saved as over')
+  assert(saved.flags.brushedOffDana === true && saved.flags.metDana === true, 'what you said to Dana was not remembered')
+  assert(saved.period === 'afternoon', `the ride did not cost the hour (${saved.period})`)
+
+  // And Marcus's game starts as it always has.
+  await enterDoor(page, "Marcus's")
+  await approach(page, 'Marcus')
+  await page.keyboard.press('e')
+  await page.waitForTimeout(400)
+  await talkThrough(page)
+  await page.waitForTimeout(600)
+  const body = await page.locator('body').innerText()
+  assert(/winner takes|Poker Night|Sit down/i.test(body), `the game never started (saw: ${body.slice(0, 160)})`)
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+})
+
+await test('a reload in the middle of the opening starts it again rather than skipping it', async () => {
+  const page = await newPage(null)
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(400)
+  await enterDoor(page, 'Outside')
+  await readUntil(page, /What you|raised the river/)
+  await page.locator('[data-testid="dialogue-advance"]').click()
+  await answer(page, 1)
+  await readUntil(page, /Get on/)
+  await page.locator('[data-testid="dialogue-advance"]').click()
+  await page.locator('[data-testid="bus-ride"]').waitFor({ state: 'visible' })
+  // Half-way across town, the page goes.
+  const saved = await savedState(page)
+  assert(saved.areaId === 'basin' && !saved.completedEventIds.includes('dana-walks-you-to-the-bus'), 'half a beat was saved')
+  // Opened again on what was saved (newPage's own save would be put back on a reload).
+  const again = await newPage(JSON.stringify(saved))
+  await again.goto(BASE)
+  await again.waitForSelector('canvas')
+  await untilSaid(again, /calling after you/)
+  assert((await areaNameOf(again)).includes('Basin Street'), 'not back on Basin Street')
+  assert(page.__errors.length === 0 && again.__errors.length === 0, `console errors: ${[...page.__errors, ...again.__errors][0]}`)
+})
+
+await test('walking to Marcus before Dana finds you is caught at the depot', async () => {
+  // A run from before the opening was written, already on its way on foot.
+  const page = await newPage(
+    baseSave({
+      cash: 0,
+      cityId: 'apartment',
+      areaId: 'seventh',
+      unlockedCityIds: ['apartment'],
+      flags: { wonPokerNight: false, beatFinalRival: false, hasPenthouse: false },
+      completedEventIds: STORY_SEEN.filter((id) => id !== 'dana-at-the-depot' && id !== 'dana-walks-you-to-the-bus'),
+    }),
+  )
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(500)
+  await walkUntil(page, 'east', 'Depot')
+  await readUntil(page, /There you are/)
+  await readUntil(page, /raised the river/)
+  await page.locator('[data-testid="dialogue-advance"]').click()
+  await answer(page, 2)
+  await readUntil(page, /Here it comes/)
+  await page.locator('[data-testid="dialogue-advance"]').click()
+  await page.locator('[data-testid="bus-ride"][data-forced]').waitFor({ state: 'visible' })
+  await readUntil(page, /goes in ahead of you/)
+  await page.locator('[data-testid="dialogue-advance"]').click()
+  await page.waitForTimeout(400)
+  assert((await areaNameOf(page)).includes('Eastgate'), 'the depot did not put you on the bus to Marcus')
+  const saved = await savedState(page)
+  assert(saved.flags.toldDanaToWatch === true, 'what you said to Dana at the depot was not remembered')
+  assert(saved.completedEventIds.includes('dana-at-the-depot'), 'the depot beat was not saved as over')
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+})
+
+await test('a beat remembers what you said, and every line of it is read out', async () => {
+  // Told Dana to mind her own business on the 14; she brings it up after the
+  // first night. Her lines come as two boxes back to back, and the second used
+  // to open on the first one's last page: blank, and impossible to close.
+  const page = await newPage(
+    openedSave({
+      areaId: 'laundromat',
+      cash: 1500,
+      flags: { wonPokerNight: true, beatFinalRival: false, hasPenthouse: false, metDana: true, brushedOffDana: true },
+    }),
+  )
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(500)
+  await approach(page, 'Dana')
+  await page.keyboard.press('e')
+  await page.waitForTimeout(400)
+  await readUntil(page, /Go and lose it somewhere bigger/)
+  await readUntil(page, /You were my business tonight/)
+  await readUntil(page, /I will be around/)
+  await page.locator('[data-testid="dialogue-advance"]').click()
+  await page.waitForTimeout(400)
+  assert((await dialogueNow(page)) === '', 'the beat did not end')
+  const saved = await savedState(page)
+  assert(saved.completedEventIds.includes('dana-takes-your-measure'), 'the beat was not saved as over')
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+})
+
+/**
  * A beat can ask the player something. The question is the table's own pixel
  * buttons over the street, answered by number, by arrows and Enter, or by a
  * tap; what you answer is remembered, and a road you cannot take is shown shut.
@@ -912,7 +1139,7 @@ await test('a lost match: Nadia makes you wait, and Marcus says build it back', 
 })
 
 await test('the town is one continuous place', async () => {
-  const page = await newPage(null)
+  const page = await newPage(openedSave())
   await page.goto(BASE)
   await page.waitForSelector('canvas')
   await page.waitForTimeout(400)
@@ -1497,7 +1724,7 @@ for (const [width, height] of [
 }
 
 await test('the bus ride fits the window', async () => {
-  const page = await newPage(null)
+  const page = await newPage(openedSave())
   await page.setViewportSize({ width: 1024, height: 560 })
   await page.goto(BASE)
   await page.waitForSelector('canvas')

@@ -55,10 +55,14 @@ export interface StageChoice {
 
 /** What the screen has to show while an event is part-way through. */
 export interface EventStage {
-  /** The text box currently up, if any. */
-  dialogue?: { speaker: string; lines: string[] }
+  /**
+   * The text box currently up, if any. `id` is new for every box, so two boxes
+   * back to back are two boxes — the second does not open on the first one's
+   * last page.
+   */
+  dialogue?: { id: number; speaker: string; lines: string[] }
   /** The question currently up, if any. */
-  choice?: StageChoice
+  choice?: StageChoice & { id: number }
   /** Set while the screen is covered, for a `fade`. */
   faded: boolean
   /**
@@ -133,6 +137,7 @@ export class EventMachine {
   private waitingOn: number | null = null
   private cueTimers = new Map<number, number>()
   private nextCue = 1
+  private nextBox = 1
 
   constructor(host: MachineHost) {
     this.host = host
@@ -280,7 +285,7 @@ export class EventMachine {
 
       switch (step.kind) {
         case 'dialogue':
-          this.setStage({ ...this.stage, dialogue: { speaker: step.speaker ?? '', lines: step.lines } })
+          this.setStage({ ...this.stage, dialogue: { id: this.nextBox++, speaker: step.speaker ?? '', lines: step.lines } })
           return
         case 'choice': {
           const state = this.host.getState()
@@ -291,6 +296,7 @@ export class EventMachine {
           this.setStage({
             ...this.stage,
             choice: {
+              id: this.nextBox++,
               speaker: step.speaker ?? '',
               prompt: step.prompt,
               options: shown.map(({ option, open }) => ({

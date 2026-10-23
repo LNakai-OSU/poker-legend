@@ -610,6 +610,7 @@ export function GameApp() {
       {events.stage.dialogue && (
         <div data-testid="event-dialogue" style={{ position: 'fixed', inset: 0, zIndex: 95 }}>
           <DialogueBox
+            key={events.stage.dialogue.id}
             speaker={speakerName(events.stage.dialogue.speaker)}
             lines={events.stage.dialogue.lines}
             onFinish={events.advance}
@@ -618,6 +619,7 @@ export function GameApp() {
       )}
       {events.stage.choice && (
         <ChoiceBox
+          key={events.stage.choice.id}
           speaker={speakerName(events.stage.choice.speaker)}
           prompt={events.stage.choice.prompt}
           options={events.stage.choice.options}

@@ -175,9 +175,11 @@ A scripted beat: when it happens, what has to be true, what then occurs.
 **Triggers:** `talkTo` (a character), `interact` (a fixture — the beat gets
 first refusal over its action, and the next talk does the usual thing),
 `enterArea` (walking in through a door, off an edge or off a bus; not loading a
-save, not getting up from a table), `caught` (the collectors catch you: the beat
-plays with them standing over you, and the shakedown follows its last line),
-`standOn` (typed and validated, **not yet fired** by the overworld).
+save, not getting up from a table — unless it says `onLoad: true`, for a beat
+that must happen before anything else there, like the opening), `caught` (the
+collectors catch you: the beat plays with them standing over you, and the
+shakedown follows its last line), `standOn` (typed and validated, **not yet
+fired** by the overworld).
 
 **Conditions** (all must hold): `flag`, `period`, `dayAtLeast`, `cashAtLeast`,
 `hasItem`, `hasLesson`, `eventDone`, `chapter`, and the ones that let the story
@@ -190,6 +192,7 @@ see losing:
 | `hunted` | collectors are working the town you are in — anybody's, or one sponsor's | `{ kind: 'hunted', sponsorId: 'wen' }` |
 | `challenge` | the match is `unplayed`, `lost` (she is making you wait), `rematch` (she will play you now) or `won` | `{ kind: 'challenge', status: ['lost', 'rematch'] }` |
 | `count` | something has happened `atLeast`/`atMost` times (at least once by default; `atMost: 0` is never): `busted`, `challengeLost`, or a sponsor's `staked`, `repaid`, `missed`, `caught` | `{ kind: 'count', of: 'repaid', sponsorId: 'cass' }` |
+| `canPay` | you owe this sponsor and hold enough to pay all of it now — the condition on a "pay her back" answer | `{ kind: 'canPay', sponsorId: 'cass' }` |
 
 **The record.** The run remembers what has gone wrong, because nobody can talk
 about a setback the state has forgotten: `record` in `state.ts` counts busts
@@ -198,10 +201,14 @@ seat on the ladder), matches lost, and for each sponsor the stakes taken,
 repaid, missed and collected on. The mechanics count; beats read it with
 `count`. A paid debt leaves the debt list but stays in the record.
 
-**Flags:** `wonPokerNight`, `beatFinalRival`, `hasPenthouse`, and `cameBack` —
-set by a beat that marks climbing back from a setback (Ray's when you are back
-at boat money after going broke; Marcus's after a rematch won), and read by
-beats that care that you did.
+**Flags** are a data list, `src/world/flags.ts`: each says what it means set
+and clear, which is how the editor reads a condition out loud. Adding one is a
+line there. `wonPokerNight`, `beatFinalRival`, `hasPenthouse`; `cameBack`, set
+by a beat that marks climbing back from a setback (Ray's when you are back at
+boat money after going broke; Marcus's after a rematch won); and the flags
+choices set (below): `metDana`, `askedDanaWhy`, `toldDanaToWatch`,
+`brushedOffDana`, `askedNadiaWho`, `toldNadiaLeaveMarcus`, `trustsDana`,
+`cutDanaOff`, `turnedDownMarcus`, `stakedKit`.
 
 **The chapter** is how far up the ladder the run has got: the furthest town set
 foot in, by bus or on foot (`chapterOf` in `state.ts`). `{ kind: 'chapter',
@@ -210,14 +217,67 @@ you first walk into Crescent Harbor, whichever way you go afterwards. It is the
 story's clock: town-specific beats ask for it, and characters' chapters key on
 it. [STORYBOARD.md](STORYBOARD.md) is the whole run written against it.
 
-**Actions**, in order: `dialogue`, `moveNpc`, `wait`, `setFlag`, `clearFlag`,
-`giveItem`, `giveCash`, `unlockCity`, `unlockTable`, `startTable`,
-`startPokerNight`, `teleport`, `advancePeriod`, `advanceDay`, `playSound`,
-`fade`.
+**Actions**, in order: `dialogue`, `choice`, `if`, `moveNpc`, `movePlayer`,
+`wait`, `setFlag`, `clearFlag`, `giveItem`, `giveCash`, `takeStake`, `repay`,
+`unlockCity`, `unlockTable`, `startTable`, `startPokerNight`, `teleport`,
+`ride`, `advancePeriod`, `advanceDay`, `playSound`, `fade`.
+
+**Choices.** A `choice` puts a question to the player with two to four answers,
+each a `label`, optional `conditions` (enough cash, a debt to pay) and `then`, the
+branch it leads to — lines, flags, cash, a stake taken or repaid, a ride, a
+table. Once the branch is done the event carries on after the question, unless
+the branch sat you down at a table.
+
+```ts
+{
+  kind: 'choice',
+  speaker: 'kit',
+  prompt: 'Stake Kit $10,000?',
+  options: [
+    {
+      label: 'Stake him $10,000',
+      conditions: [{ kind: 'cashAtLeast', amount: 10000 }],
+      then: [{ kind: 'giveCash', amount: -10000 }, { kind: 'setFlag', flag: 'stakedKit' }],
+    },
+    { label: 'Not this time', then: [{ kind: 'dialogue', speaker: 'kit', lines: ['Kit: Fair.'] }] },
+  ],
+}
+```
+
+- An answer whose conditions do not hold is shown greyed out with why
+  ("needs $10,000"), so the player sees the road not open to them — or left off
+  the list with `hidden: true`. **Every choice keeps one answer with no
+  conditions**, so there is always a way on; the tests fail otherwise.
+- **A choice must change something a later beat reads.** A flag an answer sets
+  has to be asked about by some other beat or character (`events.test.ts`), and
+  the later beat says so with `if`: `{ kind: 'if', when: [conditions], then:
+  [...], else: [...] }` plays one list or the other. Stakes and repayments are
+  remembered by the record instead, which the sponsors' beats already read.
+- On screen it is the table's pixel buttons, one under another, full width on a
+  phone. Keys: an answer's number picks it; ↑ ↓ move the pointer and Enter or
+  Space picks.
+
+**People moving.** `moveNpc` walks somebody to a tile — or `to: 'player'`, the
+free tile beside you nearest them — along the way a person would go, at
+`pace: 'walk'` or `'run'`, and the beat waits until they are there. `from` brings
+them on at a tile first (the end of the street) when they were not here;
+`youFollow` has the player walk a step behind them; `leaves` has them go once
+they get there (through the door they walked to). `movePlayer` walks you
+somewhere. Somebody a beat has moved stays where it left them until you leave
+the area. `teleport` and `ride` take `with: ['dana']`: they come along and stand
+beside you at the other end.
+
+**A ride you do not choose.** `ride` puts you on the 14 to an area and tile,
+with `with` sat beside you and `during` — talk, pauses, quiet changes of state;
+nothing that walks or changes scene — said on the way. There is no skip button,
+and it ends when what is said has been said (and not before it has felt like a
+ride). It costs the hour a ride across town always costs.
 
 Rules:
 
-- An event fires **once**, ever, unless marked `repeatable`.
+- An event fires **once**, ever, unless marked `repeatable`. It is saved once it
+  is over and never half-way: a reload in the middle of one puts you back
+  where it started, and the beat has not happened.
 - **At most one event per moment.** Two events sharing a trigger must have
   conditions that tell them apart — a flag one way and the other, hours or
   chapters that do not overlap, one waiting on the other with `eventDone`,
@@ -226,10 +286,22 @@ Rules:
   and the tests fail otherwise, because declaration order is not a decision
   anybody made. `canBothFire` in `events.ts` is the rule; the tests and the
   editor share it.
+- **A beat that carries you somewhere is still holding the screen when you
+  arrive.** A `teleport` or `ride`, down any branch, and a beat for walking into
+  that area must be told apart the same way — by the beat's own conditions as
+  changed by what it did on the way. The opening sets `metDana` before it takes
+  you to the depot, which is how it is told apart from the depot's own beat for
+  anybody who arrives without her. `arrivalClashes` is the rule.
+- **What a beat does has to make sense down every branch**: everybody and every
+  table it names exists, everybody it walks somewhere can stand there, every
+  question has a way on. `eventChecks.ts`, shared by the tests and the editor.
 - **The street holds still while a beat plays.** Nobody moves, including a
-  collector, until the last line is read.
-- Actions that finish by themselves all run in one tick. `dialogue`, `wait` and
-  `fade` suspend until something says to carry on.
+  collector, until the last line is read — nobody but whoever the beat itself is
+  walking. The keys and the d-pad do nothing until it is over.
+- Actions that finish by themselves all run in one tick. `dialogue`, `choice`,
+  `moveNpc`, `movePlayer`, `ride`, `wait` and `fade` suspend until something says
+  to carry on. A walk the street cannot finish lands the walker where they were
+  going after a while, so no beat can hang on one.
 - `startTable` and `startPokerNight` end the event — what follows is the table,
   and there is nobody left in the street to say the next line to.
 
@@ -347,7 +419,9 @@ standing in a wall, no two events fighting over a moment. They have repeatedly
 caught real mistakes before the game was ever launched.
 
 **The editor.** `npm run dev`, then `localhost:5173/#editor`. Three tabs — Maps,
-Characters, Events — show the content above and write it straight back to
+Characters, Events — show the content above (in the Events tab an answer's
+conditions and branch, an `if`'s two ways and a ride's lines are edited as lists
+inside the step, exactly like the event's own) and write it straight back to
 `cities.ts`, `characters.ts` and `events.ts`. Each tab checks the content rules
 as you type, and the save endpoint runs them again and refuses anything a test
 would fail. A save rewrites only the text you changed: comments and hand layout

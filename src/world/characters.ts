@@ -285,7 +285,8 @@ export const CHARACTERS: Record<string, CharacterDef> = {
           // morning off to get the front room ready and is out for ice, so he
           // is not standing in the street Dana runs up.
           when: [
-            { kind: 'flag', flag: 'metDana', set: false },
+            { kind: 'eventDone', eventId: 'dana-walks-you-to-the-bus', done: false },
+            { kind: 'eventDone', eventId: 'dana-at-the-depot', done: false },
             { kind: 'flag', flag: 'wonPokerNight', set: false },
             { kind: 'eventDone', eventId: 'poker-night', done: false },
           ],

@@ -712,6 +712,14 @@ export function OverworldScene({
         if (wrapper && wrapper.dataset.playerRow !== String(player.row)) {
           wrapper.dataset.playerRow = String(player.row)
         }
+        // Where everybody is actually drawn, a tile at a time, so the suite can
+        // watch somebody a beat is walking rather than only where they will end.
+        if (wrapper) {
+          const people = npcs
+            .map((n) => `${n.config.id}@${Math.round(n.sprite.x / TILE_SIZE)},${Math.round(n.sprite.y / TILE_SIZE) - 1}`)
+            .join(';')
+          if (wrapper.dataset.people !== people) wrapper.dataset.people = people
+        }
         setPlayerTile((current) =>
           current.col === player.col && current.row === player.row
             ? current
