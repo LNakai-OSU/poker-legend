@@ -2615,6 +2615,36 @@ await test('the events tab catches two events fighting over one moment', async (
   await page.close()
 })
 
+await test('the events tab edits a choice: its answers, what they need, and where they lead', async () => {
+  const page = await editorPage('#editor/events/kit-after')
+  await page.waitForSelector('[data-testid="event-detail"][data-event="kit-after"]')
+  assert((await problemCount(page)) === 'no problems', `kit-after already has problems: ${await problemsOf(page)}`)
+  // The choice is the second step; its answers are cards inside it.
+  const script = await page.locator('[data-testid="script"]').innerText()
+  assert(/answer “Stake him \$10,000”, open if you have at least \$10,000/.test(script), `the script does not read the answers (saw: ${script.slice(0, 400)})`)
+  assert(await page.locator('[data-testid="action-1-option-0"]').isVisible(), 'the first answer is not shown')
+  assert((await page.inputValue('[data-testid="action-1-option-1-label"]')) === 'Not this time', 'the second answer’s label is not editable')
+
+  // Closing the only answer with no conditions leaves the player with no way on.
+  await page.locator('[data-testid="action-1-option-1-condition-add"]').selectOption('cashAtLeast')
+  assert(/no answer/.test(await problemsOf(page)), `a choice with no way on passed: ${await problemsOf(page)}`)
+  await page.locator('[data-testid="action-1-option-1-condition-0-remove"]').click()
+  assert((await problemCount(page)) === 'no problems', 'taking the condition back off did not clear it')
+
+  // A line said on one answer is a step inside it, edited like any other.
+  await page.locator('[data-testid="action-1-option-1-action-add"]').selectOption('setFlag')
+  assert(await page.locator('[data-testid="action-1-option-1-action-1"]').isVisible(), 'the new step in the answer is not shown')
+  // A fifth answer is one too many to offer.
+  await page.locator('[data-testid="action-1-option-add"]').click()
+  await page.locator('[data-testid="action-1-option-add"]').click()
+  assert((await page.locator('[data-testid="action-1-option-add"]').count()) === 0, 'a choice can be given a fifth answer')
+  // Two blank-named answers say the same thing.
+  await page.fill('[data-testid="action-1-option-2-label"]', 'Not this time')
+  assert(/says the same as another answer/.test(await problemsOf(page)), 'two answers saying the same passed')
+  assertNoSaving(page)
+  await page.close()
+})
+
 await test('the events tab builds a new event from ids that exist', async () => {
   const page = await editorPage('#editor/events')
   await page.waitForSelector('[data-testid="event-editor"]')
