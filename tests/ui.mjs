@@ -30,6 +30,9 @@ const STORY_SEEN = [
   // The opening: Dana walks you to the 14.
   'dana-walks-you-to-the-bus',
   'dana-at-the-depot',
+  // The night of the first game: Dana walks you home, Marcus rides out with you.
+  'dana-walks-you-home',
+  'marcus-rides-out-with-you',
   'arrive-silvercreek',
   'arrive-riverbend',
   'arrive-crescent',

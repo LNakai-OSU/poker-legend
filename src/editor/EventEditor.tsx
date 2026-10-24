@@ -673,7 +673,7 @@ function TriggerTarget({ trigger, options, onChange }: { trigger: EventTrigger; 
                 onChange(next)
               }}
             />
-            or when a save is loaded there
+            or when you find yourself there (a save loaded, getting up from a table)
           </label>
         </>
       )

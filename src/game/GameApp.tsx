@@ -123,8 +123,9 @@ export function GameApp() {
    * Fired when the area changes — through a door, off the edge of a street, off
    * a bus — and not when a save is loaded into one or when you get up from a
    * table in the room you were already in: that is being somewhere, not
-   * arriving. A beat can ask to fire on a load too (`onLoad`): the opening,
-   * which a reload half-way through must not skip.
+   * arriving. A beat can ask to fire then too (`onLoad`): one that has to
+   * happen before anything else there — the opening, which a reload half-way
+   * through must not skip, and the scene straight after the first poker night.
    */
   const lastArea = useRef<string | null>(null)
   const runEvent = events.run
@@ -145,6 +146,16 @@ export function GameApp() {
     const event = eventFor(EVENTS, { kind: 'enterArea', areaId }, state)
     if (event) runEvent(event)
   }, [view.kind, state, runEvent, clearCast])
+
+  /**
+   * Back to the room you were sitting in. Like a load, this is finding yourself
+   * somewhere rather than walking in, so only an `onLoad` beat is asked — the
+   * one that has to happen before anything else here.
+   */
+  const getUpFromTable = () => {
+    lastArea.current = null
+    backToCity()
+  }
 
   const handlePoi = (action: PoiAction) => {
     switch (action.kind) {
@@ -276,7 +287,7 @@ export function GameApp() {
       return settled
     })
     if (table.isFinale) setView({ kind: result.finaleWon ? 'ending' : 'finaleLost' })
-    else backToCity()
+    else getUpFromTable()
   }
 
   const handleCaught = () => {
@@ -312,12 +323,13 @@ export function GameApp() {
           onWin={(winnings) => {
             // Winnings are *added* to the roll. This used to assign it, so
             // walking in with $250,000 and winning set the bankroll to ~$1,500.
-            // You are still sitting in Marcus's front room. Getting out of town is
-            // a decision for the morning, not something the win does for you.
+            // You are still sitting in Marcus's front room. The win itself takes
+            // you nowhere: the beat that follows it does (`dana-walks-you-home`),
+            // as content, and it is asked because getting up is not walking in.
             setState((s) => ({ ...s, cash: s.cash + winnings, flags: { ...s.flags, wonPokerNight: true } }))
-            backToCity()
+            getUpFromTable()
           }}
-          onLeave={backToCity}
+          onLeave={getUpFromTable}
         />
       )
 

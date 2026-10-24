@@ -32,9 +32,11 @@ import {
 /** What makes an event fire. */
 export type EventTrigger =
   /**
-   * Walking into an area, however you got there. With `onLoad`, also loading a
-   * save that stands there: a beat that has to happen before anything else in
-   * the area — the opening — is not skipped by a reload in the middle of it.
+   * Walking into an area, however you got there. With `onLoad`, also finding
+   * yourself there without walking in — loading a save that stands there, or
+   * getting up from a table in it: a beat that has to happen before anything
+   * else in the area (the opening; the scene after the first poker night) is
+   * not skipped by a reload in the middle of it.
    */
   | { kind: 'enterArea'; areaId: string; onLoad?: boolean }
   /** Standing on one specific tile of one area. */
@@ -849,7 +851,8 @@ export const EVENTS: GameEvent[] = [
     id: 'dana-takes-your-measure',
     about:
       'Dana has been watching you play. Costs nothing and gives nothing — she is ' +
-      'here to make the town feel like somewhere you are known.',
+      'here to make the town feel like somewhere you are known. A run now hears this straight after the ' +
+      'game (`dana-walks-you-home`) and is in Silver Creek by the next afternoon; this is for saves from before.',
     trigger: { kind: 'talkTo', characterId: 'dana' },
     conditions: [
       { kind: 'flag', flag: 'wonPokerNight' },
@@ -884,7 +887,8 @@ export const EVENTS: GameEvent[] = [
     id: 'marcus-sends-you-off',
     about:
       'The casino nudge. Marcus, cleaned out and proud, sends you to Silver Creek — ' +
-      'and plants the penthouse as the thing at the top of the ladder.',
+      'and plants the penthouse as the thing at the top of the ladder. A run now hears this in ' +
+      '`dana-walks-you-home` and `marcus-rides-out-with-you`; this is for saves that won before those.',
     trigger: { kind: 'talkTo', characterId: 'marcus' },
     conditions: [
       { kind: 'flag', flag: 'wonPokerNight' },
@@ -908,6 +912,194 @@ export const EVENTS: GameEvent[] = [
       },
     ],
   },
+  // The night of the first game, and the morning after. Straight after you win,
+  // Marcus and Dana make their excuses and tell you which bus is next; Dana
+  // walks you home; in the morning Marcus is on your step and rides the 14 out
+  // to Silver Creek with you. Both fire on finding yourself there (`onLoad`),
+  // so getting up from the table starts the first and a reload in the middle of
+  // either starts it again. docs/STORYBOARD.md, Act 0.
+  {
+    id: 'dana-walks-you-home',
+    about:
+      'Straight after you win the first poker night: Marcus and Dana praise your play and make excuses for ' +
+      'their own, tell you the 14 runs out to Silver Creek for nothing, and Dana walks you home to sleep.',
+    trigger: { kind: 'enterArea', areaId: 'marcus-house', onLoad: true },
+    conditions: [
+      { kind: 'flag', flag: 'wonPokerNight' },
+      { kind: 'chapter', cityId: 'apartment' },
+      // The hours he is home, which are the hours his game is on.
+      { kind: 'period', period: ['afternoon', 'evening', 'night'] },
+      // A save that won before this was written, and has heard his send-off.
+      { kind: 'eventDone', eventId: 'marcus-sends-you-off', done: false },
+    ],
+    actions: [
+      { kind: 'wait', ms: 400 },
+      { kind: 'dialogue', lines: ['The last chip slides across. Marcus stares at it like it owes him rent.'] },
+      { kind: 'moveNpc', characterId: 'marcus', to: 'player' },
+      {
+        kind: 'dialogue',
+        speaker: 'marcus',
+        lines: [
+          'Marcus: That is everything. Mine, and Dana’s. You played that like you had done it for years.',
+          'Marcus: For the record, my cards were cold all night. Nobody can play cold cards.',
+        ],
+      },
+      { kind: 'moveNpc', characterId: 'dana', from: { col: 8, row: 4 }, to: 'player' },
+      {
+        kind: 'dialogue',
+        speaker: 'dana',
+        lines: [
+          'Dana: His cards were fine. He played them like they were on fire.',
+          'Dana: I would have had you on the last hand. I was watching you instead of my cards.',
+        ],
+      },
+      // What you said to her on the 14 (`dana-walks-you-to-the-bus`).
+      {
+        kind: 'if',
+        when: [{ kind: 'flag', flag: 'brushedOffDana' }],
+        then: [{ kind: 'dialogue', speaker: 'dana', lines: ['Dana: My own business, you said. You were my business tonight.'] }],
+        else: [
+          {
+            kind: 'if',
+            when: [{ kind: 'flag', flag: 'toldDanaToWatch' }],
+            then: [{ kind: 'dialogue', speaker: 'dana', lines: ['Dana: You told me to watch. I did. So did somebody else, through me.'] }],
+            else: [
+              {
+                kind: 'if',
+                when: [{ kind: 'flag', flag: 'askedDanaWhy' }],
+                then: [{ kind: 'dialogue', speaker: 'dana', lines: ['Dana: Somebody is going to enjoy reading about tonight.'] }],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'marcus',
+        lines: [
+          'Marcus: Right. You cannot take my money every Friday. I will run out of furniture.',
+          'Marcus: Silver Creek. The casino out on the reservation road. The 14 runs there from the depot, and the fare is nothing.',
+        ],
+      },
+      { kind: 'dialogue', speaker: 'dana', lines: ['Dana: A hundred buys a seat at the low-stakes table. You just won fifteen.'] },
+      { kind: 'dialogue', speaker: 'marcus', lines: ['Marcus: I am putting you on that bus myself. First thing tomorrow.'] },
+      // The game ran late, whenever it started.
+      {
+        kind: 'if',
+        when: [{ kind: 'period', period: 'afternoon' }],
+        then: [{ kind: 'advancePeriod', steps: 2 }],
+        else: [{ kind: 'if', when: [{ kind: 'period', period: 'evening' }], then: [{ kind: 'advancePeriod' }] }],
+      },
+      { kind: 'dialogue', speaker: 'dana', lines: ['Dana: Come on. I will walk you home before he cries.'] },
+      { kind: 'dialogue', speaker: 'marcus', lines: ['Marcus: I am not crying. The cards are dusty.'] },
+      { kind: 'moveNpc', characterId: 'dana', to: { col: 7, row: 9 }, youFollow: true },
+      { kind: 'fade', to: 'out' },
+      { kind: 'teleport', areaId: 'basin', col: 5, row: 4, with: ['dana'] },
+      { kind: 'fade', to: 'in' },
+      {
+        kind: 'dialogue',
+        speaker: 'dana',
+        lines: [
+          'Dana: This is you. Sleep. Marcus has set two alarms, which frightens me.',
+          'Dana: I will be around.',
+        ],
+      },
+      // Set before you go in, so the receipt under the door (`rent-receipt`,
+      // for coming home later) is told apart from coming home tonight.
+      { kind: 'setFlag', flag: 'marcusSeesYouOff' },
+      { kind: 'fade', to: 'out' },
+      { kind: 'teleport', areaId: 'home', col: 6, row: 7 },
+      { kind: 'fade', to: 'in' },
+      { kind: 'dialogue', lines: ['You lie down meaning to count it again. You get as far as four hundred.'] },
+      { kind: 'fade', to: 'out' },
+      { kind: 'advanceDay' },
+      { kind: 'fade', to: 'in' },
+      { kind: 'dialogue', lines: ['Morning. Somebody is hammering on your door.'] },
+      { kind: 'dialogue', speaker: 'marcus', lines: ['Marcus: I can hear you not getting up! Coat! Bus!'] },
+    ],
+  },
+  {
+    id: 'marcus-rides-out-with-you',
+    about:
+      'The morning after the first game: Marcus is on your step, rides the 14 out to Silver Creek with you, ' +
+      'tells you the Porto Lumina story on the way, and walks you into the casino to the low-stakes table.',
+    trigger: { kind: 'enterArea', areaId: 'basin', onLoad: true },
+    conditions: [
+      // Said out loud, though the walk home already needed it: it is what tells
+      // this apart from the opening on this street and at the depot.
+      { kind: 'flag', flag: 'wonPokerNight' },
+      { kind: 'flag', flag: 'marcusSeesYouOff' },
+      { kind: 'eventDone', eventId: 'dana-walks-you-home' },
+      { kind: 'chapter', cityId: 'apartment' },
+    ],
+    actions: [
+      { kind: 'wait', ms: 300 },
+      { kind: 'moveNpc', characterId: 'marcus', from: { col: 9, row: 6 }, to: 'player' },
+      {
+        kind: 'dialogue',
+        speaker: 'marcus',
+        lines: [
+          'Marcus: Finally. Your neighbour has been timing me.',
+          'Marcus: I told your landlord on the stairs: rent is on my tab till you are back. Do not argue.',
+          'Marcus: I said I would put you on the bus. I am getting on it with you.',
+        ],
+      },
+      { kind: 'moveNpc', characterId: 'marcus', to: { col: 26, row: 7 }, youFollow: true },
+      { kind: 'fade', to: 'out' },
+      { kind: 'teleport', areaId: 'depot', col: 6, row: 2, with: ['marcus'] },
+      { kind: 'fade', to: 'in' },
+      { kind: 'dialogue', speaker: 'marcus', lines: ['Marcus: Same 14. We just do not get off at Eastgate.'] },
+      {
+        kind: 'ride',
+        areaId: 'sc-street',
+        col: 26,
+        row: 12,
+        with: ['marcus'],
+        caption: 'Marcus has brought sandwiches. He hands you one when the town runs out.',
+        during: [
+          {
+            kind: 'dialogue',
+            speaker: 'marcus',
+            lines: [
+              'Marcus: You know the Porto Lumina story? A woman lives in a penthouse over the casino.',
+              'Marcus: Every so often she puts it on the table, heads up. Four years. Nobody has taken it.',
+              'Marcus: I am not saying it is you. I am saying I want to be at the rail if it is.',
+            ],
+          },
+        ],
+      },
+      { kind: 'dialogue', lines: ['Silver Creek. A casino at the end of the reservation road, and a dollar-two game inside it.'] },
+      { kind: 'dialogue', speaker: 'marcus', lines: ['Marcus: Smell that? Carpet and cigarettes. Real poker.'] },
+      { kind: 'moveNpc', characterId: 'marcus', to: { col: 16, row: 5 }, youFollow: true },
+      { kind: 'fade', to: 'out' },
+      { kind: 'teleport', areaId: 'sc-floor', col: 10, row: 9, with: ['marcus'] },
+      { kind: 'fade', to: 'in' },
+      { kind: 'dialogue', speaker: 'marcus', lines: ['Marcus: Pit boss, top left. He seats the low-stakes table. A hundred to sit.'] },
+      {
+        kind: 'if',
+        when: [{ kind: 'cashAtLeast', amount: 600 }],
+        then: [
+          {
+            kind: 'dialogue',
+            speaker: 'marcus',
+            lines: ['Marcus: Six hundred buys the riverboat upriver. You have that, so just do not lose it.'],
+          },
+        ],
+        else: [{ kind: 'dialogue', speaker: 'marcus', lines: ['Marcus: Get to six hundred and the riverboat upriver will have you.'] }],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'marcus',
+        lines: [
+          'Marcus: I am getting the 14 home before the slots get my lunch money.',
+          'Marcus: Go and be a story I can tell.',
+        ],
+      },
+      { kind: 'clearFlag', flag: 'marcusSeesYouOff' },
+      { kind: 'moveNpc', characterId: 'marcus', to: { col: 10, row: 11 }, leaves: true },
+      { kind: 'dialogue', lines: ['The low-stakes table is top left. The pit boss is waiting to seat you.'] },
+    ],
+  },
 
   // ---------------------------------------------------------------------------
   // Every town has an arrival card — what the table costs and what moves you on —
@@ -921,6 +1113,12 @@ export const EVENTS: GameEvent[] = [
     id: 'arrive-silvercreek',
     about: 'Arriving at Silver Creek: what the table costs, and the bankroll that buys the boat.',
     trigger: { kind: 'enterArea', areaId: 'sc-street' },
+    // For anybody who got here on their own. Marcus brings you off the bus with
+    // the flag set and says all this himself (`marcus-rides-out-with-you`).
+    conditions: [
+      { kind: 'flag', flag: 'marcusSeesYouOff', set: false },
+      { kind: 'eventDone', eventId: 'marcus-rides-out-with-you', done: false },
+    ],
     actions: [
       { kind: 'dialogue', lines: ['Silver Creek. A casino at the end of the reservation road, and a dollar-two game inside it.'] },
       {
@@ -947,6 +1145,11 @@ export const EVENTS: GameEvent[] = [
           'Ray: One of these days I walk out of there ahead, and I keep walking.',
           'Ray: You have got the look. Do not get the tab.',
         ],
+      },
+      {
+        kind: 'if',
+        when: [{ kind: 'eventDone', eventId: 'marcus-rides-out-with-you' }],
+        then: [{ kind: 'dialogue', speaker: 'ray', lines: ['Ray: Saw your friend walk you in. Overalls. Hang on to him. This room eats friends.'] }],
       },
     ],
   },
@@ -2008,6 +2211,11 @@ export const EVENTS: GameEvent[] = [
     conditions: [
       { kind: 'flag', flag: 'wonPokerNight' },
       { kind: 'chapter', cityId: ['silverCreek', 'riverbend', 'crescentHarbor', 'palmCay', 'neonMesa', 'portoLumina'] },
+      // Only ever set while you are still in Basin, so the chapter already says
+      // this; it is the flag that tells this apart from Dana bringing you home
+      // after the first game (`dana-walks-you-home`), which the chapter cannot
+      // once that beat has moved you.
+      { kind: 'flag', flag: 'marcusSeesYouOff', set: false },
     ],
     actions: [
       { kind: 'dialogue', lines: ['Under the door: a rent receipt, stamped PAID, for every week since you left.'] },
