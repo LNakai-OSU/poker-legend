@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { EventMachine, FORCED_RIDE_MS, type EventStage, type MachineHost } from './eventMachine'
-import { initialState, type GameState } from './state'
-import type { GameEvent } from '../world/events'
+import { chapterOf, initialState, type GameState } from './state'
+import { EVENTS, eventFor, type GameEvent } from '../world/events'
+import { CITIES, TABLES } from '../world/content'
 
 /**
  * A beat played through without a screen: the host records what the machine
@@ -255,5 +256,131 @@ describe('people walking, and a ride you cannot get off', () => {
     expect(h.stage.cast.dana).toEqual({ areaId: 'basin', col: 2, row: 1 })
     h.machine.clearCast()
     expect(h.stage.cast).toEqual({})
+  })
+})
+
+/**
+ * The night of the first game, as the game has it — the real beats, not test
+ * ones. Winning Marcus's game used to leave the player in his front room with
+ * nothing said; now the win is followed by a scene that tells you where to go,
+ * walks you home, and in the morning takes you there. docs/STORYBOARD.md, Act 0.
+ */
+describe('the night of the first game, played through', () => {
+  const event = (id: string) => EVENTS.find((e) => e.id === id)!
+
+  /** Plays a beat to its end: every line read, the first answer taken, every walk landed, every pause waited out. */
+  function playThrough(h: ReturnType<typeof harness>, beat: GameEvent): string[] {
+    const said: string[] = []
+    h.machine.run(beat)
+    for (let guard = 0; h.machine.isRunning && guard < 500; guard++) {
+      const stage = h.stage
+      if (stage.dialogue) {
+        said.push(...stage.dialogue.lines)
+        h.machine.advance()
+      } else if (stage.choice) {
+        h.machine.choose(0)
+      } else if (stage.cues.length > 0) {
+        for (const cue of stage.cues) h.machine.cueDone(cue.id)
+      } else {
+        h.tick(1000)
+      }
+    }
+    expect(h.machine.isRunning, `${beat.id} never finished`).toBe(false)
+    return said
+  }
+
+  /** Up from Marcus's table a winner, having told Dana to mind her own business on the 14. */
+  const justWon: Partial<GameState> = {
+    areaId: 'marcus-house',
+    period: 'evening',
+    cash: 1500,
+    flags: { ...initialState().flags, wonPokerNight: true, metDana: true, brushedOffDana: true },
+    completedEventIds: ['dana-walks-you-to-the-bus', 'poker-night'],
+  }
+  const at = (change: Partial<GameState>) => harness({ ...justWon, ...change }).state
+
+  it('starts the moment you get up from his table a winner, and only then', () => {
+    const walk = eventFor(EVENTS, { kind: 'enterArea', areaId: 'marcus-house' }, at({}))
+    expect(walk?.id).toBe('dana-walks-you-home')
+    // Getting up is not walking in: only a beat that says `onLoad` is asked then.
+    expect(walk?.trigger).toEqual({ kind: 'enterArea', areaId: 'marcus-house', onLoad: true })
+    const lost = at({ flags: { ...justWon.flags!, wonPokerNight: false } })
+    expect(eventFor(EVENTS, { kind: 'enterArea', areaId: 'marcus-house' }, lost)).toBeUndefined()
+    // A save that won before this was written, and has heard Marcus's send-off.
+    const heard = at({ completedEventIds: [...justWon.completedEventIds!, 'marcus-sends-you-off'] })
+    expect(eventFor(EVENTS, { kind: 'enterArea', areaId: 'marcus-house' }, heard)).toBeUndefined()
+  })
+
+  it('has them praise you, blame their cards, name the bus, and walk you home to sleep', () => {
+    const h = harness(justWon)
+    const said = playThrough(h, event('dana-walks-you-home')).join('\n')
+    expect(said).toMatch(/played that like you had done it for years/)
+    expect(said).toMatch(/my cards were cold/)
+    expect(said).toMatch(/watching you instead of my cards/)
+    // What you said to her on the 14.
+    expect(said).toMatch(/You were my business tonight/)
+    expect(said).toMatch(/Silver Creek.*14 runs there from the depot, and the fare is nothing/)
+    expect(said).toMatch(/hundred buys a seat at the low-stakes table/)
+    // The fare it names is the fare the depot charges, and the town needs no bankroll.
+    expect(CITIES.silverCreek.travelCost).toBe(0)
+    expect(CITIES.silverCreek.unlockCash).toBe(0)
+    expect(TABLES['silvercreek-low'].buyIn).toBe(100)
+
+    // Home, in bed, and the next morning: the night costs the day a session would.
+    expect(h.state.areaId).toBe('home')
+    expect(h.state.day).toBe(2)
+    expect(h.state.period).toBe('morning')
+    expect(h.state.flags.marcusSeesYouOff).toBe(true)
+    expect(h.state.completedEventIds).toContain('dana-walks-you-home')
+    expect(said).toMatch(/hammering on your door/)
+    // Once: getting up from his table again starts nothing.
+    const again = { ...h.state, areaId: 'marcus-house', period: 'evening' as const }
+    expect(eventFor(EVENTS, { kind: 'enterArea', areaId: 'marcus-house' }, again)).toBeUndefined()
+    // Still Basin: no rent receipt under the door tonight.
+    expect(eventFor(EVENTS, { kind: 'enterArea', areaId: 'home' }, h.state)).toBeUndefined()
+  })
+
+  it('has Marcus at the door in the morning, ride the 14 out with you and see you in to the low-stakes table', () => {
+    const h = harness(justWon)
+    playThrough(h, event('dana-walks-you-home'))
+    // Out of the door.
+    const outside = { ...h.state, areaId: 'basin' }
+    const ride = eventFor(EVENTS, { kind: 'enterArea', areaId: 'basin' }, outside)
+    expect(ride?.id).toBe('marcus-rides-out-with-you')
+    expect(ride?.trigger).toEqual({ kind: 'enterArea', areaId: 'basin', onLoad: true })
+
+    const out = harness(outside)
+    const said = playThrough(out, ride!).join('\n')
+    expect(said).toMatch(/rent is on my tab/)
+    expect(said).toMatch(/Porto Lumina/)
+    expect(said).toMatch(/hundred to sit/)
+    expect(said).toMatch(/riverboat/)
+    expect(out.log.some((l) => /^ride to .* with marcus$/.test(l))).toBe(true)
+
+    // In the casino at Silver Creek, which now counts as somewhere you have been.
+    expect(out.state.areaId).toBe('sc-floor')
+    expect(out.state.cityId).toBe('silverCreek')
+    expect(chapterOf(out.state)).toBe('silverCreek')
+    // The bus ride is the hour any ride is: the same day, the afternoon.
+    expect(out.state.day).toBe(2)
+    expect(out.state.period).toBe('afternoon')
+    expect(out.state.flags.marcusSeesYouOff).toBe(false)
+    // And he has gone home: nobody left standing on the floor.
+    expect(out.stage.cast.marcus).toBeUndefined()
+
+    // Once, and the valet's card is not read to somebody Marcus walked in.
+    expect(eventFor(EVENTS, { kind: 'enterArea', areaId: 'basin' }, { ...out.state, areaId: 'basin' })).toBeUndefined()
+    expect(eventFor(EVENTS, { kind: 'enterArea', areaId: 'sc-street' }, { ...out.state, areaId: 'sc-street' })).toBeUndefined()
+    // Ray noticed who walked you in.
+    const ray = eventFor(EVENTS, { kind: 'talkTo', characterId: 'ray' }, out.state)
+    expect(ray?.id).toBe('ray-is-due')
+    expect(playThrough(harness(out.state), ray!).join('\n')).toMatch(/Saw your friend walk you in/)
+    // Coming home later, the receipt is under the door.
+    expect(eventFor(EVENTS, { kind: 'enterArea', areaId: 'home' }, { ...out.state, areaId: 'home' })?.id).toBe('rent-receipt')
+  })
+
+  it('still greets anybody who gets to Silver Creek on their own', () => {
+    const walked = harness({ areaId: 'sc-street', cityId: 'silverCreek', unlockedCityIds: ['apartment', 'silverCreek'] }).state
+    expect(eventFor(EVENTS, { kind: 'enterArea', areaId: 'sc-street' }, walked)?.id).toBe('arrive-silvercreek')
   })
 })
