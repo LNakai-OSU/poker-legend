@@ -1519,7 +1519,7 @@ function paletteFor(look: PersonLook, outfit: Outfit, hat: HatKind | undefined):
   }
 }
 
-function layersFor(figure: Figure, facing: Facing, frame: WalkFrame, blink: boolean) {
+function layersFor(figure: Figure, facing: Facing, frame: WalkFrame, blink: boolean, seated = false) {
   const view: View = facing === 'right' ? 'left' : facing
   const { look } = figure
   const outfit = OUTFITS[figure.role](look)
@@ -1547,6 +1547,8 @@ function layersFor(figure: Figure, facing: Facing, frame: WalkFrame, blink: bool
   layers.push(...hair[view].map((layer) => ({ ...layer, fromY: hat?.hairFrom })))
   if (hat) layers.push(...hat.views[view])
   layers.push(...(outfit.front?.[view] ?? []))
+  // Last, so it folds whatever the outfit put below the waist too.
+  if (seated) layers.push(SEATED_LOWER[view])
 
   const post = (cells: Cells) => {
     if (outfit.shortSleeves) recolor(cells, 'sleeve', 'skin', 15)
@@ -1588,9 +1590,58 @@ const SKIRT: Record<View, Layer> = {
   ),
 }
 
+/**
+ * Sitting down: everything from the waist up as they stand, and below it a lap
+ * instead of legs.
+ *
+ * From the front or the back the thighs come straight at you, so a seated
+ * person is a short wide lap and then nothing — a table or a chair back is in
+ * front of the rest. In profile the thighs run forward level with the seat and
+ * the shins drop from the knee, which is what makes a side view read as sitting.
+ * `_` clears what the standing legs and the outfit left there.
+ */
+const SEATED_LOWER: Record<View, Layer> = {
+  down: at(18,
+    '....MLLLLLLl....',
+    '...MLLLLLLLLl...',
+    '________________',
+    '________________',
+    '________________',
+    '________________',
+  ),
+  up: at(18,
+    '....MLLLLLLl....',
+    '...MLLLLLLLLl...',
+    '________________',
+    '________________',
+    '________________',
+    '________________',
+  ),
+  left: at(18,
+    '__MLLLLLLLl_____',
+    '__MLLLLLLLl_____',
+    '__MLl___________',
+    '_DFFf___________',
+    '_FFFf___________',
+    '________________',
+  ),
+}
+
+/**
+ * Somebody sitting, facing `facing`, as colours row by row; null is
+ * transparent. The hips are on row 18, the same as standing, so a seat puts
+ * that row on its cushion.
+ */
+export function seatedPixels(figure: Figure, facing: Facing, blink = false): (string | null)[] {
+  return pixelsOf(layersFor(figure, facing, 0, blink, true), facing)
+}
+
 /** The finished pixels of one frame, as colours, row by row. Null is transparent. */
 export function personPixels(figure: Figure, facing: Facing, frame: WalkFrame, blink = false): (string | null)[] {
-  const { layers, post, palette: colors } = layersFor(figure, facing, frame, blink)
+  return pixelsOf(layersFor(figure, facing, frame, blink), facing)
+}
+
+function pixelsOf({ layers, post, palette: colors }: ReturnType<typeof layersFor>, facing: Facing): (string | null)[] {
   const cells = compose(layers, post)
   const out: (string | null)[] = new Array(PERSON_W * PERSON_H).fill(null)
   for (let y = 0; y < PERSON_H; y++) {

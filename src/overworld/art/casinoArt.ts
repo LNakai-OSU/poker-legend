@@ -1,6 +1,7 @@
 import type { ArtContext, StampArt } from '../stampArt'
 import { INK, oval, ovalSpans, shadow, sprite, text, textCentred, textWidth, tint, type Px } from '../pixelArt'
 import { bulbBorder } from './buildingParts'
+import type { StampSeat } from '../../world/stamps'
 
 /**
  * The furniture of a gaming floor.
@@ -310,34 +311,43 @@ function cardTable(px: Px, x: number, y: number, w: number, h: number, s: TableS
   chips(px, mx + 6, y + h - 8, ['#e83a3a'])
 }
 
-/** A six-seat poker table: 3x2 of felt, a chair at each end and two along each side. */
-function pokerTable6(s: TableStyle): StampArt {
+/**
+ * A chair at one of the stamp's seats. The seat is where somebody sits — the
+ * middle of the cushion — and the chair is built round it with its back on the
+ * far side from the felt.
+ */
+function chairAt(px: Px, seat: StampSeat, s: TableStyle) {
+  if (seat.facing === 'down') chair(px, seat.x - 5, seat.y - 7, 'top', s)
+  else if (seat.facing === 'up') chair(px, seat.x - 5, seat.y - 1, 'bottom', s)
+  else if (seat.facing === 'right') chair(px, seat.x - 6, seat.y - 5, 'left', s)
+  else chair(px, seat.x - 4, seat.y - 5, 'right', s)
+}
+
+/**
+ * A card table with its chairs: the ones behind it and at its ends first, then
+ * the table, then the ones in front of it, whose backs cross its front rail.
+ */
+function pokerTable(s: TableStyle, x: number, y: number, w: number, h: number, board: number): StampArt {
   return {
     draw: (px, c) => {
-      chair(px, 18, 3, 'top', s)
-      chair(px, 52, 3, 'top', s)
-      chair(px, 1, 26, 'left', s)
-      chair(px, 69, 26, 'right', s)
-      cardTable(px, 9, 11, 62, 40, s, 5)
-      chair(px, 20, 47, 'bottom', s)
-      chair(px, 50, 47, 'bottom', s)
-      void c
+      for (const seat of c.seats) if (seat.facing !== 'up') chairAt(px, seat, s)
+      cardTable(px, x, y, w, h, s, board)
+      for (const seat of c.seats) if (seat.facing === 'up') chairAt(px, seat, s)
+    },
+    // The rail and its front face: what hides the lap of somebody sitting
+    // across it or at an end.
+    occluder: (px) => {
+      oval(px, x, y, w, h, INK)
+      oval(px, x, y + 2, w, h, INK)
     },
   }
 }
 
+/** A six-seat poker table: 3x2 of felt, a chair at each end and two along each side. */
+const pokerTable6 = (s: TableStyle) => pokerTable(s, 9, 11, 62, 40, 5)
+
 /** A heads-up table: two tiles of felt, a chair either end and one each side. */
-function pokerTable4(s: TableStyle): StampArt {
-  return {
-    draw: (px) => {
-      chair(px, 12, 2, 'top', s)
-      chair(px, 1, 18, 'left', s)
-      chair(px, 53, 18, 'right', s)
-      cardTable(px, 9, 9, 46, 30, s, 3)
-      chair(px, 38, 35, 'bottom', s)
-    },
-  }
-}
+const pokerTable4 = (s: TableStyle) => pokerTable(s, 9, 9, 46, 30, 3)
 
 // ---------------------------------------------------------------------------
 // Craps and roulette

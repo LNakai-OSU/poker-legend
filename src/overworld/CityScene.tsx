@@ -9,7 +9,9 @@ import { useAmbientMusic } from '../audio/SoundToggle'
 import { PERIOD_LABEL } from '../game/time'
 import { CHARACTERS, charactersIn } from '../world/characters'
 import { EVENTS, eventFor, type GameEvent } from '../world/events'
-import { artForPoi, figureForCharacter, figuresForPois } from './casting'
+import { artForPoi, figureForCharacter, figuresForPois, figuresForSitters } from './casting'
+import { sittersIn } from '../world/seating'
+import type { SeatedConfig } from './sitters'
 
 interface CitySceneProps {
   state: GameState
@@ -60,6 +62,18 @@ export function CityScene({
   // Everybody standing at a POI, dressed for what they do and made up from
   // their id, with nobody in the street the double of anybody else in it.
   const figures = figuresForPois(area.pois, CHARACTERS, scheduled.map((s) => s.figure))
+  // Who is sitting at the tables. Worked out from the map, so a table looks the
+  // same every time you come in; nobody sits where somebody is already standing
+  // or where you are about to.
+  const sitters = sittersIn(area, {
+    present: scheduled.map(({ id, at }) => ({ id, ...(moved?.[id] ?? { col: at.col, row: at.row }) })),
+    keepClear: [landing],
+  })
+  const sitterFigures = figuresForSitters(sitters, CHARACTERS, [
+    ...scheduled.map((s) => s.figure),
+    ...figures.values(),
+  ])
+  const seated: SeatedConfig[] = sitters.map((sitter) => ({ sitter, figure: sitterFigures.get(sitter.id)! }))
   // A person on a tile you cannot walk on is behind the furniture there — the
   // clerk at the counter, the dealer at the table — and is drawn that way.
   const behind = (col: number, row: number) => !isWalkable(area.map, col, row)
@@ -195,6 +209,7 @@ export function CityScene({
       period={state.period}
       outdoors={outdoors}
       stamps={area.stamps}
+      seated={seated}
       hud={
         <>
           <div>{area.name}</div>

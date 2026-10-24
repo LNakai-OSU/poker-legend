@@ -1,6 +1,6 @@
 import { Texture } from 'pixi.js'
 import { TILE_SIZE } from './tiles'
-import { STAMP_BY_ID, stampSize } from '../world/stamps'
+import { STAMP_BY_ID, stampSize, type StampSeat } from '../world/stamps'
 import { currentGlow, type Glow, type Px } from './pixelArt'
 import { BUILDING_ART } from './art/buildingArt'
 import { CASINO_ART } from './art/casinoArt'
@@ -34,6 +34,8 @@ export interface ArtContext {
   frame: number
   /** The stamp's footprint, row by row, in map characters — where its doors are, and so on. */
   tiles: string[]
+  /** Its chairs, for a table: the art draws one at each. */
+  seats: StampSeat[]
 }
 
 export type StampDraw = (px: Px, c: ArtContext) => void
@@ -67,6 +69,14 @@ export interface StampArt {
   standsUp?: number
   /** Where it throws light after dark: pools on the ground, in art units from the footprint's top-left. */
   lights?: StampLight[]
+  /**
+   * For something people sit at, the part of it that is in front of whoever
+   * sits on the far side or at an end: the table top and its rail, without the
+   * chairs. Somebody sitting there is cut away wherever this is painted, so the
+   * rail hides their lap and they read as sitting behind it, not on it. Colour
+   * is ignored; only where it paints counts.
+   */
+  occluder?: StampDraw
 }
 
 /** A pool of light a stamp throws on the ground after dark. */
@@ -138,15 +148,15 @@ export function stampLayers(stampId: string): StampLayers | null {
   const { cols, rows } = stampSize(stamp)
   const bleed = bleedOf(art)
   const frames = Math.max(1, art.frames ?? 1)
-  const tiles = footprint(stampId)
+  const shape = footprint(stampId)
   const toTexture = (draw: StampDraw, frame: number) => {
-    const texture = Texture.from(paint(draw, cols, rows, frame, bleed, tiles))
+    const texture = Texture.from(paint(draw, cols, rows, frame, bleed, shape))
     texture.source.scaleMode = 'nearest'
     return texture
   }
   const over = overDrawing(art)
   // The night pass: the same drawings again, keeping only what glows.
-  const lit = (draw: StampDraw) => Array.from({ length: frames }, (_, frame) => paintLit(draw, cols, rows, frame, bleed, tiles))
+  const lit = (draw: StampDraw) => Array.from({ length: frames }, (_, frame) => paintLit(draw, cols, rows, frame, bleed, shape))
   const litUnder = lit(art.draw)
   const litOver = over ? lit(over) : null
   const toLitTextures = (canvases: Array<HTMLCanvasElement | null> | null) => {
@@ -196,9 +206,9 @@ export function stampCanvas(stampId: string): HTMLCanvasElement | null {
   if (!stamp || !art) return null
   const { cols, rows } = stampSize(stamp)
   const none = { left: 0, top: 0, right: 0, bottom: 0 }
-  const tiles = footprint(stampId)
-  const canvas = paint(art.draw, cols, rows, 0, none, tiles)
-  if (art.over) canvas.getContext('2d')!.drawImage(paint(art.over, cols, rows, 0, none, tiles), 0, 0)
+  const shape = footprint(stampId)
+  const canvas = paint(art.draw, cols, rows, 0, none, shape)
+  if (art.over) canvas.getContext('2d')!.drawImage(paint(art.over, cols, rows, 0, none, shape), 0, 0)
   return canvas
 }
 
@@ -273,7 +283,7 @@ function paintLit(
   rows: number,
   frame: number,
   bleed: StampBleed,
-  tiles: string[],
+  shape: Shape,
 ): HTMLCanvasElement | null {
   const w = cols * UNIT
   const h = rows * UNIT
@@ -298,13 +308,17 @@ function paintLit(
       }
       ctx.fillRect((x + bleed.left) * SCALE, (y + bleed.top) * SCALE, pw * SCALE, ph * SCALE)
     },
-    { cols, rows, w, h, frame, tiles },
+    { cols, rows, w, h, frame, ...shape },
   )
   return glowed ? canvas : null
 }
 
-function footprint(stampId: string): string[] {
-  return STAMP_BY_ID[stampId].tiles.split('\n').filter((row) => row.length > 0)
+/** What a drawing is told about a stamp's shape, beyond its size. */
+type Shape = Pick<ArtContext, 'tiles' | 'seats'>
+
+function footprint(stampId: string): Shape {
+  const stamp = STAMP_BY_ID[stampId]
+  return { tiles: stamp.tiles.split('\n').filter((row) => row.length > 0), seats: stamp.seats ?? [] }
 }
 
 function paint(
@@ -313,7 +327,7 @@ function paint(
   rows: number,
   frame: number,
   bleed: StampBleed,
-  tiles: string[],
+  shape: Shape,
 ): HTMLCanvasElement {
   const w = cols * UNIT
   const h = rows * UNIT
@@ -328,7 +342,7 @@ function paint(
       ctx.fillStyle = color
       ctx.fillRect((x + bleed.left) * SCALE, (y + bleed.top) * SCALE, pw * SCALE, ph * SCALE)
     },
-    { cols, rows, w, h, frame, tiles },
+    { cols, rows, w, h, frame, ...shape },
   )
   return canvas
 }
@@ -343,10 +357,48 @@ export function stampPreview(stampId: string, frame = 0): { canvas: HTMLCanvasEl
   if (!stamp || !art) return null
   const { cols, rows } = stampSize(stamp)
   const bleed = bleedOf(art)
-  const tiles = footprint(stampId)
-  const canvas = paint(art.draw, cols, rows, frame, bleed, tiles)
-  if (art.over) canvas.getContext('2d')!.drawImage(paint(art.over, cols, rows, frame, bleed, tiles), 0, 0)
+  const shape = footprint(stampId)
+  const canvas = paint(art.draw, cols, rows, frame, bleed, shape)
+  if (art.over) canvas.getContext('2d')!.drawImage(paint(art.over, cols, rows, frame, bleed, shape), 0, 0)
   return { canvas, bleed }
+}
+
+/** Where a stamp's occluder paints: one flag per art unit of its footprint, row by row. */
+export interface Occluder {
+  w: number
+  h: number
+  covers: Uint8Array
+}
+
+const occluderCache = new Map<string, Occluder | null>()
+
+/**
+ * What of a stamp is in front of somebody sitting at it, or null if nothing is.
+ * Read from the drawing without a canvas, so the tests can see it too.
+ */
+export function stampOccluder(stampId: string): Occluder | null {
+  if (occluderCache.has(stampId)) return occluderCache.get(stampId)!
+  const stamp = STAMP_BY_ID[stampId]
+  const draw = ART[stampId]?.occluder
+  if (!stamp || !draw) {
+    occluderCache.set(stampId, null)
+    return null
+  }
+  const { cols, rows } = stampSize(stamp)
+  const w = cols * UNIT
+  const h = rows * UNIT
+  const covers = new Uint8Array(w * h)
+  draw(
+    (x, y, pw, ph) => {
+      for (let yy = Math.max(0, Math.round(y)); yy < Math.min(h, Math.round(y + ph)); yy++) {
+        for (let xx = Math.max(0, Math.round(x)); xx < Math.min(w, Math.round(x + pw)); xx++) covers[yy * w + xx] = 1
+      }
+    },
+    { cols, rows, w, h, frame: 0, ...footprint(stampId) },
+  )
+  const occluder = { w, h, covers }
+  occluderCache.set(stampId, occluder)
+  return occluder
 }
 
 /** Whether a stamp has art of its own, as opposed to only laying down tiles. */
