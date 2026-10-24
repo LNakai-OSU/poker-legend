@@ -942,6 +942,215 @@ await test('walking to Marcus before Dana finds you is caught at the depot', asy
   assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
 })
 
+/**
+ * After the first game. Winning Marcus's table used to put you back in his
+ * front room with nothing said and no idea what came next. Now getting up a
+ * winner is a beat: Marcus and Dana make their excuses and name the bus, Dana
+ * walks you home, and in the morning Marcus is on your step and rides the 14
+ * out to Silver Creek with you.
+ *
+ * The deck is real. Only the shuffle is made repeatable: Math.random, which
+ * the table draws from, is seeded from the moment Marcus deals until you get
+ * up, and the player shoves every hand.
+ */
+const POKER_NIGHT_SEED = 7
+
+/** Seeds Math.random while `window.__seeded` is on; the rest of the game keeps the real one. */
+async function seedRandom(page, seed) {
+  await page.addInitScript((start) => {
+    const real = Math.random
+    let s = start >>> 0
+    const seeded = () => {
+      s = (s + 0x6d2b79f5) >>> 0
+      let t = s
+      t = Math.imul(t ^ (t >>> 15), t | 1)
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+    }
+    Math.random = () => (window.__seeded ? seeded() : real())
+  }, seed)
+}
+
+/** Sits down at Marcus's table from his front room and shoves every hand until the table is yours. */
+async function winPokerNight(page, budget = 150000) {
+  await approach(page, 'Marcus')
+  await page.keyboard.press('e')
+  await readUntil(page, /You in\?/)
+  await page.evaluate(() => {
+    window.__seeded = true
+  })
+  await page.locator('[data-testid="dialogue-advance"]').click()
+  let hands = 0
+  for (let waited = 0; waited < budget; waited += 200) {
+    const headOut = page.locator('button', { hasText: 'Head out' })
+    if (await headOut.isVisible().catch(() => false)) {
+      await page.evaluate(() => {
+        window.__seeded = false
+      })
+      await headOut.click()
+      return hands
+    }
+    for (const label of [/^All in/, /^Call /, /^Check$/, /^Next hand/, /^Deal me back in/, /Continue|Let's go/]) {
+      const button = page.locator('button', { hasText: label }).first()
+      if (await button.isVisible().catch(() => false)) {
+        if (String(label).includes('Next hand')) hands++
+        await button.click()
+        break
+      }
+    }
+    await page.waitForTimeout(200)
+  }
+  throw new Error(`never won the poker night (${hands} hands)`)
+}
+
+/** Whether somebody is drawn on a tile next to the player. */
+async function besideYou(page, id) {
+  const [them, you] = await Promise.all([drawnAt(page, id), posOf(page)])
+  return !!them && !!you && Math.abs(them.col - you.col) + Math.abs(them.row - you.row) === 1
+}
+
+await test('after the first game Dana walks you home and Marcus rides out with you to Silver Creek', async () => {
+  const page = await newPage(
+    openedSave({
+      areaId: 'marcus-house',
+      period: 'evening',
+      flags: { wonPokerNight: false, beatFinalRival: false, hasPenthouse: false, metDana: true, brushedOffDana: true },
+      // Nobody has greeted you at Silver Creek yet: Marcus does it himself.
+      completedEventIds: STORY_SEEN.filter(
+        (id) => !['dana-walks-you-home', 'marcus-rides-out-with-you', 'arrive-silvercreek'].includes(id),
+      ),
+    }),
+  )
+  await seedRandom(page, POKER_NIGHT_SEED)
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(500)
+  await winPokerNight(page)
+
+  // Up from the table a winner, and the room has something to say about it.
+  await untilSaid(page, /last chip slides across/)
+  assert((await areaNameOf(page)).includes('Marcus'), `not in Marcus's front room (${await areaNameOf(page)})`)
+  await readUntil(page, /cards were cold/)
+  await readUntil(page, /watching you instead of my cards/)
+  assert(await besideYou(page, 'character-dana'), 'Dana did not come over from the table')
+  await shot(page, 'after-the-game-excuses')
+  // What you said to her on the 14 is remembered.
+  await readUntil(page, /You were my business tonight/)
+  await readUntil(page, /14 runs there from the depot, and the fare is nothing/)
+  await readUntil(page, /hundred buys a seat/)
+  await readUntil(page, /walk you home/)
+
+  // She walks you out and home. The keys do nothing on the way.
+  await readUntil(page, /This is you/)
+  assert((await areaNameOf(page)).includes('Basin Street'), `not at your door (${await areaNameOf(page)})`)
+  assert(await besideYou(page, 'character-dana'), 'Dana did not walk you home')
+  await shot(page, 'after-the-game-your-door')
+  await readUntil(page, /four hundred/)
+  assert((await areaNameOf(page)).includes('Apartment'), `not in your flat (${await areaNameOf(page)})`)
+  await readUntil(page, /Coat! Bus!/)
+  await page.locator('[data-testid="dialogue-advance"]').click()
+  await page.waitForTimeout(500)
+  assert((await dialogueNow(page)) === '', 'the walk home did not end')
+  const home = await savedState(page)
+  assert(home.completedEventIds.includes('dana-walks-you-home'), 'the walk home was not saved as over')
+  assert(home.areaId === 'home' && home.day === 2 && home.period === 'morning', `not home the next morning (${home.areaId}, day ${home.day}, ${home.period})`)
+  assert(home.flags.wonPokerNight === true && home.cash >= 1500, 'the win was not kept')
+
+  // The morning: out of the door, and Marcus is there.
+  await enterDoor(page, 'Outside')
+  await readUntil(page, /timing me/)
+  assert(await besideYou(page, 'character-marcus'), 'Marcus is not on your step')
+  await readUntil(page, /getting on it with you/)
+  await page.locator('[data-testid="dialogue-advance"]').click()
+  await readUntil(page, /do not get off at Eastgate/)
+  assert((await areaNameOf(page)).includes('Depot'), `not at the depot (${await areaNameOf(page)})`)
+  assert(await besideYou(page, 'character-marcus'), 'Marcus did not come to the stop')
+  await page.locator('[data-testid="dialogue-advance"]').click()
+  await page.locator('[data-testid="bus-ride"][data-forced]').waitFor({ state: 'visible' })
+  assert(await page.locator('[data-testid="bus-companion"]').isVisible(), 'Marcus is not sat with you')
+  await shot(page, 'after-the-game-ride-out')
+  await readUntil(page, /Porto Lumina/)
+  await readUntil(page, /Silver Creek\. A casino/)
+  assert((await areaNameOf(page)).includes('Silver Creek'), `the bus did not put you down at Silver Creek (${await areaNameOf(page)})`)
+  await readUntil(page, /Real poker/)
+  await readUntil(page, /Pit boss, top left/)
+  assert((await areaNameOf(page)).includes('Casino'), `Marcus did not walk you in (${await areaNameOf(page)})`)
+  await shot(page, 'after-the-game-casino')
+  await readUntil(page, /story I can tell/)
+  await readUntil(page, /pit boss is waiting/)
+  await page.locator('[data-testid="dialogue-advance"]').click()
+  await page.waitForTimeout(500)
+  assert((await dialogueNow(page)) === '', 'the ride out did not end')
+  assert(!(await drawnAt(page, 'character-marcus')), 'Marcus is still standing on the floor')
+  const there = await savedState(page)
+  assert(there.cityId === 'silverCreek' && there.areaId === 'sc-floor', `not on the casino floor (${there.cityId}/${there.areaId})`)
+  assert(there.unlockedCityIds.includes('silverCreek'), 'arriving with Marcus did not count as visiting Silver Creek')
+  assert(there.completedEventIds.includes('marcus-rides-out-with-you'), 'the ride out was not saved as over')
+  assert(there.flags.marcusSeesYouOff === false, 'Marcus is still seeing you off')
+
+  // The table he pointed at is there to sit at; and out of the door the
+  // valet's card is not read to somebody Marcus walked in.
+  await approach(page, 'Pit Boss')
+  await enterDoor(page, 'Out')
+  await page.waitForTimeout(800)
+  assert((await dialogueNow(page)) === '', `the arrival card played after Marcus walked you in (${(await dialogueNow(page)).slice(0, 80)})`)
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+})
+
+await test('a reload in the middle of the walk home or the ride out starts it again', async () => {
+  // Saved the moment you got up from Marcus's table a winner.
+  const won = await newPage(
+    openedSave({
+      areaId: 'marcus-house',
+      period: 'evening',
+      cash: 1500,
+      flags: { wonPokerNight: true, beatFinalRival: false, hasPenthouse: false, metDana: true },
+      completedEventIds: STORY_SEEN.filter((id) => !['dana-walks-you-home', 'marcus-rides-out-with-you'].includes(id)),
+    }),
+  )
+  await won.goto(BASE)
+  await won.waitForSelector('canvas')
+  await readUntil(won, /walk you home/)
+  // Half-way through, the page goes.
+  const mid = await savedState(won)
+  assert(mid.areaId === 'marcus-house' && mid.period === 'evening' && !mid.completedEventIds.includes('dana-walks-you-home'), 'half the walk home was saved')
+  const again = await newPage(JSON.stringify(mid))
+  await again.goto(BASE)
+  await again.waitForSelector('canvas')
+  await untilSaid(again, /last chip slides across/)
+
+  // Saved on your step the next morning, Marcus waiting.
+  const step = await newPage(
+    openedSave({
+      areaId: 'basin',
+      period: 'morning',
+      day: 2,
+      cash: 1500,
+      flags: { wonPokerNight: true, beatFinalRival: false, hasPenthouse: false, metDana: true, marcusSeesYouOff: true },
+      completedEventIds: STORY_SEEN.filter((id) => id !== 'marcus-rides-out-with-you'),
+    }),
+  )
+  await step.goto(BASE)
+  await step.waitForSelector('canvas')
+  await readUntil(step, /getting on it with you/)
+  await step.locator('[data-testid="dialogue-advance"]').click()
+  await readUntil(step, /do not get off at Eastgate/)
+  await step.locator('[data-testid="dialogue-advance"]').click()
+  await step.locator('[data-testid="bus-ride"]').waitFor({ state: 'visible' })
+  const onTheBus = await savedState(step)
+  assert(
+    onTheBus.areaId === 'basin' && onTheBus.flags.marcusSeesYouOff && !onTheBus.completedEventIds.includes('marcus-rides-out-with-you'),
+    'half the ride out was saved',
+  )
+  const back = await newPage(JSON.stringify(onTheBus))
+  await back.goto(BASE)
+  await back.waitForSelector('canvas')
+  await untilSaid(back, /timing me/)
+  assert((await areaNameOf(back)).includes('Basin Street'), 'not back on your step')
+  const errors = [won, again, step, back].flatMap((p) => p.__errors)
+  assert(errors.length === 0, `console errors: ${errors[0]}`)
+})
+
 await test('a beat remembers what you said, and every line of it is read out', async () => {
   // Told Dana to mind her own business on the 14; she brings it up after the
   // first night. Her lines come as two boxes back to back, and the second used

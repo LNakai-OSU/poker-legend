@@ -1000,12 +1000,9 @@ const apartmentCity: CityDef = {
       MARCUS_HOUSE,
       { col: 7, row: 9 },
       '#141018',
-      [
-        local('marcus-dana', 'Dana', 9, 5, [
-          'Dana: He has been talking about this game all week.',
-          'Dana: He is going to lose. He always loses.',
-        ]),
-      ],
+      // Dana sits in on the first night as herself (her schedule), not as a
+      // fixture: a fixture was still at his table while she was up the ladder.
+      [],
       [{ col: 7, row: 10, toAreaId: 'eastgate', toCol: 11, toRow: 4, label: 'Outside' }],
     ),
     laundromat: area(

@@ -944,7 +944,9 @@ export const EVENTS: GameEvent[] = [
           'Marcus: For the record, my cards were cold all night. Nobody can play cold cards.',
         ],
       },
-      { kind: 'moveNpc', characterId: 'dana', from: { col: 8, row: 4 }, to: 'player' },
+      // From her chair at the table, where her schedule has her tonight; `from`
+      // brings her on there for a save that never met her on the way.
+      { kind: 'moveNpc', characterId: 'dana', from: { col: 9, row: 5 }, to: 'player' },
       {
         kind: 'dialogue',
         speaker: 'dana',
