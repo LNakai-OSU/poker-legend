@@ -55,7 +55,8 @@ it to that.
 
 **Arcs in one line each.**
 
-- **Marcus** — stuck → proud → visits to check it is real → watches → hosts the
+- **Marcus** — stuck → proud, and rides the 14 out with you to see you in →
+  visits to check it is real → watches → hosts the
   Friday game at the penthouse ("winner hosts").
 - **Dana** — silent at the table → turns up wherever you go → *I'm the someone*:
   she has written Nadia a letter from every room you played in → stays on as
@@ -81,9 +82,11 @@ them.
 - **Face:** Marcus. **Want:** the Friday game. **Problem:** broke, rent due in
   nine days. **Thread:** Dana watching — and the first time you step outside,
   she is the one who runs up the street to fetch you. **Payoff:** you take the
-  whole table, and Marcus covers the rent while you are gone (the receipt is
-  under the door when you come home — §4).
-- **Turn:** stuck → leaving.
+  whole table; Marcus and Dana make their excuses and name the bus; Dana walks
+  you home; in the morning Marcus rides the 14 out to Silver Creek with you and
+  walks you in. He covers the rent while you are gone (the receipt is under the
+  door when you come home — §4).
+- **Turn:** stuck → winning → carried out of town by the people who lost to you.
 
 | Beat | Who / where | Trigger | Conditions | Event id | Status |
 |---|---|---|---|---|---|
@@ -92,9 +95,10 @@ them.
 | **The opening.** The first time you step out of your door, Dana runs up Basin Street to catch you ("You walk fast for somebody with nowhere to be"), you answer her (**choice**: why do you watch / then watch tonight / mind your own business), she walks you to the end of the street, and rides the 14 with you to Eastgate (a forced ride: no skip, the hour passes, it is afternoon) and goes in at Marcus's door ahead of you | Dana, Basin Street → depot → the 14 → Eastgate | enterArea basin (also on load) | not wonPokerNight, first night not played, Dana not met, not night | `dana-walks-you-to-the-bus` | built |
 | …or, for a run that reached the depot without her: she is waiting at the stop, and the same ride | Dana, the depot | enterArea depot (also on load) | as above | `dana-at-the-depot` | built |
 | "Tonight. My place." | Marcus, Basin Street, morning | talkTo marcus | not wonPokerNight, morning (from day 2; on the day of the opening he is out for ice) | `marcus-reminds-you` (repeatable) | built |
-| The Friday game | Marcus's place, afternoon on — where Dana has just left you | talkTo marcus | not wonPokerNight | `poker-night` → poker night | built |
-| **The casino nudge.** Marcus, cleaned out and proud, sends you to Silver Creek and tells you the Porto Lumina story — the long pull is planted | Marcus | talkTo marcus | wonPokerNight, chapter Basin | `marcus-sends-you-off` | built |
-| Dana takes your measure; "I'll be around" — and if you told her to mind her own business on the 14, "you were my business tonight" | Dana | talkTo dana | wonPokerNight, chapter Basin | `dana-takes-your-measure` | built |
+| The Friday game. Dana is at the table as herself (a chapter of her schedule, from the opening until she walks you home) | Marcus's place, afternoon on — where Dana has just left you | talkTo marcus | not wonPokerNight | `poker-night` → poker night | built |
+| **After the game.** The moment you get up a winner: Marcus ("You played that like you had done it for years… my cards were cold all night") and Dana ("His cards were fine. He played them like they were on fire… I was watching you instead of my cards") make their excuses; Dana remembers your answer on the 14; they name the next step — **the 14 from the depot runs out to Silver Creek, the fare is nothing, a hundred buys a seat at the low-stakes table** — and Marcus says he will put you on the bus himself in the morning. The game has run late (it is night). Dana walks you home ("He has set two alarms, which frightens me. I will be around"); you sleep (a day passes); morning, and Marcus is hammering on your door | Marcus and Dana, his front room → Basin Street → your flat | enterArea marcus-house **onLoad** (fires on getting up from his table, and on a reload) | wonPokerNight, chapter Basin, afternoon on, old send-off not heard | `dana-walks-you-home` | built |
+| **Marcus rides out with you.** Step outside and he is on your step: the rent is on his tab ("I told your landlord on the stairs"); he walks you to the depot and rides the 14 out with you (forced ride, the hour passes) telling the Porto Lumina story — the long pull is planted; off the bus at Silver Creek ("Carpet and cigarettes. Real poker"), he walks you into the casino: the pit boss seats the low-stakes table, a hundred to sit, six hundred is the riverboat; "Go and be a story I can tell", and he takes the 14 home. Arriving this way counts as visiting Silver Creek | Marcus, Basin Street → depot → the 14 → Silver Creek Approach → the casino floor | enterArea basin **onLoad** | wonPokerNight, `marcusSeesYouOff`, after `dana-walks-you-home`, chapter Basin | `marcus-rides-out-with-you` | built |
+| *Kept for saves that won before the two beats above:* the casino nudge, and Dana taking your measure. A new run is in Silver Creek before it could talk to either | Marcus / Dana | talkTo | wonPokerNight, chapter Basin | `marcus-sends-you-off`, `dana-takes-your-measure` | legacy |
 
 ### Act 1 — Silver Creek · gate: $600 for the riverboat
 
@@ -105,8 +109,9 @@ them.
 
 | Beat | Who / where | Trigger | Conditions | Event id | Status |
 |---|---|---|---|---|---|
-| Arrival card: the table, the buy-in, the $600 that buys the boat | Valet, Silver Creek Approach | enterArea sc-street | — | `arrive-silvercreek` | built |
-| Ray's thirty years | Ray, street | talkTo ray | chapter Silver Creek | `ray-is-due` | built |
+| Marcus walks you in to the low-stakes table and goes home (Act 0, `marcus-rides-out-with-you`) | Marcus, casino floor | — | — | `marcus-rides-out-with-you` | built |
+| Arrival card: the table, the buy-in, the $600 that buys the boat — for anybody who got here on their own (Marcus says it himself) | Valet, Silver Creek Approach | enterArea sc-street | `marcusSeesYouOff` clear, `marcus-rides-out-with-you` not done | `arrive-silvercreek` | built |
+| Ray's thirty years — and if Marcus walked you in, "Hang on to him. This room eats friends" | Ray, street | talkTo ray | chapter Silver Creek | `ray-is-due` | built |
 | Dana in the corner; Kit cleaned this table out last month | Dana, casino floor, evening/night | talkTo dana | chapter Silver Creek | `dana-silvercreek` | built |
 | Send-off: "That is boat money." | Ray | talkTo ray | chapter Silver Creek, after `ray-is-due`, cash ≥ $600 | `ray-sees-you-off` | built |
 
@@ -262,8 +267,8 @@ missed and collected on.
 |---|---|---|---|---|
 | Day one: "Rent is due in nine days" | window | before the Friday game is won | `apartment-window` (POI `lockedLines`) | built |
 | Day ten, still unwon: "Rent day came and went" — Marcus has vouched for you: COME AND WIN IT OFF ME | interact apartment-window | day ≥ 10, not wonPokerNight | `rent-day` | built |
-| Marcus covers it when he sends you off ("It goes on your tab"); the window says so after | talkTo marcus / window | wonPokerNight | `marcus-sends-you-off`, `apartment-window` | built |
-| The receipt under the door when you come home | enterArea home | chapter past Basin | `rent-receipt` | built |
+| Marcus covers it the morning he rides out with you ("I told your landlord on the stairs: rent is on my tab"); the window says so after ("He told the landlord so, loudly, on the stairs") | enterArea basin / window | wonPokerNight | `marcus-rides-out-with-you`, `apartment-window` | built |
+| The receipt under the door when you come home — not the night Dana walks you home (`marcusSeesYouOff` tells them apart) | enterArea home | chapter past Basin | `rent-receipt` | built |
 
 ### Owing, missed, caught — the sponsors and their people
 
@@ -328,7 +333,7 @@ beat reads; `events.test.ts` fails on a flag an answer sets that nothing reads.
 
 | Beat | The question | Answers | What it sets | Who remembers |
 |---|---|---|---|---|
-| `dana-walks-you-to-the-bus` / `dana-at-the-depot` | What do you say to Dana? | Why were you watching? · Then watch tonight · Mind your own business | `askedDanaWhy` · `toldDanaToWatch` · `brushedOffDana` | Dana after the first night (`dana-takes-your-measure`), Dana's reveal in Lumina (`dana-reveal`) |
+| `dana-walks-you-to-the-bus` / `dana-at-the-depot` | What do you say to Dana? | Why were you watching? · Then watch tonight · Mind your own business | `askedDanaWhy` · `toldDanaToWatch` · `brushedOffDana` | Dana straight after the first night (`dana-walks-you-home`; `dana-takes-your-measure` for older saves), Dana's reveal in Lumina (`dana-reveal`) |
 | `cass-offers` | Take Cass's money? | Take the $1,500 · Not today | the record (`staked`) | Kit at the Harbor (`kit-harbor`); every Cass beat after |
 | `cass-owing`, `emeka-owing`, `consortium-owing`, `wen-owing` | Pay them back now? | Pay now (only if you can cover it) · Not yet | the record (`repaid` on time) | the sponsor's repaid beats, Cass and Mr. Emeka later up the ladder |
 | `cass-overdue`, `emeka-overdue`, `consortium-overdue`, `wen-overdue` | Pay what you owe? | Pay what I owe (only if you can) · I cannot. Not yet | the record (`repaid`, after `missed`) — and the hunt is called off | the sponsor's repaid-late beats |
@@ -416,3 +421,30 @@ after the bus was mechanics with captions.
   (`teleport`/`ride` `with`), and put you on a bus you cannot get off (`ride`).
 - A beat is saved only once it is over, and the opening fires on a load as
   well, so a reload in the middle of it starts it again.
+
+### Done since (2026-10-23, the night of the first game)
+
+- **After the win** the player is no longer left in Marcus's front room with
+  nothing said. `dana-walks-you-home` plays the moment they get up from his
+  table: excuses, the bus named with its real fare and buy-in, the walk home,
+  a night's sleep. `marcus-rides-out-with-you` plays when they step outside the
+  next morning: Marcus takes them out to Silver Creek and onto the casino floor.
+- **Getting up from a table asks `onLoad` beats**, as loading a save does: it is
+  finding yourself in the room, not walking into it. That is the post-win
+  trigger, and it makes both beats reload-safe with nothing new in the model.
+- **`marcusSeesYouOff`** spans the night (set by Dana at your door, cleared by
+  Marcus in the casino). It is what tells the night home apart from the rent
+  receipt, and the ride in apart from the Silver Creek arrival card.
+- **Dana sits in on the first night as herself.** Marcus's room had a fixture
+  named Dana at the card table in every chapter; it is now a chapter of her
+  schedule, from the opening until she walks you home.
+
+Left, for the user to decide:
+
+- **Marcus's ride costs the hour**, like every forced ride; the bus you take
+  yourself out of town costs a day, and walking the reservation road costs
+  nothing. So the ride neither hands out a day (walking is cheaper still) nor
+  costs one. A forced ride out of town could be made to cost the day instead.
+- **The old send-offs** (`marcus-sends-you-off`, `dana-takes-your-measure`)
+  only fire for saves that won before this; delete them once those do not
+  matter. The editor tests use `dana-takes-your-measure` as a fixture.

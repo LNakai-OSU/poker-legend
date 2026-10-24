@@ -176,7 +176,10 @@ A scripted beat: when it happens, what has to be true, what then occurs.
 first refusal over its action, and the next talk does the usual thing),
 `enterArea` (walking in through a door, off an edge or off a bus; not loading a
 save, not getting up from a table — unless it says `onLoad: true`, for a beat
-that must happen before anything else there, like the opening), `caught` (the
+that must happen before anything else there: the opening, or Marcus and Dana
+the moment you get up from his table a winner. An `onLoad` beat is asked
+whenever you find yourself somewhere without walking in, so a reload in the
+middle of it starts it again), `caught` (the
 collectors catch you: the beat plays with them standing over you, and the
 shakedown follows its last line), `standOn` (typed and validated, **not yet
 fired** by the overworld).
@@ -205,7 +208,9 @@ repaid, missed and collected on. The mechanics count; beats read it with
 and clear, which is how the editor reads a condition out loud. Adding one is a
 line there. `wonPokerNight`, `beatFinalRival`, `hasPenthouse`; `cameBack`, set
 by a beat that marks climbing back from a setback (Ray's when you are back at
-boat money after going broke; Marcus's after a rematch won); and the flags
+boat money after going broke; Marcus's after a rematch won); `marcusSeesYouOff`,
+set while Marcus is seeing you off to Silver Creek (from Dana at your door the
+night of the first game till he leaves you on the casino floor); and the flags
 choices set (below): `metDana`, `askedDanaWhy`, `toldDanaToWatch`,
 `brushedOffDana`, `askedNadiaWho`, `toldNadiaLeaveMarcus`, `trustsDana`,
 `cutDanaOff`, `turnedDownMarcus`, `stakedKit`.
@@ -352,7 +357,8 @@ Each stop raises both the bankroll gate and the stakes; the content tests fail
 if either stops climbing.
 
 **The beats.** Flat above a bakery → Marcus's home game (winner takes
-everything) → the bus out to Silver Creek → the ladder → clubs and private
+everything) → Dana walks you home, and in the morning Marcus rides the bus out
+to Silver Creek with you → the ladder → clubs and private
 invitationals → a heads-up Challenge for the penthouse, which you commit to
 before you see a card and cannot leave.
 

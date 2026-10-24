@@ -923,7 +923,7 @@ export function describeTrigger(trigger: EventTrigger, names: Names): string {
     case 'interact':
       return `When you use ${names.poi(trigger.poiId)}`
     case 'enterArea':
-      return `When you walk into ${names.area(trigger.areaId)}${trigger.onLoad ? ', or a save is loaded there' : ''}`
+      return `When you walk into ${names.area(trigger.areaId)}${trigger.onLoad ? ', or find yourself there (a save loaded, getting up from a table)' : ''}`
     case 'standOn':
       return `When you step on (${trigger.col},${trigger.row}) in ${names.area(trigger.areaId)}`
     case 'caught':

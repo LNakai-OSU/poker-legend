@@ -369,6 +369,32 @@ export const CHARACTERS: Record<string, CharacterDef> = {
       // is writing to Nadia about you. Revealed in Porto Lumina (`dana-reveal`).
       chapters: [
         {
+          // The night of the first game. She went in ahead of you, and has the
+          // chair by the window at Marcus's table until she walks you home
+          // (`dana-walks-you-home`). Mornings she is at the laundromat as ever.
+          when: [
+            { kind: 'chapter', cityId: 'apartment' },
+            { kind: 'flag', flag: 'metDana' },
+            { kind: 'eventDone', eventId: 'dana-walks-you-home', done: false },
+          ],
+          schedule: [
+            { period: 'morning', areaId: 'laundromat', col: 8, row: 4, lines: [
+              'Dana: Dryer four is the only one that works. Now you know.',
+            ] },
+            { period: 'afternoon', areaId: 'marcus-house', col: 9, row: 5, lines: [
+              'Dana: He has been talking about this game all week.',
+              'Dana: He is going to lose. He always loses.',
+            ] },
+            { period: 'evening', areaId: 'marcus-house', col: 9, row: 5, lines: [
+              'Dana: He has been talking about this game all week.',
+              'Dana: He is going to lose. He always loses.',
+            ] },
+            { period: 'night', areaId: 'marcus-house', col: 9, row: 5, lines: [
+              'Dana: He is going to lose. He always loses.',
+            ] },
+          ],
+        },
+        {
           when: [{ kind: 'chapter', cityId: 'silverCreek' }],
           lines: ['Dana: I go where the games are.'],
           schedule: [
