@@ -124,6 +124,12 @@ object over them. A wall on a street must belong to a building, a furniture tile
 must belong to an object, and a door tile must lead somewhere; the content tests
 fail otherwise.
 
+A table's stamp lists its chairs (`seats`), and the game fills some of them —
+never none, never all, since the open chair is yours. A table whose dealer deals
+a game in `TABLES` seats that game's own players as themselves; any other table
+seats strangers. Who sits where is worked out from the map by
+`src/world/seating.ts`, never written down, so placing a table is all it takes.
+
 ### Events — `src/world/events.ts`
 
 A scripted beat: when it happens, what has to be true, what then occurs.
