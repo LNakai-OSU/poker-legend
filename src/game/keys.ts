@@ -49,6 +49,21 @@ function isSliderKey(e: KeyboardEvent): boolean {
   return e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'Home' || e.key === 'End' || e.key === 'PageUp' || e.key === 'PageDown'
 }
 
+/**
+ * The second click of a double click, which is never a second decision.
+ *
+ * A double click on a text box's "Let's go" closed it and then turned the first
+ * page of the next box — or, where a question or a shop came next, pressed
+ * whatever had appeared under the pointer. Boxes, questions and menus swallow
+ * it in the capture phase, before anything inside them hears it.
+ */
+export function swallowDoubleClick(e: { detail: number; stopPropagation(): void; preventDefault(): void }) {
+  if (e.detail > 1) {
+    e.stopPropagation()
+    e.preventDefault()
+  }
+}
+
 // --- who has the keys --------------------------------------------------------
 
 /**

@@ -447,6 +447,36 @@ describe('the run is carried by people', () => {
     }
   })
 
+  /**
+   * A playtester pressed "Let's go" on the arrival card outside the casino and
+   * was left standing at the stop. An arrival card ends by walking you to the
+   * door of the room with the town's table and through it — the door the street
+   * has, landing where that door lands you, so a map edit that moves the door
+   * fails here rather than walking you into a wall.
+   */
+  it('walks you in to the town’s table when its arrival card is over', () => {
+    const arrivals = EVENTS.filter((e) => e.id.startsWith('arrive-'))
+    expect(arrivals.length).toBe(CITY_ORDER.length)
+    for (const event of arrivals) {
+      if (event.trigger.kind !== 'enterArea') throw new Error(`${event.id} is not for walking into a street`)
+      const street = AREAS[event.trigger.areaId].area
+      const tail = event.actions.slice(-4)
+      expect(tail.map((a) => a.kind), `${event.id} does not end by walking you in`).toEqual(['movePlayer', 'fade', 'teleport', 'fade'])
+      const [walk, out, into, back] = tail as [
+        Extract<EventAction, { kind: 'movePlayer' }>,
+        Extract<EventAction, { kind: 'fade' }>,
+        Extract<EventAction, { kind: 'teleport' }>,
+        Extract<EventAction, { kind: 'fade' }>,
+      ]
+      expect([out.to, back.to]).toEqual(['out', 'in'])
+      const door = street.exits.find((x) => x.toAreaId === into.areaId)
+      if (!door) throw new Error(`${event.id} puts you in ${into.areaId}, which has no door on ${street.name}`)
+      expect(Math.abs(walk.to.col - door.col) + Math.abs(walk.to.row - door.row), `${event.id} stops short of the door`).toBe(1)
+      expect({ col: into.col, row: into.row }, `${event.id} lands you off the door's mat`).toEqual({ col: door.toCol, row: door.toRow })
+      expect(AREAS[into.areaId].area.pois.some((p) => p.action.kind === 'table'), `${event.id} walks you into a room with no table`).toBe(true)
+    }
+  })
+
   it('notices when the player has the bankroll for the next town', () => {
     // Tied to the gate itself, so moving a gate without moving the send-off fails.
     for (let i = 0; i + 1 < CITY_ORDER.length; i++) {

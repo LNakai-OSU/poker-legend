@@ -5,7 +5,7 @@ import { INK } from './pixel/ink'
 import { wrapText } from './pixel/font'
 import { buttonHeight, DOCK } from './tableLayout'
 import { useViewport } from './useViewport'
-import { isActionKey, navStep, useKeyLayer } from './keys'
+import { isActionKey, navStep, swallowDoubleClick, useKeyLayer } from './keys'
 
 /**
  * A question a beat puts to the player, and the answers they can give.
@@ -95,7 +95,7 @@ export function ChoiceBox({ speaker, prompt, options, onChoose }: ChoiceBoxProps
   })
 
   return (
-    <div data-testid="event-choice" style={{ position: 'fixed', inset: 0, zIndex: 96 }}>
+    <div data-testid="event-choice" onClickCapture={swallowDoubleClick} style={{ position: 'fixed', inset: 0, zIndex: 96 }}>
       <div
         role="dialog"
         aria-label={prompt}

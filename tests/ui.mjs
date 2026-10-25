@@ -405,6 +405,15 @@ async function walkUntil(page, side, nameFragment, maxHops = 6) {
 const areaNameOf = (page) =>
   page.evaluate(() => document.querySelector('[data-testid="minimap"]')?.textContent ?? '')
 
+/** Waits for the player to be standing in an area whose name matches. */
+async function untilArea(page, re, budget = 20000) {
+  for (let waited = 0; waited <= budget; waited += 200) {
+    if (re.test(await areaNameOf(page))) return true
+    await page.waitForTimeout(200)
+  }
+  return false
+}
+
 /** Walks up to a thing and talks to it. */
 async function talkTo(page, name) {
   await approach(page, name)
@@ -624,11 +633,60 @@ await test('walking into Riverbend stops you with what it costs, and Kit is on t
     !(await page.locator('[data-testid="event-dialogue"]').isVisible()),
     'the arrival never finished',
   )
+  // "Let's go" walks you aboard; Kit is on the dock when you come ashore.
+  assert(await untilArea(page, /Riverboat/), `the arrival did not walk you aboard (in ${await areaNameOf(page)})`)
+  await enterDoor(page, 'Ashore')
   const here = await poisOf(page)
   assert(
     here.some((p) => p.name === 'Kit'),
     `Kit is not on the dock in the morning (saw: ${here.map((p) => p.name).join(', ')})`,
   )
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+})
+
+/**
+ * "Let's go" on the card outside the casino means in.
+ *
+ * A playtester pressed it and was left standing at the stop with the casino
+ * somewhere up the street. Every town's arrival card now ends with the walk to
+ * the door and through it. A double click on a card's last page is one press:
+ * it used to finish the box and then turn the first page of the next one.
+ */
+await test(`pressing "Let's go" on the arrival card walks you into the casino`, async () => {
+  const page = await newPage(
+    baseSave({
+      cityId: 'silverCreek',
+      areaId: 'road-silvercreek',
+      unlockedCityIds: ['apartment', 'silverCreek'],
+      completedEventIds: STORY_SEEN.filter((id) => id !== 'arrive-silvercreek' && id !== 'marcus-rides-out-with-you'),
+    }),
+  )
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(500)
+  await walkEdge(page, 'east')
+  const card = page.locator('[data-testid="event-dialogue"]')
+  await card.waitFor({ state: 'visible' })
+  const go = page.locator('[data-testid="dialogue-advance"]')
+  assert(/Let's go/.test(await go.innerText()), 'the first card is not one page')
+  await go.dblclick()
+  await page.waitForTimeout(300)
+  const next = await card.innerText().catch(() => '')
+  assert(/First time\?/.test(next), `a double click on "Let's go" went on past the Valet's first line (saw: ${next.slice(0, 80)})`)
+  await talkThrough(page)
+  assert(await untilArea(page, /Silver Creek Casino/), `"Let's go" left you outside (in ${await areaNameOf(page)})`)
+  await page.waitForTimeout(800)
+  assert(!(await card.isVisible().catch(() => false)), 'a box was left open inside')
+  assert(!(await page.locator('[data-testid="event-fade"]').isVisible().catch(() => false)), 'the screen was left black')
+  const at = await posOf(page)
+  assert(at.col === 10 && at.row === 10, `you came in somewhere other than the door (${at.col},${at.row})`)
+  // Not stuck: the keys are yours again, and the walk does not run twice.
+  await step(page, 'ArrowUp')
+  const moved = await posOf(page)
+  assert(moved.row === 9, `the keys did not come back after the walk in (${moved.col},${moved.row})`)
+  const saved = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? 'null'), SAVE_KEY)
+  assert(saved.completedEventIds.includes('arrive-silvercreek'), 'the arrival was not marked done, so it would play again')
   assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
   await page.close()
 })

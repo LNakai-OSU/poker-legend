@@ -11,7 +11,7 @@ import { frameStyle, type FrameSpec } from './pixel/frame'
 import { chipTopUrl } from './pixel/chips'
 import { buttonHeight } from './tableLayout'
 import { useViewport } from './useViewport'
-import { useMenuKeys } from './keys'
+import { swallowDoubleClick, useMenuKeys } from './keys'
 import { useTouchFirst } from './device'
 
 /**
@@ -267,6 +267,7 @@ export function SideNav({
       />
       <div
         ref={panel}
+        onClickCapture={swallowDoubleClick}
         role="dialog"
         aria-modal="true"
         aria-label="Menu"

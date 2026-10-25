@@ -1,5 +1,5 @@
 import { useRef, useState, type ReactNode } from 'react'
-import { useMenuKeys } from './keys'
+import { swallowDoubleClick, useMenuKeys } from './keys'
 import { CITIES, LESSONS, SHOPS, SPONSORS } from '../world/content'
 import { travelOptions } from './progression'
 import { totalOwed, type CityId, type Debt, type GameState } from './state'
@@ -28,7 +28,7 @@ export function MenuScreen({
     // A menu that only fills the top ~45% of the screen reads as a page that
     // failed to load. The panel is centred vertically instead, and still grows
     // and scrolls normally once its content is taller than the viewport.
-    <div ref={panel} data-testid="menu-screen" style={{
+    <div ref={panel} data-testid="menu-screen" onClickCapture={swallowDoubleClick} style={{
       width: '100vw', minHeight: '100vh', background: '#0f0f17', color: '#e8e8f0',
       fontFamily: 'monospace', padding: 'clamp(14px, 4vw, 32px)', boxSizing: 'border-box', overflowX: 'hidden',
       display: 'flex', flexDirection: 'column', justifyContent: 'center',

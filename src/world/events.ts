@@ -1113,7 +1113,7 @@ export const EVENTS: GameEvent[] = [
   // Act 1 — Silver Creek. Ray, and a rumour.
   {
     id: 'arrive-silvercreek',
-    about: 'Arriving at Silver Creek: what the table costs, and the bankroll that buys the boat.',
+    about: 'Arriving at Silver Creek: what the table costs, and the bankroll that buys the boat. Then you walk in to its table.',
     trigger: { kind: 'enterArea', areaId: 'sc-street' },
     // For anybody who got here on their own. Marcus brings you off the bus with
     // the flag set and says all this himself (`marcus-rides-out-with-you`).
@@ -1131,6 +1131,12 @@ export const EVENTS: GameEvent[] = [
           'Valet: Get yourself to six hundred and the riverboat upriver will have you.',
         ],
       },
+      // "Let's go" means in: off the last line you walk to the door of the casino
+      // and through it, rather than being left at the stop to find it.
+      { kind: 'movePlayer', to: { col: 16, row: 5 } },
+      { kind: 'fade', to: 'out' },
+      { kind: 'teleport', areaId: 'sc-floor', col: 10, row: 10 },
+      { kind: 'fade', to: 'in' },
     ],
   },
   {
@@ -1197,7 +1203,7 @@ export const EVENTS: GameEvent[] = [
   // Act 2 — Riverbend Landing. Deb, Cass's money, and Kit in the flesh.
   {
     id: 'arrive-riverbend',
-    about: 'Arriving at Riverbend: the boat, the bankroll that buys the Harbor, and somebody asking after you.',
+    about: 'Arriving at Riverbend: the boat, the bankroll that buys the Harbor, and somebody asking after you. Then you walk in to its table.',
     trigger: { kind: 'enterArea', areaId: 'rb-street' },
     actions: [
       { kind: 'dialogue', lines: ['Riverbend Landing. A riverboat that has not moved in eleven years, and a two-five game that never stops.'] },
@@ -1209,6 +1215,12 @@ export const EVENTS: GameEvent[] = [
           'Deckhand: Somebody on the dock was asking if Marcus’s friend had come upriver yet. Kit, they said.',
         ],
       },
+      // "Let's go" means in: off the last line you walk to the door of the boat
+      // and through it, rather than being left at the stop to find it.
+      { kind: 'movePlayer', to: { col: 9, row: 6 } },
+      { kind: 'fade', to: 'out' },
+      { kind: 'teleport', areaId: 'rb-boat', col: 11, row: 9 },
+      { kind: 'fade', to: 'in' },
     ],
   },
   {
@@ -1288,7 +1300,7 @@ export const EVENTS: GameEvent[] = [
   // Act 3 — Crescent Harbor. The mentor, and the rival a door ahead.
   {
     id: 'arrive-crescent',
-    about: 'Arriving at Crescent Harbor: a name, a suit, and the room behind the room.',
+    about: 'Arriving at Crescent Harbor: a name, a suit, and the room behind the room. Then you walk in to its table.',
     trigger: { kind: 'enterArea', areaId: 'ch-street' },
     actions: [
       { kind: 'dialogue', lines: ['Crescent Harbor. Card rooms with carpet, and doors that open for people the room already knows.'] },
@@ -1300,6 +1312,12 @@ export const EVENTS: GameEvent[] = [
           'Woman in a Suit: Get a real suit and the Harbour Room may send for you. Eight thousand and the ferry to Palm Cay will.',
         ],
       },
+      // "Let's go" means in: off the last line you walk to the door of the card room
+      // and through it, rather than being left at the stop to find it.
+      { kind: 'movePlayer', to: { col: 14, row: 5 } },
+      { kind: 'fade', to: 'out' },
+      { kind: 'teleport', areaId: 'ch-cardroom', col: 10, row: 11 },
+      { kind: 'fade', to: 'in' },
     ],
   },
   {
@@ -1387,7 +1405,7 @@ export const EVENTS: GameEvent[] = [
   // Act 4 — Palm Cay. The midpoint: home comes to visit, and the rival borrows.
   {
     id: 'arrive-palmcay',
-    about: 'Arriving at Palm Cay: the soft money, the bankroll that buys the Mesa, and a face from home.',
+    about: 'Arriving at Palm Cay: the soft money, the bankroll that buys the Mesa, and a face from home. Then you walk in to its table.',
     trigger: { kind: 'enterArea', areaId: 'pc-street' },
     actions: [
       { kind: 'dialogue', lines: ['Palm Cay. Linen, rum, and people who have forgotten what day it is, playing ten-twenty-five.'] },
@@ -1399,6 +1417,12 @@ export const EVENTS: GameEvent[] = [
           'Lifeguard: Somebody from your home town was asking for you on the promenade. Nice guy. Terrible hat.',
         ],
       },
+      // "Let's go" means in: off the last line you walk to the door of the Cay Room
+      // and through it, rather than being left at the stop to find it.
+      { kind: 'movePlayer', to: { col: 13, row: 5 } },
+      { kind: 'fade', to: 'out' },
+      { kind: 'teleport', areaId: 'pc-casino', col: 10, row: 11 },
+      { kind: 'fade', to: 'in' },
     ],
   },
   {
@@ -1465,7 +1489,7 @@ export const EVENTS: GameEvent[] = [
   // Act 5 — Neon Mesa. The debt comes due on somebody else.
   {
     id: 'arrive-mesa',
-    about: 'Arriving at Neon Mesa: the studied money, and the bankroll that buys the plane to Lumina.',
+    about: 'Arriving at Neon Mesa: the studied money, and the bankroll that buys the plane to Lumina. Then you walk in to its table.',
     trigger: { kind: 'enterArea', areaId: 'nm-street' },
     actions: [
       { kind: 'dialogue', lines: ['Neon Mesa. Everything lit, everybody studied, and nobody at the tables twitches for free.'] },
@@ -1477,6 +1501,12 @@ export const EVENTS: GameEvent[] = [
           'Tout: And the high roller room looks at your shoes. I am serious about the shoes.',
         ],
       },
+      // "Let's go" means in: off the last line you walk to the door of the casino
+      // and through it, rather than being left at the stop to find it.
+      { kind: 'movePlayer', to: { col: 6, row: 6 } },
+      { kind: 'fade', to: 'out' },
+      { kind: 'teleport', areaId: 'nm-casino', col: 11, row: 12 },
+      { kind: 'fade', to: 'in' },
     ],
   },
   {
@@ -1553,7 +1583,7 @@ export const EVENTS: GameEvent[] = [
   // Act 6 — Porto Lumina. Everything that followed you up was pointing here.
   {
     id: 'arrive-lumina',
-    about: 'Arriving at Porto Lumina: the nosebleed, the match, and the man who photographs the winner.',
+    about: 'Arriving at Porto Lumina: the nosebleed, the match, and the man who photographs the winner. Then you walk in to its table.',
     trigger: { kind: 'enterArea', areaId: 'pl-street' },
     actions: [
       {
@@ -1568,6 +1598,12 @@ export const EVENTS: GameEvent[] = [
           'Photographer: Four years I have photographed her winning. Give me a reason to photograph somebody else.',
         ],
       },
+      // "Let's go" means in: off the last line you walk to the door of the casino
+      // and through it, rather than being left at the stop to find it.
+      { kind: 'movePlayer', to: { col: 15, row: 6 } },
+      { kind: 'fade', to: 'out' },
+      { kind: 'teleport', areaId: 'pl-casino', col: 10, row: 10 },
+      { kind: 'fade', to: 'in' },
     ],
   },
   {

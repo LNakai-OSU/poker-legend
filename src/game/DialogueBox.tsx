@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { playSound } from '../audio/audio'
-import { isActionKey, useKeyLayer } from './keys'
+import { isActionKey, swallowDoubleClick, useKeyLayer } from './keys'
 import { useTouchFirst } from './device'
 
 interface DialogueBoxProps {
@@ -63,6 +63,7 @@ export function DialogueBox({ speaker, lines, onFinish }: DialogueBoxProps) {
       <div style={{ minHeight: 40 }}>{lines[index]}</div>
       <button
         data-testid="dialogue-advance"
+        onClickCapture={swallowDoubleClick}
         onClick={advance}
         style={{
           marginTop: 12,
