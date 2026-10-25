@@ -2,22 +2,39 @@ import { describe, expect, it } from 'vitest'
 import { DOOR, isWalkable } from '../overworld/tiles'
 import { TIME_PERIODS } from '../game/time'
 import { AREAS } from './cities'
-import { CHARACTERS, charactersIn } from './characters'
+import { CHARACTERS, allSchedules, charactersIn } from './characters'
 import { TABLES } from './content'
 import { seatingFor, type SeatingArea } from './seating'
 import { KEEP, STAMPS, STAMP_BY_ID, seatTile, stampSize } from './stamps'
 import type { AreaDef } from './types'
 
-/** Every area with a table that has chairs, in every period, with whoever the hour puts there. */
+/** Every area with a table that has chairs. */
 const seatedAreas = Object.values(AREAS)
   .map(({ area }) => area)
   .filter((area) => (area.stamps ?? []).some((s) => STAMP_BY_ID[s.stampId]?.seats?.length))
 
+/**
+ * Who can be standing in an area at an hour: everybody as the game begins, and
+ * then each chapter of the story that brings somebody here instead — Dana at
+ * the card room in the evening, say — one at a time.
+ */
+function crowds(areaId: string, period: (typeof TIME_PERIODS)[number]) {
+  const usual = charactersIn(areaId, period).map(({ id, at }) => ({ id, col: at.col, row: at.row }))
+  const out = [usual]
+  for (const [id, character] of Object.entries(CHARACTERS)) {
+    for (const schedule of allSchedules(character).slice(1)) {
+      const at = schedule.find((entry) => entry.period === period)
+      if (at?.areaId === areaId) out.push([...usual.filter((p) => p.id !== id), { id, col: at.col, row: at.row }])
+    }
+  }
+  return out
+}
+
+/** Every seated area, in every period, with every crowd the story can put in it. */
 const cases = seatedAreas.flatMap((area) =>
-  TIME_PERIODS.map((period) => {
-    const present = charactersIn(area.id, period).map(({ id, at }) => ({ id, col: at.col, row: at.row }))
-    return { area, period, present, seating: seatingFor(area, { present }) }
-  }),
+  TIME_PERIODS.flatMap((period) =>
+    crowds(area.id, period).map((present) => ({ area, period, present, seating: seatingFor(area, { present }) })),
+  ),
 )
 
 const key = (col: number, row: number) => `${col},${row}`
@@ -67,7 +84,9 @@ describe('the chairs on a table stamp', () => {
 })
 
 describe('who sits at the tables', () => {
-  it('has seated tables to check', () => {
+  it('has seated tables, and story chapters in them, to check', () => {
+    // The story puts people in casinos; if that ever stops, this test stops covering it.
+    expect(cases.some((c) => c.present.length > 0), 'nobody ever stands in a casino').toBe(true)
     expect(seatedAreas.map((a) => a.id)).toEqual(
       expect.arrayContaining(['sc-floor', 'rb-boat', 'ch-cardroom', 'pc-casino', 'nm-casino', 'pl-casino']),
     )

@@ -77,6 +77,29 @@ describe('looks', () => {
     expect(figures.get('marcus-dana')?.look.shirt).toBe(CHARACTERS.dana.look.shirt)
   })
 
+  it('gives somebody who turns up in two towns the same face in both', () => {
+    // Hal teaches in Crescent Harbor and on the Strip; he was drawn from each
+    // POI's id, so the same man had two faces.
+    const drawn = new Map<string, string[]>()
+    for (const city of Object.values(CITIES)) {
+      for (const area of allAreas(city)) {
+        const figures = figuresForPois(area.pois, CHARACTERS)
+        for (const p of area.pois) {
+          if (p.name !== 'Hal') continue
+          drawn.set(p.id, [visualKey(figures.get(p.id)!)])
+        }
+      }
+    }
+    expect([...drawn.keys()].sort()).toEqual(['hal', 'hal-mesa'])
+    expect(drawn.get('hal')).toEqual(drawn.get('hal-mesa'))
+  })
+
+  it('dresses the shopkeeper and the boat dealer for the job', () => {
+    const everyone = Object.values(CITIES).flatMap((city) => allAreas(city).flatMap((a) => a.pois))
+    expect(roleForPoi(everyone.find((p) => p.id === 'patel')!)).toBe('clerk')
+    expect(roleForPoi(everyone.find((p) => p.id === 'marina')!)).toBe('suit')
+  })
+
   /**
    * The whole point of giving strangers faces: no street has two of the same
    * person standing in it, at any hour.
@@ -93,5 +116,51 @@ describe('looks', () => {
         }
       }
     }
+  })
+})
+
+describe('what people wear', () => {
+  /** Everybody standing at a POI in the game, as drawn. */
+  const everyone = Object.values(CITIES).flatMap((city) =>
+    allAreas(city).flatMap((area) => {
+      const figures = figuresForPois(area.pois, CHARACTERS)
+      return area.pois.filter((poi) => artForPoi(poi) === 'person').map((poi) => figures.get(poi.id)!)
+    }),
+  )
+
+  it('does not put half the town in the same hat', () => {
+    // Eight people across the game wore one navy cap, so the street read as one
+    // man in different shirts. A hat is a person's own now, in their own colour.
+    const hats = new Map<string, number>()
+    for (const { role, look } of everyone) {
+      // A cap from the portrait accessories shows on anybody whose job has no hat of its own.
+      const own = role === 'local' || role === 'kid' ? look.hat : undefined
+      const hat = own ?? (look.accessory === 'cap' || look.accessory === 'visor' ? look.accessory : undefined)
+      if (!hat) continue
+      const key = `${hat} ${look.hatColor ?? 'default'}`
+      hats.set(key, (hats.get(key) ?? 0) + 1)
+    }
+    const common = [...hats.entries()].filter(([, n]) => n > 3)
+    expect(common, 'the same hat in the same colour on more than three heads').toEqual([])
+  })
+
+  it('dresses people in their own clothes in more than a shirt', () => {
+    const own = everyone.filter(({ role }) => role === 'local')
+    const garments = new Set(own.map(({ look }) => look.garment).filter(Boolean))
+    const hairs = new Set(own.map(({ look }) => look.hairStyle))
+    expect(garments.size, 'kinds of thing worn over the shirt').toBeGreaterThanOrEqual(4)
+    expect(hairs.size, 'haircuts').toBeGreaterThanOrEqual(9)
+  })
+
+  it('keeps a uniform a uniform', () => {
+    // A dealer in a hoodie is not a dealer. Garments and hats of one's own are
+    // for people in their own clothes; the job's clothes cover them.
+    const look = lookFromId('somebody')
+    const plain = visualKey({ role: 'dealer', look: { ...look, garment: undefined, hat: undefined } })
+    const dressed = visualKey({
+      role: 'dealer',
+      look: { ...look, garment: 'hoodie', garmentColor: '#c83a3a', hat: 'cowboy' },
+    })
+    expect(dressed).toBe(plain)
   })
 })

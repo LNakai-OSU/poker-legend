@@ -85,3 +85,77 @@ Nothing. All agents have finished and their worktrees and branches are removed.
 - Earlier known-unfixed items: tutorial coaching goes quiet after hand 1; bet
   sizing is lumpy at micro stakes. (The action-button wall on phones may be
   resolved by the table redesign — check.)
+
+## Round 2 (2026-10-20)
+
+Critic r2 (sonnet) scored overall 7/10. Creator r2 fixed its top items (merged
+to main, not pushed): Mesa frontage, quiet Mesa carpets, taller slots and fuller
+floors, five shop floors, night rim light, one Hal face, gas station and Mesa
+lay-by. Creator's own overall ~7.8; 356 unit, 52/52 browser. Left: Mesa casino
+floor near the door is empty; slot banks repeat reel order; Outfitters slate
+busy; Ultraviolet front plain; jackpot boards clipped by the HUD; editor
+preview per-cell logic; door labels vs signs; worktree dev servers ignore
+file changes (vite ignores .claude/). Next: round-3 critic, then stop and report.
+
+## Round 4 creator (2026-10-21, branch worktree-agent-ac6068170dbae6dcd, not merged)
+
+Critic r3 scored overall 7.2/10 and named four fixes; all four are done on the
+branch:
+
+1. **Mesa Casino floor** — the pit runs wall to wall (main table, heads-up,
+   roulette, craps); the front is a slot bank either side of the door aisle
+   with a new change booth (cashier inside) and a new WIN ME prize car between
+   them; cacti at the sides; a croupier, cashier, cocktail waitress and tourist
+   on the floor.
+2. **Slot banks** — art can now have several looks (`StampArt.variants`); a
+   placement is handed one by `placementVariants` (consecutive per room, offset
+   by position, shared across every slot-bank stamp via `variantGroup`). A
+   bank's look rotates its palette (4-5 colourways each), pairs or alternates
+   machines, deals different reels/emblems and lights a different marquee
+   (LUCKY 7, WILD, BONUS, HOT, DIAMOND, TRIPLE). The editor draws the same.
+3. **People** — `PersonLook` gains `hat`/`hatColor` and `garment`/`garmentColor`
+   (jacket, vest, hoodie, overalls, stripes, cardigan) and four haircuts (afro,
+   pigtails, slick, shaggy). Strangers draw them from their id; only people in
+   their own clothes (`local`, `kid`) wear them; a POI with a written face
+   keeps exactly that face. The six street regulars got garments in data.
+   Clerks behind counters are drawn to the belt at the counter's far edge
+   (`NpcConfig.counter`), not a head over its front.
+4. **Rooms** — four new floors (parquet, diamond lino, front-room carpet, navy
+   saloon carpet) and nineteen small props (`src/overworld/art/propsArt.ts`).
+   The seven named rooms are furnished to the walls; seven other rooms with a
+   5x5 bare square got a prop or two. `src/world/rooms.test.ts` guards both.
+
+Left: the cast still has many dealer-uniformed staff (by role, on purpose);
+showroom middles are an aisle by design; the Lumina lobby and casino share
+marble; no new tests for the people beyond the existing casting suite.
+
+## Losing progression (2026-10-22, branch worktree-agent-a1af32883948641a8, not merged)
+
+Losing is now part of the story: the state keeps a `record` of busts, matches
+lost and each sponsor's stakes; events can ask `cashBelow`, `debt`, `hunted`,
+`challenge` and `count`, fire on `caught`, and set `cameBack`. ~50 beats: the
+kitchen table deals you back in wherever Marcus is when you are broke; each
+sponsor notices owing/late/square and has a collector with a face and lines;
+a lost match is met by Nadia, Marcus, Dana, Hal and Kit with a rematch path;
+the rent pays off. STORYBOARD.md §4 is the map; GAME_BIBLE §2 the vocabulary.
+Left: see STORYBOARD.md §6 (choices, a stake-sized home game, bust beats for
+Deb/Rosa/the Fixer, collectors indoors).
+
+## Choices and the opening (2026-10-22, branch worktree-agent-a4689be2c4f7c6fbb, not merged)
+
+Events can ask the player something: `choice` (2–4 answers, each with
+conditions and a branch) and `if` (a later beat reading the answer), with
+`takeStake`/`repay` actions and a `canPay` condition. Answers are the table's
+pixel buttons (number keys, ↑↓ + Enter, taps). The machine that plays beats is
+`src/game/eventMachine.ts` (React-free, unit-tested); a beat is saved only when
+it is over. Branch-aware content checks live in `src/world/eventChecks.ts` and
+`arrivalClashes` in `events.ts`; flags are data in `src/world/flags.ts`. The
+editor edits answers, ifs, walks and rides as nested lists.
+
+The opening: Dana runs up Basin Street the first time you step outside, walks
+you to the depot and rides the 14 with you to Marcus's door (`moveNpc` walks
+now — pace, `from`, `youFollow`, `leaves` — plus `movePlayer`, `with` on
+`teleport`/`ride`, and the forced `ride`). The depot catches anybody who got
+there first; `enterArea` can fire `onLoad`. STORYBOARD.md has the choices table
+and §6 what is left (legacy saves already at Eastgate skip the opening; more
+choices: the first poker night, Emeka/Consortium offers).

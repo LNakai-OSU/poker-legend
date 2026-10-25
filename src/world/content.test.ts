@@ -20,8 +20,9 @@ import {
 } from './content'
 import { CHAR_FOR_TILE, DOOR, FURNITURE, PROP, ROAD, WALL, isWalkable, parseMap } from '../overworld/tiles'
 import { KEEP, STAMP_BY_ID, stampSize } from './stamps'
-import { CHARACTERS, charactersIn, periodsAway, scheduleConflicts, seatsOf } from './characters'
+import { CHARACTERS, allSchedules, charactersIn, periodsAway, scheduleConflicts, seatsOf } from './characters'
 import { TIME_PERIODS } from '../game/time'
+import { TOWN_ORDER } from '../game/state'
 
 describe('parseMap', () => {
   it('builds a rectangular grid and marks walls unwalkable', () => {
@@ -485,7 +486,7 @@ describe('objects on the map', () => {
   it('stands nobody in the road', () => {
     // Ray spent his evenings in the middle of the highway outside the casino.
     for (const [id, character] of Object.entries(CHARACTERS)) {
-      for (const entry of character.overworld?.schedule ?? []) {
+      for (const entry of allSchedules(character).flat()) {
         const area = findArea(entry.areaId)?.area
         if (!area) continue
         expect(
@@ -503,6 +504,12 @@ describe('objects on the map', () => {
 })
 
 describe('progression curve', () => {
+  it('tells the story in the same order the ladder climbs', () => {
+    // The chapter a beat asks for is read off TOWN_ORDER; the gates are read off
+    // CITY_ORDER. If they drifted apart, a town's people would arrive a town early.
+    expect(['apartment', ...CITY_ORDER]).toEqual(TOWN_ORDER)
+  })
+
   it('raises the bankroll gate at every stop on the ladder', () => {
     const gates = CITY_ORDER.map((id) => CITIES[id].unlockCash)
     for (let i = 1; i < gates.length; i++) {
@@ -700,7 +707,7 @@ describe('the opponents', () => {
 describe('the town keeps its own hours', () => {
   it('stands every scheduled character somewhere that exists', () => {
     for (const [id, character] of Object.entries(CHARACTERS)) {
-      for (const entry of character.overworld?.schedule ?? []) {
+      for (const entry of allSchedules(character).flat()) {
         const located = findArea(entry.areaId)
         expect(located, `${id} is scheduled into "${entry.areaId}", which is not an area`).toBeDefined()
       }
@@ -711,7 +718,7 @@ describe('the town keeps its own hours', () => {
     // A character on an unwalkable tile is a name plate floating in scenery that
     // you can see and never reach.
     for (const [id, character] of Object.entries(CHARACTERS)) {
-      for (const entry of character.overworld?.schedule ?? []) {
+      for (const entry of allSchedules(character).flat()) {
         const area = findArea(entry.areaId)?.area
         if (!area) continue
         expect(
@@ -724,7 +731,7 @@ describe('the town keeps its own hours', () => {
 
   it('leaves somewhere to stand next to everyone', () => {
     for (const [id, character] of Object.entries(CHARACTERS)) {
-      for (const entry of character.overworld?.schedule ?? []) {
+      for (const entry of allSchedules(character).flat()) {
         const area = findArea(entry.areaId)?.area
         if (!area) continue
         const approaches = [
@@ -749,7 +756,7 @@ describe('the town keeps its own hours', () => {
     // POIs are part of the map and are always there; a character who shares a
     // tile with one hides it for that whole period.
     for (const [id, character] of Object.entries(CHARACTERS)) {
-      for (const entry of character.overworld?.schedule ?? []) {
+      for (const entry of allSchedules(character).flat()) {
         const area = findArea(entry.areaId)?.area
         if (!area) continue
         const clash = area.pois.find((p) => p.col === entry.col && p.row === entry.row)
@@ -765,7 +772,7 @@ describe('the town keeps its own hours', () => {
       const presence = character.overworld
       if (!presence) continue
       expect(presence.lines.length, `${id} is out in the town with nothing to say`).toBeGreaterThan(0)
-      for (const entry of presence.schedule) {
+      for (const entry of allSchedules(character).flat()) {
         const said = entry.lines ?? presence.lines
         expect(said.length, `${id} has nothing to say in the ${entry.period}`).toBeGreaterThan(0)
       }

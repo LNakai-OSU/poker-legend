@@ -32,7 +32,8 @@ export class GridPlayer {
   facing: Direction = 'down'
   /** Anchored at the feet, so a scene can draw whoever is further down the screen in front. */
   sprite: Sprite
-  private speedPxPerSec: number
+  /** Pixels a second. A beat walking you beside somebody sets it to their pace. */
+  speedPxPerSec: number
   private frames: PersonFrames
   /** Steps taken, so each one leads with the other foot. */
   private strides = 0
@@ -50,10 +51,10 @@ export class GridPlayer {
     this.frames = personFrames(options.figure ?? HERO_FIGURE)
     this.sprite = new Sprite(this.frames.walk.down[0])
     this.sprite.anchor.set(0, 1)
-    this.place()
+    this.drawAtPosition()
   }
 
-  private place() {
+  private drawAtPosition() {
     this.sprite.position.set(this.pixelX, this.pixelY + TILE_SIZE)
     this.sprite.zIndex = this.sprite.y
   }
@@ -71,6 +72,19 @@ export class GridPlayer {
     }
     this.sprite.texture =
       frame === 0 && this.blinkLeft > 0 ? this.frames.blink[this.facing] : this.frames.walk[this.facing][frame]
+  }
+
+  /** Stands them on a tile at once, mid-step or not. */
+  place(col: number, row: number) {
+    this.col = col
+    this.row = row
+    this.targetCol = col
+    this.targetRow = row
+    this.pixelX = col * TILE_SIZE
+    this.pixelY = row * TILE_SIZE
+    this.moving = false
+    this.drawAtPosition()
+    this.refreshFrame()
   }
 
   /** Turns on the spot without stepping, for facing a door or a person. */
@@ -129,7 +143,7 @@ export class GridPlayer {
       this.pixelX += (dx / dist) * step
       this.pixelY += (dy / dist) * step
     }
-    this.place()
+    this.drawAtPosition()
     this.refreshFrame()
   }
 

@@ -1,6 +1,7 @@
 import { daysUntilRematch, type GameState } from './state'
 import { buttonStyle } from './MenuScenes'
-import { TABLES } from '../world/content'
+import { SPONSORS, TABLES } from '../world/content'
+import { CHARACTERS } from '../world/characters'
 
 function FullScreen({ children, background = '#0a0a12' }: { children: React.ReactNode; background?: string }) {
   return (
@@ -15,14 +16,18 @@ function FullScreen({ children, background = '#0a0a12' }: { children: React.Reac
 }
 
 /** Caught by collectors — they take most of the bankroll; the debt itself still stands. */
-export function CaughtScene({ onRestart }: { onRestart: () => void }) {
+export function CaughtScene({ sponsorId, onRestart }: { sponsorId?: string | null; onRestart: () => void }) {
+  const sponsor = sponsorId ? SPONSORS[sponsorId] : undefined
+  const collector = sponsor ? CHARACTERS[sponsor.collector]?.name : undefined
   return (
     <FullScreen background="#160a0a">
-      <h2>They caught up with you.</h2>
+      <h2 data-testid="caught-by">{collector ? `${collector} caught up with you.` : 'They caught up with you.'}</h2>
       <p>
-        Two of them, either side, walking you out through the service corridor. Nobody in the room
-        looks up. They count most of it out of your hands and explain, patiently, what happens if
-        there is a next time.
+        {sponsor
+          ? `${sponsor.name}'s people, either side, walking you out through the service corridor. `
+          : 'Two of them, either side, walking you out through the service corridor. '}
+        Nobody in the room looks up. They count most of it out of your hands and explain, patiently,
+        what happens if there is a next time.
       </p>
       <p style={{ color: '#9a9ab0' }}>
         You wake up back where you last felt safe, with cab fare and not much else. What you owe has

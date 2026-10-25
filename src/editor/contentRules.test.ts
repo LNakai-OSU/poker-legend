@@ -128,10 +128,10 @@ describe('a character at a table', () => {
 
 describe('an event', () => {
   const fresh = (): GameEvent => ({
-    id: 'deb-says-hello',
-    about: 'Deb says hello on the riverboat street.',
-    trigger: { kind: 'talkTo', characterId: 'deb' },
-    actions: [{ kind: 'dialogue', speaker: 'deb', lines: ['Deb: Hello.'] }],
+    id: 'mack-says-hello',
+    about: 'Mack says hello on the riverboat street.',
+    trigger: { kind: 'talkTo', characterId: 'mack' },
+    actions: [{ kind: 'dialogue', speaker: 'mack', lines: ['Mack: Hello.'] }],
   })
 
   it('is fine when it is fine', () => {
@@ -148,14 +148,18 @@ describe('an event', () => {
   it('may not share a moment with another event without something to tell them apart', () => {
     const rival = { ...fresh(), trigger: { kind: 'talkTo' as const, characterId: 'dana' } }
     expect(eventProblems(rival, null, world).join('\n')).toMatch(/"dana-takes-your-measure" share a trigger/)
-    rival.conditions = [{ kind: 'flag', flag: 'wonPokerNight', set: false }]
+    // Dana has a beat in every chapter, so a new one needs the hour of the story as well.
+    rival.conditions = [
+      { kind: 'flag', flag: 'wonPokerNight', set: false },
+      { kind: 'chapter', cityId: 'apartment' },
+    ]
     expect(eventProblems(rival, null, world)).toEqual([])
   })
 
   it('may not name tables, areas or characters that do not exist', () => {
     const e = fresh()
     e.actions = [
-      { kind: 'moveNpc', characterId: 'ghost', col: 1, row: 1 },
+      { kind: 'moveNpc', characterId: 'ghost', to: { col: 1, row: 1 } },
       { kind: 'teleport', areaId: 'atlantis', col: 1, row: 1 },
       { kind: 'dialogue', speaker: 'ghost', lines: ['Boo.'] },
       { kind: 'startTable', tableId: 'nowhere' },

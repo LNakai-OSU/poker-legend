@@ -131,10 +131,13 @@ export class SeatedPerson {
     this.sprite = new Container()
     this.sprite.position.set(sitter.col * TILE_SIZE, (sitter.row + 1) * TILE_SIZE)
     this.sprite.zIndex = this.sprite.y
+    // Anchored at the bottom-left like everybody else's body, which is where
+    // the night's rim of light is laid round a person.
     this.body = new Sprite(this.open)
+    this.body.anchor.set(0, 1)
     this.body.position.set(
       (sitter.table.col * UNIT + origin.x) * SCALE - this.sprite.x,
-      (sitter.table.row * UNIT + origin.y) * SCALE - this.sprite.y,
+      (sitter.table.row * UNIT + origin.y + PERSON_H) * SCALE - this.sprite.y,
     )
     this.sprite.addChild(this.body)
   }

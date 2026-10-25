@@ -1,191 +1,78 @@
 import { useCallback, useRef, useState } from 'react'
-import type { EventAction, GameEvent } from '../world/events'
+import type { GameEvent } from '../world/events'
 import type { GameState } from './state'
-import { advanceDay, advancePeriod, unlockTable } from './state'
 import { playSound } from '../audio/audio'
+import { EMPTY_STAGE, EventMachine, type EventStage, type MachineHost } from './eventMachine'
+
+export type { EventStage } from './eventMachine'
+export { FADE_MS } from './eventMachine'
 
 /**
- * Runs an event's actions, one after another.
+ * The event machine, wired to React.
  *
- * The runner is the only thing that knows *how* to do any of this; content only
- * says which things and in what order. Actions fall into two sorts: ones that
- * finish by themselves, which it walks straight through, and ones that wait —
- * a line of dialogue waits for the player, a `wait` waits for the clock — which
- * suspend it until something says to carry on.
+ * The machine (`eventMachine.ts`) knows how to play a beat; this keeps one for
+ * the life of the game, shows its stage, and hands it the state as it is now
+ * rather than as it was when the last render happened — a beat that sets a flag
+ * and then asks about it in the same breath has to see its own change.
  */
-
-/** What the screen has to show while an event is part-way through. */
-export interface EventStage {
-  /** The text box currently up, if any. */
-  dialogue?: { speaker: string; lines: string[] }
-  /** Set while the screen is covered, for a `fade`. */
-  faded: boolean
-  /** Somebody who has been moved out of their scheduled place for this scene. */
-  moved: Record<string, { col: number; row: number }>
-}
-
-const EMPTY_STAGE: EventStage = { faded: false, moved: {} }
 
 export interface EventHandlers {
   /** Starting a table or the poker night is a change of scene, not of state. */
   onStartTable: (tableId: string) => void
   onStartPokerNight: () => void
-  onTeleport: (areaId: string, col: number, row: number) => void
+  /** Stand the player on this tile of the area the state now names. */
+  onPlace: (col: number, row: number) => void
+  /** The bus, with nobody able to get off it. */
+  onStartRide: (ride: NonNullable<EventStage['ride']>) => void
+  /** Off the bus, into the street. */
+  onEndRide: () => void
 }
 
 export function useEventRunner(
+  state: GameState,
   setState: (update: (state: GameState) => GameState) => void,
   handlers: EventHandlers,
 ) {
   const [stage, setStage] = useState<EventStage>(EMPTY_STAGE)
   const [running, setRunning] = useState<GameEvent | null>(null)
-  // Held in a ref as well as in state: `advance` is called from a keypress and
-  // from a timer, and both need the position as it is now rather than as it was
-  // when the callback was made.
-  const queue = useRef<EventAction[]>([])
-  // Whether an event owns the screen. Not derivable from the queue: while a text
-  // box is up the queue is drained but the event is very much still running, and
-  // a second event starting over the top of it would lose the first one's
-  // remaining actions.
-  const runningRef = useRef<GameEvent | null>(null)
-  const timer = useRef<number | null>(null)
+  // The state as the machine last left it. A render brings it back in line with
+  // React's own, which by then includes everything the machine did.
+  const latest = useRef(state)
+  latest.current = state
   const handlersRef = useRef(handlers)
   handlersRef.current = handlers
+  const setStateRef = useRef(setState)
+  setStateRef.current = setState
 
-  const finish = useCallback(
-    (event: GameEvent) => {
-      runningRef.current = null
-      setRunning(null)
-      setStage(EMPTY_STAGE)
-      if (!event.repeatable) {
-        setState((s) =>
-          s.completedEventIds.includes(event.id)
-            ? s
-            : { ...s, completedEventIds: [...s.completedEventIds, event.id] },
-        )
-      }
-    },
-    [setState],
-  )
+  const machine = useRef<EventMachine | null>(null)
+  if (!machine.current) {
+    const host: MachineHost = {
+      getState: () => latest.current,
+      setState: (update) => {
+        latest.current = update(latest.current)
+        setStateRef.current(update)
+      },
+      onStage: setStage,
+      onRunning: setRunning,
+      startTable: (tableId) => handlersRef.current.onStartTable(tableId),
+      startPokerNight: () => handlersRef.current.onStartPokerNight(),
+      place: (col, row) => handlersRef.current.onPlace(col, row),
+      startRide: (ride) => handlersRef.current.onStartRide(ride),
+      endRide: () => handlersRef.current.onEndRide(),
+      playSound: (sound) => playSound(sound as Parameters<typeof playSound>[0]),
+      schedule: (ms, fn) => window.setTimeout(fn, ms),
+      cancel: (handle) => window.clearTimeout(handle),
+      now: () => performance.now(),
+    }
+    machine.current = new EventMachine(host)
+  }
+  const m = machine.current
 
-  /**
-   * Works through the queue until something has to wait for the player.
-   *
-   * A loop rather than a chain of callbacks, so a run of actions that do not
-   * wait — set a flag, give some cash, unlock a town — all happen in the same
-   * tick instead of a frame apart each.
-   */
-  const pump = useCallback(
-    (event: GameEvent) => {
-      for (;;) {
-        const action = queue.current.shift()
-        if (!action) {
-          finish(event)
-          return
-        }
+  const run = useCallback((event: GameEvent, then?: () => void) => m.run(event, then), [m])
+  const advance = useCallback(() => m.advance(), [m])
+  const choose = useCallback((index: number) => m.choose(index), [m])
+  const cueDone = useCallback((id: number, at?: { col: number; row: number }) => m.cueDone(id, at), [m])
+  const clearCast = useCallback(() => m.clearCast(), [m])
 
-        switch (action.kind) {
-          case 'dialogue':
-            setStage((s) => ({ ...s, dialogue: { speaker: action.speaker ?? '', lines: action.lines } }))
-            return
-          case 'wait':
-            timer.current = window.setTimeout(() => {
-              timer.current = null
-              pump(event)
-            }, action.ms)
-            return
-          case 'fade':
-            setStage((s) => ({ ...s, faded: action.to === 'out' }))
-            // A fade is a beat in itself: it is worth seeing before the next line.
-            timer.current = window.setTimeout(() => {
-              timer.current = null
-              pump(event)
-            }, FADE_MS)
-            return
-
-          case 'moveNpc':
-            setStage((s) => ({
-              ...s,
-              moved: { ...s.moved, [action.characterId]: { col: action.col, row: action.row } },
-            }))
-            break
-          case 'setFlag':
-            setState((s) => ({ ...s, flags: { ...s.flags, [action.flag]: true } }))
-            break
-          case 'clearFlag':
-            setState((s) => ({ ...s, flags: { ...s.flags, [action.flag]: false } }))
-            break
-          case 'giveItem':
-            setState((s) =>
-              s.ownedItemIds.includes(action.itemId)
-                ? s
-                : { ...s, ownedItemIds: [...s.ownedItemIds, action.itemId] },
-            )
-            break
-          case 'giveCash':
-            setState((s) => ({ ...s, cash: Math.max(0, s.cash + action.amount) }))
-            break
-          case 'unlockCity':
-            setState((s) =>
-              s.unlockedCityIds.includes(action.cityId as GameState['cityId'])
-                ? s
-                : { ...s, unlockedCityIds: [...s.unlockedCityIds, action.cityId as GameState['cityId']] },
-            )
-            break
-          case 'unlockTable':
-            setState((s) => unlockTable(s, action.tableId))
-            break
-          case 'advancePeriod':
-            setState((s) => advancePeriod(s, action.steps ?? 1))
-            break
-          case 'advanceDay':
-            setState((s) => advanceDay(s, action.days ?? 1))
-            break
-          case 'playSound':
-            playSound(action.sound as Parameters<typeof playSound>[0])
-            break
-          case 'teleport':
-            handlersRef.current.onTeleport(action.areaId, action.col, action.row)
-            break
-
-          // A change of scene ends the event: what follows is the table, and
-          // there is nobody left on the street to say the next line to.
-          case 'startTable':
-            finish(event)
-            handlersRef.current.onStartTable(action.tableId)
-            return
-          case 'startPokerNight':
-            finish(event)
-            handlersRef.current.onStartPokerNight()
-            return
-        }
-      }
-    },
-    [finish, setState],
-  )
-
-  /** Begin an event. Ignored while another is already running. */
-  const run = useCallback(
-    (event: GameEvent) => {
-      if (runningRef.current) return
-      runningRef.current = event
-      queue.current = [...event.actions]
-      setRunning(event)
-      setStage(EMPTY_STAGE)
-      pump(event)
-    },
-    [pump],
-  )
-
-  /** The player dismissed the text box. */
-  const advance = useCallback(() => {
-    if (!running) return
-    setStage((s) => ({ ...s, dialogue: undefined }))
-    pump(running)
-  }, [pump, running])
-
-  return { stage, running, run, advance, isRunning: running !== null }
+  return { stage, running, run, advance, choose, cueDone, clearCast, isRunning: running !== null }
 }
-
-/** How long the screen stays covered for a fade. */
-export const FADE_MS = 420

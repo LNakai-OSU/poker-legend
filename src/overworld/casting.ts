@@ -3,7 +3,7 @@ import type { CharacterDef } from '../world/characters'
 import type { PoiDef } from '../world/types'
 import type { Sitter } from '../world/seating'
 import type { NpcArt } from './Npc'
-import { visualKey, type Figure, type NpcRole, type PersonHairStyle, type PersonLook } from './characterArt'
+import { visualKey, type Figure, type Garment, type NpcRole, type PersonHairStyle, type PersonLook, type StreetHat } from './characterArt'
 
 /**
  * Who looks like what.
@@ -140,12 +140,32 @@ const TROUSERS = [
 ]
 const SHOES = ['#4a3426', '#2a2228', '#6a4a30', '#3a3a46', '#a83232', '#dcdce2']
 
-const ANY_HAIR: PersonHairStyle[] = ['short', 'short', 'long', 'tied', 'bald', 'bob', 'curly', 'spiky', 'bun', 'buzz', 'buzz']
-const HIS_HAIR: PersonHairStyle[] = ['short', 'short', 'short', 'bald', 'curly', 'spiky', 'buzz', 'buzz', 'tied']
-const HER_HAIR: PersonHairStyle[] = ['long', 'long', 'tied', 'tied', 'bob', 'bob', 'bun', 'curly', 'short']
+const ANY_HAIR: PersonHairStyle[] = [
+  'short', 'long', 'tied', 'bald', 'bob', 'curly', 'spiky', 'bun', 'buzz', 'afro', 'slick', 'shaggy', 'pigtails',
+]
+const HIS_HAIR: PersonHairStyle[] = ['short', 'short', 'bald', 'curly', 'spiky', 'buzz', 'buzz', 'tied', 'afro', 'slick', 'slick', 'shaggy']
+const HER_HAIR: PersonHairStyle[] = ['long', 'long', 'tied', 'bob', 'bob', 'bun', 'curly', 'afro', 'pigtails', 'shaggy']
+/** Caps and visors are hats now, in colours of their own; these are what is left on the face. */
 const ACCESSORIES: AvatarLook['accessory'][] = [
   'none', 'none', 'none', 'none', 'none', 'none', 'none', 'none', 'none', 'none',
-  'glasses', 'glasses', 'cap', 'cap', 'shades', 'earring', 'visor',
+  'glasses', 'glasses', 'shades', 'earring',
+]
+/** About one stranger in three wears a hat of their own. */
+const HATS: Array<StreetHat | undefined> = [
+  undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined,
+  'cap', 'cap', 'beanie', 'fedora', 'sunhat', 'cowboy', 'beret',
+]
+const HAT_COLORS = [
+  '#2f3d5c', '#b83a3a', '#2a6a4a', '#e8d8a8', '#4a3a2e', '#8a5a30', '#2a2a34', '#e07a3a', '#6a4a9a', '#d8d4cc',
+]
+/** Over the shirt: as often nothing as anything. */
+const GARMENT_CHOICES: Array<Garment | undefined> = [
+  undefined, undefined, undefined, undefined, undefined, undefined,
+  'jacket', 'jacket', 'vest', 'hoodie', 'hoodie', 'overalls', 'stripes', 'stripes', 'cardigan',
+]
+const GARMENT_COLORS = [
+  '#2a3350', '#5a3a24', '#7a2a2a', '#3a5a3a', '#6a6a74', '#2a5a8a', '#c8a050', '#e8e0cc', '#8a3a6a',
+  '#2e2e36', '#4a7a9a', '#a8603a',
 ]
 
 /** A small seeded generator, so a stranger looks the same every time you pass them. */
@@ -190,17 +210,30 @@ export function lookFromId(id: string, name = '', role: NpcRole = 'local'): Pers
   const accessory = choose(ACCESSORIES)
   const skirt = feminine && next() < 0.5
   const sleeves = next() < 0.4 ? 'short' : 'long'
+  // Drawn after everything above, so adding them changed nobody's face.
+  let hat = choose(HATS)
+  const hatColor = choose(HAT_COLORS)
+  let garment = choose(GARMENT_CHOICES)
+  let garmentColor = choose(GARMENT_COLORS)
+  // A jacket the colour of the shirt under it is just a shirt.
+  if (garmentColor === shirt) garmentColor = GARMENT_COLORS[(GARMENT_COLORS.indexOf(shirt) + 3) % GARMENT_COLORS.length]
+  // Children wear caps and beanies, and nobody puts a five-year-old in a waistcoat.
+  if (child && hat && hat !== 'cap' && hat !== 'beanie') hat = undefined
+  if (child && (garment === 'vest' || garment === 'cardigan')) garment = 'hoodie'
+  // Big hair and a hat: the hat wins and the hair is wasted. Keep the hair.
+  if (hairStyle === 'afro' || hairStyle === 'pigtails' || hairStyle === 'bun') hat = undefined
   return {
     skin,
     hair,
     hairStyle,
     shirt,
-    // A visor on a bald head shows nothing of the baldness; let him keep it bare.
-    accessory: hairStyle === 'bald' && accessory === 'visor' ? 'none' : accessory,
+    accessory,
     trousers,
     shoes,
     lower: skirt ? 'skirt' : 'trousers',
     sleeves,
+    ...(hat ? { hat, hatColor } : {}),
+    ...(garment ? { garment, garmentColor } : {}),
   }
 }
 
@@ -216,6 +249,23 @@ function dressed(id: string, look: PersonLook): PersonLook {
     shoes: look.shoes ?? shoes,
     sleeves: look.sleeves ?? sleeves,
   }
+}
+
+/**
+ * A stranger at a POI: made up from a seed, with whatever the content says
+ * about them written over it. Somebody whose look the content writes is
+ * dressed as written — a hat or a jacket is only made up for them if the look
+ * says nothing about their face either, so Hal is one man in both towns.
+ */
+function castLook(poi: PoiDef, seed: string, role: NpcRole): PersonLook {
+  const made = lookFromId(seed, poi.name, role)
+  if (poi.look?.skin || poi.look?.hair) {
+    delete made.hat
+    delete made.hatColor
+    delete made.garment
+    delete made.garmentColor
+  }
+  return { ...made, ...poi.look }
 }
 
 /** A named character in the street: their own face, their own clothes. */
@@ -253,9 +303,9 @@ export function figuresForPois(
       continue
     }
     const role = roleForPoi(poi)
-    let figure: Figure = { role, look: { ...lookFromId(poi.id, poi.name, role), ...poi.look } }
+    let figure: Figure = { role, look: castLook(poi, poi.id, role) }
     for (let attempt = 1; seen.has(visualKey(figure)) && attempt < 8; attempt++) {
-      figure = { role, look: { ...lookFromId(`${poi.id}#${attempt}`, poi.name, role), ...poi.look } }
+      figure = { role, look: castLook(poi, `${poi.id}#${attempt}`, role) }
     }
     seen.add(visualKey(figure))
     figures.set(poi.id, figure)

@@ -1,5 +1,5 @@
 import { Container, Sprite, type Texture } from 'pixi.js'
-import { FRAME_MS, SCALE, UNIT, stampLayers } from './stampArt'
+import { FRAME_MS, SCALE, UNIT, placementVariants, stampLayers } from './stampArt'
 import type { GlowField, LightSource } from './lighting'
 import { TILE_SIZE, type TileGrid } from './tiles'
 import { cellArt, cellTextures, paintedGrid } from './cells'
@@ -135,8 +135,9 @@ export function buildStampScene(stamps: PlacedStamp[]): StampScene {
   const lights: LightSource[] = []
   const glowing: Array<{ stampId: string; x: number; y: number; canvas: HTMLCanvasElement }> = []
 
-  for (const placed of stamps) {
-    const art = stampLayers(placed.stampId)
+  const variants = placementVariants(stamps)
+  for (const [i, placed] of stamps.entries()) {
+    const art = stampLayers(placed.stampId, variants[i])
     if (!art) continue
     const x = placed.col * TILE_SIZE - art.bleed.left * SCALE
     const y = placed.row * TILE_SIZE - art.bleed.top * SCALE

@@ -4,6 +4,8 @@ import type { OpponentDef, TableDef } from './types'
 import type { NpcArt } from '../overworld/Npc'
 import type { NpcRole, PersonLook } from '../overworld/characterArt'
 import { TIME_PERIODS, type TimePeriod } from '../game/time'
+import type { GameState } from '../game/state'
+import { allHold, type EventCondition } from './events'
 
 /**
  * Who somebody is, in one place.
@@ -92,6 +94,27 @@ export interface OverworldPresence {
   lines: string[]
   /** Where they are through the day. An empty schedule means they are nowhere. */
   schedule: ScheduleEntry[]
+  /**
+   * Where the story takes them later.
+   *
+   * A schedule used to be forever: Marcus was in Basin on the last day of the
+   * game exactly as on the first, so nobody you met could come up the ladder
+   * with you. A chapter is a whole day somewhere else, from the moment its
+   * conditions hold — usually how far the run has got. The last chapter whose
+   * conditions hold replaces `schedule`, so the list reads as a timeline: later
+   * in the story is lower down.
+   */
+  chapters?: ScheduleChapter[]
+}
+
+/** Part of somebody's story: where they spend their days once it has begun. */
+export interface ScheduleChapter {
+  /** When this part of the story applies. All must hold. */
+  when: EventCondition[]
+  /** Where they are at each hour of it. Hours left out, they are nowhere. */
+  schedule: ScheduleEntry[]
+  /** What they say when the hour has nothing more specific. Falls back to their usual lines. */
+  lines?: string[]
 }
 
 export interface CharacterDef {
@@ -235,6 +258,8 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     overworld: {
       // He works, he eats, he goes home and deals. The Friday game is at his
       // place because his place is where he already is.
+      // Straight from work: overalls over the shirt he plays in.
+      look: { garment: 'overalls', garmentColor: '#3a5a8a', trousers: '#3a5a8a', shoes: '#5a3a22' },
       lines: ['Marcus: Catch me later. I am always around.'],
       schedule: [
         { period: 'morning', areaId: 'basin', col: 9, row: 11, lines: [
@@ -252,6 +277,64 @@ export const CHARACTERS: Record<string, CharacterDef> = {
           'Marcus: Still up. Cannot sleep after a session. You know how it is.',
         ] },
       ],
+      // The friend you leave behind, who comes to see whether it is true, and is
+      // at the rail for the match. See docs/STORYBOARD.md.
+      chapters: [
+        {
+          // The day of the first game, before Dana has brought you: he has the
+          // morning off to get the front room ready and is out for ice, so he
+          // is not standing in the street Dana runs up.
+          when: [
+            { kind: 'eventDone', eventId: 'dana-walks-you-to-the-bus', done: false },
+            { kind: 'eventDone', eventId: 'dana-at-the-depot', done: false },
+            { kind: 'flag', flag: 'wonPokerNight', set: false },
+            { kind: 'eventDone', eventId: 'poker-night', done: false },
+          ],
+          schedule: [
+            { period: 'afternoon', areaId: 'marcus-house', col: 5, row: 6, lines: [
+              'Marcus: You made it! Dana found you, then. She finds everybody.',
+            ] },
+            { period: 'evening', areaId: 'marcus-house', col: 5, row: 6, lines: [
+              'Marcus: Door is open. Chairs are out.',
+            ] },
+            { period: 'night', areaId: 'marcus-house', col: 5, row: 6, lines: [
+              'Marcus: Still up. Cannot sleep before a session. You know how it is.',
+            ] },
+          ],
+        },
+        {
+          // A week off, at the midpoint. Home again once you have gone on.
+          when: [{ kind: 'chapter', cityId: 'palmCay' }, { kind: 'flag', flag: 'wonPokerNight' }],
+          lines: ['Marcus: Four drinks with umbrellas in. I regret nothing.'],
+          schedule: [
+            { period: 'morning', areaId: 'pc-street', col: 13, row: 7 },
+            { period: 'afternoon', areaId: 'pc-street', col: 13, row: 7 },
+            { period: 'evening', areaId: 'pc-grill', col: 5, row: 3, lines: [
+              'Marcus: They brought me a fish with its face on. I have named him.',
+            ] },
+          ],
+        },
+        {
+          // Nadia sends a car for him once she has named the match.
+          when: [{ kind: 'chapter', cityId: 'portoLumina' }, { kind: 'eventDone', eventId: 'nadia-names-the-match' }],
+          lines: ['Marcus: I am at the rail. That is the rule.'],
+          schedule: [
+            { period: 'afternoon', areaId: 'pl-street', col: 12, row: 6 },
+            { period: 'evening', areaId: 'pl-casino', col: 12, row: 8 },
+            { period: 'night', areaId: 'pl-casino', col: 12, row: 8 },
+          ],
+        },
+        {
+          when: [{ kind: 'flag', flag: 'hasPenthouse' }],
+          lines: ['Marcus: Winner hosts. Those are the rules.'],
+          schedule: [
+            { period: 'morning', areaId: 'pl-lift', col: 4, row: 4 },
+            { period: 'afternoon', areaId: 'pl-lift', col: 4, row: 4 },
+            { period: 'evening', areaId: 'pl-lift', col: 4, row: 4 },
+            { period: 'night', areaId: 'pl-lift', col: 4, row: 4 },
+          ],
+        },
+      ],
     },
   },
   dana: {
@@ -268,6 +351,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     },
     overworld: {
       // She is at the laundromat because it is warm and nobody asks her anything.
+      look: { garment: 'cardigan', garmentColor: '#4a4a54', lower: 'skirt', trousers: '#2e2e36' },
       lines: ['Dana: Mm.'],
       schedule: [
         { period: 'morning', areaId: 'laundromat', col: 8, row: 4, lines: [
@@ -280,6 +364,64 @@ export const CHARACTERS: Record<string, CharacterDef> = {
         { period: 'evening', areaId: 'diner', col: 12, row: 5, lines: [
           'Dana: Coffee. Corner booth. Back to the wall.',
         ] },
+      ],
+      // Wherever you play next, she is already in the corner of it — because she
+      // is writing to Nadia about you. Revealed in Porto Lumina (`dana-reveal`).
+      chapters: [
+        {
+          when: [{ kind: 'chapter', cityId: 'silverCreek' }],
+          lines: ['Dana: I go where the games are.'],
+          schedule: [
+            { period: 'evening', areaId: 'sc-floor', col: 17, row: 7 },
+            { period: 'night', areaId: 'sc-floor', col: 17, row: 7 },
+          ],
+        },
+        {
+          when: [{ kind: 'chapter', cityId: 'riverbend' }],
+          lines: ['Dana: A bar on a boat that does not move. My kind of place.'],
+          schedule: [
+            { period: 'evening', areaId: 'rb-boat', col: 19, row: 3 },
+            { period: 'night', areaId: 'rb-boat', col: 19, row: 3 },
+          ],
+        },
+        {
+          when: [{ kind: 'chapter', cityId: 'crescentHarbor' }],
+          lines: ['Dana: Corner table. Back to the wall. Some things do not change.'],
+          schedule: [
+            { period: 'evening', areaId: 'ch-supper', col: 12, row: 3 },
+            { period: 'night', areaId: 'ch-club', col: 13, row: 4 },
+          ],
+        },
+        {
+          when: [{ kind: 'chapter', cityId: 'palmCay' }],
+          lines: ['Dana: Marcus is here. He does not know I am. Let us keep it that way.'],
+          schedule: [{ period: 'night', areaId: 'pc-casino', col: 9, row: 8 }],
+        },
+        {
+          when: [{ kind: 'chapter', cityId: 'neonMesa' }],
+          lines: ['Dana: Loud in here. Good. Nobody hears anything.'],
+          schedule: [
+            { period: 'evening', areaId: 'nm-club', col: 13, row: 4 },
+            { period: 'night', areaId: 'nm-club', col: 13, row: 4 },
+          ],
+        },
+        {
+          when: [{ kind: 'chapter', cityId: 'portoLumina' }],
+          lines: ['Dana: Go and say hello to her. She has waited a long time for somebody worth it.'],
+          schedule: [
+            { period: 'evening', areaId: 'pl-casino', col: 16, row: 7 },
+            { period: 'night', areaId: 'pl-casino', col: 16, row: 7 },
+          ],
+        },
+        {
+          when: [{ kind: 'flag', flag: 'hasPenthouse' }],
+          lines: ['Dana: Somebody, somewhere, is sitting down at a kitchen table tonight.'],
+          schedule: [
+            { period: 'afternoon', areaId: 'pl-lift', col: 11, row: 4 },
+            { period: 'evening', areaId: 'pl-lift', col: 11, row: 4 },
+            { period: 'night', areaId: 'pl-lift', col: 11, row: 4 },
+          ],
+        },
       ],
     },
   },
@@ -297,6 +439,8 @@ export const CHARACTERS: Record<string, CharacterDef> = {
       lose: ['Ray: Bah. Next one.'],
     },
     overworld: {
+      // A windbreaker he has had since the casino gave them away.
+      look: { garment: 'jacket', garmentColor: '#a8603a', sleeves: 'long' },
       lines: ['Ray: I am due. I can feel it.'],
       schedule: [
         { period: 'afternoon', areaId: 'sc-street', col: 18, row: 7, lines: [
@@ -326,6 +470,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
       lose: ['Sully: Well played.'],
     },
     overworld: {
+      look: { garment: 'vest', garmentColor: '#2e2e36', sleeves: 'short' },
       lines: ['Sully: Working.'],
       schedule: [
         { period: 'morning', areaId: 'sc-street', col: 12, row: 13, lines: [
@@ -351,6 +496,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
       lose: ['Deb: Alright. That was good.'],
     },
     overworld: {
+      look: { garment: 'jacket', garmentColor: '#2a1e1a', lower: 'skirt', trousers: '#5a3a24' },
       lines: ['Deb: Been here longer than you.'],
       schedule: [
         { period: 'morning', areaId: 'rb-street', col: 9, row: 7, lines: [
@@ -376,6 +522,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
       lose: ['Mack: Hm.'],
     },
     overworld: {
+      look: { garment: 'hoodie', garmentColor: '#5a6a4a' },
       lines: ['Mack: Waiting on a hand. Same as always.'],
       schedule: [
         { period: 'afternoon', areaId: 'rb-street', col: 20, row: 12, lines: [
@@ -522,6 +669,62 @@ export const CHARACTERS: Record<string, CharacterDef> = {
           raise: ['Kit: Raise.'],
         },
       },
+    },
+    overworld: {
+      // The rival: a town ahead of you, until the debt catches up. Nowhere at the
+      // start — Kit is a rumour in Silver Creek and a face from Riverbend on.
+      lines: ['Kit: Not now.'],
+      schedule: [],
+      chapters: [
+        {
+          when: [{ kind: 'chapter', cityId: 'riverbend' }],
+          lines: ['Kit: The boat leaves when it leaves. So do I.'],
+          schedule: [
+            { period: 'morning', areaId: 'rb-street', col: 26, row: 12 },
+            { period: 'afternoon', areaId: 'rb-street', col: 26, row: 12 },
+          ],
+        },
+        {
+          when: [{ kind: 'chapter', cityId: 'crescentHarbor' }],
+          lines: ['Kit: Still no suit? Brave.'],
+          schedule: [
+            { period: 'evening', areaId: 'ch-street', col: 4, row: 6 },
+            { period: 'night', areaId: 'ch-street', col: 4, row: 6 },
+          ],
+        },
+        {
+          when: [{ kind: 'chapter', cityId: 'palmCay' }],
+          lines: ['Kit: Working. Bernard is working too. He just does not know it.'],
+          schedule: [
+            { period: 'afternoon', areaId: 'pc-casino', col: 12, row: 4 },
+            { period: 'evening', areaId: 'pc-casino', col: 12, row: 4 },
+          ],
+        },
+        {
+          when: [{ kind: 'chapter', cityId: 'neonMesa' }],
+          lines: ['Kit: Not now.'],
+          schedule: [
+            { period: 'morning', areaId: 'nm-street', col: 18, row: 9 },
+            { period: 'night', areaId: 'nm-street', col: 18, row: 9 },
+          ],
+        },
+        {
+          when: [{ kind: 'chapter', cityId: 'portoLumina' }],
+          lines: ['Kit: Next boat. Any boat.'],
+          schedule: [
+            { period: 'morning', areaId: 'pl-street', col: 26, row: 13 },
+            { period: 'afternoon', areaId: 'pl-street', col: 26, row: 13 },
+          ],
+        },
+        {
+          when: [{ kind: 'flag', flag: 'hasPenthouse' }],
+          lines: ['Kit: Remember I asked nicely.'],
+          schedule: [
+            { period: 'morning', areaId: 'pl-street', col: 26, row: 13 },
+            { period: 'afternoon', areaId: 'pl-street', col: 26, row: 13 },
+          ],
+        },
+      ],
     },
   },
   rosa: {
@@ -702,6 +905,182 @@ export const CHARACTERS: Record<string, CharacterDef> = {
       lose: ['Kingsley: Marvellous. Again!'],
     },
   },
+  hal: {
+    // The mentor. He sells lessons from a stool on Harbor Boulevard and again on
+    // the Mesa Strip — those are POIs, and they take his face from here by name —
+    // and turns up in Porto Lumina the night before the match, uninvited.
+    name: 'Hal',
+    style: 'Forty years in card rooms.',
+    look: { skin: '#b98a62', hair: '#b8b8b0', hairStyle: 'short', shirt: '#6b5a44', accessory: 'glasses' },
+    // He does not sit down any more. If anybody ever seats him, this is what he says.
+    lines: { greeting: ['Hal: I do not play now. I watch other people play the way I taught them.'] },
+    overworld: {
+      lines: ['Hal: Position. Always position.'],
+      schedule: [],
+      chapters: [
+        {
+          when: [{ kind: 'chapter', cityId: 'portoLumina' }],
+          lines: ['Hal: Position. Pot odds. The person. In that order.'],
+          schedule: [
+            { period: 'evening', areaId: 'pl-street', col: 13, row: 6 },
+            { period: 'night', areaId: 'pl-street', col: 13, row: 6 },
+          ],
+        },
+        {
+          when: [{ kind: 'flag', flag: 'hasPenthouse' }],
+          lines: ['Hal: Well played. I mean that, which I rarely do.'],
+          schedule: [{ period: 'morning', areaId: 'pl-lift', col: 9, row: 5 }],
+        },
+      ],
+    },
+  },
+  // ---------------------------------------------------------------------------
+  // The sponsors and the people they send. A sponsor is a menu at a fixture —
+  // these give Cass and Mr. Emeka a face that turns up again once you have paid
+  // them, and give each collector a face before the chase. While you owe a
+  // sponsor on time, their collector stands beside them; once the stake runs out
+  // they are the one coming down the street (`collector` in npcs.ts), and the
+  // `caught` beats in events.ts are their lines. See docs/STORYBOARD.md.
+  // ---------------------------------------------------------------------------
+  cass: {
+    name: 'Cass',
+    style: 'Stakes players off the Riverbend dock.',
+    look: { skin: '#c68e62', hair: '#2a1a12', hairStyle: 'tied', shirt: '#2f5d62', accessory: 'earring' },
+    // They never sit down; if anybody ever seats them, this is what they say.
+    lines: { greeting: ['Cass: I do not play. I back people who do.'] },
+    overworld: {
+      // A river woman's coat, not a banker's suit. She lends from a bait shed.
+      role: 'local',
+      look: { garment: 'jacket', garmentColor: '#3a3a2e', trousers: '#2e2e26', sleeves: 'long' },
+      lines: ['Cass: Nobody pays me back. You did.'],
+      schedule: [],
+      chapters: [
+        {
+          // Paid her back, and she comes to watch what that looks like at the top.
+          when: [{ kind: 'chapter', cityId: 'portoLumina' }, { kind: 'count', of: 'repaid', sponsorId: 'cass' }],
+          lines: ['Cass: Watching my investment. It is a long way from the dock.'],
+          schedule: [
+            { period: 'evening', areaId: 'pl-casino', col: 8, row: 8 },
+            { period: 'night', areaId: 'pl-casino', col: 8, row: 8 },
+          ],
+        },
+      ],
+    },
+  },
+  emeka: {
+    name: 'Mr. Emeka',
+    style: 'Backs patient players.',
+    look: { skin: '#4a2c1a', hair: '#1a1a1a', hairStyle: 'bald', shirt: '#e8e2d0', accessory: 'glasses' },
+    // They never sit down; if anybody ever seats them, this is what they say.
+    lines: { greeting: ['Mr. Emeka: I do not sit down. I invest in people who do.'] },
+    overworld: {
+      role: 'suit',
+      lines: ['Mr. Emeka: Patient. I said I liked patient.'],
+      schedule: [],
+      chapters: [
+        {
+          // Paid back, he turns up on the Strip with a new player and an opinion.
+          when: [{ kind: 'chapter', cityId: 'neonMesa' }, { kind: 'count', of: 'repaid', sponsorId: 'emeka' }],
+          lines: ['Mr. Emeka: My new player is not patient. I am working on him.'],
+          schedule: [
+            { period: 'afternoon', areaId: 'nm-street', col: 22, row: 8 },
+            { period: 'evening', areaId: 'nm-street', col: 22, row: 8 },
+          ],
+        },
+      ],
+    },
+  },
+  dutch: {
+    name: 'Dutch',
+    style: "Cass's brother-in-law. Collects for her.",
+    look: { skin: '#e0b088', hair: '#9a6a32', hairStyle: 'short', shirt: '#5a6a3a', accessory: 'cap' },
+    // They never sit down; if anybody ever seats them, this is what they say.
+    lines: { greeting: ['Dutch: Me? No. I just hold the coats.'] },
+    overworld: {
+      // A yellow slicker in all weathers: the river is always about to happen.
+      look: { garment: 'jacket', garmentColor: '#d4a51c', trousers: '#3a3a30', sleeves: 'long' },
+      lines: ['Dutch: Just here for the view. Lovely day for it. Three days, she said?'],
+      schedule: [],
+      chapters: [
+        {
+          when: [{ kind: 'debt', sponsorId: 'cass', status: 'owing' }],
+          schedule: [
+            { period: 'morning', areaId: 'rb-street', col: 6, row: 8 },
+            { period: 'afternoon', areaId: 'rb-street', col: 6, row: 8 },
+            { period: 'evening', areaId: 'rb-street', col: 6, row: 8 },
+          ],
+        },
+      ],
+    },
+  },
+  abel: {
+    name: 'Abel',
+    style: "Mr. Emeka's man. Very polite.",
+    look: { skin: '#6b4226', hair: '#141414', hairStyle: 'short', shirt: '#3a4a6a', accessory: 'none' },
+    // They never sit down; if anybody ever seats them, this is what they say.
+    lines: { greeting: ['Abel: I do not play, thank you. I keep count.'] },
+    overworld: {
+      role: 'suit',
+      lines: ['Abel: Mr. Emeka hopes you are well. He asked me to hope it too.'],
+      schedule: [],
+      chapters: [
+        {
+          when: [{ kind: 'debt', sponsorId: 'emeka', status: 'owing' }],
+          schedule: [
+            { period: 'afternoon', areaId: 'ch-street', col: 8, row: 12 },
+            { period: 'evening', areaId: 'ch-street', col: 8, row: 12 },
+            { period: 'night', areaId: 'ch-street', col: 8, row: 12 },
+          ],
+        },
+      ],
+    },
+  },
+  lowe: {
+    name: 'Mr. Lowe',
+    style: 'One of the Consortium’s two men. The one who talks.',
+    look: { skin: '#d8b49a', hair: '#5a5a5a', hairStyle: 'short', shirt: '#2a2a32', accessory: 'shades' },
+    // They never sit down; if anybody ever seats them, this is what they say.
+    lines: { greeting: ['Mr. Lowe: We do not play. We collect.'] },
+    overworld: {
+      // The Consortium's men dress identically. That is the point of them.
+      role: 'collector',
+      lines: ['Mr. Lowe: We are not here. You will know when we are here.'],
+      schedule: [],
+      chapters: [
+        {
+          when: [{ kind: 'debt', sponsorId: 'consortium', status: 'owing' }],
+          schedule: [
+            { period: 'morning', areaId: 'nm-street', col: 25, row: 9 },
+            { period: 'evening', areaId: 'nm-street', col: 25, row: 9 },
+            { period: 'night', areaId: 'nm-street', col: 25, row: 9 },
+          ],
+        },
+      ],
+    },
+  },
+  fong: {
+    name: 'Ms. Fong',
+    style: "Madame Wen's bookkeeper. Carries a ledger, not a bat.",
+    look: { skin: '#e8c4a0', hair: '#0e0e10', hairStyle: 'tied', shirt: '#6a1a2a', accessory: 'glasses' },
+    // They never sit down; if anybody ever seats them, this is what they say.
+    lines: { greeting: ['Ms. Fong: I keep the book. I do not write in it at the table.'] },
+    overworld: {
+      role: 'suit',
+      look: { lower: 'skirt' },
+      lines: ['Ms. Fong: I keep the book. Your page is short so far.'],
+      schedule: [],
+      chapters: [
+        {
+          when: [{ kind: 'debt', sponsorId: 'wen', status: 'owing' }],
+          schedule: [
+            { period: 'afternoon', areaId: 'pl-street', col: 6, row: 9 },
+            { period: 'evening', areaId: 'pl-street', col: 6, row: 9 },
+            { period: 'night', areaId: 'pl-street', col: 6, row: 9 },
+          ],
+        },
+      ],
+    },
+  },
   nadia: {
     name: 'Nadia Okonkwo',
     style: 'Four years in the penthouse.',
@@ -788,44 +1167,98 @@ export function seatsOf(table: TableDef): OpponentDef[] {
  * walking there. It costs nothing while you are not looking, it cannot drift out
  * of step with the clock, and a save holds the hour rather than everyone's
  * coordinates.
+ *
+ * Given the state, the story counts too: whoever has followed you up the
+ * ladder is where their current chapter puts them. `lines` is what they say
+ * here, with the fallbacks already applied.
  */
-export function charactersIn(areaId: string, period: TimePeriod): Array<{
+export function charactersIn(
+  areaId: string,
+  period: TimePeriod,
+  state?: GameState,
+): Array<{
   id: string
   character: CharacterDef
   at: ScheduleEntry
+  lines: string[]
 }> {
   const here = []
   for (const [id, character] of Object.entries(CHARACTERS)) {
-    const at = character.overworld?.schedule.find(
-      (entry) => entry.areaId === areaId && entry.period === period,
-    )
-    if (at) here.push({ id, character, at })
+    const { schedule, lines } = scheduleFor(character, state)
+    // Where they are this hour first, then whether that is here — so nobody can
+    // be in two rooms at once however their chapters are written.
+    const at = schedule.find((entry) => entry.period === period)
+    if (at && at.areaId === areaId) here.push({ id, character, at, lines: at.lines ?? lines })
   }
   return here
 }
 
-/** Every period a character is somewhere, for checking nobody is in two places. */
+/**
+ * Where somebody spends their days at this point in the story: the last of
+ * their chapters whose conditions hold, or their usual schedule.
+ *
+ * Without a state it is the usual schedule — where they are when the game
+ * begins.
+ */
+export function scheduleFor(
+  character: CharacterDef,
+  state?: GameState,
+): { schedule: ScheduleEntry[]; lines: string[] } {
+  const presence = character.overworld
+  if (!presence) return { schedule: [], lines: [] }
+  const chapter = state
+    ? [...(presence.chapters ?? [])].reverse().find((c) => allHold(c.when, state))
+    : undefined
+  return chapter
+    ? { schedule: chapter.schedule, lines: chapter.lines ?? presence.lines }
+    : { schedule: presence.schedule, lines: presence.lines }
+}
+
+/**
+ * Every schedule a character keeps at any point in the story — their usual
+ * one and each chapter's — for checking every place anybody could ever stand.
+ */
+export function allSchedules(character: CharacterDef): ScheduleEntry[][] {
+  const presence = character.overworld
+  if (!presence) return []
+  return [presence.schedule, ...(presence.chapters ?? []).map((c) => c.schedule)]
+}
+
+/**
+ * Anybody in two places at once, or two people on one tile.
+ *
+ * One place per hour is checked within each schedule — the usual one and each
+ * chapter — because a chapter is somebody's whole day somewhere else. A tile is
+ * checked across every schedule anybody keeps, whatever the story: two people
+ * sharing one would only be fine if their chapters could never overlap, and
+ * that is not worth proving.
+ */
 export function scheduleConflicts(): string[] {
   const seen = new Map<string, string>()
   const problems: string[] = []
   for (const [id, character] of Object.entries(CHARACTERS)) {
-    const periods = new Set<TimePeriod>()
-    for (const entry of character.overworld?.schedule ?? []) {
-      if (periods.has(entry.period)) {
-        problems.push(`${id} is in two places at once in the ${entry.period}`)
+    for (const schedule of allSchedules(character)) {
+      const periods = new Set<TimePeriod>()
+      for (const entry of schedule) {
+        if (periods.has(entry.period)) {
+          problems.push(`${id} is in two places at once in the ${entry.period}`)
+        }
+        periods.add(entry.period)
+        const key = `${entry.areaId}:${entry.period}:${entry.col},${entry.row}`
+        const other = seen.get(key)
+        if (other && other !== id) problems.push(`${id} and ${other} stand on the same tile in the ${entry.period}`)
+        seen.set(key, id)
       }
-      periods.add(entry.period)
-      const key = `${entry.areaId}:${entry.period}:${entry.col},${entry.row}`
-      const other = seen.get(key)
-      if (other) problems.push(`${id} and ${other} stand on the same tile in the ${entry.period}`)
-      seen.set(key, id)
     }
   }
   return problems
 }
 
-/** Periods a character has nowhere to be, so you can tell a gap from an oversight. */
+/**
+ * Periods a character has nowhere to be at any point in the story, so you can
+ * tell a gap from an oversight.
+ */
 export function periodsAway(character: CharacterDef): TimePeriod[] {
-  const scheduled = new Set(character.overworld?.schedule.map((e) => e.period))
+  const scheduled = new Set(allSchedules(character).flat().map((e) => e.period))
   return TIME_PERIODS.filter((period) => !scheduled.has(period))
 }

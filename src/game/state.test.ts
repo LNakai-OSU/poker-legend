@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
+  BUST_LINE,
   advanceDay,
+  arriveAt,
+  challengeStatus,
+  countOf,
+  debtStatus,
+  huntingSponsorId,
+  isHunted,
+  chapterOf,
   CAUGHT_GRACE_DAYS,
   caughtByCollectors,
   daysUntilDue,
@@ -228,5 +236,84 @@ describe('the heads-up finale', () => {
     expect(lost.cash).toBe(80000)
     expect(daysUntilRematch(lost)).toBe(FINALE_REMATCH_DAYS)
     expect(daysUntilRematch(advanceDay(lost, FINALE_REMATCH_DAYS))).toBe(0)
+  })
+})
+
+describe('the chapter', () => {
+  it('is the furthest town set foot in, however you got there', () => {
+    const home = initialState()
+    expect(chapterOf(home)).toBe('apartment')
+    // Walking in counts: the road to Riverbend is no less being in Riverbend.
+    const walked = arriveAt(arriveAt(home, 'sc-street', 'silverCreek'), 'rb-street', 'riverbend')
+    expect(walked.unlockedCityIds).toContain('riverbend')
+    expect(chapterOf(walked)).toBe('riverbend')
+    // Going back down the ladder does not rewind the story.
+    expect(chapterOf(arriveAt(walked, 'basin', 'apartment'))).toBe('riverbend')
+  })
+})
+
+/**
+ * Losing is part of the story: the run remembers each setback, so the people in
+ * it can say something about it. See docs/STORYBOARD.md, "When it goes wrong".
+ */
+describe('the record of losing', () => {
+  const EMEKA = { id: 'emeka', name: 'Mr. Emeka' }
+
+  it('remembers a stake taken and paid back after the debt is gone', () => {
+    const owing = staked()
+    expect(countOf(owing, 'staked', 'cass')).toBe(1)
+    expect(debtStatus(owing, 'cass')).toBe('owing')
+    const paid = payDebt({ ...owing, cash: 5000 }, owing.debts[0].id)
+    expect(paid.debts).toEqual([])
+    expect(debtStatus(paid, 'cass')).toBe('none')
+    expect(countOf(paid, 'repaid', 'cass')).toBe(1)
+    expect(countOf(paid, 'repaid')).toBe(1)
+    expect(countOf(paid, 'repaid', 'emeka')).toBe(0)
+  })
+
+  it('counts a stake missed once, however long it stays missed', () => {
+    const late = advanceDay(staked(), 4)
+    expect(debtStatus(late, 'cass')).toBe('overdue')
+    expect(debtStatus(late)).toBe('overdue')
+    expect(countOf(late, 'missed', 'cass')).toBe(1)
+    expect(countOf(advanceDay(late, 3), 'missed', 'cass')).toBe(1)
+    // Paying late still pays, and still remembers it was late.
+    const paid = payDebt({ ...late, cash: 5000 }, late.debts[0].id)
+    expect(countOf(paid, 'missed', 'cass')).toBe(1)
+    expect(countOf(paid, 'repaid', 'cass')).toBe(1)
+  })
+
+  it('knows whose collectors are in town: the stake that ran out first', () => {
+    const both = takeStake(staked(), EMEKA, 2000, 0.3, 5)
+    const hunted = advanceDay(both, 6)
+    expect(isHunted(hunted)).toBe(true)
+    expect(huntingSponsorId(hunted)).toBe('cass')
+    const caught = caughtByCollectors(hunted)
+    expect(countOf(caught, 'caught', 'cass')).toBe(1)
+    expect(countOf(caught, 'caught', 'emeka')).toBe(0)
+    expect(isHunted(caught)).toBe(false)
+  })
+
+  it('counts a shakedown that leaves you unable to sit anywhere as going broke', () => {
+    const hunted = advanceDay(staked({ cash: 0 }), 4)
+    expect(hunted.cash).toBeGreaterThanOrEqual(BUST_LINE)
+    expect(caughtByCollectors({ ...hunted, cash: 300 }).record.busted).toBe(1)
+    // Already broke is not broke again.
+    expect(caughtByCollectors({ ...hunted, cash: 50 }).record.busted).toBe(0)
+  })
+
+  it('follows the match from unplayed to lost to a rematch to won', () => {
+    const start = { ...initialState(), day: 10 }
+    expect(challengeStatus(start)).toBe('unplayed')
+    const lost = lostFinalChallenge(start)
+    expect(challengeStatus(lost)).toBe('lost')
+    expect(countOf(lost, 'challengeLost')).toBe(1)
+    expect(challengeStatus(advanceDay(lost, FINALE_REMATCH_DAYS))).toBe('rematch')
+    const won = { ...lost, flags: { ...lost.flags, hasPenthouse: true } }
+    expect(challengeStatus(won)).toBe('won')
+  })
+
+  it('puts the line for going broke at the cheapest seat on the ladder', () => {
+    expect(BUST_LINE).toBe(Math.min(...Object.values(TABLES).map((t) => t.buyIn)))
   })
 })

@@ -1,10 +1,11 @@
 import type { Accessory, AvatarLook, HairStyle } from '../game/avatars'
 import type { Archetype, SkillTier } from '../engine/types'
-import type { StoryFlag } from '../game/state'
+import { TOWN_ORDER, type ChallengeStatus, type CountOf, type DebtStatus, type StoryFlag } from '../game/state'
+import { STORY_FLAGS as FLAG_MEANING, STORY_FLAG_IDS } from '../world/flags'
 import type { SoundName } from '../audio/audio'
 import { TIME_PERIODS, type TimePeriod } from '../game/time'
 import type { CharacterDef, Persona, ScheduleEntry, TableLines } from '../world/characters'
-import type { EventAction, EventCondition, EventTrigger, GameEvent } from '../world/events'
+import { ENDS_EVENT, type EventAction, type EventCondition, type EventTrigger, type GameEvent, type RideAction, type Spot } from '../world/events'
 
 /**
  * What a character or an event is allowed to look like, for the editor.
@@ -58,7 +59,13 @@ export const ACCESSORIES = keysOf<Accessory>({
   visor: true,
   earring: true,
 })
-export const STORY_FLAGS = keysOf<StoryFlag>({ wonPokerNight: true, beatFinalRival: true, hasPenthouse: true })
+/** Every story flag, from the list in `src/world/flags.ts`. */
+export const STORY_FLAGS: StoryFlag[] = STORY_FLAG_IDS
+export const DEBT_STATUSES = keysOf<DebtStatus>({ none: true, owing: true, overdue: true })
+export const CHALLENGE_STATUSES = keysOf<ChallengeStatus>({ unplayed: true, lost: true, rematch: true, won: true })
+export const COUNT_OF = keysOf<CountOf>({ busted: true, challengeLost: true, staked: true, repaid: true, missed: true, caught: true })
+/** Counts that belong to a sponsor, and can name one. */
+export const SPONSOR_COUNTS: CountOf[] = ['staked', 'repaid', 'missed', 'caught']
 export const SOUNDS = keysOf<SoundName>({
   deal: true,
   chip: true,
@@ -72,7 +79,7 @@ export const SOUNDS = keysOf<SoundName>({
   cash: true,
 })
 
-export const TRIGGER_KINDS = keysOf<EventTrigger['kind']>({ talkTo: true, interact: true, enterArea: true, standOn: true })
+export const TRIGGER_KINDS = keysOf<EventTrigger['kind']>({ talkTo: true, interact: true, enterArea: true, standOn: true, caught: true })
 export const CONDITION_KINDS = keysOf<EventCondition['kind']>({
   flag: true,
   period: true,
@@ -81,10 +88,20 @@ export const CONDITION_KINDS = keysOf<EventCondition['kind']>({
   hasItem: true,
   hasLesson: true,
   eventDone: true,
+  chapter: true,
+  cashBelow: true,
+  debt: true,
+  hunted: true,
+  challenge: true,
+  count: true,
+  canPay: true,
 })
 export const ACTION_KINDS = keysOf<EventAction['kind']>({
   dialogue: true,
+  choice: true,
+  if: true,
   moveNpc: true,
+  movePlayer: true,
   wait: true,
   setFlag: true,
   clearFlag: true,
@@ -95,14 +112,20 @@ export const ACTION_KINDS = keysOf<EventAction['kind']>({
   startTable: true,
   startPokerNight: true,
   teleport: true,
+  ride: true,
+  takeStake: true,
+  repay: true,
   advancePeriod: true,
   advanceDay: true,
   playSound: true,
   fade: true,
 })
 
+/** What a forced ride may carry: talk, a pause, a quiet change of state. */
+export const RIDE_ACTION_KINDS: Array<RideAction['kind']> = ['dialogue', 'wait', 'setFlag', 'clearFlag', 'giveItem', 'giveCash', 'playSound']
+
 /** Actions after which nothing else in the event runs: the table takes over. */
-export const ENDS_EVENT = new Set<EventAction['kind']>(['startTable', 'startPokerNight'])
+export { ENDS_EVENT }
 
 // ---------------------------------------------------------------------------
 // New things, with sensible blanks.
@@ -118,10 +141,15 @@ export function blankTrigger(kind: EventTrigger['kind'], ids: { character: strin
       return { kind, areaId: ids.area }
     case 'standOn':
       return { kind, areaId: ids.area, col: 1, row: 1 }
+    case 'caught':
+      return { kind }
   }
 }
 
-export function blankCondition(kind: EventCondition['kind'], ids: { item: string; lesson: string; event: string }): EventCondition {
+export function blankCondition(
+  kind: EventCondition['kind'],
+  ids: { item: string; lesson: string; event: string; sponsor?: string },
+): EventCondition {
   switch (kind) {
     case 'flag':
       return { kind, flag: 'wonPokerNight' }
@@ -137,18 +165,51 @@ export function blankCondition(kind: EventCondition['kind'], ids: { item: string
       return { kind, lessonId: ids.lesson }
     case 'eventDone':
       return { kind, eventId: ids.event }
+    case 'chapter':
+      return { kind, cityId: 'silverCreek' }
+    case 'cashBelow':
+      return { kind, amount: 100 }
+    case 'debt':
+      return { kind, status: 'owing' }
+    case 'hunted':
+      return { kind }
+    case 'challenge':
+      return { kind, status: 'lost' }
+    case 'count':
+      return { kind, of: 'busted' }
+    case 'canPay':
+      return { kind, sponsorId: ids.sponsor ?? 'cass' }
   }
 }
 
 export function blankAction(
   kind: EventAction['kind'],
-  ids: { character: string; area: string; table: string; city: string; item: string },
+  ids: { character: string; area: string; table: string; city: string; item: string; sponsor?: string },
 ): EventAction {
   switch (kind) {
     case 'dialogue':
       return { kind, speaker: ids.character, lines: [''] }
+    case 'choice':
+      return {
+        kind,
+        speaker: ids.character,
+        prompt: '',
+        options: [
+          { label: 'Yes', then: [] },
+          { label: 'No', then: [] },
+        ],
+      }
+    case 'if':
+      return { kind, when: [{ kind: 'flag', flag: 'wonPokerNight' }], then: [] }
     case 'moveNpc':
-      return { kind, characterId: ids.character, col: 1, row: 1 }
+      return { kind, characterId: ids.character, to: { col: 1, row: 1 } }
+    case 'movePlayer':
+      return { kind, to: { col: 1, row: 1 } }
+    case 'ride':
+      return { kind, areaId: ids.area, col: 1, row: 1 }
+    case 'takeStake':
+    case 'repay':
+      return { kind, sponsorId: ids.sponsor ?? 'cass' }
     case 'wait':
       return { kind, ms: 500 }
     case 'setFlag':
@@ -241,7 +302,7 @@ export function canonicalCharacter(character: CharacterDef): CharacterDef {
                 ordered(entry, ['period', 'areaId', 'col', 'row', 'lines'] satisfies Array<keyof ScheduleEntry>),
               ),
             },
-            ['art', 'color', 'lines', 'schedule'],
+            ['art', 'color', 'role', 'look', 'lines', 'schedule'],
           )
         : undefined,
     },
@@ -266,6 +327,7 @@ const PART_ORDER = [
   'eventId',
   'done',
   'areaId',
+  'onLoad',
   'col',
   'row',
   'ms',
@@ -274,8 +336,59 @@ const PART_ORDER = [
   'steps',
   'days',
   'sound',
+  'sponsorId',
+  'prompt',
+  'options',
+  'label',
+  'conditions',
+  'hidden',
+  'when',
+  'then',
+  'else',
   'to',
+  'from',
+  'pace',
+  'youFollow',
+  'leaves',
+  'caption',
+  'with',
+  'during',
 ]
+
+/** One condition with its keys in order. */
+const orderedCondition = (c: EventCondition) => ordered(c, PART_ORDER)
+
+/** One action, and every action and condition inside it, with their keys in order. */
+function orderedAction(action: EventAction): EventAction {
+  switch (action.kind) {
+    case 'choice':
+      return ordered(
+        {
+          ...action,
+          options: action.options.map((o) =>
+            ordered({ ...o, conditions: o.conditions?.map(orderedCondition), then: o.then.map(orderedAction) }, PART_ORDER),
+          ),
+        },
+        PART_ORDER,
+      )
+    case 'if':
+      return ordered(
+        { ...action, when: action.when.map(orderedCondition), then: action.then.map(orderedAction), else: action.else?.map(orderedAction) },
+        PART_ORDER,
+      )
+    case 'ride':
+      return ordered({ ...action, during: action.during?.map((a) => orderedAction(a) as RideAction) }, PART_ORDER)
+    case 'moveNpc':
+      return ordered(
+        { ...action, to: action.to === 'player' ? action.to : ordered(action.to, PART_ORDER), from: action.from && ordered(action.from, PART_ORDER) },
+        PART_ORDER,
+      )
+    case 'movePlayer':
+      return ordered({ ...action, to: ordered(action.to, PART_ORDER) }, PART_ORDER)
+    default:
+      return ordered(action, PART_ORDER)
+  }
+}
 
 /** An event with its keys, and its trigger's, conditions' and actions' keys, in the file's order. */
 export function canonicalEvent(event: GameEvent): GameEvent {
@@ -283,8 +396,8 @@ export function canonicalEvent(event: GameEvent): GameEvent {
     {
       ...event,
       trigger: ordered(event.trigger, PART_ORDER),
-      conditions: event.conditions?.map((c) => ordered(c, PART_ORDER)),
-      actions: event.actions.map((a) => ordered(a, PART_ORDER)),
+      conditions: event.conditions?.map(orderedCondition),
+      actions: event.actions.map(orderedAction),
     },
     ['id', 'about', 'trigger', 'conditions', 'repeatable', 'actions'] satisfies Array<keyof GameEvent>,
   )
@@ -410,28 +523,54 @@ export function characterShapeProblems(value: unknown, path = 'character'): Prob
     if (!isObj(value.overworld)) problems.push(`${path}.overworld should be an overworld presence`)
     else {
       const presence = value.overworld
-      keys(presence, `${path}.overworld`, ['lines', 'schedule'], ['art', 'color'], problems)
+      keys(presence, `${path}.overworld`, ['lines', 'schedule'], ['art', 'color', 'role', 'look', 'chapters'], problems)
       lineList(presence.lines, `${path}.overworld.lines`, problems)
+      // The street clothes: a uniform, and what the portrait never shows.
+      if (presence.role !== undefined) string(presence.role, `${path}.overworld.role`, problems, true)
+      if (presence.look !== undefined && !isObj(presence.look)) problems.push(`${path}.overworld.look should be a look`)
       if (presence.color !== undefined) integer(presence.color, `${path}.overworld.color`, problems, 0)
-      if (!Array.isArray(presence.schedule)) problems.push(`${path}.overworld.schedule should be a list`)
-      else {
-        presence.schedule.forEach((entry, i) => {
-          const at = `${path}.overworld.schedule[${i}]`
-          if (!isObj(entry)) {
-            problems.push(`${at} is not a schedule entry`)
-            return
-          }
-          keys(entry, at, ['period', 'areaId', 'col', 'row'], ['lines'], problems)
-          oneOf(entry.period, TIME_PERIODS, `${at}.period`, problems)
-          string(entry.areaId, `${at}.areaId`, problems, true)
-          integer(entry.col, `${at}.col`, problems, 0)
-          integer(entry.row, `${at}.row`, problems, 0)
-          if (entry.lines !== undefined) lineList(entry.lines, `${at}.lines`, problems)
-        })
+      scheduleShape(presence.schedule, `${path}.overworld.schedule`, problems)
+      if (presence.chapters !== undefined) {
+        if (!Array.isArray(presence.chapters)) problems.push(`${path}.overworld.chapters should be a list`)
+        else {
+          presence.chapters.forEach((chapter, i) => {
+            const at = `${path}.overworld.chapters[${i}]`
+            if (!isObj(chapter)) {
+              problems.push(`${at} is not a chapter`)
+              return
+            }
+            keys(chapter, at, ['when', 'schedule'], ['lines'], problems)
+            if (!Array.isArray(chapter.when)) problems.push(`${at}.when should be a list of conditions`)
+            else chapter.when.forEach((c, j) => conditionShape(c, `${at}.when[${j}]`, problems))
+            scheduleShape(chapter.schedule, `${at}.schedule`, problems)
+            if (chapter.lines !== undefined) lineList(chapter.lines, `${at}.lines`, problems)
+          })
+        }
       }
     }
   }
   return problems
+}
+
+/** A list of where somebody is, hour by hour: their usual day or a chapter's. */
+function scheduleShape(value: unknown, path: string, problems: Problems) {
+  if (!Array.isArray(value)) {
+    problems.push(`${path} should be a list`)
+    return
+  }
+  value.forEach((entry, i) => {
+    const at = `${path}[${i}]`
+    if (!isObj(entry)) {
+      problems.push(`${at} is not a schedule entry`)
+      return
+    }
+    keys(entry, at, ['period', 'areaId', 'col', 'row'], ['lines'], problems)
+    oneOf(entry.period, TIME_PERIODS, `${at}.period`, problems)
+    string(entry.areaId, `${at}.areaId`, problems, true)
+    integer(entry.col, `${at}.col`, problems, 0)
+    integer(entry.row, `${at}.row`, problems, 0)
+    if (entry.lines !== undefined) lineList(entry.lines, `${at}.lines`, problems)
+  })
 }
 
 function triggerShape(value: unknown, path: string, problems: Problems) {
@@ -449,14 +588,18 @@ function triggerShape(value: unknown, path: string, problems: Problems) {
       string(value.poiId, `${path}.poiId`, problems, true)
       return
     case 'enterArea':
-      keys(value, path, ['kind', 'areaId'], [], problems)
+      keys(value, path, ['kind', 'areaId'], ['onLoad'], problems)
       string(value.areaId, `${path}.areaId`, problems, true)
+      if (value.onLoad !== undefined && typeof value.onLoad !== 'boolean') problems.push(`${path}.onLoad should be true or false`)
       return
     case 'standOn':
       keys(value, path, ['kind', 'areaId', 'col', 'row'], [], problems)
       string(value.areaId, `${path}.areaId`, problems, true)
       integer(value.col, `${path}.col`, problems, 0)
       integer(value.row, `${path}.row`, problems, 0)
+      return
+    case 'caught':
+      keys(value, path, ['kind'], [], problems)
       return
     default:
       problems.push(`${path}.kind should be one of ${TRIGGER_KINDS.join(', ')}`)
@@ -502,6 +645,46 @@ function conditionShape(value: unknown, path: string, problems: Problems) {
       string(value.eventId, `${path}.eventId`, problems, true)
       if (value.done !== undefined && typeof value.done !== 'boolean') problems.push(`${path}.done should be true or false`)
       return
+    case 'chapter': {
+      keys(value, path, ['kind', 'cityId'], [], problems)
+      const towns = Array.isArray(value.cityId) ? value.cityId : [value.cityId]
+      if (towns.length === 0) problems.push(`${path} names no town`)
+      towns.forEach((t, i) => oneOf(t, TOWN_ORDER, `${path}.cityId[${i}]`, problems))
+      return
+    }
+    case 'cashBelow':
+      keys(value, path, ['kind', 'amount'], [], problems)
+      integer(value.amount, `${path}.amount`, problems, 1)
+      return
+    case 'debt':
+    case 'challenge': {
+      keys(value, path, ['kind', 'status'], value.kind === 'debt' ? ['sponsorId'] : [], problems)
+      if (value.sponsorId !== undefined) string(value.sponsorId, `${path}.sponsorId`, problems, true)
+      const statuses = Array.isArray(value.status) ? value.status : [value.status]
+      if (statuses.length === 0) problems.push(`${path} names no status`)
+      const allowed = value.kind === 'debt' ? DEBT_STATUSES : CHALLENGE_STATUSES
+      statuses.forEach((s, i) => oneOf(s, allowed, `${path}.status[${i}]`, problems))
+      return
+    }
+    case 'hunted':
+      keys(value, path, ['kind'], ['sponsorId', 'set'], problems)
+      if (value.sponsorId !== undefined) string(value.sponsorId, `${path}.sponsorId`, problems, true)
+      if (value.set !== undefined && typeof value.set !== 'boolean') problems.push(`${path}.set should be true or false`)
+      return
+    case 'canPay':
+      keys(value, path, ['kind', 'sponsorId'], [], problems)
+      string(value.sponsorId, `${path}.sponsorId`, problems, true)
+      return
+    case 'count':
+      keys(value, path, ['kind', 'of'], ['sponsorId', 'atLeast', 'atMost'], problems)
+      oneOf(value.of, COUNT_OF, `${path}.of`, problems)
+      if (value.sponsorId !== undefined) {
+        string(value.sponsorId, `${path}.sponsorId`, problems, true)
+        if (!SPONSOR_COUNTS.includes(value.of as CountOf)) problems.push(`${path}.sponsorId only goes with a sponsor's count`)
+      }
+      if (value.atLeast !== undefined) integer(value.atLeast, `${path}.atLeast`, problems, 0)
+      if (value.atMost !== undefined) integer(value.atMost, `${path}.atMost`, problems, 0)
+      return
     default:
       problems.push(`${path}.kind should be one of ${CONDITION_KINDS.join(', ')}`)
   }
@@ -519,12 +702,78 @@ function actionShape(value: unknown, path: string, problems: Problems) {
       if (value.speaker !== undefined) string(value.speaker, `${path}.speaker`, problems, true)
       lineList(value.lines, `${path}.lines`, problems)
       return
+    case 'choice': {
+      keys(value, path, ['kind', 'prompt', 'options'], ['speaker'], problems)
+      if (value.speaker !== undefined) string(value.speaker, `${path}.speaker`, problems, true)
+      string(value.prompt, `${path}.prompt`, problems)
+      if (!Array.isArray(value.options)) {
+        problems.push(`${path}.options should be a list`)
+        return
+      }
+      value.options.forEach((option, i) => {
+        const at = `${path}.options[${i}]`
+        if (!isObj(option)) {
+          problems.push(`${at} is not an answer`)
+          return
+        }
+        keys(option, at, ['label', 'then'], ['conditions', 'hidden'], problems)
+        string(option.label, `${at}.label`, problems)
+        if (option.hidden !== undefined && typeof option.hidden !== 'boolean') problems.push(`${at}.hidden should be true or false`)
+        conditionList(option.conditions, `${at}.conditions`, problems, true)
+        actionList(option.then, `${at}.then`, problems)
+      })
+      return
+    }
+    case 'if':
+      keys(value, path, ['kind', 'when', 'then'], ['else'], problems)
+      conditionList(value.when, `${path}.when`, problems)
+      actionList(value.then, `${path}.then`, problems)
+      if (value.else !== undefined) actionList(value.else, `${path}.else`, problems)
+      return
     case 'moveNpc':
+      keys(value, path, ['kind', 'characterId', 'to'], ['from', 'pace', 'youFollow', 'leaves'], problems)
+      string(value.characterId, `${path}.characterId`, problems, true)
+      if (value.to !== 'player') tileShape(value.to, `${path}.to`, problems)
+      if (value.from !== undefined) tileShape(value.from, `${path}.from`, problems)
+      if (value.pace !== undefined) oneOf(value.pace, ['walk', 'run'], `${path}.pace`, problems)
+      for (const flag of ['youFollow', 'leaves'] as const) {
+        if (value[flag] !== undefined && typeof value[flag] !== 'boolean') problems.push(`${path}.${flag} should be true or false`)
+      }
+      return
+    case 'movePlayer':
+      keys(value, path, ['kind', 'to'], ['pace'], problems)
+      tileShape(value.to, `${path}.to`, problems)
+      if (value.pace !== undefined) oneOf(value.pace, ['walk', 'run'], `${path}.pace`, problems)
+      return
     case 'teleport':
-      keys(value, path, ['kind', kind === 'moveNpc' ? 'characterId' : 'areaId', 'col', 'row'], [], problems)
-      string(kind === 'moveNpc' ? value.characterId : value.areaId, `${path}.${kind === 'moveNpc' ? 'characterId' : 'areaId'}`, problems, true)
+      keys(value, path, ['kind', 'areaId', 'col', 'row'], ['with'], problems)
+      string(value.areaId, `${path}.areaId`, problems, true)
       integer(value.col, `${path}.col`, problems, 0)
       integer(value.row, `${path}.row`, problems, 0)
+      if (value.with !== undefined) idList(value.with, `${path}.with`, problems)
+      return
+    case 'ride':
+      keys(value, path, ['kind', 'areaId', 'col', 'row'], ['caption', 'with', 'during'], problems)
+      string(value.areaId, `${path}.areaId`, problems, true)
+      integer(value.col, `${path}.col`, problems, 0)
+      integer(value.row, `${path}.row`, problems, 0)
+      if (value.caption !== undefined) string(value.caption, `${path}.caption`, problems)
+      if (value.with !== undefined) idList(value.with, `${path}.with`, problems)
+      if (value.during !== undefined) {
+        actionList(value.during, `${path}.during`, problems)
+        if (Array.isArray(value.during)) {
+          value.during.forEach((a, i) => {
+            if (isObj(a) && !RIDE_ACTION_KINDS.includes(a.kind as RideAction['kind'])) {
+              problems.push(`${path}.during[${i}] cannot happen on a bus: only ${RIDE_ACTION_KINDS.join(', ')}`)
+            }
+          })
+        }
+      }
+      return
+    case 'takeStake':
+    case 'repay':
+      keys(value, path, ['kind', 'sponsorId'], [], problems)
+      string(value.sponsorId, `${path}.sponsorId`, problems, true)
       return
     case 'wait':
       keys(value, path, ['kind', 'ms'], [], problems)
@@ -576,6 +825,32 @@ function actionShape(value: unknown, path: string, problems: Problems) {
   }
 }
 
+function tileShape(value: unknown, path: string, problems: Problems) {
+  if (!isObj(value)) {
+    problems.push(`${path} should be a tile, { col, row }`)
+    return
+  }
+  keys(value, path, ['col', 'row'], [], problems)
+  integer(value.col, `${path}.col`, problems, 0)
+  integer(value.row, `${path}.row`, problems, 0)
+}
+
+function idList(value: unknown, path: string, problems: Problems) {
+  if (!Array.isArray(value)) problems.push(`${path} should be a list of ids`)
+  else value.forEach((id, i) => string(id, `${path}[${i}]`, problems, true))
+}
+
+function conditionList(value: unknown, path: string, problems: Problems, optional = false) {
+  if (value === undefined && optional) return
+  if (!Array.isArray(value)) problems.push(`${path} should be a list`)
+  else value.forEach((c, i) => conditionShape(c, `${path}[${i}]`, problems))
+}
+
+function actionList(value: unknown, path: string, problems: Problems) {
+  if (!Array.isArray(value)) problems.push(`${path} should be a list`)
+  else value.forEach((a, i) => actionShape(a, `${path}[${i}]`, problems))
+}
+
 /** Problems with the shape of an event, as received from a browser. */
 export function eventShapeProblems(value: unknown, path = 'event'): Problems {
   const problems: Problems = []
@@ -608,18 +883,34 @@ export interface Names {
   item: (id: string) => string
   lesson: (id: string) => string
   city: (id: string) => string
+  /** Optional, so older callers still describe a sponsor by id. */
+  sponsor?: (id: string) => string
 }
 
-const FLAG_WORDS: Record<StoryFlag, string> = {
-  wonPokerNight: 'you have won the first poker night',
-  beatFinalRival: 'you have beaten the final rival',
-  hasPenthouse: 'you own the penthouse',
+const FLAG_WORDS = Object.fromEntries(STORY_FLAG_IDS.map((f) => [f, FLAG_MEANING[f].set])) as Record<StoryFlag, string>
+const NOT_FLAG_WORDS = Object.fromEntries(STORY_FLAG_IDS.map((f) => [f, FLAG_MEANING[f].clear])) as Record<StoryFlag, string>
+
+const DEBT_WORDS: Record<DebtStatus, string> = { none: 'owe nothing', owing: 'owe, on time', overdue: 'are past due' }
+const CHALLENGE_WORDS: Record<ChallengeStatus, string> = {
+  unplayed: 'not played yet',
+  lost: 'lost, and she is making you wait',
+  rematch: 'lost, and she will play you again now',
+  won: 'won',
+}
+const COUNT_WORDS: Record<CountOf, string> = {
+  busted: 'gone broke',
+  challengeLost: 'lost the match',
+  staked: 'taken a stake',
+  repaid: 'paid a stake back',
+  missed: 'missed a stake',
+  caught: 'been caught by collectors',
 }
 
-const NOT_FLAG_WORDS: Record<StoryFlag, string> = {
-  wonPokerNight: 'you have not won the first poker night yet',
-  beatFinalRival: 'you have not beaten the final rival yet',
-  hasPenthouse: 'you do not own the penthouse',
+function timesWords(atLeast: number | undefined, atMost: number | undefined): string {
+  if (atMost === 0) return 'never'
+  const low = atLeast ?? (atMost === undefined ? 1 : 0)
+  if (atMost === undefined) return low <= 1 ? 'at least once' : `at least ${low} times`
+  return low === atMost ? `exactly ${low} times` : `${low} to ${atMost} times`
 }
 
 const listOf = (items: string[]) =>
@@ -632,9 +923,11 @@ export function describeTrigger(trigger: EventTrigger, names: Names): string {
     case 'interact':
       return `When you use ${names.poi(trigger.poiId)}`
     case 'enterArea':
-      return `When you walk into ${names.area(trigger.areaId)}`
+      return `When you walk into ${names.area(trigger.areaId)}${trigger.onLoad ? ', or a save is loaded there' : ''}`
     case 'standOn':
       return `When you step on (${trigger.col},${trigger.row}) in ${names.area(trigger.areaId)}`
+    case 'caught':
+      return 'When the collectors catch you'
   }
 }
 
@@ -658,8 +951,32 @@ export function describeCondition(condition: EventCondition, names: Names): stri
       return (condition.done ?? true)
         ? `“${condition.eventId}” has happened`
         : `“${condition.eventId}” has not happened yet`
+    case 'chapter': {
+      const towns = Array.isArray(condition.cityId) ? condition.cityId : [condition.cityId]
+      return `the furthest you have got is ${listOf(towns.map(names.city))}`
+    }
+    case 'cashBelow':
+      return `you have less than $${condition.amount.toLocaleString('en-US')}`
+    case 'debt': {
+      const who = condition.sponsorId ? (names.sponsor?.(condition.sponsorId) ?? condition.sponsorId) : 'everybody'
+      return `to ${who} you ${listOf([condition.status].flat().map((s) => DEBT_WORDS[s]))}`
+    }
+    case 'hunted': {
+      const whose = condition.sponsorId ? `${names.sponsor?.(condition.sponsorId) ?? condition.sponsorId}'s collectors are` : 'collectors are'
+      return (condition.set ?? true) ? `${whose} working this town` : `${whose} not working this town`
+    }
+    case 'challenge':
+      return `the match is ${listOf([condition.status].flat().map((s) => CHALLENGE_WORDS[s]))}`
+    case 'count': {
+      const whose = condition.sponsorId ? ` with ${names.sponsor?.(condition.sponsorId) ?? condition.sponsorId}` : ''
+      return `you have ${COUNT_WORDS[condition.of]}${whose} ${timesWords(condition.atLeast, condition.atMost)}`
+    }
+    case 'canPay':
+      return `you can pay ${names.sponsor?.(condition.sponsorId) ?? condition.sponsorId} back in full`
   }
 }
+
+const spotWords = (spot: Spot) => (spot === 'player' ? 'up to you' : `to (${spot.col},${spot.row})`)
 
 /** A line without its "Marcus: " label, when the label is just the speaker's name again. */
 function spoken(line: string, who: string): string {
@@ -675,8 +992,28 @@ export function describeAction(action: EventAction, names: Names): string {
       const more = action.lines.length > 1 ? ` (+${action.lines.length - 1} more)` : ''
       return action.speaker ? `${who} says “${first}”${more}` : `${who} reads “${first}”${more}`
     }
-    case 'moveNpc':
-      return `${names.character(action.characterId)} walks to (${action.col},${action.row})`
+    case 'choice':
+      return `${action.speaker ? names.character(action.speaker) : 'you are'} ${action.speaker ? 'asks' : 'asked'} “${action.prompt}” — ${action.options.map((o) => `“${o.label}”`).join(' or ')}`
+    case 'if':
+      return `if ${action.when.map((c) => describeCondition(c, names)).join(' and ')}…`
+    case 'moveNpc': {
+      const who = names.character(action.characterId)
+      const how = action.pace === 'run' ? 'runs' : 'walks'
+      const from = action.from ? ` from (${action.from.col},${action.from.row})` : ''
+      const follow = action.youFollow ? ', and you walk behind' : ''
+      const leaves = action.leaves ? ', and goes' : ''
+      return `${who} ${how}${from} ${spotWords(action.to)}${follow}${leaves}`
+    }
+    case 'movePlayer':
+      return `you ${action.pace === 'run' ? 'run' : 'walk'} ${spotWords(action.to)}`
+    case 'ride': {
+      const company = action.with?.length ? ` with ${listOf(action.with.map(names.character))}` : ''
+      return `you ride the bus to ${names.area(action.areaId)}${company}, and cannot get off`
+    }
+    case 'takeStake':
+      return `you take ${names.sponsor?.(action.sponsorId) ?? action.sponsorId}'s stake`
+    case 'repay':
+      return `you pay ${names.sponsor?.(action.sponsorId) ?? action.sponsorId} back what you owe`
     case 'wait':
       return `a pause of ${action.ms}ms`
     case 'setFlag':
@@ -697,8 +1034,10 @@ export function describeAction(action: EventAction, names: Names): string {
       return `you sit down at ${names.table(action.tableId)}`
     case 'startPokerNight':
       return 'the poker night starts'
-    case 'teleport':
-      return `you find yourself in ${names.area(action.areaId)} at (${action.col},${action.row})`
+    case 'teleport': {
+      const company = action.with?.length ? `, with ${listOf(action.with.map(names.character))}` : ''
+      return `you find yourself in ${names.area(action.areaId)} at (${action.col},${action.row})${company}`
+    }
     case 'advancePeriod':
       return (action.steps ?? 1) === 1 ? 'the hour moves on' : `${action.steps} hours pass`
     case 'advanceDay':
@@ -717,6 +1056,8 @@ export interface ScriptLine {
   step: number
   /** A further line of the same conversation. */
   more?: boolean
+  /** How far inside a choice or an `if` it is: 0 for the event's own steps. */
+  depth?: number
 }
 
 /** The whole event read as a little script, one row per beat and per line spoken. */
@@ -727,17 +1068,53 @@ export function describeEvent(event: GameEvent, names: Names): ScriptLine[] {
     (conditions.length > 0 ? `, if ${conditions.join(' and ')}` : '') +
     (event.repeatable ? ' (every time)' : ' (once)') +
     ':'
-  const beats = event.actions.flatMap((action, i): ScriptLine[] => {
+  return [{ text: opening, step: 0 }, ...describeActions(event.actions, names, 0)]
+}
+
+/** A list of actions read aloud, with what is inside a choice or an `if` indented under it. */
+function describeActions(actions: EventAction[], names: Names, depth: number, stepOf?: number): ScriptLine[] {
+  return actions.flatMap((action, i): ScriptLine[] => {
     const then = i === 0 ? '' : 'then '
-    const step = i + 1
-    if (action.kind !== 'dialogue' || action.lines.length <= 1) return [{ text: `${then}${describeAction(action, names)}`, step }]
-    // A conversation reads better as the lines themselves than as "(+2 more)".
-    const who = action.speaker ? names.character(action.speaker) : 'a caption'
-    const [first, ...rest] = action.lines
-    return [
-      { text: `${then}${describeAction({ ...action, lines: [first] }, names)}`, step },
-      ...rest.map((line) => ({ text: `“${spoken(line, who)}”`, step, more: true })),
+    const step = stepOf ?? i + 1
+    const at = depth > 0 ? { depth } : {}
+    const inner = (lead: string, list: EventAction[]): ScriptLine[] => [
+      { text: lead, step, ...{ depth: depth + 1 } },
+      ...describeActions(list, names, depth + 2, step),
     ]
+    switch (action.kind) {
+      case 'choice':
+        return [
+          { text: `${then}${describeAction(action, names)}`, step, ...at },
+          ...action.options.flatMap((option) => {
+            const open = option.conditions?.length
+              ? `, open if ${option.conditions.map((c) => describeCondition(c, names)).join(' and ')}`
+              : ''
+            return inner(`answer “${option.label}”${open}:`, option.then)
+          }),
+        ]
+      case 'if':
+        return [
+          { text: `${then}${describeAction(action, names)}`, step, ...at },
+          ...describeActions(action.then, names, depth + 1, step),
+          ...(action.else ? inner('otherwise:', action.else) : []),
+        ]
+      case 'ride':
+        return [
+          { text: `${then}${describeAction(action, names)}`, step, ...at },
+          ...describeActions(action.during ?? [], names, depth + 1, step),
+        ]
+      case 'dialogue': {
+        if (action.lines.length <= 1) return [{ text: `${then}${describeAction(action, names)}`, step, ...at }]
+        // A conversation reads better as the lines themselves than as "(+2 more)".
+        const who = action.speaker ? names.character(action.speaker) : 'a caption'
+        const [first, ...rest] = action.lines
+        return [
+          { text: `${then}${describeAction({ ...action, lines: [first] }, names)}`, step, ...at },
+          ...rest.map((line) => ({ text: `“${spoken(line, who)}”`, step, more: true, ...at })),
+        ]
+      }
+      default:
+        return [{ text: `${then}${describeAction(action, names)}`, step, ...at }]
+    }
   })
-  return [{ text: opening, step: 0 }, ...beats]
 }

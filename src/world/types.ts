@@ -107,6 +107,11 @@ export interface SponsorDef {
   interestRate: number
   dueInDays: number
   pitch: string[]
+  /**
+   * Who they send when a stake runs out: a character id. Their face is the one
+   * that chases you down the street, and `caught` beats are written for them.
+   */
+  collector: string
 }
 
 export type MissionGoal =

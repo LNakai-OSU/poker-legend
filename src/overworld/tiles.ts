@@ -76,11 +76,36 @@ export const DIRT = 36
  */
 export const CROSSWALK = 37
 
+// --- more floors -----------------------------------------------------------
+// Every shop used to stand on one of two plank floors or the same speckled
+// vinyl, so a boutique, an outfitters and a boat showroom were the same room.
+
+/** Woven seagrass matting: the island boutique. */
+export const SEAGRASS = 38
+/** Blue-grey slate flags: the riverside outfitters. */
+export const SLATE = 39
+/** Pale polished concrete in big slabs: a showroom. */
+export const SHOWROOM = 40
+/** Terracotta squares with a painted tile now and then: the trading post. */
+export const SALTILLO = 41
+/** Cream and sage vinyl in a chequer: the corner shop. */
+export const VINYL = 42
+/** Dark oak laid in a chevron: the members' club. */
+export const PARQUET = 43
+/** Mint and cream lino in diamonds: the riverside diner. */
+export const DINER_LINO = 44
+/** Wall-to-wall carpet, brown and worn, with a trellis in it: a front room. */
+export const SHAG = 45
+/** Navy carpet with a gold lattice: the riverboat's saloon. */
+export const CARPET_NAVY = 46
+
 const WALKABLE = new Set([
   FLOOR, CARPET, ROAD, SIDEWALK, GRASS, DOOR, SAND, FLOWER, PLAZA,
   WOOD_FLOOR, CHECKER, TILE_FLOOR, MARBLE, DECK, LINO,
   CARPET_GREEN, CARPET_TEAL, CARPET_NEON, CARPET_ROYAL, CARPET_VIOLET,
   DIRT, CROSSWALK,
+  SEAGRASS, SLATE, SHOWROOM, SALTILLO, VINYL,
+  PARQUET, DINER_LINO, SHAG, CARPET_NAVY,
 ])
 
 /** The faces of back walls: solid, drawn front-on, with a floor in front of them. */
@@ -90,7 +115,7 @@ export const WALL_FACES = new Set([
 ])
 
 /** Floors that are laid as a carpet, and so get a border where they stop. */
-export const CARPETS = new Set([CARPET, CARPET_GREEN, CARPET_TEAL, CARPET_NEON, CARPET_ROYAL, CARPET_VIOLET])
+export const CARPETS = new Set([CARPET, CARPET_GREEN, CARPET_TEAL, CARPET_NEON, CARPET_ROYAL, CARPET_VIOLET, CARPET_NAVY])
 
 /**
  * Every tile, with the character that writes it and a name to show a person.
@@ -139,6 +164,15 @@ export const TILE_VOCABULARY: Array<{ tile: number; char: string; name: string }
   { tile: CARPET_VIOLET, char: '%', name: 'Violet carpet' },
   { tile: DIRT, char: '_', name: 'Dirt track' },
   { tile: CROSSWALK, char: 'z', name: 'Crossing' },
+  { tile: SEAGRASS, char: 'r', name: 'Seagrass matting' },
+  { tile: SLATE, char: 'y', name: 'Slate flags' },
+  { tile: SHOWROOM, char: 'e', name: 'Showroom concrete' },
+  { tile: SALTILLO, char: 'x', name: 'Terracotta tiles' },
+  { tile: VINYL, char: 'v', name: 'Vinyl chequer' },
+  { tile: PARQUET, char: 'H', name: 'Parquet' },
+  { tile: DINER_LINO, char: 'G', name: 'Diamond lino' },
+  { tile: SHAG, char: 'A', name: 'Front-room carpet' },
+  { tile: CARPET_NAVY, char: 'R', name: 'Saloon carpet' },
 ]
 
 /** The character that writes each tile, for turning a grid back into a sketch. */

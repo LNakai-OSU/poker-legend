@@ -36,7 +36,34 @@ export type WalkFrame = 0 | 1 | 2
  * ones a character with a seat may use; the rest exist to keep a street full of
  * strangers from wearing three haircuts between them.
  */
-export type PersonHairStyle = AvatarLook['hairStyle'] | 'bob' | 'curly' | 'spiky' | 'bun' | 'buzz'
+export type PersonHairStyle =
+  | AvatarLook['hairStyle']
+  | 'bob' | 'curly' | 'spiky' | 'bun' | 'buzz'
+  | 'afro' | 'pigtails' | 'slick' | 'shaggy'
+
+/** Hats somebody can wear of their own accord, rather than because their job hands them one. */
+export type StreetHat = 'cap' | 'beanie' | 'fedora' | 'sunhat' | 'cowboy' | 'beret'
+
+/**
+ * What goes over the shirt, for somebody in their own clothes. Without it a
+ * street was thirty people in one T-shirt in thirty colours.
+ */
+export type Garment =
+  /** An open jacket, the shirt showing down the front. */
+  | 'jacket'
+  /** A waistcoat over the shirt, its sleeves showing. */
+  | 'vest'
+  /** A hood at the back of the neck, a pocket across the front. */
+  | 'hoodie'
+  /** A bib and braces over the shirt, the same cloth down the legs. */
+  | 'overalls'
+  /** Bands of the garment colour across the shirt. */
+  | 'stripes'
+  /** A cardigan buttoned up the front. */
+  | 'cardigan'
+
+export const STREET_HATS: StreetHat[] = ['cap', 'beanie', 'fedora', 'sunhat', 'cowboy', 'beret']
+export const GARMENTS: Garment[] = ['jacket', 'vest', 'hoodie', 'overalls', 'stripes', 'cardigan']
 
 /**
  * What somebody is wearing on the street — their table look and the rest of them.
@@ -53,6 +80,14 @@ export interface PersonLook extends Omit<AvatarLook, 'hairStyle'> {
   lower?: 'trousers' | 'shorts' | 'skirt'
   /** Short sleeves show the forearm. Long unless said otherwise. */
   sleeves?: 'long' | 'short'
+  /** A hat of their own. A uniform's hat wins over it. */
+  hat?: StreetHat
+  /** The hat's colour. A cap is navy and a beanie red unless said otherwise. */
+  hatColor?: string
+  /** What they wear over the shirt, in their own clothes. A uniform covers it. */
+  garment?: Garment
+  /** The garment's colour: the jacket, the waistcoat, the overalls, the stripes. */
+  garmentColor?: string
 }
 
 /**
@@ -98,7 +133,7 @@ export const NPC_ROLES: NpcRole[] = [
 ]
 
 export const PERSON_HAIR_STYLES: PersonHairStyle[] = [
-  'short', 'long', 'tied', 'bald', 'bob', 'curly', 'spiky', 'bun', 'buzz',
+  'short', 'long', 'tied', 'bald', 'bob', 'curly', 'spiky', 'bun', 'buzz', 'afro', 'pigtails', 'slick', 'shaggy',
 ]
 
 // ---------------------------------------------------------------------------
@@ -798,6 +833,153 @@ const HAIR: Record<PersonHairStyle, ViewSet> = {
       '.........hhh....',
     )],
   },
+  /** A round cloud of hair, wider than the head, low on the brow. */
+  afro: {
+    down: [at(0,
+      '................',
+      '.....HHHHHH.....',
+      '...HHGGHHHHHH...',
+      '..HGGHHHHHHHHh..',
+      '.HGHHHHHHHHHHhh.',
+      '.HGHHHHHHHHHHhh.',
+      '.HHHHHHHHHHHhhh.',
+      '.HHH........hhh.',
+      '.HHh........hhh.',
+      '.Hh..........hh.',
+      '..h..........h..',
+    )],
+    up: [at(0,
+      '................',
+      '.....HHHHHH.....',
+      '...HHGGHHHHHH...',
+      '..HGGHHHHHHHHh..',
+      '.HGHHHHHHHHHHhh.',
+      '.HGHHHHHHHHHHhh.',
+      '.HHHHHHHHHHHhhh.',
+      '.HHHHHHHHHHHhhh.',
+      '.HHHHHHHHHHhhhh.',
+      '.hHHHHHHHHHhhh..',
+      '..hhHHHHHHhhh...',
+    )],
+    left: [at(0,
+      '................',
+      '.....HHHHHH.....',
+      '...HHGGHHHHHH...',
+      '..HGGHHHHHHHHh..',
+      '.HGHHHHHHHHHHhh.',
+      '.HGHHHHHHHHHHhh.',
+      '.HHH.HHHHHHHhhh.',
+      '.Hh...HHHHHHhhh.',
+      '.......sHHHHhhh.',
+      '.......SsHHHhhh.',
+      '.........hhhh...',
+    )],
+  },
+  /** Two bunches tied either side with ribbon. */
+  pigtails: {
+    down: [at(3,
+      '.....HHHHHH.....',
+      '...HGGHHHHHHH...',
+      '..HGHHHHHHHHHh..',
+      '..HGHHHHHHHHhh..',
+      '..HHH..hH..hhh..',
+      '.YHh........hhY.',
+      'HHh..........hHh',
+      'HHh..........hHh',
+      '.h............h.',
+    )],
+    up: [at(3,
+      '.....HHHHHH.....',
+      '...HGGHHHHHHH...',
+      '..HGHHHHHHHHHh..',
+      '..HGHHHHHHHHhh..',
+      '..HHHHHHHHHHhh..',
+      '.YHHHHHHHHHHhhY.',
+      'HHhHHHHHHHHHhhHh',
+      'HHh.hhHHHHhhh.Hh',
+      '.h............h.',
+    )],
+    left: [at(3,
+      '.....HHHHHH.....',
+      '...HHGGHHHHHH...',
+      '..HGGHHHHHHHHh..',
+      '..HGHHHHHHHHhh..',
+      '..h..HHHHHHHhhY.',
+      '.......sHHHHhHHh',
+      '.......SsHHhhHHh',
+      '.........hhh.hh.',
+    )],
+  },
+  /** Combed straight back with a shine on it: a high forehead and no fringe. */
+  slick: {
+    down: [at(3,
+      '.....HHHHHH.....',
+      '...HHHGGGHHHH...',
+      '..HHGGHHHHHHhh..',
+      '..HGHHHHHHHHhh..',
+      '..Hh........hh..',
+    )],
+    up: [at(3,
+      '.....HHHHHH.....',
+      '...HHHGGGHHHH...',
+      '..HHGGHHHHHHhh..',
+      '..HGHHHHHHHHhh..',
+      '..HHHHHHHHHHhh..',
+      '..hHHHHHHHHHhh..',
+      '...hHHHHHHHhh...',
+      '....hhhhhhhh....',
+    )],
+    left: [at(3,
+      '.....HHHHHH.....',
+      '...HHGGGHHHHH...',
+      '..HGGHHHHHHHHh..',
+      '..h.HHHHHHHHhh..',
+      '.......sHHHHhh..',
+      '.......SsHHhhh..',
+      '.........hhhh...',
+    )],
+  },
+  /** Grown out and unbrushed: a fringe in strands to the eyes, ragged at the neck. */
+  shaggy: {
+    down: [at(2,
+      '................',
+      '....HHHHHHH.....',
+      '..HHGGHHHHHHH...',
+      '..HGHHHHHHHHHh..',
+      '.HGHHHHHHHHHhhh.',
+      '.HHHhHHhHHhHhhh.',
+      '.HHh..h..h..hhh.',
+      '.Hh..........hh.',
+      '.h...........hh.',
+      '..............h.',
+    )],
+    up: [at(2,
+      '................',
+      '....HHHHHHH.....',
+      '..HHGGHHHHHHH...',
+      '..HGHHHHHHHHHh..',
+      '.HGHHHHHHHHHhhh.',
+      '.HHHHHHHHHHHhhh.',
+      '.HHHHHHHHHHHhhh.',
+      '.HHHHHHHHHHHhhh.',
+      '.hHHHHHHHHHHhhh.',
+      '..HhHHhHHhHHhh..',
+      '..h..h..h..h....',
+    )],
+    left: [at(2,
+      '................',
+      '....HHHHHHH.....',
+      '..HHGGHHHHHHH...',
+      '..HGHHHHHHHHHh..',
+      '.HGHHHHHHHHHhhh.',
+      '.HHhHHHHHHHHhhh.',
+      '..h.h.HHHHHHhhh.',
+      '.......sHHHHhhh.',
+      '.......SsHHHhhh.',
+      '........HhHhhh..',
+      '........h..h....',
+    )],
+  },
   buzz: {
     down: [at(3,
       '....HHHHHHHH....',
@@ -836,7 +1018,7 @@ const HAIR: Record<PersonHairStyle, ViewSet> = {
 type View = 'down' | 'up' | 'left'
 type ViewLayers = Partial<Record<View, Layer[]>>
 
-type HatKind = 'cap' | 'visor' | 'officer' | 'pillbox' | 'toque' | 'sunhat' | 'beanie' | 'fedora' | 'hero'
+type HatKind = StreetHat | 'visor' | 'officer' | 'pillbox' | 'toque' | 'hero'
 
 interface Hat {
   views: Record<View, Layer[]>
@@ -1040,6 +1222,60 @@ const HATS: Record<HatKind, Hat> = {
       )],
     },
   },
+  /** A cattleman's hat: a creased crown and a brim that turns up at both ends. */
+  cowboy: {
+    hairFrom: 7,
+    views: {
+      down: [at(1,
+        '.....KCCCCc.....',
+        '....KCcCCcCc....',
+        '....KCCCCCCc....',
+        '.K..xxxxxxxx..c.',
+        '.KCCCCCCCCCCCcc.',
+        '..cccccccccccc..',
+      )],
+      up: [at(1,
+        '.....KCCCCc.....',
+        '....KCCCCCCc....',
+        '....KCCCCCCc....',
+        '.K..xxxxxxxx..c.',
+        '.KCCCCCCCCCCCcc.',
+        '..cccccccccccc..',
+      )],
+      left: [at(1,
+        '.....KCCCc......',
+        '....KCcCCCc.....',
+        '....KCCCCCc.....',
+        'K...xxxxxxx..c..',
+        'KCCCCCCCCCCCcc..',
+        '.ccccccccccc....',
+      )],
+    },
+  },
+  /** A beret, worn over one ear. */
+  beret: {
+    hairFrom: 5,
+    views: {
+      down: [at(2,
+        '.......Kc.......',
+        '...KKCCCCCCc....',
+        '..KCCCCCCCCCcc..',
+        '..cCCCCCCCCCcc..',
+      )],
+      up: [at(2,
+        '.......Kc.......',
+        '...KKCCCCCCc....',
+        '..KCCCCCCCCCcc..',
+        '..cCCCCCCCCCcc..',
+      )],
+      left: [at(2,
+        '......Kc........',
+        '...KKCCCCCc.....',
+        '..KCCCCCCCCCc...',
+        '..cCCCCCCCCcc...',
+      )],
+    },
+  },
   hero: {
     hairFrom: 7,
     views: {
@@ -1177,12 +1413,117 @@ const NECKLINES: Layer[][] = [
   [],
 ]
 
-const OUTFITS: Record<NpcRole, (look: PersonLook) => Outfit> = {
-  local: (look) => ({
-    colors: {},
-    shortSleeves: look.sleeves === 'short',
-    over: { down: pick(NECKLINES, look.shirt + look.skin + look.hairStyle) },
+/**
+ * Somebody's own clothes over their shirt. Each says which materials take the
+ * garment's colour and what it adds over the body; `under` is the shirt where
+ * it shows through.
+ */
+const GARMENT_OUTFITS: Record<Garment, (look: PersonLook, cloth: string) => Outfit> = {
+  jacket: (look, cloth) => ({
+    colors: { top: cloth, sleeve: cloth, under: look.shirt },
+    over: {
+      down: [at(13,
+        '......VUUu......',
+        '......tUUt......',
+        '.......Uu.......',
+        '.......Uu.......',
+      )],
+      left: [at(13,
+        '.....Uu.........',
+        '.....Ut.........',
+      )],
+    },
   }),
+  vest: (look, cloth) => ({
+    colors: { top: cloth, under: look.shirt },
+    shortSleeves: look.sleeves === 'short',
+    over: {
+      down: [at(13,
+        '....BVUUuB......',
+        '.......Uu.......',
+        '.......u........',
+      )],
+      left: [at(13, '.....UB.........')],
+    },
+  }),
+  hoodie: (_look, cloth) => ({
+    colors: { top: cloth, sleeve: cloth, trim: '#f4f4f4' },
+    over: {
+      down: [
+        at(12, '....RT....Tt....'),
+        at(14,
+          '......Y..Y......',
+          '......Y..Y......',
+          '.....tTTTTt.....',
+        ),
+      ],
+      up: [at(12,
+        '....RTTTTTTt....',
+        '....tTTTTTTt....',
+        '.....tttttt.....',
+      )],
+      left: [at(12,
+        '........RTt.....',
+        '.........tt.....',
+      )],
+    },
+  }),
+  overalls: (look, cloth) => ({
+    colors: { apron: cloth, legs: cloth, metal: '#d8d8e0' },
+    shortSleeves: look.sleeves === 'short',
+    over: {
+      down: [at(13,
+        '.....I....I.....',
+        '.....J....p.....',
+        '.....JPPPPp.....',
+        '.....JPPPPp.....',
+        '....JPPPPPPp....',
+      )],
+      up: [at(13,
+        '.....J....J.....',
+        '......J..J......',
+        '.......JJ.......',
+        '......J..J......',
+        '....pppppppp....',
+      )],
+      left: [at(13,
+        '.......J........',
+        '.......J........',
+        '.....PPJ........',
+        '.....PPP........',
+        '.....ppppp......',
+      )],
+    },
+  }),
+  stripes: (look, cloth) => ({
+    colors: { trim: cloth },
+    shortSleeves: look.sleeves === 'short',
+    patterns: ['stripes'],
+    over: { down: [at(13, '.......SS.......')] },
+  }),
+  cardigan: (look, cloth) => ({
+    colors: { top: cloth, sleeve: cloth, under: look.shirt },
+    over: {
+      down: [at(13,
+        '......VUUu......',
+        '.......tI.......',
+        '.......t........',
+        '.......tI.......',
+      )],
+      left: [at(13, '.....V..........')],
+    },
+  }),
+}
+
+const OUTFITS: Record<NpcRole, (look: PersonLook) => Outfit> = {
+  local: (look) =>
+    look.garment
+      ? GARMENT_OUTFITS[look.garment](look, look.garmentColor ?? '#4a5a7a')
+      : {
+          colors: {},
+          shortSleeves: look.sleeves === 'short',
+          over: { down: pick(NECKLINES, look.shirt + look.skin + look.hairStyle) },
+        },
 
   dealer: () => ({
     colors: { top: BLACK, sleeve: WHITE_SHIRT, under: WHITE_SHIRT, trim: '#cc2a3e', legs: BLACK, shoe: '#1c1c24', metal: '#d4d4dc' },
@@ -1495,6 +1836,10 @@ export interface Figure {
 const ACCESSORY_HAT: Partial<Record<PersonLook['accessory'], HatKind>> = { cap: 'cap', visor: 'visor' }
 /** The cap and visor colours a table portrait draws them in, so they match. */
 const ACCESSORY_HAT_COLOR: Partial<Record<HatKind, string>> = { cap: '#2f3d5c', visor: '#1e5c3a' }
+/** What a hat of somebody's own is made of when their look does not say. */
+const STREET_HAT_COLOR: Partial<Record<HatKind, string>> = {
+  beanie: '#b83a3a', fedora: '#4a3a2e', sunhat: '#e8d8a8', cowboy: '#8a5a30', beret: '#2a2a34',
+}
 
 function paletteFor(look: PersonLook, outfit: Outfit, hat: HatKind | undefined): Palette {
   const c = outfit.colors
@@ -1507,7 +1852,7 @@ function paletteFor(look: PersonLook, outfit: Outfit, hat: HatKind | undefined):
     under: ramp(c.under ?? WHITE_SHIRT),
     legs: ramp(c.legs ?? look.trousers ?? '#3a4a6a'),
     shoe: ramp(c.shoe ?? look.shoes ?? '#4a3426'),
-    hat: ramp(c.hat ?? (hat && ACCESSORY_HAT_COLOR[hat]) ?? '#2f3d5c'),
+    hat: ramp(c.hat ?? look.hatColor ?? (hat && (ACCESSORY_HAT_COLOR[hat] ?? STREET_HAT_COLOR[hat])) ?? '#2f3d5c'),
     trim: ramp(c.trim ?? '#c03030'),
     apron: ramp(c.apron ?? '#e8e8e0'),
     metal: ramp(c.metal ?? '#e3b640'),
@@ -1523,7 +1868,9 @@ function layersFor(figure: Figure, facing: Facing, frame: WalkFrame, blink: bool
   const view: View = facing === 'right' ? 'left' : facing
   const { look } = figure
   const outfit = OUTFITS[figure.role](look)
-  const hatKind = outfit.hat ?? ACCESSORY_HAT[look.accessory]
+  // Somebody in their own clothes may wear a hat of their own; a uniform decides its own.
+  const ownHat = figure.role === 'local' || figure.role === 'kid' ? look.hat : undefined
+  const hatKind = outfit.hat ?? ownHat ?? ACCESSORY_HAT[look.accessory]
   const hat = hatKind ? HATS[hatKind] : undefined
   const hairStyle = outfit.hair ?? look.hairStyle
   const hair = hairStyle === 'hero' ? HERO_HAIR : (HAIR[hairStyle] ?? HAIR.short)
@@ -1691,10 +2038,11 @@ function frameTexture(figure: Figure, facing: Facing, frame: WalkFrame, blink: b
 }
 
 /**
- * How much of somebody shows over a counter: down to the bottom of the ribs, so
- * the counter's edge hides their hands and everything below.
+ * How much of somebody shows behind furniture: down to the belt, hands and all.
+ * Down to the ribs was a head and a collar over every counter in the game, and
+ * a shopkeeper read as a child peering over it.
  */
-export const UPPER_BODY_ROWS = 17
+export const UPPER_BODY_ROWS = 19
 
 /** Every frame somebody needs: three walk frames per facing, a blink, and the same from the waist up. */
 export interface PersonFrames {
@@ -1709,7 +2057,10 @@ const frameCache = new Map<string, PersonFrames>()
 
 export function figureKey(figure: Figure): string {
   const l = figure.look
-  return [figure.role, l.skin, l.hair, l.hairStyle, l.shirt, l.accessory, l.trousers, l.shoes, l.lower, l.sleeves].join('|')
+  return [
+    figure.role, l.skin, l.hair, l.hairStyle, l.shirt, l.accessory, l.trousers, l.shoes, l.lower, l.sleeves,
+    l.hat, l.hatColor, l.garment, l.garmentColor,
+  ].join('|')
 }
 
 /**

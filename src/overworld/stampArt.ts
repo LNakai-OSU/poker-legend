@@ -5,6 +5,7 @@ import { currentGlow, type Glow, type Px } from './pixelArt'
 import { BUILDING_ART } from './art/buildingArt'
 import { CASINO_ART } from './art/casinoArt'
 import { FURNITURE_ART } from './art/furnitureArt'
+import { PROPS_ART } from './art/propsArt'
 import { STREET_ART } from './art/streetArt'
 import { STREET_FURNITURE } from './art/streetFurniture'
 
@@ -34,8 +35,14 @@ export interface ArtContext {
   frame: number
   /** The stamp's footprint, row by row, in map characters — where its doors are, and so on. */
   tiles: string[]
-  /** Its chairs, for a table: the art draws one at each. */
-  seats: StampSeat[]
+  /** Its chairs, for a table: the art draws one at each. Left out for a stamp with none. */
+  seats?: StampSeat[]
+  /**
+   * Which of the stamp's looks this placement gets, 0 up to `variants - 1`; 0
+   * for a stamp with one look. Chosen by `placementVariants`, so two of the
+   * same object in one room are never drawn identically.
+   */
+  variant: number
 }
 
 export type StampDraw = (px: Px, c: ArtContext) => void
@@ -77,6 +84,19 @@ export interface StampArt {
    * is ignored; only where it paints counts.
    */
   occluder?: StampDraw
+  /**
+   * How many looks it has. A bank of slot machines placed twice in one room
+   * should not be the same bank twice, but the art is told nothing about where
+   * it stands; each placement is handed a `variant` instead (see
+   * `placementVariants`) and the drawing varies on that.
+   */
+  variants?: number
+  /**
+   * Stamps that share looks: every bank of slots in a room takes the next look
+   * along whichever bank it is, so the island bank and the reef bank beside it
+   * do not both say WILD.
+   */
+  variantGroup?: string
 }
 
 /** A pool of light a stamp throws on the ground after dark. */
@@ -94,6 +114,7 @@ const ART: Record<string, StampArt> = {
   ...BUILDING_ART,
   ...CASINO_ART,
   ...FURNITURE_ART,
+  ...PROPS_ART,
   ...STREET_ART,
   ...STREET_FURNITURE,
 }
@@ -136,13 +157,42 @@ export interface StampLayers {
 
 const layerCache = new Map<string, StampLayers | null>()
 
+/** How many looks a stamp has: 1 unless its art says otherwise. */
+export function variantCount(stampId: string): number {
+  return Math.max(1, ART[stampId]?.variants ?? 1)
+}
+
+/**
+ * Which look each placed stamp gets, in the order given.
+ *
+ * Copies of one stamp (or of one `variantGroup`) in a room take consecutive looks, so no two in the room
+ * match while there are looks to go round. Where the run starts is taken from
+ * the first copy's position, so the same stamp in the next room over starts
+ * somewhere else and the same bank does not open every casino.
+ */
+export function placementVariants(stamps: ReadonlyArray<{ stampId: string; col: number; row: number }>): number[] {
+  const seen = new Map<string, { start: number; count: number }>()
+  return stamps.map((placed) => {
+    const n = variantCount(placed.stampId)
+    if (n === 1) return 0
+    const group = ART[placed.stampId]?.variantGroup ?? placed.stampId
+    let run = seen.get(group)
+    if (!run) {
+      run = { start: (placed.col * 7 + placed.row * 13) % n, count: 0 }
+      seen.set(group, run)
+    }
+    return (run.start + run.count++) % n
+  })
+}
+
 /** The art for a stamp, or nothing when it has none and its tiles stand alone. */
-export function stampLayers(stampId: string): StampLayers | null {
-  if (layerCache.has(stampId)) return layerCache.get(stampId)!
+export function stampLayers(stampId: string, variant = 0): StampLayers | null {
+  const key = `${stampId}#${variant}`
+  if (layerCache.has(key)) return layerCache.get(key)!
   const stamp = STAMP_BY_ID[stampId]
   const art = ART[stampId]
   if (!stamp || !art) {
-    layerCache.set(stampId, null)
+    layerCache.set(key, null)
     return null
   }
   const { cols, rows } = stampSize(stamp)
@@ -150,13 +200,13 @@ export function stampLayers(stampId: string): StampLayers | null {
   const frames = Math.max(1, art.frames ?? 1)
   const shape = footprint(stampId)
   const toTexture = (draw: StampDraw, frame: number) => {
-    const texture = Texture.from(paint(draw, cols, rows, frame, bleed, shape))
+    const texture = Texture.from(paint(draw, cols, rows, frame, bleed, shape, variant))
     texture.source.scaleMode = 'nearest'
     return texture
   }
   const over = overDrawing(art)
   // The night pass: the same drawings again, keeping only what glows.
-  const lit = (draw: StampDraw) => Array.from({ length: frames }, (_, frame) => paintLit(draw, cols, rows, frame, bleed, shape))
+  const lit = (draw: StampDraw) => Array.from({ length: frames }, (_, frame) => paintLit(draw, cols, rows, frame, bleed, shape, variant))
   const litUnder = lit(art.draw)
   const litOver = over ? lit(over) : null
   const toLitTextures = (canvases: Array<HTMLCanvasElement | null> | null) => {
@@ -176,7 +226,7 @@ export function stampLayers(stampId: string): StampLayers | null {
     lights: art.lights ?? [],
     bleed,
   }
-  layerCache.set(stampId, layers)
+  layerCache.set(key, layers)
   return layers
 }
 
@@ -189,8 +239,8 @@ function blankLike(model: HTMLCanvasElement | null, cols: number, rows: number, 
 }
 
 /** The first frame of a stamp's art, under the people. Kept for callers that want one texture. */
-export function stampTexture(stampId: string): Texture | null {
-  return stampLayers(stampId)?.under[0] ?? null
+export function stampTexture(stampId: string, variant = 0): Texture | null {
+  return stampLayers(stampId, variant)?.under[0] ?? null
 }
 
 /**
@@ -200,15 +250,15 @@ export function stampTexture(stampId: string): Texture | null {
  * drawn over the back, so the tray and the map show the whole object at the
  * size the editor lays it out at.
  */
-export function stampCanvas(stampId: string): HTMLCanvasElement | null {
+export function stampCanvas(stampId: string, variant = 0): HTMLCanvasElement | null {
   const stamp = STAMP_BY_ID[stampId]
   const art = ART[stampId]
   if (!stamp || !art) return null
   const { cols, rows } = stampSize(stamp)
   const none = { left: 0, top: 0, right: 0, bottom: 0 }
   const shape = footprint(stampId)
-  const canvas = paint(art.draw, cols, rows, 0, none, shape)
-  if (art.over) canvas.getContext('2d')!.drawImage(paint(art.over, cols, rows, 0, none, shape), 0, 0)
+  const canvas = paint(art.draw, cols, rows, 0, none, shape, variant)
+  if (art.over) canvas.getContext('2d')!.drawImage(paint(art.over, cols, rows, 0, none, shape, variant), 0, 0)
   return canvas
 }
 
@@ -284,6 +334,7 @@ function paintLit(
   frame: number,
   bleed: StampBleed,
   shape: Shape,
+  variant = 0,
 ): HTMLCanvasElement | null {
   const w = cols * UNIT
   const h = rows * UNIT
@@ -308,7 +359,7 @@ function paintLit(
       }
       ctx.fillRect((x + bleed.left) * SCALE, (y + bleed.top) * SCALE, pw * SCALE, ph * SCALE)
     },
-    { cols, rows, w, h, frame, ...shape },
+    { cols, rows, w, h, frame, ...shape, variant },
   )
   return glowed ? canvas : null
 }
@@ -328,6 +379,7 @@ function paint(
   frame: number,
   bleed: StampBleed,
   shape: Shape,
+  variant = 0,
 ): HTMLCanvasElement {
   const w = cols * UNIT
   const h = rows * UNIT
@@ -342,7 +394,7 @@ function paint(
       ctx.fillStyle = color
       ctx.fillRect((x + bleed.left) * SCALE, (y + bleed.top) * SCALE, pw * SCALE, ph * SCALE)
     },
-    { cols, rows, w, h, frame, ...shape },
+    { cols, rows, w, h, frame, ...shape, variant },
   )
   return canvas
 }
@@ -351,15 +403,19 @@ function paint(
  * One frame of a stamp exactly as the game composes it — spill and all, the
  * front over the back — with where the footprint starts inside it.
  */
-export function stampPreview(stampId: string, frame = 0): { canvas: HTMLCanvasElement; bleed: StampBleed } | null {
+export function stampPreview(
+  stampId: string,
+  frame = 0,
+  variant = 0,
+): { canvas: HTMLCanvasElement; bleed: StampBleed } | null {
   const stamp = STAMP_BY_ID[stampId]
   const art = ART[stampId]
   if (!stamp || !art) return null
   const { cols, rows } = stampSize(stamp)
   const bleed = bleedOf(art)
   const shape = footprint(stampId)
-  const canvas = paint(art.draw, cols, rows, frame, bleed, shape)
-  if (art.over) canvas.getContext('2d')!.drawImage(paint(art.over, cols, rows, frame, bleed, shape), 0, 0)
+  const canvas = paint(art.draw, cols, rows, frame, bleed, shape, variant)
+  if (art.over) canvas.getContext('2d')!.drawImage(paint(art.over, cols, rows, frame, bleed, shape, variant), 0, 0)
   return { canvas, bleed }
 }
 
@@ -394,7 +450,7 @@ export function stampOccluder(stampId: string): Occluder | null {
         for (let xx = Math.max(0, Math.round(x)); xx < Math.min(w, Math.round(x + pw)); xx++) covers[yy * w + xx] = 1
       }
     },
-    { cols, rows, w, h, frame: 0, ...footprint(stampId) },
+    { cols, rows, w, h, frame: 0, ...footprint(stampId), variant: 0 },
   )
   const occluder = { w, h, covers }
   occluderCache.set(stampId, occluder)

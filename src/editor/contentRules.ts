@@ -1,9 +1,10 @@
-import { CHARACTERS, type CharacterDef } from '../world/characters'
-import { EVENTS, eventsSharing, type GameEvent } from '../world/events'
-import { AREAS, CITIES, LESSONS, TABLES, allShopItems } from '../world/content'
+import { CHARACTERS, allSchedules, type CharacterDef } from '../world/characters'
+import { EVENTS, arrivalClashes, canBothFire, everyAction, eventsSharing, type GameEvent } from '../world/events'
+import { actionProblems, conditionProblems } from '../world/eventChecks'
+import { AREAS, CITIES, LESSONS, SPONSORS, TABLES, allShopItems } from '../world/content'
 import { isWalkable } from '../overworld/tileRenderer'
 import type { AreaDef, TableDef } from '../world/types'
-import { ENDS_EVENT, characterShapeProblems, eventShapeProblems } from './contentModel'
+import { characterShapeProblems, eventShapeProblems } from './contentModel'
 
 /**
  * The content rules, applied to a character or event that is not in the game yet.
@@ -26,6 +27,7 @@ export interface World {
   cityIds: string[]
   itemIds: string[]
   lessonIds: string[]
+  sponsorIds: string[]
 }
 
 /** The world as the game has it now. */
@@ -38,6 +40,7 @@ export function gameWorld(): World {
     cityIds: Object.keys(CITIES),
     itemIds: allShopItems().map((item) => item.id),
     lessonIds: Object.keys(LESSONS),
+    sponsorIds: Object.keys(SPONSORS),
   }
 }
 
@@ -117,36 +120,39 @@ function characterRules(id: string, character: CharacterDef, world: World): stri
   // the town keeps its own hours
   const presence = character.overworld
   if (presence) {
-    if (presence.schedule.length === 0) {
+    const schedules = allSchedules(character)
+    if (schedules.every((schedule) => schedule.length === 0)) {
       problems.push(`${name} is out in the town but keeps no hours at all — add where they are, or take them out of the town`)
     }
-    const periods = new Set<string>()
-    for (const entry of presence.schedule) {
-      const when = `in the ${entry.period}`
-      if (periods.has(entry.period)) problems.push(`${name} is in two places at once ${when}`)
-      periods.add(entry.period)
+    for (const schedule of schedules) {
+      const periods = new Set<string>()
+      for (const entry of schedule) {
+        const when = `in the ${entry.period}`
+        if (periods.has(entry.period)) problems.push(`${name} is in two places at once ${when}`)
+        periods.add(entry.period)
 
-      const area = world.areas[entry.areaId]?.area
-      if (!area) {
-        problems.push(`${name} is scheduled into "${entry.areaId}", which is not an area`)
-        continue
-      }
-      if (!isWalkable(area.map, entry.col, entry.row)) {
-        problems.push(`${name} stands in a wall in ${area.name} (${entry.col},${entry.row}) ${when}`)
-      } else if (!approachTiles(entry.col, entry.row).some(([c, r]) => isWalkable(area.map, c, r))) {
-        problems.push(`nobody can walk up to ${name} in ${area.name} ${when}`)
-      }
-      const poi = area.pois.find((p) => p.col === entry.col && p.row === entry.row)
-      if (poi) problems.push(`${name} stands on ${poi.name} in ${area.name} ${when}`)
-      const door = area.exits.find((e) => e.col === entry.col && e.row === entry.row)
-      if (door) problems.push(`${name} stands in the ${door.label} doorway ${when}`)
+        const area = world.areas[entry.areaId]?.area
+        if (!area) {
+          problems.push(`${name} is scheduled into "${entry.areaId}", which is not an area`)
+          continue
+        }
+        if (!isWalkable(area.map, entry.col, entry.row)) {
+          problems.push(`${name} stands in a wall in ${area.name} (${entry.col},${entry.row}) ${when}`)
+        } else if (!approachTiles(entry.col, entry.row).some(([c, r]) => isWalkable(area.map, c, r))) {
+          problems.push(`nobody can walk up to ${name} in ${area.name} ${when}`)
+        }
+        const poi = area.pois.find((p) => p.col === entry.col && p.row === entry.row)
+        if (poi) problems.push(`${name} stands on ${poi.name} in ${area.name} ${when}`)
+        const door = area.exits.find((e) => e.col === entry.col && e.row === entry.row)
+        if (door) problems.push(`${name} stands in the ${door.label} doorway ${when}`)
 
-      for (const [otherId, other] of Object.entries(everyone)) {
-        if (otherId === id) continue
-        const clash = other.overworld?.schedule.find(
-          (o) => o.period === entry.period && o.areaId === entry.areaId && o.col === entry.col && o.row === entry.row,
-        )
-        if (clash) problems.push(`${name} and ${other.name} stand on the same tile ${when}`)
+        for (const [otherId, other] of Object.entries(everyone)) {
+          if (otherId === id) continue
+          const clash = allSchedules(other).flat().find(
+            (o) => o.period === entry.period && o.areaId === entry.areaId && o.col === entry.col && o.row === entry.row,
+          )
+          if (clash) problems.push(`${name} and ${other.name} stand on the same tile ${when}`)
+        }
       }
     }
   }
@@ -155,24 +161,7 @@ function characterRules(id: string, character: CharacterDef, world: World): stri
 
 /** Whether two events can be told apart by their conditions alone — as `events.test.ts` decides it. */
 export function conditionsDistinguish(a: GameEvent, b: GameEvent): boolean {
-  const flagsOf = (event: GameEvent) =>
-    new Map(
-      (event.conditions ?? []).flatMap((c) => (c.kind === 'flag' ? [[c.flag, c.set ?? true] as const] : [])),
-    )
-  const flagsA = flagsOf(a)
-  const flagsB = flagsOf(b)
-  for (const [flag, want] of flagsA) {
-    if (flagsB.has(flag) && flagsB.get(flag) !== want) return true
-  }
-  const periodsOf = (event: GameEvent) => {
-    const condition = (event.conditions ?? []).find((c) => c.kind === 'period')
-    if (!condition || condition.kind !== 'period') return null
-    return new Set(Array.isArray(condition.period) ? condition.period : [condition.period])
-  }
-  const periodsA = periodsOf(a)
-  const periodsB = periodsOf(b)
-  if (periodsA && periodsB) return [...periodsA].every((period) => !periodsB.has(period))
-  return false
+  return !canBothFire(a, b)
 }
 
 /**
@@ -223,69 +212,36 @@ function eventRules(event: GameEvent, originalId: string | null, world: World): 
   }
 
   // what has to be true
-  for (const condition of event.conditions ?? []) {
-    if (condition.kind === 'eventDone' && condition.eventId !== event.id && !others.some((o) => o.id === condition.eventId)) {
-      problems.push(`it asks about "${condition.eventId}", which is not an event`)
-    }
-    if (condition.kind === 'hasItem' && !world.itemIds.includes(condition.itemId)) {
-      problems.push(`it asks for "${condition.itemId}", which is not an item`)
-    }
-    if (condition.kind === 'hasLesson' && !world.lessonIds.includes(condition.lessonId)) {
-      problems.push(`it asks for "${condition.lessonId}", which is not a lesson`)
-    }
-  }
+  const story = { ...world, eventIds: others.map((o) => o.id) }
+  for (const condition of event.conditions ?? []) problems.push(...conditionProblems(condition, story, event.id))
 
   // at most one event per moment
   for (const rival of eventsSharing(others, trigger)) {
     if (!conditionsDistinguish(event, rival)) {
       problems.push(
-        `it and "${rival.id}" share a trigger and could both fire — add a flag or an hour that tells them apart`,
+        `it and "${rival.id}" share a trigger and could both fire — add a flag, an hour or a chapter that tells them apart`,
       )
     }
   }
 
-  // what happens
-  let ended: string | null = null
-  event.actions.forEach((action, i) => {
-    const step = `step ${i + 1}`
-    if (ended) problems.push(`${step} never happens: ${ended} ends the event before it`)
-    switch (action.kind) {
-      case 'dialogue':
-        if (action.lines.length === 0) problems.push(`${step} is dialogue with no lines`)
-        if (action.speaker && action.speaker === action.speaker.toLowerCase() && !world.characters[action.speaker]) {
-          problems.push(`${step} is spoken by "${action.speaker}", who is nobody`)
-        }
-        break
-      case 'moveNpc':
-        if (!world.characters[action.characterId]) problems.push(`${step} moves "${action.characterId}", who is nobody`)
-        break
-      case 'startTable':
-      case 'unlockTable':
-        if (!world.tables[action.tableId]) problems.push(`${step} points at table "${action.tableId}", which does not exist`)
-        break
-      case 'teleport': {
-        const where = area(action.areaId)
-        if (!where) problems.push(`${step} sends you to "${action.areaId}", which is not an area`)
-        else if (!isWalkable(where.map, action.col, action.row)) {
-          problems.push(`${step} puts you inside a wall in ${where.name} (${action.col},${action.row})`)
-        }
-        break
-      }
-      case 'unlockCity':
-        if (!world.cityIds.includes(action.cityId)) problems.push(`${step} opens "${action.cityId}", which is not a city`)
-        break
-      case 'giveItem':
-        if (!world.itemIds.includes(action.itemId)) problems.push(`${step} gives "${action.itemId}", which is not an item`)
-        break
-      default:
-        break
+  // somebody else's beat for walking into wherever this one takes you
+  const withThis = [...others, event]
+  for (const [carrier, arrival] of arrivalClashes(withThis)) {
+    if (carrier === event) {
+      problems.push(
+        `it takes you somewhere "${arrival.id}" fires on walking into, and both could be ready — set a flag on the way that tells them apart`,
+      )
+    } else if (arrival === event) {
+      problems.push(`"${carrier.id}" takes you in here while it could fire too — tell them apart by a flag "${carrier.id}" sets on the way`)
     }
-    if (ENDS_EVENT.has(action.kind) && !ended) ended = action.kind === 'startTable' ? 'sitting down at the table' : 'the poker night'
-  })
+  }
+
+  // what happens, down every branch
+  problems.push(...actionProblems(event, story))
 
   // the night that opens the campaign
   if (originalId === 'poker-night') {
-    if (!event.actions.some((a) => a.kind === 'startPokerNight')) problems.push('the first poker night has to start the poker night')
+    if (!everyAction(event.actions).some((a) => a.kind === 'startPokerNight')) problems.push('the first poker night has to start the poker night')
     if (event.repeatable) problems.push('the first poker night cannot be played again')
   }
   return problems

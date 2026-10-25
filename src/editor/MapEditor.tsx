@@ -14,7 +14,7 @@ import { TILE_THEMES } from '../overworld/sprites'
 import { cellArt, cellCanvas, paintedGrid, tileSwatch } from '../overworld/cells'
 import { CHARACTERS, charactersIn } from '../world/characters'
 import { KEEP, STAMPS, findStamp, stampSize, type PlacedStamp } from '../world/stamps'
-import { stampCanvas } from '../overworld/stampArt'
+import { placementVariants, stampCanvas } from '../overworld/stampArt'
 import { sittersIn } from '../world/seating'
 import { figuresForSitters } from '../overworld/casting'
 import { sitterCanvas, sitterOrigin } from '../overworld/sitters'
@@ -671,8 +671,8 @@ export function MapEditor({ onClose, nav }: { onClose: () => void; nav?: React.R
         </div>
         {/* The objects, drawn over the tiles exactly as the game draws them.
             Pointer-transparent, so you still paint and drag through them. */}
-        {stamps.map((item, i) => {
-          const canvas = stampCanvas(item.stampId)
+        {stamps.map((item, i, all) => {
+          const canvas = stampCanvas(item.stampId, placementVariants(all)[i])
           const stamp = findStamp(item.stampId)
           if (!canvas || !stamp) return null
           const { cols, rows } = stampSize(stamp)

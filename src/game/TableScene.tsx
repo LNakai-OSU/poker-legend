@@ -15,7 +15,7 @@ import { useAmbientMusic } from '../audio/SoundToggle'
 import { TableStage } from './TableStage'
 import { DOCK, buttonHeight, buttonWidth, type SceneLayout, type SceneNeeds } from './tableLayout'
 import { themeFor, type TableTheme } from './tableThemes'
-import { Countdown, Panel, PxButton, PxLine } from './pixel/ui'
+import { Panel, PxButton, PxLine } from './pixel/ui'
 import { PixelText } from './pixel/PixelText'
 import { INK } from './pixel/ink'
 import { chipTopUrl } from './pixel/chips'
@@ -45,7 +45,6 @@ const ANNOUNCE_MS = 2600
  * Long enough to read the board and the hand that beat you, short enough that
  * poker keeps happening without being asked to continue every thirty seconds.
  */
-const AUTO_DEAL_MS = 3200
 
 /** How long a line of table talk stays up. */
 const SPEECH_MS = 2200
@@ -313,19 +312,10 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
   }
 
   // --- Carrying on between hands -------------------------------------------
-  // The table used to stop dead after every hand and wait to be told to deal
-  // again. A dealer does not wait to be asked, so the next hand comes on its own
-  // once the last one has had time to be read — and "Hold" is there for the hand
-  // worth sitting with.
-  const [holding, setHolding] = useState(false)
+  // The next hand waits for the player: the board stays up, with who won and
+  // how, until they press the button (or space) to deal again.
   const handOver = !publicState.handInProgress && lastResult !== null
   const canPlayOn = handOver && !youBusted && !(isFinale && opponentsBusted)
-
-  useEffect(() => {
-    if (!canPlayOn || holding) return
-    const timer = window.setTimeout(dealNextHand, AUTO_DEAL_MS)
-    return () => window.clearTimeout(timer)
-  }, [canPlayOn, holding, lastResult?.handNumber])
 
   // Space deals the next hand now, for a player who has already read the board.
   useEffect(() => {
@@ -624,41 +614,13 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
         </EndPanel>
       )
     } else if (!publicState.handInProgress) {
-      // Between hands: who won, and a bar that says the next hand is coming,
-      // rather than a panel that stops play until it is dismissed. The
-      // countdown fills while it waits, so the delay is visible instead of felt.
+      // Between hands: who won, and a button to deal the next hand when ready.
       body = (
         <>
           {handOver && lastResult && <ShowdownSummary result={lastResult} players={players} scale={P} />}
           <div data-testid="hand-over-bar" style={{ ...row, marginTop: DOCK.gap * P }}>
-            {canPlayOn && !holding && (
-              <>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 * P }}>
-                  <span data-testid="auto-deal-status">
-                    <PixelText text="Next hand" scale={P} ink={INK.dark} />
-                  </span>
-                  <Countdown scale={P} durationMs={AUTO_DEAL_MS} runKey={lastResult?.handNumber} />
-                </span>
-                <PxButton lines={['Deal now (space)']} scale={P} role="primary" height={one} onClick={dealNextHand} />
-                <PxButton lines={['Hold']} scale={P} role="plain" height={one} onClick={() => setHolding(true)} />
-              </>
-            )}
-            {canPlayOn && holding && (
-              <>
-                <span data-testid="auto-deal-status">
-                  <PixelText text="Holding" scale={P} ink={INK.dark} />
-                </span>
-                <PxButton
-                  lines={['Next hand (space)']}
-                  scale={P}
-                  role="primary"
-                  height={one}
-                  onClick={() => {
-                    setHolding(false)
-                    dealNextHand()
-                  }}
-                />
-              </>
+            {canPlayOn && (
+              <PxButton lines={['Next hand (space)']} scale={P} role="primary" height={one} onClick={dealNextHand} />
             )}
             {!isFinale && (
               <PxButton lines={[`Leave table ($${you.stack.toLocaleString()})`]} scale={P} role="plain" height={one} onClick={() => leaveWith(you.stack)} />

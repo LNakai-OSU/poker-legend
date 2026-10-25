@@ -28,7 +28,7 @@ function picture(stamp: StampDef, seats = stamp.seats ?? []): string[] {
       for (let yy = Math.max(0, y); yy < Math.min(h, y + ph); yy++)
         for (let xx = Math.max(0, x); xx < Math.min(w, x + pw); xx++) grid[yy * w + xx] += `${color};`
     },
-    { cols, rows, w, h, frame: 0, tiles: stamp.tiles.split('\n'), seats },
+    { cols, rows, w, h, frame: 0, tiles: stamp.tiles.split('\n'), seats, variant: 0 },
   )
   return grid
 }

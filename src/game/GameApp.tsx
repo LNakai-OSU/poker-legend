@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { CityScene } from '../overworld/CityScene'
 import { PokerNightScene } from './PokerNightScene'
 import { BusTransition } from './BusTransition'
@@ -13,13 +13,19 @@ import { hasFastTravel, missionStatus, tableAccess, travelCostTo } from './progr
 import { clearSave, loadGame, saveGame } from './save'
 import { useEventRunner } from './useEventRunner'
 import { DialogueBox } from './DialogueBox'
+import { ChoiceBox } from './ChoiceBox'
 import { CHARACTERS } from '../world/characters'
+import { EVENTS, eventFor } from '../world/events'
 import { SoundToggle, useAudioUnlock } from '../audio/SoundToggle'
 import { playSound } from '../audio/audio'
 import {
+  BUST_LINE,
   advanceDay,
   advancePeriod,
+  arriveAt,
   caughtByCollectors,
+  huntingSponsorId,
+  recordBust,
   daysUntilRematch,
   initialState,
   lostFinalChallenge,
@@ -50,6 +56,8 @@ type View =
       /** Where the bus puts you down. */
       arrive: { cityId?: CityId; areaId?: string; col?: number; row?: number }
     }
+  /** A ride a beat put you on: no skip button, and off when the beat says. */
+  | { kind: 'ride'; destination: string; caption?: string; with: string[] }
   | { kind: 'table'; tableId: string }
   | { kind: 'blocked'; title: string; message: string }
   | { kind: 'bankrollWarning'; tableId: string; warning: string }
@@ -83,28 +91,60 @@ export function GameApp() {
    * back exactly where you were.
    */
   const [settingsOpen, setSettingsOpen] = useState(false)
+  /** Whose collectors it was, for the shakedown screen; the hunt is over by the time it shows. */
+  const [caughtBy, setCaughtBy] = useState<string | null>(null)
   useAudioUnlock()
-
-  // Hub locations are the checkpoints; table and menu state is never persisted.
-  useEffect(() => {
-    if (view.kind === 'city') saveGame(state)
-  }, [state, view.kind])
-
-  const backToCity = () => setView({ kind: 'city' })
 
   /**
    * The runner for scripted beats. Everything it cannot do by itself — changing
    * scene, putting the player somewhere — it hands back here.
    */
-  const events = useEventRunner(setState, {
+  const events = useEventRunner(state, setState, {
     onStartTable: (tableId) => setView({ kind: 'table', tableId }),
     onStartPokerNight: () => setView({ kind: 'pokerNight' }),
-    onTeleport: (areaId, col, row) => {
-      const destination = findArea(areaId)
-      setState((s) => ({ ...s, areaId, cityId: destination?.cityId ?? s.cityId }))
-      setEntryTile({ col, row })
-    },
+    onPlace: (col, row) => setEntryTile({ col, row }),
+    onStartRide: (ride) => setView({ kind: 'ride', ...ride }),
+    onEndRide: () => setView({ kind: 'city' }),
   })
+
+  // Hub locations are the checkpoints; table and menu state is never persisted.
+  // Nor is a beat half-played: it is saved once it is over, so a reload in the
+  // middle of one puts you back where it started rather than somewhere it was
+  // carrying you, with nobody beside you and the beat forgotten.
+  useEffect(() => {
+    if (view.kind === 'city' && !events.isRunning) saveGame(state)
+  }, [state, view.kind, events.isRunning])
+
+  const backToCity = () => setView({ kind: 'city' })
+
+  /**
+   * Walking into somewhere is a moment a beat can be written for.
+   *
+   * Fired when the area changes — through a door, off the edge of a street, off
+   * a bus — and not when a save is loaded into one or when you get up from a
+   * table in the room you were already in: that is being somewhere, not
+   * arriving. A beat can ask to fire on a load too (`onLoad`): the opening,
+   * which a reload half-way through must not skip.
+   */
+  const lastArea = useRef<string | null>(null)
+  const runEvent = events.run
+  const clearCast = events.clearCast
+  useEffect(() => {
+    if (view.kind !== 'city') return
+    const areaId = state.areaId ?? CITIES[state.cityId].entryAreaId
+    const previous = lastArea.current
+    lastArea.current = areaId
+    if (previous === null) {
+      const event = eventFor(EVENTS, { kind: 'enterArea', areaId }, state)
+      if (event?.trigger.kind === 'enterArea' && event.trigger.onLoad) runEvent(event)
+      return
+    }
+    if (previous === areaId) return
+    // Whoever a beat left standing in the last place is not standing here.
+    clearCast()
+    const event = eventFor(EVENTS, { kind: 'enterArea', areaId }, state)
+    if (event) runEvent(event)
+  }, [view.kind, state, runEvent, clearCast])
 
   const handlePoi = (action: PoiAction) => {
     switch (action.kind) {
@@ -227,10 +267,13 @@ export function GameApp() {
       if (result.finaleWon) {
         return { ...next, flags: { ...next.flags, beatFinalRival: true, hasPenthouse: true } }
       }
+      // Getting up with less than the cheapest seat costs is going broke, and
+      // the people who know you will say so.
+      const settled = next.cash < BUST_LINE ? recordBust(next) : next
       // Losing the match is its own outcome, not a cash-game session that
       // happened to go badly: the buy-in stays with her and so does the table.
-      if (table.isFinale) return lostFinalChallenge(next)
-      return next
+      if (table.isFinale) return lostFinalChallenge(settled)
+      return settled
     })
     if (table.isFinale) setView({ kind: result.finaleWon ? 'ending' : 'finaleLost' })
     else backToCity()
@@ -241,10 +284,25 @@ export function GameApp() {
     // caught must never be cheaper than paying. You keep what you've learned and
     // what you own, and they give you a few days before they come looking again,
     // so there is still a game to climb back out with.
-    setState(caughtByCollectors)
-    playSound('lose')
-    setView({ kind: 'caught' })
+    const shakedown = () => {
+      setCaughtBy(huntingSponsorId(state))
+      setState(caughtByCollectors)
+      playSound('lose')
+      setView({ kind: 'caught' })
+    }
+    // Whoever caught you says their piece first, standing over you in the street,
+    // and the shakedown follows the last line.
+    const event = eventFor(EVENTS, { kind: 'caught' }, state)
+    if (!event || !events.run(event, shakedown)) shakedown()
   }
+
+  /** Gambling a bankroll away below the cheapest seat is a bust, like a session. */
+  const settleGamble = (delta: number) =>
+    setState((s) => {
+      const cash = Math.max(0, s.cash + delta)
+      const next = { ...s, cash }
+      return s.cash >= BUST_LINE && cash < BUST_LINE ? recordBust(next) : next
+    })
 
   const scene = (() => {
     switch (view.kind) {
@@ -296,6 +354,16 @@ export function GameApp() {
         />
       )
     }
+
+    case 'ride':
+      return (
+        <BusTransition
+          destination={view.destination}
+          caption={view.caption}
+          companions={view.with.map((id) => CHARACTERS[id]).filter((c) => c !== undefined)}
+          forced
+        />
+      )
 
     case 'table': {
       const table = TABLES[view.tableId]
@@ -451,7 +519,7 @@ export function GameApp() {
       return (
         <SlotsScene
           state={state}
-          onResult={(delta) => setState((s) => ({ ...s, cash: Math.max(0, s.cash + delta) }))}
+          onResult={settleGamble}
           onBack={backToCity}
         />
       )
@@ -460,7 +528,7 @@ export function GameApp() {
       return (
         <CrapsScene
           state={state}
-          onResult={(delta) => setState((s) => ({ ...s, cash: Math.max(0, s.cash + delta) }))}
+          onResult={settleGamble}
           onBack={backToCity}
         />
       )
@@ -486,7 +554,7 @@ export function GameApp() {
       return <PenthouseScene state={state} onBack={backToCity} />
 
     case 'caught':
-      return <CaughtScene onRestart={backToCity} />
+      return <CaughtScene sponsorId={caughtBy} onRestart={backToCity} />
 
     case 'ending':
       return <EndingScene state={state} onContinue={backToCity} />
@@ -504,12 +572,15 @@ export function GameApp() {
               // Walking between towns is just walking, so the city follows the
               // area rather than the other way round.
               const destination = findArea(areaId)
-              setState((s) => ({ ...s, areaId, cityId: destination?.cityId ?? s.cityId }))
+              setState((s) => arriveAt(s, areaId, destination?.cityId ?? s.cityId))
               setEntryTile({ col, row })
             }}
             onCaught={handleCaught}
             onEvent={events.run}
-            moved={events.stage.moved}
+            cast={events.stage.cast}
+            cues={events.stage.cues}
+            onCueDone={events.cueDone}
+            paused={events.isRunning}
           />
         )
     }
@@ -539,11 +610,21 @@ export function GameApp() {
       {events.stage.dialogue && (
         <div data-testid="event-dialogue" style={{ position: 'fixed', inset: 0, zIndex: 95 }}>
           <DialogueBox
+            key={events.stage.dialogue.id}
             speaker={speakerName(events.stage.dialogue.speaker)}
             lines={events.stage.dialogue.lines}
             onFinish={events.advance}
           />
         </div>
+      )}
+      {events.stage.choice && (
+        <ChoiceBox
+          key={events.stage.choice.id}
+          speaker={speakerName(events.stage.choice.speaker)}
+          prompt={events.stage.choice.prompt}
+          options={events.stage.choice.options}
+          onChoose={events.choose}
+        />
       )}
       {!settingsOpen && !lockedInAtTable && (
         <button

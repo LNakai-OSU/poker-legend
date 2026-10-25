@@ -1,8 +1,8 @@
-import { OverworldScene, type ChaserConfig, type Interactable, type SceneExit } from './OverworldScene'
-import { AREAS, CITIES, MISSIONS, collectorSpawn, findArea } from '../world/content'
+import { OverworldScene, type ChaserConfig, type Interactable, type SceneCue, type SceneExit } from './OverworldScene'
+import { AREAS, CITIES, MISSIONS, SPONSORS, collectorSpawn, findArea } from '../world/content'
 import { isWalkable } from './tileRenderer'
 import { missionStatus } from '../game/progression'
-import { daysUntilDue, totalOwed, type GameState, type StoryFlag } from '../game/state'
+import { daysUntilDue, huntingSponsorId, totalOwed, type GameState, type StoryFlag } from '../game/state'
 import type { PoiAction, PoiDef } from '../world/types'
 import type { NpcArt } from './Npc'
 import { useAmbientMusic } from '../audio/SoundToggle'
@@ -12,6 +12,11 @@ import { EVENTS, eventFor, type GameEvent } from '../world/events'
 import { artForPoi, figureForCharacter, figuresForPois, figuresForSitters } from './casting'
 import { sittersIn } from '../world/seating'
 import type { SeatedConfig } from './sitters'
+import type { CastPlace, Cue } from '../game/eventMachine'
+import { besideTile } from './paths'
+
+/** How fast a beat walks somebody, in pixels a second: a stroll beside you, or a run to catch you. */
+const PACE_SPEED = { walk: 118, run: 250 } as const
 
 interface CitySceneProps {
   state: GameState
@@ -22,8 +27,13 @@ interface CitySceneProps {
   onCaught: () => void
   /** Hand a scripted beat to the runner. Without it, events do not fire. */
   onEvent?: (event: GameEvent) => void
-  /** Anybody an event has stood somewhere other than their scheduled tile. */
-  moved?: Record<string, { col: number; row: number }>
+  /** Where beats have put people: somewhere other than their usual tile, or somewhere they do not usually go. */
+  cast?: Record<string, CastPlace>
+  /** Walks a beat has asked for. */
+  cues?: Cue[]
+  onCueDone?: (id: number, at?: { col: number; row: number }) => void
+  /** Set while an event has the screen: the street holds still until it is done. */
+  paused?: boolean
 }
 
 export function CityScene({
@@ -33,7 +43,10 @@ export function CityScene({
   onEnterArea,
   onCaught,
   onEvent,
-  moved,
+  cast = {},
+  cues = [],
+  onCueDone,
+  paused,
 }: CitySceneProps) {
   // Areas resolve globally, not within a city: walking off the edge of a street
   // can take you into the next town, which is the point of the world being one
@@ -55,8 +68,36 @@ export function CityScene({
   // Whoever the hour puts here. A POI is part of the map and is always in it;
   // these are people, and where they are depends on when you came. Each is
   // drawn as themselves: the Marcus in the street is the Marcus at the table.
-  const scheduled = charactersIn(areaId, state.period).map((entry) => ({
+  // A beat can take somebody away from their usual place, and bring somebody
+  // who is not usually here: Dana, walking you to the bus.
+  const castHere = Object.entries(cast).filter(([, place]) => place.areaId === areaId)
+  const usual = charactersIn(areaId, state.period, state).filter(
+    (entry) => !cast[entry.id] || cast[entry.id].areaId === areaId,
+  )
+  const visiting = castHere
+    .map(([id]) => id)
+    .filter((id) => !usual.some((entry) => entry.id === id) && CHARACTERS[id])
+    .map((id) => ({ id, character: CHARACTERS[id], at: { col: -1, row: -1 }, lines: CHARACTERS[id].overworld?.lines ?? [] }))
+  // Somebody who came with you stands beside where you land, on a tile nobody
+  // else is standing on.
+  const taken = new Set<string>([
+    ...area.pois.map((p) => `${p.col},${p.row}`),
+    ...usual.map((e) => `${e.at.col},${e.at.row}`),
+    `${landing.col},${landing.row}`,
+  ])
+  const placeOf = (id: string, at: { col: number; row: number }) => {
+    const place = cast[id]
+    if (!place || place.areaId !== areaId) return at
+    if ('beside' in place) {
+      const spot = besideTile(area.map, landing, (c, r) => taken.has(`${c},${r}`))
+      taken.add(`${spot.col},${spot.row}`)
+      return spot
+    }
+    return { col: place.col, row: place.row }
+  }
+  const scheduled = [...usual, ...visiting].map((entry) => ({
     ...entry,
+    at: placeOf(entry.id, entry.at),
     figure: figureForCharacter(entry.id, entry.character),
   }))
   // Everybody standing at a POI, dressed for what they do and made up from
@@ -64,10 +105,14 @@ export function CityScene({
   const figures = figuresForPois(area.pois, CHARACTERS, scheduled.map((s) => s.figure))
   // Who is sitting at the tables. Worked out from the map, so a table looks the
   // same every time you come in; nobody sits where somebody is already standing
-  // or where you are about to.
+  // — wherever the hour or a beat has put them — where you are about to, or
+  // where a beat is walking somebody to or from.
+  const walks = cues
+    .filter((cue) => cue.areaId === areaId)
+    .flatMap((cue) => [...(cue.to === 'player' ? [] : [cue.to]), ...(cue.from ? [cue.from] : [])])
   const sitters = sittersIn(area, {
-    present: scheduled.map(({ id, at }) => ({ id, ...(moved?.[id] ?? { col: at.col, row: at.row }) })),
-    keepClear: [landing],
+    present: scheduled.map(({ id, at }) => ({ id, col: at.col, row: at.row })),
+    keepClear: [landing, ...walks],
   })
   const sitterFigures = figuresForSitters(sitters, CHARACTERS, [
     ...scheduled.map((s) => s.figure),
@@ -82,6 +127,10 @@ export function CityScene({
     ...area.pois.map((poi) => {
       const art = artForPoi(poi)
       const role = figures.get(poi.id)?.role
+      // A beat written for this fixture gets first refusal, as it does for a
+      // person: Hal introduces himself before he sells you anything, and the
+      // next time you talk to him he opens the book.
+      const event = onEvent ? eventFor(EVENTS, { kind: 'interact', poiId: poi.id }, state) : undefined
       return {
         id: poi.id,
         name: poi.name,
@@ -90,6 +139,8 @@ export function CityScene({
         art,
         figure: figures.get(poi.id),
         behind: art === 'person' && behind(poi.col, poi.row),
+        // Furniture behind them too is the back of a counter, not the bench of a booth.
+        counter: art === 'person' && behind(poi.col, poi.row) && behind(poi.col, poi.row - 1),
         // People at a post keep their eyes on it; everybody else looks about.
         restless: art === 'person' && !behind(poi.col, poi.row) && (role === 'local' || role === 'tourist' || role === 'kid'),
         labelled: poi.labelled,
@@ -98,13 +149,14 @@ export function CityScene({
           poi.action.kind === 'flavor' || isLocked(state, poi)
             ? undefined
             : () => onAction(poi.action, poi),
+        onTalk: event && onEvent ? () => (onEvent(event), true) : undefined,
       }
     }),
-    ...scheduled.map(({ id, character, at, figure }) => {
+    ...scheduled.map(({ id, character, at, lines, figure }) => {
       // Somebody with something scripted to say says that instead of their
       // usual line for the hour.
       const event = onEvent ? eventFor(EVENTS, { kind: 'talkTo', characterId: id }, state) : undefined
-      const placed = moved?.[id] ?? at
+      const placed = at
       return {
         id: `character-${id}`,
         name: character.name,
@@ -114,8 +166,9 @@ export function CityScene({
         art: character.overworld?.art ?? ('person' as NpcArt),
         figure,
         behind: behind(placed.col, placed.row),
+        counter: behind(placed.col, placed.row) && behind(placed.col, placed.row - 1),
         restless: !behind(placed.col, placed.row),
-        lines: at.lines ?? character.overworld?.lines ?? [],
+        lines,
         onTalk: event && onEvent ? () => (onEvent(event), true) : undefined,
       }
     }),
@@ -134,10 +187,19 @@ export function CityScene({
   // door puts you straight back out where they are. Where they are, though, is
   // the far end of the street from the way out of town — the chase has to be one
   // the player can actually win by running for the bus.
+  // They are somebody: the sponsor's own collector, the face that stands over
+  // you when they catch you.
   const spawnTile = landing
+  const collectorId = hunted ? SPONSORS[huntingSponsorId(state) ?? '']?.collector : undefined
+  const collector = collectorId ? CHARACTERS[collectorId] : undefined
   const chaser: ChaserConfig | undefined =
     hunted && areaId === city.entryAreaId
-      ? { name: 'Collector', ...collectorSpawn(area, spawnTile), stepMs: 430 }
+      ? {
+          name: collector?.name ?? 'Collector',
+          figure: collector && collectorId ? figureForCharacter(collectorId, collector) : undefined,
+          ...collectorSpawn(area, spawnTile),
+          stepMs: 430,
+        }
       : undefined
 
   const owed = totalOwed(state)
@@ -207,6 +269,20 @@ export function CityScene({
         onEnterArea(link.toAreaId, landing.col, landing.row)
       }}
       period={state.period}
+      paused={paused}
+      cues={cues
+        .filter((cue) => cue.areaId === areaId)
+        .map(
+          (cue): SceneCue => ({
+            id: cue.id,
+            who: cue.who === 'player' ? 'player' : `character-${cue.who}`,
+            to: cue.to,
+            speed: PACE_SPEED[cue.pace],
+            youFollow: cue.youFollow,
+            leaves: cue.leaves,
+          }),
+        )}
+      onCueDone={onCueDone}
       outdoors={outdoors}
       stamps={area.stamps}
       seated={seated}
