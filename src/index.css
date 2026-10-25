@@ -221,7 +221,23 @@ button {
 }
 .bus-bob { animation: bus-bob 620ms ease-in-out infinite; }
 
+/* The menu behind the ☰: slides in from the right edge in whole steps, as a
+   GBA window does, over a dimmed game; and back out the same way. */
+@keyframes side-nav-in {
+  from { transform: translateX(calc(100% + 16px)); }
+  to   { transform: translateX(0); }
+}
+@keyframes side-nav-out {
+  from { transform: translateX(0); }
+  to   { transform: translateX(calc(100% + 16px)); }
+}
+.side-nav-panel { animation: side-nav-in 160ms steps(5, end) both; }
+.side-nav-scrim { animation: fade-in 160ms steps(4, end) both; }
+.side-nav.closing .side-nav-panel { animation: side-nav-out 140ms steps(4, end) both; }
+.side-nav.closing .side-nav-scrim { animation: fade-in 140ms steps(4, end) reverse both; }
+
 @media (prefers-reduced-motion: reduce) {
+  .side-nav-panel, .side-nav-scrim, .side-nav.closing .side-nav-panel, .side-nav.closing .side-nav-scrim { animation: none; }
   .announcement { animation-duration: 2600ms; animation-name: none; opacity: 1; }
   .deal-countdown { animation: none; transform: scaleX(1); }
   .bus-scroll-far, .bus-scroll-near, .bus-bob { animation: none; }

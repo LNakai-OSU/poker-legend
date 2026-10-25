@@ -7,7 +7,8 @@ import { buttonStyle as menuButtonStyle, MentorScene, MenuScreen, ShopScene, Spo
 import { CaughtScene, EndingScene, FinaleLostScene } from './EndScenes'
 import { CrapsScene, SlotsScene } from './CasinoGameScenes'
 import { PenthouseScene, VenueScene } from './VenueScenes'
-import { SettingsScene } from './SettingsScene'
+import { SideNav } from './SideNav'
+import { anyKeyLayer } from './keys'
 import { CITIES, LESSONS, MISSIONS, SPONSORS, TABLES, findArea } from '../world/content'
 import { hasFastTravel, missionStatus, tableAccess, travelCostTo } from './progression'
 import { clearSave, loadGame, saveGame } from './save'
@@ -90,7 +91,7 @@ export function GameApp() {
    * back on the street. Over the top, nothing unmounts and closing it puts you
    * back exactly where you were.
    */
-  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   /** Whose collectors it was, for the shakedown screen; the hunt is over by the time it shows. */
   const [caughtBy, setCaughtBy] = useState<string | null>(null)
   useAudioUnlock()
@@ -592,7 +593,8 @@ export function GameApp() {
             cast={events.stage.cast}
             cues={events.stage.cues}
             onCueDone={events.cueDone}
-            paused={events.isRunning}
+            // The menu is a pause: nobody walks, nobody chases, while it is open.
+            paused={events.isRunning || menuOpen}
           />
         )
     }
@@ -602,6 +604,19 @@ export function GameApp() {
   // it is not an escape hatch any more, but the match is meant to feel like a
   // door that has shut behind you and a menu button undercuts that.
   const lockedInAtTable = view.kind === 'table' && TABLES[view.tableId]?.isFinale === true
+
+  // Escape opens the menu when nothing else has the keys — no text box, no
+  // question, no menu of its own (where Escape is the way out instead).
+  useEffect(() => {
+    if (menuOpen || lockedInAtTable) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.repeat || anyKeyLayer()) return
+      e.preventDefault()
+      setMenuOpen(true)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [menuOpen, lockedInAtTable])
 
   return (
     <>
@@ -638,11 +653,13 @@ export function GameApp() {
           onChoose={events.choose}
         />
       )}
-      {!settingsOpen && !lockedInAtTable && (
+      {!lockedInAtTable && (
         <button
           data-testid="settings-button"
-          aria-label="Settings"
-          onClick={() => setSettingsOpen(true)}
+          aria-label="Menu"
+          aria-haspopup="dialog"
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen(true)}
           style={{
             position: 'fixed',
             top: 'max(12px, env(safe-area-inset-top))',
@@ -668,19 +685,22 @@ export function GameApp() {
 
       {/* Over the game, not instead of it: the scene underneath stays mounted, so
           closing this puts the player back in the same hand with the same chips. */}
-      {settingsOpen && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 100, overflowY: 'auto' }}>
-          <SettingsScene
-            state={state}
-            onNewGame={() => {
-              clearSave()
-              setState(initialState())
-              setSettingsOpen(false)
-              setView({ kind: 'city' })
-            }}
-            onBack={() => setSettingsOpen(false)}
-          />
-        </div>
+      {menuOpen && (
+        <SideNav
+          state={state}
+          onNewGame={() => {
+            clearSave()
+            setState(initialState())
+            setMenuOpen(false)
+            setView({ kind: 'city' })
+          }}
+          onClose={() => {
+            setMenuOpen(false)
+            // The keys go back to the game, not to a button: the ☰ holding the
+            // focus would open the menu again on the next Enter.
+            if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+          }}
+        />
       )}
     </>
   )

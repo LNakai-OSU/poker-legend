@@ -198,6 +198,26 @@ The poker screen is modelled on how an online table actually reads
 - **Bet sizing** offers min-raise, half/three-quarter/full pot, 1.5x and 2x pot,
   all-in, plus a slider for anything in between.
 
+## Controls
+
+One set of keys everywhere (`src/game/keys.ts`):
+
+- **Move:** the arrows or W A S D — in the street, and as the cursor in every
+  list: a question's answers, a menu scene's buttons, the side panel.
+- **Do it:** Space, E or Enter — talk to whoever or whatever you are next to
+  (people, fixtures, signs, notes), turn a text box's page, pick an answer,
+  press the button the cursor is on. A held key's auto-repeat is never a second
+  press, and a text box or a question finishes once however fast it is pressed.
+- **Escape:** leaves a menu scene, goes up a page in the side panel, closes it,
+  and opens it from the street or the table when nothing else is on screen.
+- **Menu (☰):** a panel down the right edge (`SideNav.tsx`) — where you stand,
+  Bag, Jobs, Record, sound, volume, New game. It pauses the street while open.
+
+Whatever answers keys takes a place on one stack (`useKeyLayer`), and only the
+top answers: Space in the side panel does not also turn the page of the text
+box under it, or deal the next hand. Menus take keys in the capture phase and
+stop them there; the table's own Space/Enter for the next hand is left alone.
+
 ## Mobile
 
 The iPhone target needs more than a responsive layout, since the overworld is

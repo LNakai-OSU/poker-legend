@@ -246,7 +246,7 @@ async function moveTo(page, col, row, budget = 60) {
 }
 
 const promptOf = (page) =>
-  page.locator('text=/Press E to talk|Tap E to talk/').first().textContent().catch(() => null)
+  page.locator('text=/Press E or Space to talk|Tap E to talk/').first().textContent().catch(() => null)
 
 /**
  * Walks up to a named person or object. Looks the tile up from the scene rather
@@ -1252,13 +1252,18 @@ await test('the keys answer a question, and the answer is remembered', async () 
   await choiceBox(page).waitFor({ state: 'visible' })
   const prompt = await page.locator('[data-testid="choice-prompt"]').innerText()
   assert(/kitchen table/.test(prompt), `the question is not asked (saw: ${prompt})`)
-  // The pointer starts on the first answer; down, then Enter, picks the second.
+  // The pointer starts on the first answer; S and W move it as the arrows do,
+  // and E picks the one it is on, as Enter and Space do.
   const focused = await page.evaluate(() => document.activeElement?.getAttribute('data-testid'))
   assert(focused === 'choice-option-0', `the first answer does not have the focus (${focused})`)
+  await page.keyboard.press('s')
+  await page.keyboard.press('w')
   await page.keyboard.press('ArrowDown')
-  await page.keyboard.press('Enter')
+  const pointed = await page.evaluate(() => document.activeElement?.getAttribute('data-testid'))
+  assert(pointed === 'choice-option-1', `S, W and down left the pointer on ${pointed}`)
+  await page.keyboard.press('e')
   await page.waitForTimeout(300)
-  assert(/Proud/.test(await dialogueText(page)), `Enter did not give the answer the pointer was on (saw: ${await dialogueText(page)})`)
+  assert(/Proud/.test(await dialogueText(page)), `E did not give the answer the pointer was on (saw: ${await dialogueText(page)})`)
   await talkThrough(page)
   await page.waitForTimeout(300)
   const saved = await savedState(page)
@@ -2210,6 +2215,174 @@ await test('settings can adjust volume and start a new game', async () => {
   await page.locator('[data-testid="confirm-new-game"]').click()
   await page.waitForTimeout(600)
   assert((await page.locator('body').innerText()).includes('Your Apartment'), 'new game did not reset')
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+})
+
+/** What has the keyboard's focus: its test id, or its text. */
+const focusedOf = (page) =>
+  page.evaluate(() => {
+    const el = document.activeElement
+    if (!el || el === document.body) return null
+    const nth = [...document.querySelectorAll('button, input, a[href]')].indexOf(el)
+    return el.getAttribute('data-testid') || `${el.textContent?.trim().slice(0, 40) || el.tagName}#${nth}`
+  })
+
+/**
+ * The ☰ opens a panel down the side, not a page: the game stays where it was
+ * beside it, the keys work it, and Escape, the X or a tap off it puts it away.
+ */
+for (const [label, device] of [
+  ['laptop', null],
+  ['phone', devices['iPhone 13']],
+]) {
+  await test(`the menu is a side panel the keys and a finger can work (${label})`, async () => {
+    const page = await newPage(baseSave({ cash: 4242, ownedItemIds: [] }), device)
+    await page.goto(BASE)
+    await page.waitForSelector('canvas')
+    await page.waitForTimeout(500)
+
+    await page.locator('[data-testid="settings-button"]').click()
+    await page.waitForTimeout(400)
+    const nav = page.locator('[data-testid="side-nav"]')
+    assert(await nav.isVisible(), 'the ☰ opened no menu')
+    const box = await page.evaluate(() => {
+      const r = document.querySelector('[data-testid="side-nav"] [role="dialog"]').getBoundingClientRect()
+      return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, w: window.innerWidth, h: window.innerHeight, sw: document.documentElement.scrollWidth }
+    })
+    assert(box.right <= box.w && box.right > box.w - 24, `the panel is not against the right edge (${box.left}..${box.right} of ${box.w})`)
+    assert(box.left > 8, 'the panel covers the whole width: a page, not a side panel')
+    assert(box.top >= 0 && box.bottom <= box.h, 'the panel runs off the top or bottom')
+    assert(box.sw <= box.w, 'the panel makes the page scroll sideways')
+    assert((await page.locator('body').innerText()).includes('$4,242'), 'the menu does not say what you have')
+
+    if (!device) {
+      // The cursor starts at the top, and the keys move it and pick with it.
+      assert((await focusedOf(page)) === 'nav-resume', `the cursor started on ${await focusedOf(page)}`)
+      const before = await posOf(page)
+      await page.keyboard.press('s')
+      assert((await focusedOf(page)) === 'nav-bag', `S moved the cursor to ${await focusedOf(page)}`)
+      await page.keyboard.press('ArrowDown')
+      assert((await focusedOf(page)) === 'nav-jobs', `↓ moved the cursor to ${await focusedOf(page)}`)
+      await page.keyboard.press('w')
+      await page.keyboard.press('e')
+      await page.waitForTimeout(200)
+      assert(await page.locator('[data-testid="nav-back"]').isVisible(), 'E on Bag did not open the bag')
+      assert((await page.locator('body').innerText()).includes('Things you carry'), 'the bag shows nothing')
+      await page.keyboard.press('Escape')
+      await page.waitForTimeout(200)
+      assert(await page.locator('[data-testid="nav-bag"]').isVisible(), 'Escape in the bag did not go back up')
+      const after = await posOf(page)
+      assert(before.col === after.col && before.row === after.row, 'working the menu walked the player underneath it')
+      await page.keyboard.press('Escape')
+      await page.waitForTimeout(400)
+      assert(!(await nav.isVisible().catch(() => false)), 'Escape did not close the menu')
+
+      // Escape opens it from the street too, and Space on "Back to the game" closes it.
+      await page.keyboard.press('Escape')
+      await page.waitForTimeout(400)
+      assert(await nav.isVisible(), 'Escape in the street did not open the menu')
+      await page.keyboard.press(' ')
+      await page.waitForTimeout(400)
+      assert(!(await nav.isVisible().catch(() => false)), 'Space on "Back to the game" did not close the menu')
+      const scrolled = await page.evaluate(() => window.scrollY)
+      assert(scrolled === 0, 'Space scrolled the page')
+      await page.locator('[data-testid="settings-button"]').click()
+      await page.waitForTimeout(400)
+    } else {
+      const heights = await page.evaluate(() =>
+        [...document.querySelectorAll('[data-testid="side-nav"] button')].map((b) => b.getBoundingClientRect().height),
+      )
+      assert(Math.min(...heights) >= 38, `a menu button is ${Math.min(...heights)}px tall: too small for a finger`)
+    }
+
+    // A tap off the panel puts it away.
+    await page.mouse.click(4, Math.round(box.h / 2))
+    await page.waitForTimeout(400)
+    assert(!(await nav.isVisible().catch(() => false)), 'a tap off the panel did not close it')
+    await page.locator('[data-testid="settings-button"]').click()
+    await page.waitForTimeout(400)
+    await page.locator('[data-testid="side-nav-close"]').click()
+    await page.waitForTimeout(400)
+    assert(!(await nav.isVisible().catch(() => false)), 'the X did not close the menu')
+    assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+    await page.close()
+  })
+}
+
+/**
+ * Space and E both do the thing, wherever either does: talk to whoever you are
+ * next to, turn the page, and pick in a menu — with the arrows or W A S D to
+ * move the cursor, and Escape to leave.
+ */
+await test('Space and E both talk and turn the page, and a held key does not reopen it', async () => {
+  const page = await newPage(baseSave())
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(500)
+  await approach(page, 'Valet')
+  const box = page.locator('[data-testid="dialogue-advance"]')
+  const said = () => page.locator('[data-testid="overworld"]').innerText()
+
+  await page.keyboard.press(' ')
+  await page.waitForTimeout(250)
+  assert(await box.isVisible(), 'Space did not talk to the Valet')
+  const first = await said()
+  await page.keyboard.press('e')
+  await page.waitForTimeout(200)
+  assert((await said()) !== first, 'E did not turn the page')
+  await page.keyboard.press(' ')
+  await page.waitForTimeout(250)
+  assert(!(await box.isVisible().catch(() => false)), 'Space did not close the last page')
+  // The auto-repeat of a key held through the last page is not a new press.
+  await page.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'e', repeat: true })))
+  await page.waitForTimeout(250)
+  assert(!(await box.isVisible().catch(() => false)), 'a held E opened the conversation again')
+
+  await page.keyboard.press('e')
+  await page.waitForTimeout(250)
+  assert(await box.isVisible(), 'E did not talk to the Valet')
+  await page.keyboard.press('Enter')
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(250)
+  assert(!(await box.isVisible().catch(() => false)), 'Enter did not turn the pages')
+  assert((await page.evaluate(() => window.scrollY)) === 0, 'Space scrolled the page')
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+})
+
+await test('a menu answers the arrows and W A S D, picks with E, and Escape leaves it', async () => {
+  const page = await newPage(baseSave())
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(500)
+  const menu = page.locator('[data-testid="menu-screen"]')
+  const openBusStop = async () => {
+    await approach(page, 'Bus Stop')
+    for (let i = 0; i < 8 && !(await menu.isVisible().catch(() => false)); i++) {
+      await page.keyboard.press(i % 2 ? 'e' : ' ')
+      await page.waitForTimeout(300)
+    }
+    assert(await menu.isVisible(), 'Space and E at the bus stop never opened its menu')
+  }
+  await openBusStop()
+  const first = await focusedOf(page)
+  assert(first, 'the menu opened with no cursor')
+  await page.keyboard.press('s')
+  const second = await focusedOf(page)
+  assert(second && second !== first, `S did not move the cursor (stayed on "${first}")`)
+  await page.keyboard.press('ArrowUp')
+  assert((await focusedOf(page)) === first, 'the up arrow did not move it back')
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(400)
+  assert(!(await menu.isVisible().catch(() => false)), 'Escape did not leave the menu')
+  assert(!(await page.locator('[data-testid="side-nav"]').isVisible().catch(() => false)), 'Escape in a menu opened the side panel as well')
+
+  await openBusStop()
+  await page.waitForTimeout(300)
+  await page.keyboard.press('e')
+  await page.waitForTimeout(500)
+  assert(await page.locator('[data-testid="bus-ride"]').isVisible(), 'E on the first stop did not take the bus')
   assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
   await page.close()
 })
