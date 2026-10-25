@@ -1488,6 +1488,164 @@ await test('the window in the apartment is scenery, not a person', async () => {
   await page.close()
 })
 
+/**
+ * Mean difference, 0..255 a channel, between pairs of equal regions of what the
+ * overworld canvas shows. Each pair is [ax, ay, bx, by, w, h] in canvas pixels.
+ */
+async function regionDiffs(page, pairs) {
+  const png = await page.locator('[data-testid="overworld"] canvas').first().screenshot()
+  return page.evaluate(
+    async ([b64, pairs]) => {
+      const img = new Image()
+      img.src = `data:image/png;base64,${b64}`
+      await img.decode()
+      const c = document.createElement('canvas')
+      c.width = img.width
+      c.height = img.height
+      const ctx = c.getContext('2d')
+      ctx.drawImage(img, 0, 0)
+      const d = ctx.getImageData(0, 0, c.width, c.height).data
+      const inside = (x, y) => x >= 0 && y >= 0 && x < c.width && y < c.height
+      return pairs.map(([ax, ay, bx, by, w, h]) => {
+        let sum = 0
+        let n = 0
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            if (!inside(ax + x, ay + y) || !inside(bx + x, by + y)) continue
+            const i = (Math.round(ay + y) * c.width + Math.round(ax + x)) * 4
+            const j = (Math.round(by + y) * c.width + Math.round(bx + x)) * 4
+            for (let k = 0; k < 3; k++) sum += Math.abs(d[i + k] - d[j + k])
+            n += 3
+          }
+        }
+        return n ? sum / n : 0
+      })
+    },
+    [png.toString('base64'), pairs],
+  )
+}
+
+/**
+ * Every casino table has players at it.
+ *
+ * The chairs round a table used to be empty at every casino in the game. Now
+ * each table seats somebody — never a full table, since the open chair is
+ * yours — and a sitter is a person you cannot walk through. Whether they are
+ * really drawn, and drawn behind the rail rather than over it, is only visible
+ * in the pixels: a taken chair is compared with an empty chair of the same
+ * kind at another table in the same room, where everything round them is the
+ * same but the person.
+ */
+await test('every casino table has players sitting at it', async () => {
+  const CASINOS = ['sc-floor', 'rb-boat', 'ch-cardroom', 'pc-casino', 'nm-casino', 'pl-casino']
+  let compared = 0
+  for (const areaId of CASINOS) {
+    const page = await newPage(baseSave({ cityId: 'apartment', areaId, period: 'evening', day: 2 }), {
+      viewport: { width: 1280, height: 960 },
+    })
+    await page.goto(BASE)
+    await page.waitForSelector('[data-testid="overworld"] canvas')
+    const grid = await settle(page)
+    await page.waitForTimeout(400)
+    const { chairs, view } = await page.evaluate(() => {
+      const el = document.querySelector('[data-testid="overworld"]')
+      return { chairs: JSON.parse(el.dataset.chairs || '[]'), view: (el.dataset.view || '').split(',').map(Number) }
+    })
+    assert(chairs.length > 0, `${areaId}: no chairs published`)
+    assert(view.length === 3 && view.every((v) => !Number.isNaN(v)), `${areaId}: no camera published`)
+
+    const tables = new Map()
+    for (const chair of chairs) {
+      const key = chair.table.join(',')
+      tables.set(key, [...(tables.get(key) ?? []), chair])
+    }
+    for (const [key, seats] of tables) {
+      const taken = seats.filter((c) => c.taken).length
+      assert(taken <= seats.length - 1, `${areaId}: the table at ${key} is full`)
+    }
+    const taken = chairs.filter((c) => c.taken)
+    assert(taken.length >= tables.size - 1, `${areaId}: only ${taken.length} people at ${tables.size} tables`)
+    for (const chair of taken) {
+      assert(grid[chair.row]?.[chair.col] === 'o', `${areaId}: you could walk through the sitter at ${chair.col},${chair.row}`)
+    }
+
+    // Taken against empty, chair for chair: the head and shoulders must differ,
+    // and what the rail or the chair back covers must not.
+    const [wx, wy, zoom] = view
+    const box = (chair, fromX, fromY, w, h) => [wx + (chair.x + fromX) * zoom, wy + (chair.y + fromY) * zoom, w * zoom, h * zoom]
+    // The sitter's head and shoulders, then the part of them the furniture
+    // hides — below the rail for the far side, below the chair back for the near.
+    const head = (chair) => box(chair, 0, 6, 32, 18)
+    const hidden = (chair) =>
+      chair.facing === 'down'
+        ? box(chair, 6, chair.seatY + 16 - chair.y, 20, chair.y + 48 - (chair.seatY + 16))
+        : chair.facing === 'up'
+          ? box(chair, 6, chair.seatY + 4 - chair.y, 20, chair.y + 48 - (chair.seatY + 4))
+          : null
+    const pairs = []
+    const kinds = new Map()
+    for (const chair of chairs) {
+      const kind = `${chair.stampId}#${chair.seat}`
+      kinds.set(kind, [...(kinds.get(kind) ?? []), chair])
+    }
+    for (const group of kinds.values()) {
+      const full = group.filter((c) => c.taken)
+      const empty = group.filter((c) => !c.taken)
+      for (const a of full) for (const b of empty) pairs.push({ kind: 'person', a, b })
+      for (let i = 1; i < empty.length; i++) pairs.push({ kind: 'baseline', a: empty[0], b: empty[i] })
+    }
+    const diffs = await regionDiffs(
+      page,
+      pairs.flatMap(({ a, b }) => {
+        const [ax, ay, w, h] = head(a)
+        const [bx, by] = head(b)
+        const out = [[ax, ay, bx, by, w, h]]
+        const ha = hidden(a)
+        const hb = hidden(b)
+        out.push(ha && hb ? [ha[0], ha[1], hb[0], hb[1], ha[2], ha[3]] : [0, 0, 0, 0, 0, 0])
+        return out
+      }),
+    )
+    const baseline = Math.max(2, ...pairs.map((p, i) => (p.kind === 'baseline' ? diffs[i * 2] : 0)))
+    pairs.forEach((pair, i) => {
+      if (pair.kind !== 'person') return
+      compared++
+      const where = `${areaId}: ${pair.a.taken} at ${pair.a.col},${pair.a.row}`
+      assert(diffs[i * 2] > Math.max(12, baseline * 3), `${where} is not drawn (differs by ${diffs[i * 2].toFixed(1)}, baseline ${baseline.toFixed(1)})`)
+      // Identical when right (the same rail, the same chair back); a sitter
+      // painted over them shows even as a single row of outline.
+      assert(diffs[i * 2 + 1] < 1, `${where} is drawn over the furniture in front of them (${diffs[i * 2 + 1].toFixed(1)})`)
+    })
+    assert(page.__errors.length === 0, `${areaId}: console errors: ${page.__errors[0]}`)
+    await page.close()
+  }
+  assert(compared >= 4, `only ${compared} taken chairs had an empty one to compare with`)
+})
+
+await test('a sitter is somebody you walk round, not through', async () => {
+  const page = await newPage(baseSave({ cityId: 'apartment', areaId: 'sc-floor', period: 'evening', day: 2 }))
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  const grid = await settle(page)
+  const chairs = await page.evaluate(() => JSON.parse(document.querySelector('[data-testid="overworld"]').dataset.chairs))
+  // A taken chair with floor straight above or below it to stand on.
+  let plan = null
+  for (const chair of chairs.filter((c) => c.taken)) {
+    for (const [dir, dr] of [['down', -1], ['up', 1]]) {
+      if (grid[chair.row + dr]?.[chair.col] === 'w') plan = { chair, from: { col: chair.col, row: chair.row + dr }, dir }
+    }
+    if (plan) break
+  }
+  assert(plan, 'no taken chair with somewhere to stand next to it')
+  assert(await moveTo(page, plan.from.col, plan.from.row), `could not walk to ${plan.from.col},${plan.from.row}`)
+  await step(page, KEY_FOR[plan.dir])
+  await step(page, KEY_FOR[plan.dir])
+  const at = await posOf(page)
+  assert(at.col === plan.from.col && at.row === plan.from.row, `walked into ${plan.chair.taken}'s chair, now at ${at.col},${at.row}`)
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+})
+
 await test('a hand waits for the player before the next one', async () => {
   const page = await newPage(baseSave())
   await page.goto(BASE)
@@ -2549,6 +2707,41 @@ await test('the map editor puts down an object with its own tiles', async () => 
 
   assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
   await page.close()
+})
+
+await test('the map editor seats the same people at the tables as the game', async () => {
+  // The game's card room, in the morning, the hour the editor opens on.
+  const game = await newPage(baseSave({ cityId: 'apartment', areaId: 'ch-cardroom', period: 'morning', day: 2 }))
+  await game.goto(BASE)
+  await game.waitForSelector('canvas')
+  await settle(game)
+  const inGame = await game.evaluate(() =>
+    JSON.parse(document.querySelector('[data-testid="overworld"]').dataset.chairs)
+      .filter((c) => c.taken)
+      .map((c) => `${c.col},${c.row}:${c.taken === 'stranger' ? '' : c.taken}`)
+      .sort(),
+  )
+  assert(inGame.length > 0, 'nobody sitting in the card room')
+
+  const page = await newPage(null)
+  await page.goto(`${BASE}#editor`)
+  await page.waitForSelector('[data-testid="editor-grid"]')
+  await page.selectOption('select', 'ch-cardroom')
+  await page.waitForTimeout(400)
+  const inEditor = await page.evaluate(() =>
+    [...document.querySelectorAll('[data-testid="seated"]')].map((el) => `${el.dataset.seat}:${el.dataset.character}`).sort(),
+  )
+  assert(
+    JSON.stringify(inEditor) === JSON.stringify(inGame),
+    `the editor seats ${inEditor.join(' ')}; the game seats ${inGame.join(' ')}`,
+  )
+  // Drawn over the tables, the size of a person.
+  const box = await page.locator('[data-testid="seated"]').first().boundingBox()
+  const cell = await page.locator('[data-cell="0,0"]').boundingBox()
+  assert(box && cell && Math.abs(box.width - cell.width) < 1 && Math.abs(box.height - cell.height * 1.5) < 1, 'a sitter is the wrong size')
+  assert(page.__errors.length === 0 && game.__errors.length === 0, `console errors: ${[...page.__errors, ...game.__errors][0]}`)
+  await page.close()
+  await game.close()
 })
 
 await test('a house brings its own front door, which has to lead somewhere', async () => {

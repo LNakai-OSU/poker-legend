@@ -7,9 +7,11 @@ import { PERIOD_LIGHT, type PeriodLight, type TimePeriod } from '../game/time'
 import type { PlacedStamp } from '../world/stamps'
 import { DELTAS, GridPlayer, type Direction } from './GridPlayer'
 import { Npc, type NpcConfig } from './Npc'
+import { SeatedPerson, sitterOrigin, type SeatedConfig } from './sitters'
+import { STAMP_BY_ID, seatTile } from '../world/stamps'
 import { COLLECTOR_FIGURE, HERO_FIGURE } from './casting'
 import { alertBubbleTexture } from './objectArt'
-import { PERSON_RISE, type Figure } from './characterArt'
+import { PERSON_RISE, figureKey, type Figure } from './characterArt'
 import { DialogueBox } from '../game/DialogueBox'
 import { TouchControls, useIsTouchDevice } from './TouchControls'
 import { cameraOffset } from './camera'
@@ -116,6 +118,8 @@ interface OverworldSceneProps {
   outdoors?: boolean
   /** Objects bigger than a tile standing on this map. */
   stamps?: PlacedStamp[]
+  /** People sitting at the tables among those objects. Scenery: they take their tile, and say nothing. */
+  seated?: SeatedConfig[]
   /** A pursuer that hunts the player across the grid. */
   chaser?: ChaserConfig
   onCaught?: () => void
@@ -151,6 +155,7 @@ export function OverworldScene({
   period = 'morning',
   outdoors = false,
   stamps,
+  seated = [],
   chaser,
   onCaught,
   exits = [],
@@ -194,6 +199,7 @@ export function OverworldScene({
   // the scene catches up with both as soon as it is built.
   const syncPeopleRef = useRef<(list: Interactable[]) => void>(() => {})
   const playCuesRef = useRef<(list: SceneCue[]) => void>(() => {})
+  const syncSeatedRef = useRef<(list: SeatedConfig[]) => void>(() => {})
   // Touch input drives the same paths as the keyboard rather than synthesising
   // key events, so the Pixi ticker reads it straight from these refs.
   const touchDirRef = useRef<Direction | null>(null)
@@ -219,6 +225,7 @@ export function OverworldScene({
   // them to you, and they leave. The street follows the list.
   useEffect(() => {
     syncPeopleRef.current(interactables)
+    syncSeatedRef.current(seated)
     playCuesRef.current(cues ?? [])
   })
 
@@ -306,6 +313,8 @@ export function OverworldScene({
       // Everybody standing on the map. Not fixed: a beat can bring somebody on
       // and walk them off again (see `syncPeople`).
       const npcs: Npc[] = []
+      // Everybody sitting at a table: see `syncSeated`.
+      const sitters: SeatedPerson[] = []
       // Names are not hung over everybody all the time — a street of floating
       // captions reads as a debug view. A name shows over whoever you are
       // standing next to, which is the person "E" would talk to.
@@ -371,10 +380,20 @@ export function OverworldScene({
 
       // Everybody standing in the street is lit by what they stand in: a
       // lamp's pool, a shop window's spill, or the blue of the night.
-      const people = () => [player.sprite, ...npcs.map((n) => n.sprite), ...(hunter ? [hunter.sprite] : [])]
+      const people = () => [
+        player.sprite,
+        ...npcs.map((n) => n.sprite),
+        ...sitters.map((s) => s.sprite),
+        ...(hunter ? [hunter.sprite] : []),
+      ]
       // After dark, everybody (not the signs and gulls) has a rim of moonlight
       // round them, so a dark coat on a dark road is still a person.
-      const figures = () => [player.sprite, ...npcs.filter((n) => n.isPerson).map((n) => n.sprite), ...(hunter ? [hunter.sprite] : [])]
+      const figures = () => [
+        player.sprite,
+        ...npcs.filter((n) => n.isPerson).map((n) => n.sprite),
+        ...sitters.map((s) => s.sprite),
+        ...(hunter ? [hunter.sprite] : []),
+      ]
       const rims = new Map<Container, Sprite>()
       const rimOf = (person: Container) => {
         let rim = rims.get(person)
@@ -386,6 +405,29 @@ export function OverworldScene({
         }
         return rim
       }
+
+      // People sitting at the tables. Scenery, but they follow the list as the
+      // people standing about do: a beat that stands somebody in a chair finds
+      // it empty.
+      const syncSeated = (list: SeatedConfig[]) => {
+        const wanted = new Map(list.map((cfg) => [cfg.sitter.id, cfg]))
+        for (const sitter of [...sitters]) {
+          const cfg = wanted.get(sitter.config.sitter.id)
+          if (cfg && figureKey(cfg.figure) === figureKey(sitter.config.figure)) continue
+          sitters.splice(sitters.indexOf(sitter), 1)
+          rims.get(sitter.sprite)?.destroy()
+          rims.delete(sitter.sprite)
+          sitter.sprite.destroy({ children: true })
+        }
+        for (const cfg of list) {
+          if (sitters.some((s) => s.config.sitter.id === cfg.sitter.id)) continue
+          const sitter = new SeatedPerson(cfg)
+          sitters.push(sitter)
+          actors.addChild(sitter.sprite)
+        }
+      }
+      syncSeated(seated)
+      syncSeatedRef.current = syncSeated
       let lit: PeriodLight | null = null
       const applyLight = (next: PeriodLight | null) => {
         lit = next
@@ -416,7 +458,8 @@ export function OverworldScene({
       // Everyone standing in the world occupies their tile. Walking through a
       // person looks broken and makes the crowd feel like scenery.
       const npcAt = (col: number, row: number, except?: Npc) =>
-        npcs.some((n) => n !== except && n.config.col === col && n.config.row === row)
+        npcs.some((n) => n !== except && n.config.col === col && n.config.row === row) ||
+        sitters.some(({ config: { sitter } }) => sitter.col === col && sitter.row === row)
       const isOccupied = (col: number, row: number) =>
         npcAt(col, row) || (hunter !== null && hunter.col === col && hunter.row === row)
       const isDoorTile = (col: number, row: number) => exits.some((e) => e.col === col && e.row === row)
@@ -625,6 +668,7 @@ export function OverworldScene({
         // Idle life: a blink, a glance up the street. Whole frames, never a
         // sub-pixel drift — the art is on a grid and stays on it.
         for (const npc of npcs) npc.update(ticker.deltaMS)
+        for (const sitter of sitters) sitter.update(ticker.deltaMS)
         if (wasTalkingTo !== talkingRef.current) {
           npcs.find((n) => n.config.id === wasTalkingTo)?.release()
           wasTalkingTo = talkingRef.current
@@ -712,6 +756,10 @@ export function OverworldScene({
         if (wrapper && wrapper.dataset.playerRow !== String(player.row)) {
           wrapper.dataset.playerRow = String(player.row)
         }
+        // Where the world is drawn on the canvas, so the browser suite can find
+        // a tile's pixels.
+        const view = `${world.x},${world.y},${zoom}`
+        if (wrapper && wrapper.dataset.view !== view) wrapper.dataset.view = view
         // Where everybody is actually drawn, a tile at a time, so the suite can
         // watch somebody a beat is walking rather than only where they will end.
         if (wrapper) {
@@ -747,6 +795,7 @@ export function OverworldScene({
     return () => {
       cancelled = true
       syncPeopleRef.current = () => {}
+      syncSeatedRef.current = () => {}
       playCuesRef.current = () => {}
       window.removeEventListener('keydown', keydown)
       window.removeEventListener('keyup', keyup)
@@ -757,6 +806,33 @@ export function OverworldScene({
 
   const talking = interactables.find((i) => i.id === talkingId) ?? null
 
+  const chairs = useMemo(
+    () =>
+      (stamps ?? []).flatMap((table) =>
+        (STAMP_BY_ID[table.stampId]?.seats ?? []).map((seat, index) => {
+          const at = seatTile(seat)
+          const origin = sitterOrigin(seat)
+          const sitter = seated.find(
+            ({ sitter: s }) => s.table.col === table.col && s.table.row === table.row && s.seat === index,
+          )?.sitter
+          return {
+            stampId: table.stampId,
+            table: [table.col, table.row],
+            seat: index,
+            facing: seat.facing,
+            col: table.col + at.col,
+            row: table.row + at.row,
+            // The sitter's picture, and the cushion, in world pixels.
+            x: (table.col * 16 + origin.x) * (TILE_SIZE / 16),
+            y: (table.row * 16 + origin.y) * (TILE_SIZE / 16),
+            seatY: (table.row * 16 + seat.y) * (TILE_SIZE / 16),
+            taken: sitter ? (sitter.characterId ?? 'stranger') : null,
+          }
+        }),
+      ),
+    [stamps, seated],
+  )
+
   return (
     <div
       ref={wrapperRef}
@@ -765,6 +841,10 @@ export function OverworldScene({
         interactables.map((i) => ({ id: i.id, name: i.name, col: i.col, row: i.row })),
       )}
       data-exits={JSON.stringify(exits)}
+      // Every chair at every table, taken or not, and where its sitter is drawn
+      // in world pixels: the browser suite compares a taken chair with an empty
+      // one to see that somebody is really sitting there.
+      data-chairs={JSON.stringify(chairs)}
       // Which light the street is in, for the browser suite: 'day' indoors and in the morning.
       data-light={light && period !== 'morning' ? period : 'day'}
       // The walkable grid, so the browser suite can path by breadth-first search
@@ -780,7 +860,8 @@ export function OverworldScene({
             .map((_, c) =>
               exits.some((e) => e.col === c && e.row === r)
                 ? 'd'
-                : interactables.some((i) => i.col === c && i.row === r)
+                : interactables.some((i) => i.col === c && i.row === r) ||
+                    seated.some(({ sitter }) => sitter.col === c && sitter.row === r)
                   ? 'o'
                   : isWalkable(map, c, r)
                     ? 'w'
