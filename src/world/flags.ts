@@ -50,6 +50,13 @@ export const STORY_FLAGS = {
     clear: 'you did not brush Dana off',
   },
 
+  // The night of the first game and the morning after: Dana walks you home,
+  // and Marcus rides the 14 out to Silver Creek with you.
+  marcusSeesYouOff: {
+    set: 'Marcus is seeing you off: from the night of the first game till he has walked you into Silver Creek',
+    clear: 'nobody is seeing you off',
+  },
+
   // Porto Lumina: what you said to Nadia, and to Dana once you knew.
   askedNadiaWho: {
     set: 'you asked Nadia who has been writing to her',

@@ -39,3 +39,9 @@ behalf that you might want to revisit.
 ---
 
 <!-- Write new requests below this line. Newest at the bottom. -->
+
+## Playtester notes (2026-10-24)
+- [ ] Table UI: add small/big blind chips; make the dealer button match them visually; make it clear when blinds change; help the player see what they hold (pairs, "doubles") during the first poker night; option to see the winners' cards; the hand outro plays too fast.
+- [ ] Overworld/UI: side nav menu for the hamburger menu; a small desktop window makes the game think it is mobile; the bus animation does not look like the rest of the game; pressing "Let's Go" before the casino should take the player inside automatically.
+- [ ] Casinos: all slot machines playable; casinos more populated as they become more exclusive.
+- Liked: the sound effects.

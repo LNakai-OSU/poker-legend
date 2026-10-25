@@ -159,3 +159,18 @@ now — pace, `from`, `youFollow`, `leaves` — plus `movePlayer`, `with` on
 there first; `enterArea` can fire `onLoad`. STORYBOARD.md has the choices table
 and §6 what is left (legacy saves already at Eastgate skip the opening; more
 choices: the first poker night, Emeka/Consortium offers).
+
+## The night of the first game (2026-10-23, branch worktree-agent-a704cd34aa3f567c9, not merged)
+
+Winning Marcus's game used to leave the player in his front room with nothing
+said. Now `dana-walks-you-home` plays the moment they get up a winner (Marcus
+and Dana's excuses, the 14 to Silver Creek named with its $0 fare and $100
+seat, Dana walks you home, a night passes) and `marcus-rides-out-with-you`
+when they step outside next morning (the 14 out with Marcus, the Porto Lumina
+story, walked onto the casino floor). Engine change: getting up from a table
+asks `onLoad` beats, like a load (`getUpFromTable` in `GameApp.tsx`). New flag
+`marcusSeesYouOff`; `arrive-silvercreek` and `rent-receipt` gained conditions
+to stay apart from the two beats. Marcus's room's "Dana" fixture is now a
+chapter of Dana's schedule. Tests: a play-through in `eventMachine.test.ts`;
+two browser scenarios (the poker night is won with the shuffle seeded while
+the table is up). STORYBOARD.md Act 0 and §6 "Done since" list what is left.
