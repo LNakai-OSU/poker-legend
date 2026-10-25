@@ -12,9 +12,13 @@ import {
 } from '../overworld/tileRenderer'
 import { TILE_THEMES } from '../overworld/sprites'
 import { cellArt, cellCanvas, paintedGrid, tileSwatch } from '../overworld/cells'
-import { charactersIn } from '../world/characters'
+import { CHARACTERS, charactersIn } from '../world/characters'
 import { KEEP, STAMPS, findStamp, stampSize, type PlacedStamp } from '../world/stamps'
 import { placementVariants, stampCanvas } from '../overworld/stampArt'
+import { sittersIn } from '../world/seating'
+import { figuresForSitters } from '../overworld/casting'
+import { sitterCanvas, sitterOrigin } from '../overworld/sitters'
+import type { PoiDef } from '../world/types'
 import { TIME_PERIODS } from '../game/time'
 
 /**
@@ -318,6 +322,48 @@ export function MapEditor({ onClose, nav }: { onClose: () => void; nav?: React.R
     }
     return found
   }, [placed, areaId, period])
+
+  // Who sits at the tables, worked out and drawn the way the game does it, from
+  // the map as it stands now: move a dealer, point a new one at a game, or put a
+  // table down, and the chairs fill here as they will in the game.
+  const seated = useMemo(() => {
+    const pois: PoiDef[] = placed.flatMap((item): PoiDef[] => {
+      if (item.kind !== 'poi') return []
+      const original = area.pois.find((poi) => poi.id === item.key)
+      if (original) return [{ ...original, col: item.col, row: item.row }]
+      if (item.added?.kind !== 'poi') return []
+      const tableId = item.added.action === 'table' ? wiring[item.key] : undefined
+      return [
+        {
+          id: item.key,
+          name: item.added.name,
+          col: item.col,
+          row: item.row,
+          color: 0,
+          lines: [],
+          action: tableId ? { kind: 'table', tableId } : { kind: 'flavor' },
+        },
+      ]
+    })
+    const start = placed.find((item) => item.kind === 'start') ?? area.playerStart
+    const sitters = sittersIn(
+      { id: areaId, map: grid, pois, playerStart: { col: start.col, row: start.row }, stamps },
+      { present: charactersIn(areaId, period).map(({ id, at }) => ({ id, col: at.col, row: at.row })) },
+    )
+    const figures = figuresForSitters(sitters, CHARACTERS)
+    // Back to front, as the game sorts them.
+    return [...sitters]
+      .sort((a, b) => a.row - b.row)
+      .map((sitter) => {
+        const origin = sitterOrigin(findStamp(sitter.table.stampId)!.seats![sitter.seat])
+        return {
+          sitter,
+          src: sitterCanvas(figures.get(sitter.id)!, sitter.table.stampId, sitter.seat).toDataURL(),
+          left: ((sitter.table.col * 16 + origin.x) * CELL) / 16,
+          top: ((sitter.table.row * 16 + origin.y) * CELL) / 16,
+        }
+      })
+  }, [placed, area, areaId, period, grid, stamps, wiring])
 
   const problems = useMemo(
     () => check(grid, placed, areaId, period),
@@ -648,6 +694,26 @@ export function MapEditor({ onClose, nav }: { onClose: () => void; nav?: React.R
             />
           )
         })}
+        {/* Whoever is sitting at the tables, over them, as the game draws them. */}
+        {seated.map(({ sitter, src, left, top }) => (
+          <img
+            key={sitter.id}
+            data-testid="seated"
+            data-seat={`${sitter.col},${sitter.row}`}
+            data-character={sitter.characterId ?? ''}
+            src={src}
+            alt=""
+            style={{
+              ...pixelated,
+              position: 'absolute',
+              left,
+              top,
+              width: CELL,
+              height: (CELL * 3) / 2,
+              pointerEvents: 'none',
+            }}
+          />
+        ))}
         </div>
 
         <div style={{ flex: '1 1 320px', minWidth: 300 }}>

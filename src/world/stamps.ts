@@ -49,6 +49,34 @@ export interface StampDef {
   /** A sentence about what it is for, shown in the editor. */
   about: string
   wiring?: StampWiring
+  /**
+   * The chairs round a table. The art draws a chair at each one, and the game
+   * sits people in some of them (see `world/seating.ts`), so the two can never
+   * disagree about where a chair is.
+   */
+  seats?: StampSeat[]
+}
+
+/** Which way somebody faces. The same four as a person's sprite. */
+export type SeatFacing = 'down' | 'up' | 'left' | 'right'
+
+/**
+ * A chair, and which way whoever sits in it faces — always towards the felt.
+ *
+ * Measured in art units (16 to a tile) from the footprint's top-left, at the
+ * middle of the seat: where somebody sitting there sits. The tile that point
+ * falls in is the tile they take, so it has to be one you could otherwise
+ * stand on.
+ */
+export interface StampSeat {
+  x: number
+  y: number
+  facing: SeatFacing
+}
+
+/** The tile of the footprint a seat's sitter takes. */
+export function seatTile(seat: StampSeat): { col: number; row: number } {
+  return { col: Math.floor(seat.x / 16), row: Math.floor(seat.y / 16) }
 }
 
 /** A stamp that has been put somewhere. */
@@ -111,6 +139,27 @@ function slots(id: string, name: string, about: string, cols: number): StampDef 
   }
 }
 
+/**
+ * Six chairs round three tiles by two of felt: two along the top either side of
+ * the dealer, one at each end, two along the bottom with their backs to you.
+ */
+const SIX_SEATS: StampSeat[] = [
+  { x: 23, y: 10, facing: 'down' },
+  { x: 57, y: 10, facing: 'down' },
+  { x: 7, y: 31, facing: 'right' },
+  { x: 73, y: 31, facing: 'left' },
+  { x: 25, y: 48, facing: 'up' },
+  { x: 55, y: 48, facing: 'up' },
+]
+
+/** Four chairs round two tiles of felt: one at the top beside the dealer, one at each end, one at the bottom. */
+const FOUR_SEATS: StampSeat[] = [
+  { x: 17, y: 9, facing: 'down' },
+  { x: 7, y: 23, facing: 'right' },
+  { x: 57, y: 23, facing: 'left' },
+  { x: 43, y: 36, facing: 'up' },
+]
+
 /** A six-seat table: felt three tiles by two, and the ring of chairs round it to stand in. */
 function table6(id: string, name: string, about: string): StampDef {
   return {
@@ -120,6 +169,7 @@ function table6(id: string, name: string, about: string): StampDef {
     about,
     tiles: ['?????', '?FFF?', '?FFF?', '?????'].join('\n'),
     wiring: { kind: 'poi', at: { col: 2, row: 0 }, name: 'Dealer', action: 'table' },
+    seats: SIX_SEATS,
   }
 }
 
@@ -132,6 +182,7 @@ function table4(id: string, name: string, about: string): StampDef {
     about,
     tiles: ['????', '?FF?', '????'].join('\n'),
     wiring: { kind: 'poi', at: { col: 2, row: 0 }, name: 'Dealer', action: 'table' },
+    seats: FOUR_SEATS,
   }
 }
 
@@ -161,6 +212,7 @@ export const STAMPS: StampDef[] = [
     tiles: ['????', '?FF?', '????'].join('\n'),
     // Behind the table rather than on the felt, where a dealer stands.
     wiring: { kind: 'poi', at: { col: 2, row: 0 }, name: 'Dealer', action: 'table' },
+    seats: FOUR_SEATS,
   },
   // --- Gaming floors ----------------------------------------------------------
   slots('slot-bank', 'Slot bank', 'Four machines in red, blue and green, a stool at each.', 4),

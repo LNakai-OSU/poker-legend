@@ -1,6 +1,7 @@
 import type { AvatarLook } from '../game/avatars'
 import type { CharacterDef } from '../world/characters'
 import type { PoiDef } from '../world/types'
+import type { Sitter } from '../world/seating'
 import type { NpcArt } from './Npc'
 import { visualKey, type Figure, type Garment, type NpcRole, type PersonHairStyle, type PersonLook, type StreetHat } from './characterArt'
 
@@ -308,6 +309,40 @@ export function figuresForPois(
     }
     seen.add(visualKey(figure))
     figures.set(poi.id, figure)
+  }
+  return figures
+}
+
+/**
+ * Everybody sitting at the tables of one area, keyed by sitter id.
+ *
+ * Somebody the table's game seats is drawn as themselves, so the faces at the
+ * rail are the faces across the felt. A stranger is made up from their chair —
+ * mostly in their own clothes, now and then in a jacket and tie — and is not
+ * the double of anybody else in the room.
+ */
+export function figuresForSitters(
+  sitters: Sitter[],
+  characters: Record<string, CharacterDef>,
+  taken: Iterable<Figure> = [],
+): Map<string, Figure> {
+  const seen = new Set<string>([...taken].map(visualKey))
+  const figures = new Map<string, Figure>()
+  for (const sitter of sitters) {
+    const character = sitter.characterId ? characters[sitter.characterId] : undefined
+    if (character && sitter.characterId) {
+      const figure = figureForCharacter(sitter.characterId, character)
+      figures.set(sitter.id, figure)
+      seen.add(visualKey(figure))
+      continue
+    }
+    const role: NpcRole = seeded(`${sitter.id}:role`)() < 0.2 ? 'suit' : 'local'
+    let figure: Figure = { role, look: lookFromId(sitter.id, '', role) }
+    for (let attempt = 1; seen.has(visualKey(figure)) && attempt < 8; attempt++) {
+      figure = { role, look: lookFromId(`${sitter.id}#${attempt}`, '', role) }
+    }
+    seen.add(visualKey(figure))
+    figures.set(sitter.id, figure)
   }
   return figures
 }
