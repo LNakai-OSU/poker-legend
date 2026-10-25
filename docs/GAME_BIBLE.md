@@ -402,6 +402,12 @@ odds, position, hand reading. They are teaching, not flavour.
   person at the table; a stranger from their id; their clothes from their
   `role` (dealer, officer, clerk…). Nobody wears a floating name — it shows when
   you are standing next to them.
+- **The bus:** the same art, side on. The 14 runs along the road into the town
+  you are going to — that road's own tiles and objects scrolling past a pixel
+  at a time, in the hour's light — drawn like the parked cars, with you, whoever
+  rides with you and a few strangers at its windows in their street sprites.
+  The road is chosen by the destination (`rideRoad`), so a new town's road area
+  is its ride; there is nothing else to write.
 - **Table:** a different visual language — an oval felt, opponents round the
   rim, you at the rail, chips as physical stacks. Avatars carry an *expression*
   driven by what is happening in the hand.

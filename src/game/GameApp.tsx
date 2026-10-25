@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { CityScene } from '../overworld/CityScene'
 import { PokerNightScene } from './PokerNightScene'
 import { BusTransition } from './BusTransition'
+import { rideRoad } from './busRide'
 import { TableScene, type SessionResult } from './TableScene'
 import { buttonStyle as menuButtonStyle, MentorScene, MenuScreen, ShopScene, SponsorScene, TravelScene } from './MenuScenes'
 import { CaughtScene, EndingScene, FinaleLostScene } from './EndScenes'
@@ -58,7 +59,7 @@ type View =
       arrive: { cityId?: CityId; areaId?: string; col?: number; row?: number }
     }
   /** A ride a beat put you on: no skip button, and off when the beat says. */
-  | { kind: 'ride'; destination: string; caption?: string; with: string[] }
+  | { kind: 'ride'; destination: string; caption?: string; with: string[]; areaId?: string }
   | { kind: 'table'; tableId: string }
   | { kind: 'blocked'; title: string; message: string }
   | { kind: 'bankrollWarning'; tableId: string; warning: string }
@@ -340,6 +341,8 @@ export function GameApp() {
         <BusTransition
           destination={ride.destination}
           caption={ride.caption}
+          road={rideRoad(ride.arrive)}
+          period={state.period}
           onArrive={() => {
             setState((s) =>
               ride.arrive.cityId
@@ -373,7 +376,9 @@ export function GameApp() {
         <BusTransition
           destination={view.destination}
           caption={view.caption}
-          companions={view.with.map((id) => CHARACTERS[id]).filter((c) => c !== undefined)}
+          companions={view.with}
+          road={rideRoad({ areaId: view.areaId })}
+          period={state.period}
           forced
         />
       )

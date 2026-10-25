@@ -2028,6 +2028,43 @@ await test('the bus ride fits the window', async () => {
 })
 
 /**
+ * The bus is drawn like the street: the road into the town you are going to,
+ * its own tiles and objects running past, and you at a window. Space steps off.
+ */
+await test('the bus runs along the road into the next town, and Space steps off', async () => {
+  const page = await newPage(baseSave())
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(500)
+  await talkTo(page, 'Bus Stop')
+  await page.locator('[data-testid="menu-screen"]').waitFor({ state: 'visible' })
+  await page.evaluate(() => {
+    const go = [...document.querySelectorAll('[data-testid="menu-screen"] button')].find(
+      (b) => b.textContent.trim() === 'Go' && b.parentElement.textContent.includes('Riverbend'),
+    )
+    go.click()
+  })
+  const ride = page.locator('[data-testid="bus-ride"]')
+  await ride.waitFor({ state: 'visible' })
+  assert((await ride.getAttribute('data-road')) === 'road-riverbend', `the bus to Riverbend runs along ${await ride.getAttribute('data-road')}`)
+  const riders = JSON.parse((await ride.getAttribute('data-riders')) ?? '[]')
+  assert(riders.some((r) => r.who === 'you'), 'you are not on the bus')
+  const canvas = page.locator('[data-testid="bus-canvas"]')
+  await canvas.waitFor({ state: 'visible' })
+  await page.waitForTimeout(300)
+  const first = await canvas.screenshot()
+  await page.waitForTimeout(350)
+  const second = await canvas.screenshot()
+  assert(Buffer.compare(first, second) !== 0, 'the road is not going past the window')
+  await shot(page, 'bus-to-riverbend')
+
+  await page.keyboard.press(' ')
+  assert(await untilArea(page, /Riverbend/, 5000), `Space did not step off the bus (in ${await areaNameOf(page)})`)
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+})
+
+/**
  * The menu is a panel over the game, not a place you go.
  *
  * As a view of its own it replaced the scene, which unmounted the poker table —

@@ -1,38 +1,121 @@
-import { useEffect, useState } from 'react'
-import type { CharacterDef } from '../world/characters'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Application, Container, Graphics, Sprite, Texture } from 'pixi.js'
+import { buildStampScene, buildTileLayer, LAYER, TILE_SIZE } from '../overworld/tileRenderer'
+import { LightMap, townLight } from '../overworld/lighting'
+import { personFrames, type Figure } from '../overworld/characterArt'
+import { lookFromId } from '../overworld/casting'
+import {
+  BUS_H,
+  BUS_W,
+  BUS_WINDOWS,
+  DRIVER_WINDOW,
+  WHEEL_SIZE,
+  WHEEL_TOP,
+  WHEEL_XS,
+  drawBusBody,
+  drawBusGlass,
+  drawBusInterior,
+  drawBusWheel,
+  drawSeatTops,
+} from '../overworld/art/busArt'
+import { AREAS } from '../world/cities'
+import { PERIOD_LIGHT, type TimePeriod } from './time'
+import { HOME_ROAD, companionsOf, paintArt, roadRows, seatRiders, themeOfArea } from './busRide'
+import { PxButton } from './pixel/ui'
+import { PixelText } from './pixel/PixelText'
+import { INK } from './pixel/ink'
+import { frameStyle, type FrameSpec } from './pixel/frame'
+import { buttonHeight } from './tableLayout'
+import { useViewport } from './useViewport'
+import { useMenuKeys } from './keys'
 
 /**
- * Inside the bus, rather than a caption about one.
+ * The 14, on the road.
  *
- * Travel used to be a paragraph of text and a button, and then a shot of the bus
- * from the outside — which is nobody's experience of a bus. Since the world is
- * one continuous place you could have walked, the ride has to feel like time
- * passing in it: you are sat in the gangway with other people, the town goes past
- * the windows, and it ends on its own.
+ * A side-on shot of the bus running along the road into the town you are going
+ * to, drawn from the same code as the street: the road's own tiles and objects
+ * scroll past a tile at a time, in the hour's light, and in the bus's windows
+ * sit you, whoever is riding with you, and a few strangers — the same sprites
+ * that walk about the town. The destination is on a board in the corner, as it
+ * is on the front of a bus, and the caption is the line about the ride.
+ *
+ * It ends on its own after a few seconds. A ride a beat put you on has no skip
+ * and no end of its own: the beat ends it once what is said on the way is said.
  */
 
 interface BusTransitionProps {
-  /** Where the bus is going, for the destination blind at the front. */
+  /** Where the bus is going, for the destination board. */
   destination?: string
-  /** A line to sit under the window while it moves. */
+  /** A line about the ride. */
   caption?: string
   /** Called when the ride is over. A forced ride has no end of its own: the beat that started it ends it. */
   onArrive?: () => void
-  /** People sat beside you, in the seats either side of yours. */
-  companions?: CharacterDef[]
+  /** Character ids of the people riding with you, sat either side of you. */
+  companions?: string[]
   /**
    * A ride a beat put you on. Nobody gets off it early: there is no skip
    * button, and it does not end by itself — the beat ends it once what is said
    * on the way has been said.
    */
   forced?: boolean
+  /** The road out of the window: an area with road from side to side (see `rideRoad`). */
+  road?: string
+  /** The hour, for the light. */
+  period?: TimePeriod
 }
 
 /** How long the ride lasts. Long enough to feel like distance, short enough to sit through. */
 const RIDE_MS = 4200
+/** How fast the road goes by, in tiles a second. */
+const TILES_PER_SECOND = 5
+/** Canvas pixels per art unit in the world: 16-unit art on a 32px tile. */
+const ART = TILE_SIZE / 16
 
-export function BusTransition({ destination, caption, onArrive, companions = [], forced = false }: BusTransitionProps) {
+/** The destination board: black, with an amber edge, like the blind on the front of a bus. */
+const BOARD_FRAME: FrameSpec = {
+  rings: ['#141418', '#b8862a', '#3a2c14'],
+  lower: ['#141418', '#8a6420', '#2a200e'],
+  fill: '#0c0c10',
+  radius: 2,
+}
+/** The caption: the dark text box the rest of the game's boxes are. */
+const CAPTION_FRAME: FrameSpec = {
+  rings: ['#141418', '#6a7cb8', '#3a4778'],
+  lower: ['#141418', '#44518a', '#283058'],
+  fill: 'rgba(14, 16, 26, 0.94)',
+  radius: 3,
+}
+const TRACK_FRAME: FrameSpec = { rings: ['#141418', '#2c3352'], fill: '#10121c', radius: 1 }
+
+function textureOf(canvas: HTMLCanvasElement): Texture {
+  const texture = Texture.from(canvas)
+  texture.source.scaleMode = 'nearest'
+  return texture
+}
+
+export function BusTransition({
+  destination,
+  caption,
+  onArrive,
+  companions = [],
+  forced = false,
+  road = HOME_ROAD,
+  period = 'morning',
+}: BusTransitionProps) {
   const [done, setDone] = useState(false)
+  const view = useViewport()
+  // Off once: the timer and the button, or a double click on it, are one stop.
+  const arrived = useRef(false)
+  const arrive = () => {
+    if (arrived.current || !onArrive) return
+    arrived.current = true
+    onArrive()
+  }
+  const host = useRef<HTMLDivElement>(null)
+  const overlay = useRef<HTMLDivElement>(null)
+  const companionKey = companions.join(',')
+  const riding = useMemo(() => companionsOf(companionKey ? companionKey.split(',') : []), [companionKey])
+  const riders = useMemo(() => seatRiders(riding, `${road}:${destination ?? ''}`), [riding, road, destination])
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDone(true), RIDE_MS)
@@ -43,416 +126,293 @@ export function BusTransition({ destination, caption, onArrive, companions = [],
   // wait, which is the same bargain the table makes between hands.
   useEffect(() => {
     if (!done || forced || !onArrive) return
-    const timer = window.setTimeout(onArrive, 450)
+    const timer = window.setTimeout(arrive, 450)
     return () => window.clearTimeout(timer)
   }, [done])
+
+  // Space, E or Enter step off, as the button does; a forced ride has no button.
+  useMenuKeys(overlay, { active: !forced })
+
+  useEffect(() => {
+    const container = host.current
+    if (!container) return
+    let app: Application | null = null
+    let cancelled = false
+    const lightMaps: LightMap[] = []
+    const made: Texture[] = []
+    const make = (canvas: HTMLCanvasElement) => {
+      const texture = textureOf(canvas)
+      made.push(texture)
+      return texture
+    }
+
+    ;(async () => {
+      const area = AREAS[road]?.area ?? AREAS[HOME_ROAD].area
+      const instance = new Application()
+      await instance.init({
+        background: area.background,
+        resizeTo: container,
+        antialias: false,
+        resolution: window.devicePixelRatio || 1,
+        autoDensity: true,
+      })
+      if (cancelled) {
+        instance.destroy(true)
+        return
+      }
+      app = instance
+      instance.canvas.setAttribute('data-testid', 'bus-canvas')
+      container.appendChild(instance.canvas)
+
+      const zoom = instance.screen.width < 560 ? 1 : 2
+      const theme = themeOfArea(road)
+      const light = townLight(theme, PERIOD_LIGHT[period])
+      const lamps = !!light && light.lamps > 0
+      const ambient = light ? parseInt(light.ambient.slice(1), 16) : 0xffffff
+      const map = area.map
+      const mapW = map[0].length * TILE_SIZE
+      const mapH = map.length * TILE_SIZE
+
+      // The road, as many times side by side as it takes to cover the screen
+      // with one to spare, so it can run past for as long as the ride lasts.
+      const world = new Container()
+      world.scale.set(zoom)
+      const copies = Math.ceil(instance.screen.width / (mapW * zoom)) + 1
+      for (let k = 0; k < copies; k++) {
+        const strip = buildTileLayer(map, theme)
+        strip.sortableChildren = true
+        const stamps = buildStampScene(area.stamps ?? [])
+        strip.addChild(stamps.under, stamps.over, stamps.litUnder, stamps.litOver)
+        if (light) {
+          const artW = map[0].length * (TILE_SIZE / 2)
+          const artH = map.length * (TILE_SIZE / 2)
+          const lightMap = new LightMap(artW, artH, stamps.lights, stamps.glow(artW, artH), 2)
+          lightMap.sprite.zIndex = LAYER.lightMap
+          strip.addChild(lightMap.sprite)
+          lightMap.setPeriod(light)
+          lightMaps.push(lightMap)
+        }
+        stamps.litUnder.visible = lamps
+        stamps.litOver.visible = lamps
+        stamps.over.tint = ambient
+        strip.x = k * mapW
+        world.addChild(strip)
+      }
+      instance.stage.addChild(world)
+
+      // The bus, in layers: the cabin, the people in it, the seat tops in
+      // front of them, the bodywork with its windows cut out, the glass, the
+      // wheels.
+      const bus = new Container()
+      bus.scale.set(zoom)
+      const interior = new Sprite(make(paintArt(BUS_W, BUS_H, (px) => drawBusInterior(px, lamps))))
+      bus.addChild(interior)
+      const people = new Container()
+      bus.addChild(people)
+      const seated = riders.map((rider) => {
+        const frames = personFrames(rider.figure)
+        const sprite = new Sprite(frames.upper[rider.facing])
+        const w = BUS_WINDOWS[rider.window]
+        sprite.position.set((w.x + w.w / 2 - 8) * ART, (w.y + 1) * ART)
+        people.addChild(sprite)
+        return { rider, sprite, frames, baseY: sprite.y }
+      })
+      const driver: Figure = {
+        role: 'local',
+        look: { ...lookFromId('the-14-driver', 'Driver'), hat: 'cap', hatColor: '#2c7d8e' },
+      }
+      const driverSprite = new Sprite(personFrames(driver).upper.right)
+      driverSprite.position.set((DRIVER_WINDOW.x + DRIVER_WINDOW.w / 2 - 9) * ART, (DRIVER_WINDOW.y + 1) * ART)
+      people.addChild(driverSprite)
+      bus.addChild(new Sprite(make(paintArt(BUS_W, BUS_H, (px) => drawSeatTops(px, lamps)))))
+      const body = new Sprite(make(paintArt(BUS_W, BUS_H, (px) => drawBusBody(px, undefined, lamps))))
+      bus.addChild(body)
+      bus.addChild(new Sprite(make(paintArt(BUS_W, BUS_H, (px) => drawBusGlass(px, lamps)))))
+      const wheelFrames = [0, 1, 2].map((f) => make(paintArt(WHEEL_SIZE, WHEEL_SIZE, (px) => drawBusWheel(px, f))))
+      const wheels = WHEEL_XS.map((x) => {
+        const wheel = new Sprite(wheelFrames[0])
+        wheel.position.set(x * ART, WHEEL_TOP * ART)
+        bus.addChild(wheel)
+        return wheel
+      })
+      // After dark the bodywork takes the hour's colour, as everything in the
+      // street does; the cabin is lit from inside and keeps its own.
+      body.tint = ambient
+      for (const wheel of wheels) wheel.tint = ambient
+      if (!lamps) {
+        interior.tint = ambient
+        people.tint = ambient
+      }
+      // Headlamps on the road ahead, once the lamps are lit.
+      if (lamps) {
+        const beam = new Graphics()
+        const fx = (BUS_W - 1) * ART
+        beam
+          .poly([fx, 30 * ART, fx + 70 * ART, 22 * ART, fx + 70 * ART, 50 * ART, fx, 34 * ART])
+          .fill({ color: 0xfff0b0, alpha: 0.22 })
+        beam.blendMode = 'add'
+        bus.addChildAt(beam, 0)
+      }
+      instance.stage.addChild(bus)
+
+      // What stands on the near pavement — a lamp post, a sign — is in front
+      // of the bus, so it is drawn again over it, in the hour's colour.
+      const rows = roadRows(road)
+      const lastRoad = rows.length > 0 ? rows[rows.length - 1] : 7
+      const near = (area.stamps ?? []).filter((s) => s.row === lastRoad + 1)
+      const front = new Container()
+      front.scale.set(zoom)
+      if (near.length > 0) {
+        for (let k = 0; k < copies; k++) {
+          const stamps = buildStampScene(near)
+          const strip = new Container()
+          strip.sortableChildren = true
+          strip.addChild(stamps.under, stamps.over, stamps.litUnder, stamps.litOver)
+          stamps.under.tint = ambient
+          stamps.over.tint = ambient
+          stamps.litUnder.visible = lamps
+          stamps.litOver.visible = lamps
+          strip.x = k * mapW
+          front.addChild(strip)
+        }
+      }
+      instance.stage.addChild(front)
+
+      // Where the bus sits: on the nearer lane, wheels on its kerb side, in
+      // the middle of the screen; the road is placed under it.
+      const kerb = ((rows.length > 0 ? rows[rows.length - 1] : 7) + 1) * TILE_SIZE - 3 * ART
+      const busTop = kerb - (WHEEL_TOP + WHEEL_SIZE) * ART
+      const screenW = instance.screen.width
+      const screenH = instance.screen.height
+      let worldY = Math.round(screenH / 2 - (busTop + BUS_H) * zoom)
+      if (mapH * zoom >= screenH) worldY = Math.min(0, Math.max(screenH - mapH * zoom, worldY))
+      else worldY = Math.round((screenH - mapH * zoom) / 2)
+      world.y = worldY
+      front.y = worldY
+      const busX = Math.round((screenW - BUS_W * ART * zoom) / 2)
+      bus.position.set(busX, worldY + busTop * zoom)
+      const busY = bus.y
+
+      const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+      const speed = (still ? 2 : TILES_PER_SECOND) * TILE_SIZE
+      let travelled = 0
+      let elapsed = 0
+      instance.ticker.add((ticker) => {
+        elapsed += ticker.deltaMS
+        travelled += (speed * ticker.deltaMS) / 1000
+        // A whole art pixel at a time, as everything in the street moves.
+        const step = Math.floor(travelled / ART) * ART
+        world.x = -(step % mapW) * zoom
+        front.x = world.x
+        const turn = Math.floor(step / (5 * ART)) % 3
+        for (const wheel of wheels) wheel.texture = wheelFrames[turn]
+        if (still) return
+        // The road comes up through the bus: a bump every so often, and the
+        // people in it a beat behind, each in their own time.
+        const bump = Math.floor(elapsed / 140) % 5 === 0 ? ART : 0
+        bus.y = busY + bump * zoom
+        for (const { rider, sprite, frames, baseY } of seated) {
+          const bob = Math.floor((elapsed + rider.phase * 110) / 280) % 2 === 0 ? 0 : ART
+          sprite.y = baseY + bob
+          // You and the people with you blink now and then; strangers face front.
+          if (rider.facing === 'down') {
+            const blink = (Math.floor(elapsed / 100) + rider.phase * 7) % 38 === 0
+            sprite.texture = blink ? frames.upperBlink.down : frames.upper.down
+          }
+        }
+      })
+    })()
+
+    return () => {
+      cancelled = true
+      for (const lightMap of lightMaps) lightMap.destroy()
+      app?.destroy(true, { children: true })
+      for (const texture of made) texture.destroy(true)
+    }
+  }, [road, period, riders])
+
+  const scale = view.w < 700 || view.h < 600 ? 2 : 3
+  // Clear of the ☰ and the speaker in the top right corner.
+  const boxW = Math.min(view.w - 32, 460)
+  const boardW = Math.min(boxW, view.w - 132)
+  const names = riding.map((r) => r.character.name)
 
   return (
     <div
       data-testid="bus-ride"
       data-forced={forced || undefined}
+      data-road={road}
+      data-riders={JSON.stringify(riders.map((r) => ({ window: r.window, who: r.characterId ?? (r.figure.role === 'player' ? 'you' : 'stranger') })))}
       style={{
+        position: 'relative',
         width: '100vw',
         height: '100vh',
-        // Without this the padding is added *to* the full viewport height, so the
-        // scene is always exactly its own padding taller than the window.
         boxSizing: 'border-box',
-        background: '#0a0d16',
-        color: '#e8e8f0',
-        fontFamily: 'monospace',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 16,
-        textAlign: 'center',
-        padding: 20,
         overflow: 'hidden',
+        background: '#0a0d16',
       }}
     >
-      <div style={{ letterSpacing: 2, color: '#8ad4ff', fontSize: 13 }}>
-        {destination ? `THE 14 — ${destination.toUpperCase()}` : 'THE 14'}
-      </div>
+      <div ref={host} style={{ position: 'absolute', inset: 0 }} />
 
-      <div className="bus-cabin" style={cabinStyle}>
-        {/* Ceiling, with the grab rail running the length of it. */}
-        <div style={ceilingStyle} />
-        <div style={railStyle} />
+      <div
+        ref={overlay}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          pointerEvents: 'none',
+          padding: 'max(12px, env(safe-area-inset-top)) 16px max(12px, env(safe-area-inset-bottom))',
+          boxSizing: 'border-box',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          gap: 12,
+        }}
+      >
+        <div style={{ display: 'grid', gap: 8, justifyItems: 'start', maxWidth: boxW }}>
+          {/* The board on the front of the bus: the number and where it is going. */}
+          <div
+            data-testid="bus-destination"
+            style={{ ...frameStyle(BOARD_FRAME, scale), padding: `${2 * scale}px ${4 * scale}px`, display: 'flex', gap: 4 * scale, alignItems: 'flex-start', maxWidth: boardW }}
+          >
+            <PixelText text="14" scale={scale} ink={{ color: '#ffb030', shadow: '#4a2a08' }} />
+            <PixelText
+              text={(destination ?? 'Out of town').toUpperCase()}
+              scale={scale}
+              wrap
+              ink={{ color: '#ffd060', shadow: '#4a2a08' }}
+            />
+          </div>
+          <div style={{ ...frameStyle(CAPTION_FRAME, scale), padding: `${3 * scale}px ${4 * scale}px`, display: 'grid', gap: 2 * scale, width: '100%' }}>
+            <PixelText text={caption ?? 'The window is cold. The town goes past.'} scale={scale === 3 ? 2 : scale} wrap />
+            {names.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 * scale, alignItems: 'center' }}>
+                <PixelText text="Riding with" scale={scale === 3 ? 2 : scale} ink={INK.dim} />
+                {names.map((name) => (
+                  <span key={name} data-testid="bus-companion" title={name} style={{ display: 'inline-flex' }}>
+                    <PixelText text={name} scale={scale === 3 ? 2 : scale} ink={INK.gold} />
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
 
-        {/* The windows down the far side, with the town going past. */}
-        <div style={windowBandStyle}>
-          {[0, 1, 2].map((i) => (
-            <div key={i} style={windowStyle}>
-              <div className="bus-scroll-far" style={scenerySlab('#1b2742', '#223055', 10, 40)} />
-              <div className="bus-scroll-near" style={scenerySlab('#0b1220', '#151d33', 36, 34)} />
-              <div style={{ position: 'absolute', inset: 'auto 0 0 0', height: 12, background: '#15161d' }} />
+        {!forced && (
+          <div style={{ display: 'grid', gap: 8, justifyItems: 'center', pointerEvents: 'auto' }}>
+            <div style={{ ...frameStyle(TRACK_FRAME, 2), width: 'min(320px, 70vw)', height: 10 }}>
+              <div className="deal-countdown" style={{ height: '100%', background: '#ffd060', animationDuration: `${RIDE_MS}ms` }} />
             </div>
-          ))}
-        </div>
-
-        {/* The far row of seats, and the people in them. */}
-        <div style={farSeatRowStyle}>
-          <Passenger seat="#8a4fbd" skin="#8d5a3b" hair="#241a12" bob={0} />
-          <Passenger seat="#2f6ea8" skin="#e0b48c" hair="#5c3a22" bob={1} asleep />
-          <Passenger seat="#8a4fbd" skin="#c08552" hair="#141414" bob={2} />
-        </div>
-
-        {/* The gangway, running away from you down the bus. */}
-        <div style={gangwayStyle} />
-
-        {/* The near row: the backs of two seats, and you in the aisle one. */}
-        <div style={nearSeatRowStyle}>
-          {companions[1] ? <Beside who={companions[1]} /> : <SeatBack />}
-          <You />
-          {companions[0] ? <Beside who={companions[0]} /> : <SeatBack />}
-        </div>
+            <PxButton
+              testId="bus-skip"
+              lines={[done ? 'Step off' : 'Skip the ride']}
+              scale={2}
+              role={done ? 'primary' : 'plain'}
+              height={buttonHeight(1, 2, view.coarse)}
+              onClick={arrive}
+            />
+          </div>
+        )}
       </div>
-
-      <p style={{ color: '#9aa4b8', maxWidth: 460, lineHeight: 1.6, margin: 0, fontSize: 13 }}>
-        {caption ?? 'The window is cold. The town goes past in the dark.'}
-      </p>
-
-      <div style={progressTrackStyle}>
-        <div
-          className="deal-countdown"
-          style={{ height: '100%', background: '#8ad4ff', animationDuration: `${RIDE_MS}ms` }}
-        />
-      </div>
-
-      {!forced && (
-        <button onClick={onArrive} style={skipButtonStyle}>
-          {done ? 'Step off' : 'Skip the ride'}
-        </button>
-      )}
-    </div>
-  )
-}
-
-const cabinStyle: React.CSSProperties = {
-  position: 'relative',
-  width: 'min(94vw, 560px)',
-  // Shrinks with the window: on a short screen a fixed 250px cabin pushed the
-  // caption and the skip button off the bottom.
-  height: 'clamp(150px, 34vh, 250px)',
-  minHeight: 150,
-  flexShrink: 0,
-  borderRadius: 12,
-  overflow: 'hidden',
-  border: '3px solid #2a3348',
-  background: 'linear-gradient(180deg, #1b2130 0%, #222a3c 45%, #171d2a 100%)',
-  boxShadow: '0 14px 44px rgba(0,0,0,0.6)',
-}
-
-const ceilingStyle: React.CSSProperties = {
-  position: 'absolute',
-  inset: '0 0 auto 0',
-  height: 22,
-  background: 'linear-gradient(180deg, #2d3650 0%, #212938 100%)',
-  borderBottom: '1px solid #171d2a',
-}
-
-const railStyle: React.CSSProperties = {
-  position: 'absolute',
-  top: 26,
-  left: 18,
-  right: 18,
-  height: 3,
-  borderRadius: 2,
-  background: 'linear-gradient(180deg, #6a7693 0%, #3c4660 100%)',
-}
-
-const windowBandStyle: React.CSSProperties = {
-  position: 'absolute',
-  top: 36,
-  left: 16,
-  right: 16,
-  height: 76,
-  display: 'flex',
-  gap: 10,
-}
-
-const windowStyle: React.CSSProperties = {
-  position: 'relative',
-  flex: 1,
-  borderRadius: 6,
-  overflow: 'hidden',
-  border: '2px solid #3c4660',
-  background: 'linear-gradient(180deg, #16213a 0%, #101828 100%)',
-}
-
-const farSeatRowStyle: React.CSSProperties = {
-  position: 'absolute',
-  top: 104,
-  left: 16,
-  right: 16,
-  height: 58,
-  display: 'flex',
-  justifyContent: 'space-around',
-  alignItems: 'flex-end',
-}
-
-const gangwayStyle: React.CSSProperties = {
-  position: 'absolute',
-  top: 158,
-  left: 0,
-  right: 0,
-  height: 34,
-  background: 'linear-gradient(180deg, #2a3142 0%, #1d2330 100%)',
-  borderTop: '1px solid #39425a',
-}
-
-/**
- * Anchored from the top, not the bottom.
- *
- * The cabin shrinks on a short window, and a row pinned to the bottom would walk
- * up into the gangway and the far seats as it did. Measured from the top, a short
- * cabin simply crops the near row — which is what an interior shot looks like
- * anyway, since you are sitting in it.
- */
-const nearSeatRowStyle: React.CSSProperties = {
-  position: 'absolute',
-  top: 186,
-  left: 10,
-  right: 10,
-  height: 64,
-  display: 'flex',
-  justifyContent: 'space-around',
-  alignItems: 'flex-end',
-}
-
-const progressTrackStyle: React.CSSProperties = {
-  width: 'min(70vw, 320px)',
-  height: 3,
-  borderRadius: 2,
-  background: '#223047',
-  overflow: 'hidden',
-}
-
-const skipButtonStyle: React.CSSProperties = {
-  background: 'transparent',
-  color: '#bcc8da',
-  border: '1px solid #35507a',
-  borderRadius: 4,
-  padding: '6px 14px',
-  fontFamily: 'monospace',
-  cursor: 'pointer',
-  fontSize: 13,
-}
-
-/** A band of blocky buildings, repeated twice so it can scroll seamlessly. */
-function scenerySlab(dark: string, light: string, top: number, height: number): React.CSSProperties {
-  return {
-    position: 'absolute',
-    left: 0,
-    top,
-    height,
-    width: '200%',
-    backgroundImage: `repeating-linear-gradient(90deg,
-      ${dark} 0 14px, transparent 14px 20px,
-      ${light} 20px 40px, transparent 40px 50px,
-      ${dark} 50px 74px, transparent 74px 84px)`,
-    backgroundSize: '50% 100%',
-  }
-}
-
-/** Somebody else on the bus, seen from behind and a little to the side. */
-function Passenger({
-  seat,
-  skin,
-  hair,
-  bob,
-  asleep,
-}: {
-  seat: string
-  skin: string
-  hair: string
-  bob: number
-  asleep?: boolean
-}) {
-  return (
-    <div
-      className="bus-bob"
-      style={{ position: 'relative', width: 46, height: 54, animationDelay: `${bob * 190}ms` }}
-    >
-      {/* Head, tipped if they are asleep against the glass. */}
-      <div
-        style={{
-          position: 'absolute',
-          left: 13,
-          top: 4,
-          width: 20,
-          height: 18,
-          borderRadius: 4,
-          background: skin,
-          border: '2px solid #15151c',
-          transform: asleep ? 'rotate(-14deg)' : undefined,
-        }}
-      />
-      <div
-        style={{
-          position: 'absolute',
-          left: 12,
-          top: 1,
-          width: 22,
-          height: 7,
-          background: hair,
-          transform: asleep ? 'rotate(-14deg)' : undefined,
-        }}
-      />
-      {/* Shoulders above the seat back. */}
-      <div
-        style={{
-          position: 'absolute',
-          left: 7,
-          top: 22,
-          width: 32,
-          height: 14,
-          borderRadius: '5px 5px 0 0',
-          background: '#3a4256',
-          border: '2px solid #15151c',
-        }}
-      />
-      {/* The seat itself. */}
-      <div
-        style={{
-          position: 'absolute',
-          left: 4,
-          bottom: 0,
-          width: 38,
-          height: 22,
-          borderRadius: '4px 4px 0 0',
-          background: seat,
-          border: '2px solid #15151c',
-        }}
-      />
-    </div>
-  )
-}
-
-/** Somebody you are riding with, in the seat beside yours, in their own colours. */
-function Beside({ who }: { who: CharacterDef }) {
-  const { skin, hair, shirt } = who.look
-  return (
-    <div
-      className="bus-bob"
-      data-testid="bus-companion"
-      title={who.name}
-      style={{ position: 'relative', width: 64, height: 58, animationDelay: '240ms' }}
-    >
-      <div
-        style={{
-          position: 'absolute',
-          left: 20,
-          top: 0,
-          width: 24,
-          height: 20,
-          borderRadius: 5,
-          background: skin,
-          border: '2px solid #15151c',
-        }}
-      />
-      <div style={{ position: 'absolute', left: 18, top: -3, width: 28, height: 9, background: hair }} />
-      <div
-        style={{
-          position: 'absolute',
-          left: 9,
-          top: 20,
-          width: 46,
-          height: 18,
-          borderRadius: '6px 6px 0 0',
-          background: shirt,
-          border: '2px solid #15151c',
-        }}
-      />
-      <div
-        style={{
-          position: 'absolute',
-          left: 0,
-          bottom: 0,
-          width: 64,
-          height: 22,
-          borderRadius: '6px 6px 0 0',
-          background: 'linear-gradient(180deg, #4a3f6b 0%, #332b4c 100%)',
-          border: '2px solid #15151c',
-          borderBottom: 'none',
-        }}
-      />
-    </div>
-  )
-}
-
-/** An empty seat in the near row, seen from behind. */
-function SeatBack() {
-  return (
-    <div
-      style={{
-        width: 64,
-        height: 46,
-        borderRadius: '6px 6px 0 0',
-        background: 'linear-gradient(180deg, #4a3f6b 0%, #332b4c 100%)',
-        border: '2px solid #15151c',
-        borderBottom: 'none',
-      }}
-    />
-  )
-}
-
-/** You, in the aisle seat, with the night's money on your lap. */
-function You() {
-  return (
-    <div className="bus-bob" style={{ position: 'relative', width: 72, height: 62 }}>
-      <div
-        style={{
-          position: 'absolute',
-          left: 23,
-          top: 0,
-          width: 26,
-          height: 22,
-          borderRadius: 5,
-          background: '#d9a07a',
-          border: '2px solid #15151c',
-        }}
-      />
-      <div style={{ position: 'absolute', left: 21, top: -3, width: 30, height: 9, background: '#2b2118' }} />
-      {/* Shoulders, in the green jacket the overworld sprite wears. */}
-      <div
-        style={{
-          position: 'absolute',
-          left: 12,
-          top: 22,
-          width: 48,
-          height: 18,
-          borderRadius: '6px 6px 0 0',
-          background: '#3a9d5c',
-          border: '2px solid #15151c',
-        }}
-      />
-      {/* The bag, held on the lap. */}
-      <div
-        style={{
-          position: 'absolute',
-          left: 26,
-          top: 34,
-          width: 20,
-          height: 12,
-          borderRadius: 2,
-          background: '#4a3324',
-          border: '2px solid #15151c',
-        }}
-      />
-      <div
-        style={{
-          position: 'absolute',
-          left: 4,
-          bottom: 0,
-          width: 64,
-          height: 22,
-          borderRadius: '6px 6px 0 0',
-          background: 'linear-gradient(180deg, #5a4d80 0%, #3d3459 100%)',
-          border: '2px solid #15151c',
-          borderBottom: 'none',
-        }}
-      />
     </div>
   )
 }
