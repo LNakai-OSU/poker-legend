@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import type { Viewport } from './tableLayout'
+import { prefersTouch } from './device'
 
 function readViewport(): Viewport {
   return {
     w: window.innerWidth,
     h: window.innerHeight,
     dpr: window.devicePixelRatio || 1,
-    coarse: window.matchMedia?.('(pointer: coarse)').matches ?? false,
+    // A finger's controls for a touch device, whatever the window's size.
+    coarse: prefersTouch(),
   }
 }
 

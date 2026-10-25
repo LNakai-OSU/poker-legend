@@ -203,9 +203,14 @@ The poker screen is modelled on how an online table actually reads
 The iPhone target needs more than a responsive layout, since the overworld is
 keyboard-driven on desktop:
 
-- `TouchControls` renders an on-screen d-pad and action button on coarse-pointer
-  or narrow viewports. It drives the same movement and interaction paths through
-  refs rather than synthesising keyboard events.
+- `TouchControls` renders an on-screen d-pad and action button on touch devices.
+  It drives the same movement and interaction paths through refs rather than
+  synthesising keyboard events.
+- Touch is decided by the device, never by the window's width
+  (`src/game/device.ts`): a coarse primary pointer, or touch points with no
+  hover or a phone/tablet user agent. A small desktop window keeps the keyboard,
+  "Press E" and the desktop hints; only the layout scales (the overworld zooms
+  out under 560px, the table and menus scale down).
 - Table and menu screens size with `clamp()` so a five-card board and four seat
   panels fit at 390px without horizontal scrolling.
 - Verified at an iPhone 13 viewport: controls usable, no horizontal overflow,

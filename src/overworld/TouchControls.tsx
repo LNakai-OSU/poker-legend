@@ -1,26 +1,15 @@
-import { useEffect, useState } from 'react'
 import type { Direction } from './GridPlayer'
+import { useTouchFirst } from '../game/device'
 
 /**
  * On-screen controls for touch devices. The overworld is keyboard-driven on
  * desktop, which is unusable on a phone, so these drive the same movement and
  * interaction paths directly rather than synthesising key events.
+ *
+ * Whether they show is decided by the device, not the window's width: a small
+ * desktop window keeps its keyboard (see `src/game/device.ts`).
  */
-export function useIsTouchDevice(): boolean {
-  const [isTouch, setIsTouch] = useState(false)
-  useEffect(() => {
-    const query = window.matchMedia('(pointer: coarse)')
-    const update = () => setIsTouch(query.matches || window.innerWidth < 820)
-    update()
-    query.addEventListener('change', update)
-    window.addEventListener('resize', update)
-    return () => {
-      query.removeEventListener('change', update)
-      window.removeEventListener('resize', update)
-    }
-  }, [])
-  return isTouch
-}
+export const useIsTouchDevice = useTouchFirst
 
 interface TouchControlsProps {
   onHold: (direction: Direction | null) => void

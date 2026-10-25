@@ -2329,6 +2329,42 @@ await test('touch controls appear on a phone and move the player', async () => {
 })
 
 /**
+ * A small desktop window is still a desktop.
+ *
+ * Touch used to be "coarse pointer or narrower than 820px", so dragging the
+ * window small put a d-pad over the street and told a keyboard player to tap.
+ * The device decides the controls; the window's size only decides how the
+ * scene fits.
+ */
+await test('a small desktop window keeps the keyboard and still fits', async () => {
+  const page = await newPage(baseSave())
+  await page.setViewportSize({ width: 640, height: 420 })
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(600)
+  const pointer = await page.evaluate(() => matchMedia('(pointer: fine)').matches)
+  assert(pointer, 'this scenario needs a fine pointer')
+  assert(!(await page.locator('[data-testid="touch-controls"]').isVisible()), 'a small desktop window got the touch d-pad')
+
+  const before = await posOf(page)
+  await step(page, 'ArrowLeft')
+  const after = await posOf(page)
+  assert(after.col !== before.col || after.row !== before.row, 'the arrow keys did not move the player in a small window')
+
+  await approach(page, 'Valet')
+  const prompt = await promptOf(page)
+  assert(/^Press E/.test(prompt ?? ''), `the prompt in a small desktop window says "${prompt}"`)
+
+  const fit = await page.evaluate(() => ({
+    sideways: document.documentElement.scrollWidth - window.innerWidth,
+    down: document.documentElement.scrollHeight - window.innerHeight,
+  }))
+  assert(fit.sideways <= 0 && fit.down <= 0, `the street does not fit a small window (${fit.sideways}px wide, ${fit.down}px tall)`)
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+})
+
+/**
  * The map editor.
  *
  * Maps are ASCII in source, which is the right format to keep them in and a bad
