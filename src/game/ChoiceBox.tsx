@@ -5,6 +5,7 @@ import { INK } from './pixel/ink'
 import { wrapText } from './pixel/font'
 import { buttonHeight, DOCK } from './tableLayout'
 import { useViewport } from './useViewport'
+import { isActionKey, navStep, swallowDoubleClick, useKeyLayer } from './keys'
 
 /**
  * A question a beat puts to the player, and the answers they can give.
@@ -14,8 +15,8 @@ import { useViewport } from './useViewport'
  * a phone. An answer the player cannot give yet is still shown, greyed, with
  * why underneath — the road not open is part of the decision.
  *
- * Keys: the number of an answer picks it; the arrows move the pointer and Enter
- * or Space picks the one it is on.
+ * Keys: the number of an answer picks it; the arrows or W A S D move the
+ * pointer, and Space, E or Enter picks the one it is on.
  */
 
 interface ChoiceBoxProps {
@@ -35,6 +36,9 @@ export function ChoiceBox({ speaker, prompt, options, onChoose }: ChoiceBoxProps
   const firstOpen = Math.max(0, options.findIndex((o) => o.open))
   const [pointer, setPointer] = useState(firstOpen)
   const buttons = useRef<Array<HTMLButtonElement | null>>([])
+  const isTop = useKeyLayer()
+  // Answered once: a double click, or a held key's auto-repeat, is not two answers.
+  const answered = useRef(false)
 
   // Big enough to read at a glance, small enough that four answers and the
   // question fit on a short laptop screen.
@@ -44,7 +48,8 @@ export function ChoiceBox({ speaker, prompt, options, onChoose }: ChoiceBoxProps
   const textWidth = artWidth - 2 * DOCK.buttonPadX - 4
 
   const pick = (index: number) => {
-    if (!options[index]?.open) return
+    if (!options[index]?.open || answered.current) return
+    answered.current = true
     playSound('ui')
     onChoose(index)
   }
@@ -58,27 +63,30 @@ export function ChoiceBox({ speaker, prompt, options, onChoose }: ChoiceBoxProps
   useEffect(() => {
     const open = options.map((o, i) => (o.open ? i : -1)).filter((i) => i >= 0)
     const onKey = (e: KeyboardEvent) => {
+      if (!isTop()) return
       const number = Number(e.key)
       if (Number.isInteger(number) && number >= 1 && number <= options.length) {
         e.preventDefault()
         pick(number - 1)
         return
       }
-      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      const step = navStep(e)
+      if (step !== 0) {
         e.preventDefault()
+        e.stopPropagation()
         if (open.length === 0) return
         const at = open.indexOf(pointer)
-        const step = e.key === 'ArrowDown' ? 1 : -1
         const next = open[(Math.max(0, at) + step + open.length) % open.length]
         setPointer(next)
         buttons.current[next]?.focus({ preventScroll: true })
         return
       }
-      if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+      if (isActionKey(e)) {
         // Handled here rather than by the focused button, so it does what the
         // pointer shows even after a click elsewhere took the focus away.
         e.preventDefault()
         e.stopPropagation()
+        if (e.repeat) return
         pick(pointer)
       }
     }
@@ -87,7 +95,7 @@ export function ChoiceBox({ speaker, prompt, options, onChoose }: ChoiceBoxProps
   })
 
   return (
-    <div data-testid="event-choice" style={{ position: 'fixed', inset: 0, zIndex: 96 }}>
+    <div data-testid="event-choice" onClickCapture={swallowDoubleClick} style={{ position: 'fixed', inset: 0, zIndex: 96 }}>
       <div
         role="dialog"
         aria-label={prompt}
@@ -139,7 +147,7 @@ export function ChoiceBox({ speaker, prompt, options, onChoose }: ChoiceBoxProps
         </div>
         {!view.coarse && (
           <div className="ed-muted" style={{ color: '#8a8aa0', fontSize: 12, marginTop: 8 }}>
-            {options.length > 1 ? `1–${options.length}` : '1'}, or ↑ ↓ and Enter
+            {options.length > 1 ? `1–${options.length}` : '1'}, or ↑ ↓ and Space / E
           </div>
         )}
       </div>

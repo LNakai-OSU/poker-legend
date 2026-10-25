@@ -13,6 +13,7 @@ import { COLLECTOR_FIGURE, HERO_FIGURE } from './casting'
 import { alertBubbleTexture } from './objectArt'
 import { PERSON_RISE, figureKey, type Figure } from './characterArt'
 import { DialogueBox } from '../game/DialogueBox'
+import { isActionKey } from '../game/keys'
 import { TouchControls, useIsTouchDevice } from './TouchControls'
 import { cameraOffset } from './camera'
 import type { Edge } from '../world/types'
@@ -646,8 +647,15 @@ export function OverworldScene({
       }
       interactRef.current = tryInteract
 
+      // E, Space or Enter: whichever is under the thumb. A held key's
+      // auto-repeat is not a fresh press, or holding E through the last line
+      // of a conversation would open it again the moment it closed.
       const interact = (e: KeyboardEvent) => {
-        if (e.key !== 'e' && e.key !== 'E' && e.key !== 'Enter') return
+        if (!isActionKey(e)) return
+        // Not also a press of whatever button last had the focus — the ☰ or
+        // the speaker after a click — and not a scroll of the page for Space.
+        e.preventDefault()
+        if (e.repeat) return
         tryInteract()
       }
 
@@ -924,7 +932,7 @@ export function OverworldScene({
             pointerEvents: 'none',
           }}
         >
-          {isTouch ? `Tap E to talk to ${prompt}` : `Press E to talk to ${prompt}`}
+          {isTouch ? `Tap E to talk to ${prompt}` : `Press E or Space to talk to ${prompt}`}
         </div>
       )}
       {isTouch && !talking && !paused && (

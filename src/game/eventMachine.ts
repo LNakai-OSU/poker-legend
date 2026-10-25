@@ -73,7 +73,7 @@ export interface EventStage {
   /** Movements in flight. */
   cues: Cue[]
   /** Set while a ride you did not choose is under way. */
-  ride?: { destination: string; caption?: string; with: string[] }
+  ride?: { destination: string; caption?: string; with: string[]; areaId?: string }
 }
 
 export const EMPTY_STAGE: EventStage = { faded: false, cast: {}, cues: [] }
@@ -394,7 +394,7 @@ export class EventMachine {
         case 'ride': {
           this.settleCues()
           const name = AREAS[step.areaId]?.area.name ?? step.areaId
-          const ride = { destination: name, caption: step.caption, with: step.with ?? [] }
+          const ride = { destination: name, caption: step.caption, with: step.with ?? [], areaId: step.areaId }
           this.setStage({ ...this.stage, ride })
           this.host.startRide(ride)
           const during: RideAction[] = step.during ?? []

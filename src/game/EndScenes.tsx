@@ -1,11 +1,16 @@
+import { useRef } from 'react'
 import { daysUntilRematch, type GameState } from './state'
+import { swallowDoubleClick, useMenuKeys } from './keys'
 import { buttonStyle } from './MenuScenes'
 import { SPONSORS, TABLES } from '../world/content'
 import { CHARACTERS } from '../world/characters'
 
 function FullScreen({ children, background = '#0a0a12' }: { children: React.ReactNode; background?: string }) {
+  // Its one button answers Space, E and Enter like every other menu.
+  const panel = useRef<HTMLDivElement>(null)
+  useMenuKeys(panel)
   return (
-    <div style={{
+    <div ref={panel} onClickCapture={swallowDoubleClick} style={{
       width: '100vw', minHeight: '100vh', background, color: '#e8e8f0', fontFamily: 'monospace',
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       gap: 14, textAlign: 'center', padding: 32, boxSizing: 'border-box',
