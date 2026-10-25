@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { playSound } from '../audio/audio'
+import { isActionKey, useKeyLayer } from './keys'
+import { useTouchFirst } from './device'
 
 interface DialogueBoxProps {
   speaker: string
@@ -10,19 +12,30 @@ interface DialogueBoxProps {
 export function DialogueBox({ speaker, lines, onFinish }: DialogueBoxProps) {
   const [index, setIndex] = useState(0)
   const isLast = index === lines.length - 1
+  const isTop = useKeyLayer()
+  const touch = useTouchFirst()
+  // The last page is turned once. A double click, or a click and a key in the
+  // same frame, used to finish the box twice — and the second finish turned the
+  // first page of the *next* box, so a line of the story went unread.
+  const finished = useRef(false)
 
   const advance = () => {
+    if (finished.current) return
     playSound('dialogue')
-    if (isLast) onFinish()
-    else setIndex(index + 1)
+    if (isLast) {
+      finished.current = true
+      onFinish()
+    } else setIndex(index + 1)
   }
 
-  // Space and Enter advance the conversation, as in any game with a text box.
-  // Space would otherwise scroll the page, so it's swallowed here.
+  // Space, E and Enter turn the page, as in any game with a text box: whichever
+  // key opened the conversation carries it on. Space would otherwise scroll the
+  // page, so it's swallowed here. A held key's auto-repeat is not a page each.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== ' ' && e.key !== 'Spacebar' && e.key !== 'Enter') return
+      if (!isActionKey(e) || !isTop()) return
       e.preventDefault()
+      if (e.repeat) return
       advance()
     }
     window.addEventListener('keydown', onKey)
@@ -62,7 +75,8 @@ export function DialogueBox({ speaker, lines, onFinish }: DialogueBoxProps) {
           cursor: 'pointer',
         }}
       >
-        {isLast ? "Let's go" : 'Continue'} <span style={{ opacity: 0.7 }}>(space)</span>
+        {isLast ? "Let's go" : 'Continue'}
+        {!touch && <span style={{ opacity: 0.7 }}> (space / E)</span>}
       </button>
     </div>
   )
