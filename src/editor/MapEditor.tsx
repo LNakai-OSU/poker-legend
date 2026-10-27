@@ -347,7 +347,7 @@ export function MapEditor({ onClose, nav }: { onClose: () => void; nav?: React.R
     })
     const start = placed.find((item) => item.kind === 'start') ?? area.playerStart
     const sitters = sittersIn(
-      { id: areaId, map: grid, pois, playerStart: { col: start.col, row: start.row }, stamps },
+      { id: areaId, map: grid, pois, playerStart: { col: start.col, row: start.row }, stamps, crowd: area.crowd },
       { present: charactersIn(areaId, period).map(({ id, at }) => ({ id, col: at.col, row: at.row })) },
     )
     const figures = figuresForSitters(sitters, CHARACTERS)
