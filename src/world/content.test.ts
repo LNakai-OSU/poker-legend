@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { STAMPS } from './stamps'
 import {
   CITIES,
   CITY_ORDER,
@@ -57,6 +58,19 @@ describe('city content', () => {
   const cities = Object.values(CITIES)
   const areas = cities.flatMap((city) => allAreas(city).map((a) => ({ city, area: a })))
 
+  it('lets you play every machine in a bank of slots', () => {
+    for (const { city, area } of areas) {
+      for (const placed of area.stamps ?? []) {
+        if (!placed.stampId.startsWith('slot-bank')) continue
+        const cols = STAMPS.find((st) => st.id === placed.stampId)!.tiles.split('\n')[0].length
+        for (let i = 0; i < cols; i++) {
+          const at = area.pois.find((p) => p.col === placed.col + i && p.row === placed.row + 1)
+          expect(at?.action.kind, `${city.name}/${area.name}: machine ${i} of ${placed.stampId} is not playable`).toBe('slots')
+        }
+      }
+    }
+  })
+
   it('has rectangular maps', () => {
     for (const { city, area } of areas) {
       const widths = new Set(area.map.map((row) => row.length))
@@ -88,8 +102,10 @@ describe('city content', () => {
   })
 
   it('gives every point of interest an unambiguous approach tile', () => {
-    // Interaction picks the first POI within one tile, so if every approach to
-    // a POI is also next to a different one, the player can never reach it.
+    // Interaction picks the first POI within one tile unless you are facing
+    // one, so if every approach to a POI is also next to a different one, the
+    // player can never reach it. A slot machine is the exception: you stand on
+    // its stool and face it, with a dealer perhaps just behind you.
     for (const { city, area } of areas) {
       for (const poi of area.pois) {
         const approaches = [
@@ -99,7 +115,7 @@ describe('city content', () => {
           [poi.col, poi.row - 1],
         ].filter(([col, row]) => isWalkable(area.map, col, row))
 
-        const unambiguous = approaches.some(([col, row]) =>
+        const unambiguous = poi.action.kind === 'slots' || approaches.some(([col, row]) =>
           area.pois.every(
             (other) =>
               other.id === poi.id || Math.abs(other.col - col) + Math.abs(other.row - row) !== 1,

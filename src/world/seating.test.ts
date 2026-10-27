@@ -4,7 +4,7 @@ import { TIME_PERIODS } from '../game/time'
 import { AREAS } from './cities'
 import { CHARACTERS, allSchedules, charactersIn } from './characters'
 import { TABLES } from './content'
-import { seatingFor, type SeatingArea } from './seating'
+import { crowdedFill, seatingFor, type SeatingArea } from './seating'
 import { KEEP, STAMPS, STAMP_BY_ID, seatTile, stampSize } from './stamps'
 import type { AreaDef } from './types'
 
@@ -275,5 +275,16 @@ describe('who sits at the tables', () => {
       }
     }
     expect([...counts].sort()).toEqual([1, 2, 3, 4, 5])
+  })
+})
+
+describe('a crowded room', () => {
+  it('keeps its tables fuller the more exclusive it is, and never full', () => {
+    for (const roll of [0, 0.5, 0.99]) {
+      expect(crowdedFill(5, 0, 0)).toBe(1)
+      expect(crowdedFill(5, 1, roll)).toBe(5)
+      expect(crowdedFill(5, 0.6, roll)).toBeGreaterThanOrEqual(crowdedFill(5, 0.2, 0))
+      expect(crowdedFill(5, 0.8, roll)).toBeLessThanOrEqual(5)
+    }
   })
 })

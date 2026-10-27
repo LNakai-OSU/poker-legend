@@ -575,7 +575,15 @@ export function OverworldScene({
         }
       }
 
-      const findAdjacent = () => npcs.find((n) => player.isAdjacentTo(n.config.col, n.config.row))
+      // Whoever you are facing, before anyone else beside you: a row of slot
+      // machines has a dealer standing behind the stool, and E must play the
+      // machine you are looking at rather than whichever was listed first.
+      const findAdjacent = () => {
+        const beside = npcs.filter((n) => player.isAdjacentTo(n.config.col, n.config.row))
+        if (beside.length < 2) return beside[0]
+        const [dc, dr] = DELTAS[player.facing]
+        return beside.find((n) => n.config.col === player.col + dc && n.config.row === player.row + dr) ?? beside[0]
+      }
 
       let leaving = false
 

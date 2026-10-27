@@ -1,7 +1,7 @@
 import { isWalkable, parseMap } from '../overworld/tileRenderer'
 import { MISSIONS, SPONSORS } from './npcs'
 import type { AreaDef, CityDef, PoiDef } from './types'
-import type { PlacedStamp } from './stamps'
+import { STAMPS, type PlacedStamp } from './stamps'
 import type { CityId } from '../game/state'
 
 /**
@@ -2993,6 +2993,47 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
  * resolvable without knowing which city you were in a moment ago. Ids are
  * therefore globally unique, which `content.test.ts` enforces.
  */
+/**
+ * Every machine in a bank of slots can be played, not just the one a room's
+ * hand-written POI happens to stand on. The bank's art is a stamp, so its
+ * machines are derived from it: one 'slots' POI on the front of each cabinet,
+ * unless something is already standing there.
+ */
+/** How full each house keeps its tables: the further up the run, the more exclusive, the busier. */
+const CROWD: Record<string, number> = {
+  'sc-floor': 0,
+  'rb-boat': 0.2,
+  'ch-cardroom': 0.4,
+  'pc-casino': 0.6,
+  'nm-casino': 0.8,
+  'pl-casino': 1,
+}
+
+function addSlotMachines(area: AreaDef) {
+  for (const placed of area.stamps ?? []) {
+    if (!placed.stampId.startsWith('slot-bank')) continue
+    const stamp = STAMPS.find((st) => st.id === placed.stampId)
+    if (!stamp) continue
+    const cols = stamp.tiles.split('\n')[0].length
+    for (let i = 0; i < cols; i++) {
+      const col = placed.col + i
+      const row = placed.row + 1
+      if (area.pois.some((p) => p.col === col && p.row === row)) continue
+      area.pois.push({
+        id: `${area.id}-slot-${col}-${row}`,
+        name: 'Slot Machine',
+        col,
+        row,
+        color: COLORS.flavor,
+        art: 'none',
+        labelled: false,
+        lines: ['Three reels, one lever, and terrible odds.'],
+        action: { kind: 'slots' },
+      })
+    }
+  }
+}
+
 export const AREAS: Record<string, { area: AreaDef; cityId: CityId }> = (() => {
   const index: Record<string, { area: AreaDef; cityId: CityId }> = {}
   for (const city of Object.values(CITIES)) {
@@ -3000,6 +3041,8 @@ export const AREAS: Record<string, { area: AreaDef; cityId: CityId }> = (() => {
       // Attached here rather than passed in, so there is one area object and
       // everything that already holds one sees its objects too.
       if (AREA_STAMPS[area.id]) area.stamps = AREA_STAMPS[area.id]
+      addSlotMachines(area)
+      if (CROWD[area.id] !== undefined) area.crowd = CROWD[area.id]
       index[area.id] = { area, cityId: city.id }
     }
   }

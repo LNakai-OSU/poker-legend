@@ -283,6 +283,11 @@ export interface AreaDef {
    * one object instead of a patch of repeated texture.
    */
   stamps?: PlacedStamp[]
+  /**
+   * How full the room is kept, 0 to 1: the more exclusive the house, the more
+   * of its chairs are taken. Left out, tables fill as they happen to.
+   */
+  crowd?: number
 }
 
 export interface CityDef {

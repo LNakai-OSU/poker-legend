@@ -60,7 +60,7 @@ export interface TableSeating {
 }
 
 /** The parts of an area seating reads. */
-export type SeatingArea = Pick<AreaDef, 'id' | 'map' | 'pois' | 'playerStart' | 'stamps'>
+export type SeatingArea = Pick<AreaDef, 'id' | 'map' | 'pois' | 'playerStart' | 'stamps' | 'crowd'>
 
 export interface SeatingOptions {
   /** People standing in the area besides its POIs: whoever the hour puts here. */
@@ -178,7 +178,7 @@ export function seatingFor(area: SeatingArea, options: SeatingOptions = {}): Tab
       .slice(0, Math.max(0, capacity - standing.length))
     const wanted = game
       ? Math.max(named.length, standing.length > 0 ? 0 : 1)
-      : 1 + Math.floor(next() * capacity)
+      : crowdedFill(capacity, area.crowd ?? 0, next())
 
     // The chairs, in an order of their own for this table.
     const chairs = seats
@@ -214,6 +214,16 @@ export function seatingFor(area: SeatingArea, options: SeatingOptions = {}): Tab
     seating[position] = { table, seats: seats.length, tableId: game?.id, sitters, standing }
   }
   return seating
+}
+
+/**
+ * How many strangers sit at a table with no game: anywhere from one chair to
+ * all but one, except that a crowded room fills from the bottom up. At crowd 0
+ * that is the old spread; at 1 every table is as full as it can be.
+ */
+export function crowdedFill(capacity: number, crowd: number, roll: number): number {
+  const least = Math.min(capacity, Math.max(1, Math.round(capacity * crowd)))
+  return least + Math.floor(roll * (capacity - least + 1))
 }
 
 /** Everybody sitting down in an area. */
