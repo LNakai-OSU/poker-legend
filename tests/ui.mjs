@@ -1734,6 +1734,67 @@ await test('a bet can be made with the arrows and Space' , async () => {
   await page.close()
 })
 
+await test('a new game opens on the televised final and cuts back to the flat' , async () => {
+  const page = await newPage(null)
+  await page.goto(BASE)
+  await page.waitForSelector('[data-testid="reel"]', { timeout: 15000 })
+  const scenes = new Set()
+  for (let i = 0; i < 40 && (await page.locator('[data-testid="reel"]').isVisible().catch(() => false)); i++) {
+    scenes.add(await page.locator('[data-testid="reel"]').getAttribute('data-scene'))
+    await page.keyboard.press(' ')
+    await page.waitForTimeout(120)
+  }
+  for (const scene of ['studio', 'booth', 'bathroom', 'mirror']) assert(scenes.has(scene), `the opening never showed the ${scene}`)
+  await page.waitForSelector('canvas')
+  assert(!(await page.locator('[data-testid="reel"]').isVisible().catch(() => false)), 'the film did not end')
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+})
+
+await test('the opening can be skipped' , async () => {
+  const page = await newPage(null)
+  await page.goto(BASE)
+  await page.waitForSelector('[data-testid="reel-skip"]', { timeout: 15000 })
+  // Each film asks to be skipped on its own: two of them in a row.
+  for (let i = 0; i < 4 && (await page.locator('[data-testid="reel-skip"]').isVisible().catch(() => false)); i++) {
+    await page.locator('[data-testid="reel-skip"]').click()
+    await page.waitForTimeout(500)
+  }
+  await page.waitForSelector('canvas')
+  assert(!(await page.locator('[data-testid="reel"]').isVisible().catch(() => false)), 'skipping did not leave the film')
+  await page.close()
+})
+
+await test('the final table seats you short against five' , async () => {
+  const page = await newPage(
+    baseSave({
+      cityId: 'portoLumina',
+      areaId: 'pl-casino',
+      cash: 200000,
+      unlockedCityIds: ['apartment', 'silverCreek', 'riverbend', 'crescentHarbor', 'palmCay', 'neonMesa', 'portoLumina'],
+      completedEventIds: [...STORY_SEEN, 'nadia-names-the-match'].filter((id) => id !== 'final-table-start'),
+    }),
+  )
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(400)
+  await approach(page, 'Nadia Okonkwo')
+  await page.keyboard.press('e')
+  // Her offer, the choice, the broadcast, then the felt.
+  for (let i = 0; i < 60 && !(await page.locator('[data-testid="stack-you"]').isVisible().catch(() => false)); i++) {
+    if (await page.locator('[data-testid="choice-prompt"]').isVisible().catch(() => false)) {
+      await page.keyboard.press('1')
+    } else await page.keyboard.press(' ')
+    await page.waitForTimeout(150)
+  }
+  await page.waitForSelector('[data-testid="stack-you"]')
+  assert((await page.locator('[data-testid="stack-you"]').getAttribute('data-stack')) === '15000', 'you should have 15,000')
+  const seats = await page.locator('[data-testid^="seat-"]:not([data-testid="seat-you"])').count()
+  assert(seats === 5, `five opponents should be seated, saw ${seats}`)
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+})
+
 await test('a sitter is somebody you walk round, not through', async () => {
   const page = await newPage(baseSave({ cityId: 'apartment', areaId: 'sc-floor', period: 'evening', day: 2 }))
   await page.goto(BASE)

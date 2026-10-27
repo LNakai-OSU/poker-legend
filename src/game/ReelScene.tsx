@@ -78,7 +78,7 @@ export function ReelScene({
         <div
           data-testid="reel-ticker"
           style={{
-            width: 'min(100vw, 960px)',
+            width: REEL_WIDTH,
             boxSizing: 'border-box',
             background: '#a8281f',
             color: '#f8f4e0',
@@ -126,6 +126,9 @@ export function ReelScene({
   )
 }
 
+/** As wide as the picture can be and still leave the text box room beneath it. */
+const REEL_WIDTH = `min(100vw, 960px, calc(55vh * ${REEL_W} / ${REEL_H}))`
+
 /** One set, redrawn each frame so lights flicker and tears fall. */
 function ReelCanvas({ scene }: { scene: ReelPanel['scene'] }) {
   const ref = useRef<HTMLCanvasElement>(null)
@@ -145,12 +148,10 @@ function ReelCanvas({ scene }: { scene: ReelPanel['scene'] }) {
       width={REEL_W}
       height={REEL_H}
       style={{
-        width: 'min(100vw, 960px)',
+        width: REEL_WIDTH,
         aspectRatio: `${REEL_W} / ${REEL_H}`,
         imageRendering: 'pixelated',
         background: '#000',
-        maxHeight: '55vh',
-        objectFit: 'contain',
       }}
     />
   )

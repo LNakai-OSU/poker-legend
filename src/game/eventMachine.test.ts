@@ -407,3 +407,52 @@ describe('a reel', () => {
     expect(h.stage.dialogue?.lines[0]).toBe('Marcus: After.')
   })
 })
+
+describe('the final table', () => {
+  function play(h: ReturnType<typeof harness>, event: GameEvent): { reels: number } {
+    let reels = 0
+    h.machine.run(event)
+    for (let guard = 0; h.machine.isRunning && guard < 200; guard++) {
+      const stage = h.stage
+      if (stage.dialogue) h.machine.advance()
+      else if (stage.reel) {
+        reels++
+        h.machine.reelDone()
+      } else if (stage.choice) h.machine.choose(0)
+      else h.tick(1000)
+    }
+    return { reels }
+  }
+  const final = (id: string) => EVENTS.find((e) => e.id === id)!
+
+  it('sends you back to the same table after a loss, however you got out', () => {
+    for (const choice of [0, 1, 2]) {
+      const h = harness({ areaId: 'pl-casino', cash: 200000, flags: { ...initialState().flags, stakedKit: true } })
+      h.machine.run(final('final-lost'))
+      let guard = 0
+      while (h.machine.isRunning && guard++ < 200) {
+        const stage = h.stage
+        if (stage.reel) h.machine.reelDone()
+        else if (stage.choice) h.machine.choose(choice)
+        else if (stage.dialogue) h.machine.advance()
+        else h.tick(1000)
+      }
+      expect(h.log).toContain('table lumina-finale')
+    }
+  })
+
+  it('shows the commentators and the rail when it is won, and ends the beat for the credits', () => {
+    const h = harness({ areaId: 'pl-casino', flags: { ...initialState().flags, hasPenthouse: true } })
+    const { reels } = play(h, final('final-won'))
+    expect(reels).toBeGreaterThanOrEqual(2)
+    expect(h.machine.isRunning).toBe(false)
+  })
+
+  it('takes your seat at the table you scouted, short-stacked', () => {
+    const table = TABLES['lumina-finale']
+    expect(table.opponents).toHaveLength(5)
+    expect(table.freeroll).toBe(true)
+    // Seven big blinds against a table that is several times deeper.
+    expect((table.buyIn * (table.yourStack ?? 1)) / table.bigBlind).toBeLessThan(10)
+  })
+})

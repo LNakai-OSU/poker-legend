@@ -1317,7 +1317,7 @@ export const EVENTS: GameEvent[] = [
                 who: 'Dr. Anand',
                 text:
                   'Seventy-four. Plays by feel, by moon and by what her late husband said at ' +
-                  'the blue chair. Folds a lot more than the foot suggests.',
+                  'the blue chair. Calls almost anything, because the foot is never wrong.',
               },
               {
                 who: 'Chip',

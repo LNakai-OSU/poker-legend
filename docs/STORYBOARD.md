@@ -448,3 +448,61 @@ Left, for the user to decide:
 - **The old send-offs** (`marcus-sends-you-off`, `dana-takes-your-measure`)
   only fire for saves that won before this; delete them once those do not
   matter. The editor tests use `dana-takes-your-measure` as a fixture.
+
+---
+
+## 7. The frame — a televised final, and the road that led to it (2026-10-27)
+
+The run no longer begins in the flat. It begins at the final table of the
+**Legends Invitational**, on television, with the player the short stack by a
+mile. The lights trip; the broadcast cuts to dead air; the player goes to the
+bathroom with the lenders texting them, looks in the mirror — "how did I get
+here?" — and the game cuts back to the flat above the bakery. Everything from
+Basin up is the answer. It ends where it began: the same table, the same
+deficit, and the player plays it out.
+
+### The pieces
+
+| Piece | What it is | Where |
+|---|---|---|
+| **Prologue** | Studio → booth → bathroom → phone → mirror → "some time earlier". Plays once, on a new game. Skippable. | event `prologue` (enterArea `home`, onLoad) |
+| **`reel` action** | A short film in front of the street: a set drawn at runtime (`studio`, `booth`, `bathroom`, `mirror`, `phone`, `alley`, `rail`, `night`), an optional LIVE ticker, lines turned like a text box, a Skip button. The first non-map scene an event can show. | `world/events.ts` (`reel`), `game/ReelScene.tsx`, `game/reelArt.ts` |
+| **Interludes** | Chip Van Doren (oversells) and Dr. Priyanka Anand (the numbers, apologising for them) fill the dead air with a "Road to the Final" package. One after every hop up the ladder, appended to each town's send-off; they react to what you did (busted, owing) and each **scouts one town's lunatic** — and what they say is true at the table. Sets `scouted*` flags; the Record page lists the reads. | the six send-offs in `events.ts`; `SideNav.tsx` |
+| **The final table** | Six-handed (you and five): Nadia, Reverend Gaines, the Contessa, Bernard, Zeke. You sit down with 15,000 (7.5 big blinds) against 720,000 across the table. No buy-in, no cashing out; `proof` ($120,000 in the bank, not spent) is what lets you in, `prize` ($750,000) is what winning pays. | `TABLES['lumina-finale']`; events `nadia-names-the-match`, `final-table-start` |
+| **Losing it** | Out of chips → the back door, the sponsors' people on your heels (Dutch, Mr. Lowe, Ms. Fong), your friends getting in their way (**choice**: fire stairs → Marcus with a banquet chair; the kitchen → Dana lying in four languages; walk out → Hal on pot odds, forty minutes; Kit too if you staked him) → back to the rail, back to the same table at the same deficit. There is no rematch week: you replay until you win. | event `final-lost` (trigger `finaleLost`) |
+| **Winning it** | The commentators lose it, the rail (Marcus, Dana, Dolores) comes over the ropes, the credits roll, then the ending card and open play. | event `final-won` (trigger `finaleWon`) |
+
+### The lunatics
+
+One per town, grounded and sleazy, each a different way of being wrong at a
+card table. Each is on the floor in their own town, scouted in the interlude
+after it, and — except Dolores, who is on the rail — seated at the final.
+
+| Town | Lunatic | The bit | Plays | At the final |
+|---|---|---|---|---|
+| Silver Creek | **Lucky Dolores**, 74 | A rabbit foot, a system, a late husband and a blue chair that took him | station, novice | the rail ("rub the foot, honey") |
+| Riverbend | **Reverend Gaines** | Tithes ten percent of every pot to "the boat fund" | nit, competent, deep | seat |
+| Crescent Harbor | **The Contessa** | "Of the Lyon Valmonts. Or Leeds." The accent slips when she is thrown | maniac, sharp | seat |
+| Palm Cay | **Bernard** | Two days at the table; believes it is Thursday | whale, novice, three times deep | seat |
+| Neon Mesa | **Zeke "KingPin"** | Streams every hand to eleven thousand people, one of whom is his mum | regular, competent | seat |
+
+Hal teaches the nerd's side of the game; Dr. Anand is the nerd on the air.
+
+### Also changed with it
+
+- Walking into an empty chair at any table offers a seat (Space or X); the
+  dealer is not needed. Betting works with the arrows and Space at every
+  table.
+- The heads-up rematch week is gone. The beats written for it
+  (`nadia-makes-you-wait`, the `challenge` conditions) are now only reachable
+  by a save that quit mid-way; `nadia-rematch` takes you straight back to the
+  table.
+
+### Still to do
+
+- More of the broadcast: a mid-hand commentary option at the table (proposed,
+  not built — decided against it for now to keep the table quiet).
+- Bust beats for Deb/Rosa/the Fixer and a stake-sized home game (§6) are
+  unchanged.
+- Per-town lunatic *beats* beyond their lines (a talk event each) are not
+  written; today they are met in their lines, the interludes and the table.

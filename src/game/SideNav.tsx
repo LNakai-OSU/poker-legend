@@ -1,3 +1,4 @@
+import type { StoryFlag } from '../world/flags'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { audio } from '../audio/audio'
 import { LESSONS, MISSIONS, findItem } from '../world/content'
@@ -33,6 +34,18 @@ import { useTouchFirst } from './device'
  */
 
 type Page = 'main' | 'bag' | 'jobs' | 'record'
+
+/**
+ * What the broadcast has told you about the people at the final table. True at
+ * the table: Dr. Anand does not guess about the people, only about you.
+ */
+const SCOUTING: Array<{ flag: StoryFlag; name: string; read: string }> = [
+  { flag: 'scoutedDolores', name: 'Lucky Dolores', read: 'Plays by feel and by moon. Calls almost anything: the foot is never wrong.' },
+  { flag: 'scoutedGaines', name: 'Reverend Gaines', read: 'Tight. Folds to a river bet seven times in ten. Small bets.' },
+  { flag: 'scoutedContessa', name: 'The Contessa', read: 'Wildly aggressive. Bluffs often; gives up to anybody who calls.' },
+  { flag: 'scoutedBernard', name: 'Bernard', read: 'Calls everything. Never folds a pair. Sits on the biggest stack.' },
+  { flag: 'scoutedZeke', name: 'Zeke "KingPin"', read: 'Plays to the camera. Bluffs when chat is bored, folds when it is scared.' },
+]
 
 /** The FRLG menu box: a dark outline, a slate-blue band, a deep fill. */
 const NAV_FRAME: FrameSpec = {
@@ -188,6 +201,17 @@ export function SideNav({
         {line(`Biggest pot $${state.stats.biggestPot.toLocaleString()}`)}
         {line(`${state.unlockedCityIds.length} towns open to you`)}
         {line(`Reputation ${standing(state)}`)}
+        {rule}
+        {heading('Scouting')}
+        {SCOUTING.filter((s) => state.flags[s.flag]).length === 0 ? (
+          line('Nothing yet. The broadcast is still on the road.', INK.dim)
+        ) : null}
+        {SCOUTING.filter((s) => state.flags[s.flag]).map((s) => (
+          <div key={s.flag} data-testid={`scout-${s.flag}`} style={{ display: 'grid', gap: scale }}>
+            {line(s.name)}
+            {line(s.read, INK.dim)}
+          </div>
+        ))}
       </>
     )
   } else {

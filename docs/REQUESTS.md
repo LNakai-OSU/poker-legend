@@ -56,3 +56,12 @@ behalf that you might want to revisit.
   - **Slots:** every machine in a bank is playable — `addSlotMachines` in `cities.ts` derives a 'slots' POI for each cabinet of every `slot-bank*` stamp. Stand on the stool and face it; E now picks the POI you face before any other beside you (dealers stand behind some stools).
   - **Crowds:** areas have a `crowd` 0–1 (`CROWD` in `cities.ts`: Silver Creek 0, Riverboat .2, Harbor .4, Palm Cay .6, Mesa .8, Lumina 1) that raises the least number of strangers at a table. *Decided:* only tables without a named game fill up; tables whose game seats particular people still seat exactly them. Revisit if you want strangers on slot stools too (they'd block machines).
 - Liked: the sound effects.
+
+## Storyline, the televised frame (2026-10-27)
+- [x] A storyline through the whole game: a televised high-stakes final you are losing, a bathroom breakdown, a flashback to Marcus's night, narrative and characters in every casino, and a multi-way final table played from a huge deficit (replayed until won, with a back-door chase on a loss and credits on a win). Grounded and sleazy, a lunatic per town, a poker nerd here and there, commentators between acts.
+  - Everything is written up in `docs/STORYBOARD.md` §7. New: the `reel` event action and `ReelScene`; four new characters (Dolores, Gaines, the Contessa, Zeke); events `prologue`, `final-table-start`, `final-lost`, `final-won` and a commentator interlude on each town's send-off; the six-handed `lumina-finale` (15,000 vs 720,000).
+  - *Decided for you:* Dolores is on the rail rather than seated (the table only takes five opponents); Bernard, Palm Cay's regular, takes a seat; the entry is "proof of funds" ($120,000 held, not spent) rather than a buy-in; commentary is between acts only, not mid-hand.
+- [x] Sit down at any open chair from any side of the table without talking to the pit boss.
+  - Facing an empty chair offers it ("Press Space or X to sit down"); Space or X takes it. Chairs that would wall the room off stay plain walkable tiles. *Decided:* only tables a dealer deals a game at offer a seat.
+- [x] Spacebar and arrows to bet.
+  - ← → (or A D) move between Fold / Check / Call / Raise; ↑ ↓ (W S) step the raise through min, the pot fractions and all-in; Space, X, E or Enter does it. The pointer starts on check or call so a stray press is never a raise. Same keys at the poker night. A hint line under the buttons on a keyboard device.
