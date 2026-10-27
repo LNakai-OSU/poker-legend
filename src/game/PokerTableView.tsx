@@ -17,7 +17,7 @@ import { PixelText } from './pixel/PixelText'
 import { INK, type Ink } from './pixel/ink'
 import { frameStyle } from './pixel/frame'
 import { panelFrames } from './pixel/themeFrames'
-import { chipStackUrl, dealerButtonUrl, DENOMINATIONS } from './pixel/chips'
+import { chipStackUrl, dealerButtonUrl, tableMarkerUrl, DENOMINATIONS } from './pixel/chips'
 import { fitWords, measureText, wrapText, LINE_HEIGHT } from './pixel/font'
 import { mix, shade } from './pixel/color'
 
@@ -44,6 +44,10 @@ interface PokerTableViewProps {
   speech?: SeatSpeech | null
   /** The current key moment, announced over the felt instead of in a panel. */
   announcement?: Announcement | null
+  /** The stakes, written beside the pot so a change of blinds is on the felt. */
+  blinds?: { small: number; big: number }
+  /** Turn a fold-win winner's cards face up, which the player asked to see. */
+  showHeld?: boolean
   /** Where everything goes, and how big a pixel is. */
   layout: SceneLayout
   /** The room the table is in. */
@@ -223,6 +227,33 @@ function plateName(name: string): string {
   return measureText(name) <= room ? name : name.split(' ')[0]
 }
 
+/** Who posts which blind this hand: the two seats after the button (the button itself heads-up). */
+function blindSeats(state: PublicState): Map<string, 'sb' | 'bb'> {
+  const seated = state.players.filter((p) => !p.isEliminated)
+  const dealerIndex = seated.findIndex((p) => p.isDealer)
+  const out = new Map<string, 'sb' | 'bb'>()
+  if (dealerIndex === -1 || seated.length < 2) return out
+  const headsUp = seated.length === 2
+  out.set(seated[(dealerIndex + (headsUp ? 0 : 1)) % seated.length].id, 'sb')
+  out.set(seated[(dealerIndex + (headsUp ? 1 : 2)) % seated.length].id, 'bb')
+  return out
+}
+
+/** The blind chip, drawn in the same round style as the dealer button. */
+function BlindChip({ kind, amount, P, style }: { kind: 'sb' | 'bb'; amount?: number; P: number; style?: CSSProperties }) {
+  const word = kind === 'sb' ? 'Small blind' : 'Big blind'
+  return (
+    <img
+      data-testid={`blind-chip-${kind}`}
+      title={amount ? `${word} ${amount}` : word}
+      alt={kind === 'sb' ? 'SB' : 'BB'}
+      src={tableMarkerUrl(kind)}
+      draggable={false}
+      style={{ width: 9 * P, height: 9 * P, imageRendering: 'pixelated', flex: 'none', ...style }}
+    />
+  )
+}
+
 /** The dealer button, as an actual button on the felt. */
 function DealerButton({ P, style }: { P: number; style?: CSSProperties }) {
   return (
@@ -245,12 +276,15 @@ export function PokerTableView({
   personas,
   speech,
   announcement,
+  blinds,
+  showHeld,
   layout,
   theme,
 }: PokerTableViewProps) {
   const P = layout.scale
   const t = layout.table
   const labels = insights?.showPositions ? positionLabels(state) : null
+  const blindOf = blindSeats(state)
   const handOver = !state.handInProgress && lastResult?.handNumber === state.handNumber
   const winners = handOver ? potWinnerIds(lastResult) : new Set<string>()
 
@@ -269,7 +303,10 @@ export function PokerTableView({
 
       {opponents.map((p, i) => {
         const rect = t.seats[i] ?? t.seats[0]
-        const revealed = handOver ? lastResult.revealed.find((r) => r.playerId === p.id) : undefined
+        const revealed = handOver
+          ? (lastResult.revealed.find((r) => r.playerId === p.id) ??
+            (showHeld ? lastResult.held?.find((h) => h.playerId === p.id) : undefined))
+          : undefined
         const personality = personalityFor(p.id, personas?.[p.id])
         const expression: Expression = expressionFor({
           tellKind: p.tell && !p.folded ? (p.tell.kind as Expression) : null,
@@ -323,7 +360,12 @@ export function PokerTableView({
                   draggable={false}
                   style={{ display: 'block', width: PORTRAIT_SIZE * P, height: PORTRAIT_SIZE * P, imageRendering: 'pixelated' }}
                 />
-                {p.isDealer && <DealerButton P={P} style={{ position: 'absolute', right: P, top: P }} />}
+                {(p.isDealer || blindOf.has(p.id)) && (
+                  <div style={{ position: 'absolute', right: P, top: P, display: 'flex', gap: P }}>
+                    {blindOf.has(p.id) && <BlindChip kind={blindOf.get(p.id)!} amount={blinds?.[blindOf.get(p.id) === 'sb' ? 'small' : 'big']} P={P} />}
+                    {p.isDealer && <DealerButton P={P} />}
+                  </div>
+                )}
                 {position && (
                   <Tag text={position} theme={theme} P={P} style={{ position: 'absolute', left: 0, top: 0 }} />
                 )}
@@ -444,6 +486,7 @@ export function PokerTableView({
             style={{ width: 11 * P, height: chipStackUrl([DENOMINATIONS[4], DENOMINATIONS[5]]).h * P, imageRendering: 'pixelated' }}
           />
           <PixelText text={`Pot ${state.pot.toLocaleString()}`} scale={P} ink={INK.dark} />
+          {blinds && <PixelText text={`· Blinds ${blinds.small}/${blinds.big}`} scale={P} ink={INK.blue} />}
         </span>
       </div>
       <HandAnnouncer announcement={announcement ?? null} scale={P} theme={theme} band={t.band} />
@@ -477,6 +520,7 @@ export function PokerTableView({
             <div style={{ display: 'flex', alignItems: 'center', gap: 2 * P, height: LINE_HEIGHT * P }}>
               <PixelText text="You" scale={P} ink={INK.dark} />
               {labels?.get('you') && <PixelText text={labels.get('you')!} scale={P} ink={INK.blue} />}
+              {blindOf.has('you') && <BlindChip kind={blindOf.get('you')!} amount={blinds?.[blindOf.get('you') === 'sb' ? 'small' : 'big']} P={P} />}
               {you.isDealer && <DealerButton P={P} />}
             </div>
             <div data-testid="stack-you" data-stack={you.stack} style={{ height: LINE_HEIGHT * P }}>

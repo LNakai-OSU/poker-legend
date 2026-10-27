@@ -145,3 +145,43 @@ export function dealerButtonUrl(): string {
   cache.set(key, { url, w: 9, h: 9 })
   return url
 }
+
+const GLYPHS: Record<string, string[]> = {
+  S: ['.SS', 'S..', '.S.', '..S', 'SS.'],
+  B: ['SS.', 'S.S', 'SS.', 'S.S', 'SS.'],
+}
+
+/**
+ * The little discs that mark a seat's job: the dealer button (D), and the small
+ * and big blind (S, B) — the same round shape so they read as a set.
+ */
+export function tableMarkerUrl(kind: 'sb' | 'bb'): string {
+  const key = `marker-${kind}`
+  const hit = cache.get(key)
+  if (hit) return hit.url
+  const face = kind === 'sb' ? '#5d8fe0' : '#e0605d'
+  const rim = kind === 'sb' ? '#2c4f94' : '#942c2c'
+  const ink = '#f8f8f0'
+  const rows = [
+    '..ooooo..',
+    '.offffro.',
+    'offffffro',
+    'offffffro',
+    'offffffro',
+    'offffffro',
+    'offffffro',
+    '.orrrrro.',
+    '..ooooo..',
+  ].map((r) => r.split(''))
+  const glyph = GLYPHS[kind === 'sb' ? 'S' : 'B']
+  glyph.forEach((g, gy) => {
+    g.split('').forEach((c, gx) => {
+      if (c !== '.') rows[2 + gy][3 + gx] = 'S'
+    })
+  })
+  const raster = new Raster(9, 9)
+  raster.sprite(rows.map((r) => r.join('')), 0, 0, { o: OUTLINE, f: face, r: rim, S: ink })
+  const url = raster.toDataURL()
+  cache.set(key, { url, w: 9, h: 9 })
+  return url
+}

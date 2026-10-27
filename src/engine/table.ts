@@ -29,6 +29,8 @@ export interface HandResult {
   pots: PotResult[]
   /** Hole cards of anyone who reached showdown (folded players' hands stay private). */
   revealed: { playerId: string; holeCards: Card[]; categoryName: string }[]
+  /** Cards of a winner who took the pot because everyone folded; shown only if the player asks. */
+  held?: { playerId: string; holeCards: Card[] }[]
   bustedPlayerIds: string[]
 }
 
@@ -562,7 +564,7 @@ export class TexasHoldEmTable {
     const contributions = new Map(this.roster.map((p) => [p.id, p.handContribution]))
     const pots = calculatePots(contributions, new Set(this.roster.filter((p) => p.folded).map((p) => p.id)))
     const potResults = this.awardPots(pots, () => winner ? [winner.id] : [])
-    this.finalizeHand(potResults, [])
+    this.finalizeHand(potResults, [], winner ? [{ playerId: winner.id, holeCards: [...winner.holeCards] }] : undefined)
   }
 
   private showdown(inHand: PlayerRuntime[]) {
@@ -612,13 +614,14 @@ export class TexasHoldEmTable {
     })
   }
 
-  private finalizeHand(pots: PotResult[], revealed: HandResult['revealed']) {
+  private finalizeHand(pots: PotResult[], revealed: HandResult['revealed'], held?: HandResult['held']) {
     const bustedPlayerIds = this.roster.filter((p) => p.stack === 0).map((p) => p.id)
     this.lastResult = {
       handNumber: this.handNumber,
       board: [...this.board],
       pots,
       revealed,
+      held,
       bustedPlayerIds,
     }
     this.handInProgress = false

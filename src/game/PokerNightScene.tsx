@@ -3,6 +3,7 @@ import { TexasHoldEmTable } from '../engine/table'
 import { decideAiAction } from '../engine/ai'
 import { defaultRng } from '../engine/rng'
 import type { PlayerConfig } from '../engine/types'
+import { describeHold } from './handHint'
 import { PokerTableView, ShowdownSummary } from './PokerTableView'
 import type { Announcement } from './HandAnnouncer'
 import { playSound } from '../audio/audio'
@@ -57,6 +58,8 @@ function levelFor(handNumber: number) {
 
 /** How long the next hand waits before dealing itself. */
 const ANNOUNCE_MS = 2600
+/** Blinds going up gets longer: it changes what every bet means. */
+const BLINDS_MS = 4500
 
 function createTable() {
   return new TexasHoldEmTable(PLAYERS, {
@@ -76,6 +79,7 @@ export function PokerNightScene({ onWin, onLeave }: PokerNightSceneProps) {
   const tableRef = useRef(createTable())
   const [tick, setTick] = useState(0)
   /** The last few things anybody did this hand, narrated in the betting menu. */
+  const [showHeld, setShowHeld] = useState(false)
   const [log, setLog] = useState<string[]>([])
   const note = (line: string) => setLog((lines) => [...lines.slice(1 - LOG_LINES), line])
   const rerender = () => setTick((t) => t + 1)
@@ -95,10 +99,10 @@ export function PokerNightScene({ onWin, onLeave }: PokerNightSceneProps) {
 
   const [announcement, setAnnouncement] = useState<Announcement | null>(null)
   const announceTimer = useRef<number | null>(null)
-  const announce = (a: Announcement) => {
+  const announce = (a: Announcement, ms = ANNOUNCE_MS) => {
     setAnnouncement(a)
     if (announceTimer.current) window.clearTimeout(announceTimer.current)
-    announceTimer.current = window.setTimeout(() => setAnnouncement(null), ANNOUNCE_MS)
+    announceTimer.current = window.setTimeout(() => setAnnouncement(null), ms)
   }
   useEffect(
     () => () => {
@@ -113,16 +117,17 @@ export function PokerNightScene({ onWin, onLeave }: PokerNightSceneProps) {
     const level = levelFor(next)
     const current = levelFor(Math.max(1, state.handNumber))
     table.setBlinds(level.small, level.big)
+    setShowHeld(false)
     table.startNewHand()
     setLog([])
     playSound('deal')
     if (level.index !== current.index || next === 1) {
       announce({
         key: `blinds-${next}`,
-        text: `Blinds ${level.small}/${level.big}`,
-        detail: level.index === BLIND_LEVELS.length - 1 ? 'last level' : 'they go up every few hands',
+        text: next === 1 ? `Blinds ${level.small}/${level.big}` : `Blinds up: ${level.small}/${level.big}`,
+        detail: level.index === BLIND_LEVELS.length - 1 ? 'last level' : 'every bet costs more now',
         tone: level.index >= 3 ? 'tense' : 'neutral',
-      })
+      }, BLINDS_MS)
     }
     rerender()
   }
@@ -228,7 +233,7 @@ export function PokerNightScene({ onWin, onLeave }: PokerNightSceneProps) {
       kind: 'home',
       opponents: PLAYERS.length - 1,
       sampleAmount: (STARTING_STACK * PLAYERS.length).toLocaleString(),
-      infoTexts: [LONGEST_COACHING],
+      infoTexts: [LONGEST_COACHING, 'You hold a pair of Queens — a double. A strong start.'],
       title: "Marcus's kitchen table · winner takes all",
       subtitle: `Blinds ${level.small}/${level.big} · hand ${state.handNumber}`,
     }),
@@ -292,6 +297,9 @@ export function PokerNightScene({ onWin, onLeave }: PokerNightSceneProps) {
         <>
           {lastResult && <ShowdownSummary result={lastResult} players={PLAYERS} scale={P} />}
           <div data-testid="hand-over-bar" style={{ ...row, marginTop: DOCK.gap * P }}>
+            {lastResult?.held?.some((h) => h.playerId !== 'you') && !showHeld && (
+              <PxButton lines={['See their cards']} scale={P} role="plain" height={one} onClick={() => setShowHeld(true)} />
+            )}
             <PxButton lines={['Next hand (space)']} scale={P} role="primary" height={one} onClick={dealNextHand} />
           </div>
         </>
@@ -300,6 +308,11 @@ export function PokerNightScene({ onWin, onLeave }: PokerNightSceneProps) {
       const raiseOpen = legalActions.some((a) => a.type === 'raise')
       body = (
         <div style={{ display: 'flex', flexDirection: 'column', gap: DOCK.gap * P }}>
+          {state.handInProgress && yourHole.length === 2 && (
+            <div data-testid="hand-hint">
+              <PixelText text={describeHold(yourHole, state.board) ?? ''} scale={P} ink={{ color: '#2a6a3a', shadow: '#cfe8d4' }} wrap />
+            </div>
+          )}
           {coaching && (
             <div data-testid="coaching">
               <PixelText text={coaching} scale={P} ink={{ color: '#2a5a9a', shadow: '#c8d8f0' }} wrap />
@@ -411,6 +424,8 @@ export function PokerNightScene({ onWin, onLeave }: PokerNightSceneProps) {
       needs={needs}
       felt={(layout) => (
         <PokerTableView
+          blinds={levelFor(Math.max(1, state.handNumber))}
+          showHeld={showHeld}
           state={state}
           lastResult={lastResult}
           yourHole={yourHole}

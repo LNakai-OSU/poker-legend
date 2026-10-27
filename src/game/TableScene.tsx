@@ -39,6 +39,8 @@ interface TableSceneProps {
 
 /** How long an announcement stays up. Matches the `announce` CSS animation. */
 const ANNOUNCE_MS = 2600
+/** The end of a hand stays up longer: it is the part a player reads to learn why they won or lost. */
+const RESULT_MS = 5000
 
 /**
  * How long the felt is left alone after a hand before the next one is dealt.
@@ -200,10 +202,10 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
   // --- Announcing key moments ----------------------------------------------
   const [announcement, setAnnouncement] = useState<Announcement | null>(null)
   const announceTimer = useRef<number | null>(null)
-  const announce = (a: Announcement) => {
+  const announce = (a: Announcement, ms = ANNOUNCE_MS) => {
     setAnnouncement(a)
     if (announceTimer.current) window.clearTimeout(announceTimer.current)
-    announceTimer.current = window.setTimeout(() => setAnnouncement(null), ANNOUNCE_MS)
+    announceTimer.current = window.setTimeout(() => setAnnouncement(null), ms)
   }
   useEffect(
     () => () => {
@@ -267,7 +269,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
     }
     playSound(wonAnything ? 'win' : 'lose')
 
-    announce(resultAnnouncement(lastResult, publicState.handNumber, players))
+    announce(resultAnnouncement(lastResult, publicState.handNumber, players), RESULT_MS)
 
     // Whoever the hand turned on gets the line, so a showdown lands as a moment
     // between two people rather than a number changing.
@@ -315,6 +317,9 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
   // The next hand waits for the player: the board stays up, with who won and
   // how, until they press the button (or space) to deal again.
   const handOver = !publicState.handInProgress && lastResult !== null
+  const [showHeld, setShowHeld] = useState(false)
+  useEffect(() => setShowHeld(false), [lastResult?.handNumber])
+  const heldWinner = handOver ? lastResult?.held?.find((h) => h.playerId !== 'you') : undefined
   const canPlayOn = handOver && !youBusted && !(isFinale && opponentsBusted)
 
   // Space deals the next hand now, for a player who has already read the board.
@@ -342,7 +347,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
       setResultSettled(false)
       return
     }
-    const timer = window.setTimeout(() => setResultSettled(true), ANNOUNCE_MS)
+    const timer = window.setTimeout(() => setResultSettled(true), RESULT_MS)
     return () => window.clearTimeout(timer)
   }, [handOver, lastResult?.handNumber])
 
@@ -619,6 +624,9 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
         <>
           {handOver && lastResult && <ShowdownSummary result={lastResult} players={players} scale={P} />}
           <div data-testid="hand-over-bar" style={{ ...row, marginTop: DOCK.gap * P }}>
+            {heldWinner && !showHeld && (
+              <PxButton lines={['See their cards']} scale={P} role="plain" height={one} onClick={() => setShowHeld(true)} />
+            )}
             {canPlayOn && (
               <PxButton lines={['Next hand (space)']} scale={P} role="primary" height={one} onClick={dealNextHand} />
             )}
@@ -804,6 +812,8 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
           personas={personas}
           speech={speech}
           announcement={announcement}
+          blinds={{ small: table.smallBlind, big: table.bigBlind }}
+          showHeld={showHeld}
           layout={layout}
           theme={theme}
         />
