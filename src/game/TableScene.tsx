@@ -16,6 +16,8 @@ import { TableStage } from './TableStage'
 import { DOCK, buttonHeight, buttonWidth, type SceneLayout, type SceneNeeds } from './tableLayout'
 import { themeFor, type TableTheme } from './tableThemes'
 import { Panel, PxButton, PxLine } from './pixel/ui'
+import { useTouchFirst } from './device'
+import { useBetKeys, type BetStop } from './useBetKeys'
 import { PixelText } from './pixel/PixelText'
 import { INK } from './pixel/ink'
 import { chipTopUrl } from './pixel/chips'
@@ -41,6 +43,8 @@ interface TableSceneProps {
 const ANNOUNCE_MS = 2600
 /** The end of a hand stays up longer: it is the part a player reads to learn why they won or lost. */
 const RESULT_MS = 5000
+/** Under the betting buttons, for a player with a keyboard. */
+const BET_KEYS_HINT = '← → choose · ↑ ↓ bet size · Space confirm'
 
 /**
  * How long the felt is left alone after a hand before the next one is dealt.
@@ -545,6 +549,30 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
           ? 'busted'
           : null
 
+  // The keyboard's way of betting: arrows pick a button or a size, Space does it.
+  const raiseAvailable = legalActions.some((a) => a.type === 'raise')
+  const betStops: BetStop[] = [
+    ...(legalActions.some((a) => a.type === 'fold') ? (['fold'] as const) : []),
+    ...(legalActions.some((a) => a.type === 'check') ? (['check'] as const) : []),
+    ...(legalActions.some((a) => a.type === 'call') ? (['call'] as const) : []),
+    ...(raiseAvailable ? (['raise'] as const) : []),
+  ]
+  const betSizes = [
+    ...(publicState.minRaiseTo < allInTo ? [publicState.minRaiseTo, ...raisePresets.map((p) => p.to)] : []),
+    allInTo,
+  ]
+  const betSize = Math.min(Math.max(sliderTo, publicState.minRaiseTo), allInTo)
+  const betCursor = useBetKeys({
+    active: canAct && publicState.handInProgress && ending === null,
+    stops: betStops,
+    sizes: betSizes,
+    size: betSize,
+    setSize: setSliderTo,
+    resetKey: `${publicState.handNumber}-${publicState.street}-${publicState.currentBet}`,
+    onPick: (stop) => (stop === 'raise' ? raiseTo(betSize) : act(stop)),
+  })
+
+  const touch = useTouchFirst()
   const theme = themeFor(table)
   const lessons = state.lessonIds
   const needs = useMemo<SceneNeeds>(() => {
@@ -555,13 +583,14 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
       sampleAmount: sample,
       // The most the menu ever has to say over its buttons, so it never grows.
       infoTexts: [
+        ...(touch ? [] : [BET_KEYS_HINT]),
         ...(lessons.includes('hand-reading') ? ['Three of a kind · ~100% to win'] : []),
         ...(lessons.includes('pot-odds') ? [`Calling ${sample} into ${sample} — you need 50% to break even`] : []),
       ],
       title: `${table.name} · $${table.smallBlind}/$${table.bigBlind}`,
       subtitle: `Wallet: $${state.cash.toLocaleString()}`,
     }
-  }, [table, seats.length, lessons, state.cash])
+  }, [table, seats.length, lessons, state.cash, touch])
 
   const actingName = players.find((p) => p.id === publicState.actingPlayerId)?.name
 
@@ -682,13 +711,13 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
             {info}
             <div style={row}>
               {legalActions.some((a) => a.type === 'fold') && (
-                <PxButton lines={['Fold']} scale={P} role="fold" height={one} onClick={() => act('fold')} />
+                <PxButton lines={['Fold']} scale={P} role="fold" height={one} selected={betCursor === 'fold'} onClick={() => act('fold')} />
               )}
               {legalActions.some((a) => a.type === 'check') && (
-                <PxButton lines={['Check']} scale={P} role="primary" height={one} onClick={() => act('check')} />
+                <PxButton lines={['Check']} scale={P} role="primary" height={one} selected={betCursor === 'check'} onClick={() => act('check')} />
               )}
               {legalActions.some((a) => a.type === 'call') && (
-                <PxButton lines={[`Call ${toCall}`]} scale={P} role="primary" height={one} onClick={() => act('call')} />
+                <PxButton lines={[`Call ${toCall}`]} scale={P} role="primary" height={one} selected={betCursor === 'call'} onClick={() => act('call')} />
               )}
               {raiseOpen && publicState.minRaiseTo < allInTo && (
                 <div
@@ -724,6 +753,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
                     role="raise"
                     height={one}
                     testId="raise-slider-go"
+                    selected={betCursor === 'raise'}
                     onClick={() => raiseTo(sliderValue)}
                   />
                 </div>
@@ -746,6 +776,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
                     width={plan.sizingCellW}
                     height={two}
                     testId="raise-min"
+                    selected={betCursor === 'raise' && sliderValue === publicState.minRaiseTo}
                     onClick={() => raiseTo(publicState.minRaiseTo)}
                   />
                 )}
@@ -761,6 +792,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
                     width={plan.sizingCellW}
                     height={two}
                     testId={`raise-${preset.key}`}
+                    selected={betCursor === 'raise' && sliderValue === preset.to}
                     onClick={() => raiseTo(preset.to)}
                   />
                 ))}
@@ -771,9 +803,19 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
                   width={plan.sizingCellW}
                   height={two}
                   testId="raise-all-in"
+                  selected={betCursor === 'raise' && sliderValue === allInTo}
                   onClick={() => raiseTo(allInTo)}
                 />
               </div>
+            )}
+            {!touch && (
+              <PxLine
+                scale={P}
+                align="center"
+                ink={LOG_INK}
+                testId="bet-keys-hint"
+                text={BET_KEYS_HINT}
+              />
             )}
           </div>
         )

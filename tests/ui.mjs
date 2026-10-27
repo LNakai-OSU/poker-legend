@@ -1685,7 +1685,7 @@ await test('every casino table has players sitting at it', async () => {
   assert(compared >= 4, `only ${compared} taken chairs had an empty one to compare with`)
 })
 
-await test('walking into an empty chair sits you down, from any side', async () => {
+await test('an empty chair offers a seat from any side and Space or X takes it', async () => {
   const page = await newPage(baseSave({ cityId: 'apartment', areaId: 'sc-floor', period: 'evening', day: 2 }))
   await page.goto(BASE)
   await page.waitForSelector('canvas')
@@ -1701,7 +1701,31 @@ await test('walking into an empty chair sits you down, from any side', async () 
   assert(plan, 'no empty chair with somewhere to stand next to it')
   assert(await moveTo(page, plan.from.col, plan.from.row), `could not walk to ${plan.from.col},${plan.from.row}`)
   await step(page, KEY_FOR[plan.dir])
+  // Facing it is not sitting in it: the chair offers, and Space or X takes it.
+  assert(!(await page.locator('[data-testid="pot-value"]').isVisible()), 'walking at the chair sat down without being asked')
+  assert(/sit down/.test(await page.locator('text=/to sit down/').first().innerText()), 'no offer to sit')
+  await page.keyboard.press(' ')
   await page.waitForSelector('[data-testid="pot-value"]', { timeout: 4000 })
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+})
+
+await test('a bet can be made with the arrows and Space' , async () => {
+  const page = await newPage(baseSave())
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(400)
+  await enterDoor(page, 'Casino')
+  await talkTo(page, 'Pit Boss')
+  await page.waitForSelector('[data-testid="bet-keys-hint"]', { timeout: 20000 })
+  // Nothing is pointed at a raise to begin with, so a stray Space is only a call or a check.
+  assert((await page.locator('[data-selected="true"]').count()) === 1, 'one button should be pointed at')
+  assert(/Raise to|Min raise|½|Pot|All in/.test((await page.locator('[data-testid="dock"]').innerText())), 'no raise on offer')
+  await page.keyboard.press('ArrowUp')
+  const raising = await page.locator('[data-selected="true"]').first().getAttribute('data-testid')
+  assert(/raise/.test(raising ?? ''), `Up should point at a raise size, not ${raising}`)
+  await page.keyboard.press(' ')
+  await page.waitForSelector('[data-testid="bet-you"]', { timeout: 4000 })
   assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
   await page.close()
 })

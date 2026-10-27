@@ -15,10 +15,10 @@ function modified(e: KeyboardEvent): boolean {
   return e.metaKey || e.ctrlKey || e.altKey
 }
 
-/** Space, E or Enter: "do it". */
+/** Space, E, X or Enter: "do it". */
 export function isActionKey(e: KeyboardEvent): boolean {
   if (modified(e)) return false
-  return e.key === ' ' || e.key === 'Spacebar' || e.key === 'Enter' || e.key === 'e' || e.key === 'E'
+  return e.key === ' ' || e.key === 'Spacebar' || e.key === 'Enter' || e.key === 'e' || e.key === 'E' || e.key === 'x' || e.key === 'X'
 }
 
 /** A step through a list: back for up/left (W, A), on for down/right (S, D); 0 for anything else. */

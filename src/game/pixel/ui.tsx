@@ -34,6 +34,8 @@ interface PxButtonProps {
   subInk?: Ink
   /** The button element, for whoever has to move the focus onto it. */
   buttonRef?: (el: HTMLButtonElement | null) => void
+  /** Pointed at with the keyboard: shows the cursor the way hovering does. */
+  selected?: boolean
 }
 
 /**
@@ -41,14 +43,15 @@ interface PxButtonProps {
  * letters are drawn over the same words kept in the document — so a test or a
  * screen reader finds "Call 20" exactly where a player sees it.
  */
-export function PxButton({ lines, scale, role = 'plain', width, height, onClick, testId, style, disabled, subInk, buttonRef }: PxButtonProps) {
+export function PxButton({ lines, scale, role = 'plain', width, height, onClick, testId, style, disabled, subInk, buttonRef, selected }: PxButtonProps) {
   const w = width ?? buttonWidth(lines)
   return (
     <button
       type="button"
       ref={buttonRef}
       data-testid={testId}
-      className="px-btn"
+      className={selected ? 'px-btn px-selected' : 'px-btn'}
+      data-selected={selected ? 'true' : undefined}
       onClick={onClick}
       disabled={disabled}
       aria-disabled={disabled || undefined}

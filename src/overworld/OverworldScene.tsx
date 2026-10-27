@@ -48,6 +48,9 @@ const WORLD_ZOOM = 2
  */
 const NARROW_SCREEN_PX = 560
 
+/** The prompt for a chair in front of you, which no person's name can equal. */
+const SIT_PROMPT = '\u0000sit'
+
 function zoomFor(width: number): number {
   return width < NARROW_SCREEN_PX ? WORLD_ZOOM / 2 : WORLD_ZOOM
 }
@@ -590,6 +593,13 @@ export function OverworldScene({
       // Whoever you are facing, before anyone else beside you: a row of slot
       // machines has a dealer standing behind the stool, and E must play the
       // machine you are looking at rather than whichever was listed first.
+      const chairAt = (col: number, row: number) =>
+        chairsRef.current?.find((c) => c.col === col && c.row === row && !isOccupied(col, row))
+      const facingChair = () => {
+        const [dc, dr] = DELTAS[player.facing]
+        return chairAt(player.col + dc, player.row + dr)
+      }
+
       const findAdjacent = () => {
         const beside = npcs.filter((n) => player.isAdjacentTo(n.config.col, n.config.row))
         if (beside.length < 2) return beside[0]
@@ -636,12 +646,9 @@ export function OverworldScene({
           onExitRef.current?.(door)
           return
         }
-        // An empty chair is taken by walking into it: you are sat down, not stood on it.
-        const chair = chairsRef.current?.find((c) => c.col === nextCol && c.row === nextRow)
-        if (chair && !isOccupied(nextCol, nextRow)) {
+        // An empty chair is not walked on: you turn to face it, and Space or X sits you down.
+        if (chairAt(nextCol, nextRow)) {
           player.face(direction)
-          leaving = true
-          onSitRef.current?.(chair.tableId)
           return
         }
         player.tryMove(direction, map, isOccupied)
@@ -662,7 +669,14 @@ export function OverworldScene({
       const tryInteract = () => {
         if (talkingRef.current || pausedRef.current) return
         const adjacent = findAdjacent()
-        if (!adjacent) return
+        if (!adjacent) {
+          const chair = facingChair()
+          if (chair && !leaving) {
+            leaving = true
+            onSitRef.current?.(chair.tableId)
+          }
+          return
+        }
         const interactable = interactablesRef.current.find((i) => i.id === adjacent.config.id)
         // A scripted event gets first refusal: it runs its own conversation,
         // because it has more to say than a text box and a callback.
@@ -820,7 +834,7 @@ export function OverworldScene({
           const playerTop = player.pixelY - PERSON_RISE * 2 + 4
           adjacent.label.position.set(anchor.x, (behindThem ? Math.min(anchor.y, playerTop) : anchor.y) - 1)
         }
-        setPrompt(adjacent ? adjacent.config.name : null)
+        setPrompt(adjacent ? adjacent.config.name : !talkingRef.current && facingChair() ? SIT_PROMPT : null)
       })
 
       // Whatever arrived while the scene was being built.
@@ -962,7 +976,13 @@ export function OverworldScene({
             pointerEvents: 'none',
           }}
         >
-          {isTouch ? `Tap E to talk to ${prompt}` : `Press E or Space to talk to ${prompt}`}
+          {prompt === SIT_PROMPT
+            ? isTouch
+              ? 'Tap E to sit down'
+              : 'Press Space or X to sit down'
+            : isTouch
+              ? `Tap E to talk to ${prompt}`
+              : `Press E or Space to talk to ${prompt}`}
         </div>
       )}
       {isTouch && !talking && !paused && (

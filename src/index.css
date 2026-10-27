@@ -138,8 +138,10 @@ button {
    every GBA menu, and a one-pixel press. */
 .px-btn .px-cursor { visibility: hidden; }
 .px-btn:hover .px-cursor,
+.px-btn.px-selected .px-cursor,
 .px-btn:focus-visible .px-cursor { visibility: visible; }
 .px-btn:focus-visible { outline: none; filter: brightness(1.15); }
+.px-btn.px-selected { filter: brightness(1.2); }
 .px-btn:active > * { transform: translateY(var(--press, 2px)); }
 
 /* The raise slider: a dark groove with a chip to drag along it. */

@@ -3,6 +3,8 @@ import { TexasHoldEmTable } from '../engine/table'
 import { decideAiAction } from '../engine/ai'
 import { defaultRng } from '../engine/rng'
 import type { PlayerConfig } from '../engine/types'
+import { useTouchFirst } from './device'
+import { useBetKeys, type BetStop } from './useBetKeys'
 import { describeHold } from './handHint'
 import { PokerTableView, ShowdownSummary } from './PokerTableView'
 import type { Announcement } from './HandAnnouncer'
@@ -60,6 +62,8 @@ function levelFor(handNumber: number) {
 const ANNOUNCE_MS = 2600
 /** Blinds going up gets longer: it changes what every bet means. */
 const BLINDS_MS = 4500
+/** Under the betting buttons, for a player with a keyboard. */
+const BET_KEYS_HINT = '← → choose · ↑ ↓ bet size · Space confirm'
 
 function createTable() {
   return new TexasHoldEmTable(PLAYERS, {
@@ -228,16 +232,37 @@ export function PokerNightScene({ onWin, onLeave }: PokerNightSceneProps) {
   const level = levelFor(state.handNumber)
   const youWon = winnerId === 'you'
 
+  // The same keys as every other table: arrows pick, Space does it.
+  const betStops: BetStop[] = [
+    ...(legalActions.some((a) => a.type === 'fold') ? (['fold'] as const) : []),
+    ...(legalActions.some((a) => a.type === 'check') ? (['check'] as const) : []),
+    ...(legalActions.some((a) => a.type === 'call') ? (['call'] as const) : []),
+    ...(legalActions.some((a) => a.type === 'raise') ? (['raise'] as const) : []),
+  ]
+  const betSizes = [...(state.minRaiseTo < allInTo ? [state.minRaiseTo, ...raisePresets.map((p) => p.to)] : []), allInTo]
+  const [raiseSize, setRaiseSize] = useState(0)
+  const betSize = Math.min(Math.max(raiseSize, state.minRaiseTo), allInTo)
+  const betCursor = useBetKeys({
+    active: canAct && state.handInProgress && !gameOver,
+    stops: betStops,
+    sizes: betSizes,
+    size: betSize,
+    setSize: setRaiseSize,
+    resetKey: `${state.handNumber}-${state.street}-${state.currentBet}`,
+    onPick: (stop) => (stop === 'raise' ? raiseTo(betSize) : act(stop)),
+  })
+  const touch = useTouchFirst()
+
   const needs = useMemo<SceneNeeds>(
     () => ({
       kind: 'home',
       opponents: PLAYERS.length - 1,
       sampleAmount: (STARTING_STACK * PLAYERS.length).toLocaleString(),
-      infoTexts: [LONGEST_COACHING, 'You hold a pair of Queens — a double. A strong start.'],
+      infoTexts: [...(touch ? [] : [BET_KEYS_HINT]), LONGEST_COACHING, 'You hold a pair of Queens — a double. A strong start.'],
       title: "Marcus's kitchen table · winner takes all",
       subtitle: `Blinds ${level.small}/${level.big} · hand ${state.handNumber}`,
     }),
-    [level.small, level.big, state.handNumber],
+    [level.small, level.big, state.handNumber, touch],
   )
 
   const dock = (layout: SceneLayout) => {
@@ -322,13 +347,13 @@ export function PokerNightScene({ onWin, onLeave }: PokerNightSceneProps) {
             <>
               <div style={row}>
                 {legalActions.some((a) => a.type === 'fold') && (
-                  <PxButton lines={['Fold']} scale={P} role="fold" height={one} onClick={() => act('fold')} />
+                  <PxButton lines={['Fold']} scale={P} role="fold" height={one} selected={betCursor === 'fold'} onClick={() => act('fold')} />
                 )}
                 {legalActions.some((a) => a.type === 'check') && (
-                  <PxButton lines={['Check']} scale={P} role="primary" height={one} onClick={() => act('check')} />
+                  <PxButton lines={['Check']} scale={P} role="primary" height={one} selected={betCursor === 'check'} onClick={() => act('check')} />
                 )}
                 {legalActions.some((a) => a.type === 'call') && (
-                  <PxButton lines={[`Call ${toCall}`]} scale={P} role="primary" height={one} onClick={() => act('call')} />
+                  <PxButton lines={[`Call ${toCall}`]} scale={P} role="primary" height={one} selected={betCursor === 'call'} onClick={() => act('call')} />
                 )}
               </div>
               {raiseOpen && (
@@ -347,6 +372,7 @@ export function PokerNightScene({ onWin, onLeave }: PokerNightSceneProps) {
                       role="raise"
                       width={plan.sizingCellW}
                       height={one}
+                      selected={betCursor === 'raise' && betSize === state.minRaiseTo}
                       onClick={() => raiseTo(state.minRaiseTo)}
                     />
                   )}
@@ -358,6 +384,7 @@ export function PokerNightScene({ onWin, onLeave }: PokerNightSceneProps) {
                       role="raise"
                       width={plan.sizingCellW}
                       height={one}
+                      selected={betCursor === 'raise' && betSize === preset.to}
                       onClick={() => raiseTo(preset.to)}
                     />
                   ))}
@@ -367,9 +394,13 @@ export function PokerNightScene({ onWin, onLeave }: PokerNightSceneProps) {
                     role="allin"
                     width={plan.sizingCellW}
                     height={one}
+                    selected={betCursor === 'raise' && betSize === allInTo}
                     onClick={() => raiseTo(allInTo)}
                   />
                 </div>
+              )}
+              {!touch && (
+                <PxLine scale={P} align="center" ink={{ color: '#8a8a98', shadow: '#dcdce4' }} testId="bet-keys-hint" text={BET_KEYS_HINT} />
               )}
             </>
           )}
