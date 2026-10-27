@@ -1685,6 +1685,27 @@ await test('every casino table has players sitting at it', async () => {
   assert(compared >= 4, `only ${compared} taken chairs had an empty one to compare with`)
 })
 
+await test('walking into an empty chair sits you down, from any side', async () => {
+  const page = await newPage(baseSave({ cityId: 'apartment', areaId: 'sc-floor', period: 'evening', day: 2 }))
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  const grid = await settle(page)
+  const chairs = await page.evaluate(() => JSON.parse(document.querySelector('[data-testid="overworld"]').dataset.chairs))
+  // An empty chair with floor beside it to come at it from, at the table the pit boss deals.
+  let plan = null
+  for (const chair of chairs.filter((c) => !c.taken)) {
+    for (const [dir, dc, dr] of [['right', -1, 0], ['left', 1, 0], ['down', 0, -1], ['up', 0, 1]]) {
+      if (grid[chair.row + dr]?.[chair.col + dc] === 'w') plan = plan ?? { chair, from: { col: chair.col + dc, row: chair.row + dr }, dir }
+    }
+  }
+  assert(plan, 'no empty chair with somewhere to stand next to it')
+  assert(await moveTo(page, plan.from.col, plan.from.row), `could not walk to ${plan.from.col},${plan.from.row}`)
+  await step(page, KEY_FOR[plan.dir])
+  await page.waitForSelector('[data-testid="pot-value"]', { timeout: 4000 })
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+})
+
 await test('a sitter is somebody you walk round, not through', async () => {
   const page = await newPage(baseSave({ cityId: 'apartment', areaId: 'sc-floor', period: 'evening', day: 2 }))
   await page.goto(BASE)

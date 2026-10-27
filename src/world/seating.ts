@@ -57,6 +57,8 @@ export interface TableSeating {
   sitters: Sitter[]
   /** Players of its game standing at it rather than sitting. They count as being at the table. */
   standing: string[]
+  /** Chairs nobody is in that you can walk to without cutting the room in two: take one and you are sat down. */
+  open: Array<{ col: number; row: number; facing: SeatFacing }>
 }
 
 /** The parts of an area seating reads. */
@@ -185,19 +187,24 @@ export function seatingFor(area: SeatingArea, options: SeatingOptions = {}): Tab
       .map((seat, index) => ({ seat, index, order: next() }))
       .sort((a, b) => a.order - b.order)
     const sitters: Sitter[] = []
+    const open: TableSeating['open'] = []
     for (const { seat, index } of chairs) {
-      if (sitters.length >= wanted) break
       const at = seatTile(seat)
       const col = table.col + at.col
       const row = table.row + at.row
       const k = key(col, row)
       if (!isWalkable(area.map, col, row) || area.map[row][col] === DOOR) continue
-      if (occupied.has(k) || taken.has(k) || clear.has(k)) continue
+      if (occupied.has(k) || taken.has(k)) continue
       // Nobody sits down in the only way through.
       const blocked = new Set([...occupied, ...taken, k])
       const after = reachable(area, area.playerStart, blocked)
       const cutOff = [...before].some((tile) => !blocked.has(tile) && !after.has(tile))
       if (cutOff || approachable(blocked, after) < approachableBefore) continue
+      if (sitters.length >= wanted || clear.has(k)) {
+        // Free for the player: a chair you can walk into without walling anything off.
+        if (!clear.has(k)) open.push({ col, row, facing: seat.facing })
+        continue
+      }
       taken.add(k)
       const characterId = named[sitters.length]
       if (characterId) seatedAlready.add(characterId)
@@ -211,7 +218,22 @@ export function seatingFor(area: SeatingArea, options: SeatingOptions = {}): Tab
         ...(characterId ? { characterId } : {}),
       })
     }
-    seating[position] = { table, seats: seats.length, tableId: game?.id, sitters, standing }
+    seating[position] = { table, seats: seats.length, tableId: game?.id, sitters, standing, open }
+  }
+  // Chairs are taken by walking into them, so together they must not wall
+  // anything off either: keep each one only while the room stays whole with
+  // everybody sitting and every chair kept so far in the way.
+  const kept = new Set<string>()
+  for (const entry of seating) {
+    entry.open = entry.open.filter((chair) => {
+      const k = key(chair.col, chair.row)
+      const blocked = new Set([...occupied, ...taken, ...kept, k])
+      const after = reachable(area, area.playerStart, blocked)
+      const cutOff = [...before].some((tile) => !blocked.has(tile) && !after.has(tile))
+      if (cutOff || approachable(blocked, after) < approachableBefore) return false
+      kept.add(k)
+      return true
+    })
   }
   return seating
 }

@@ -133,6 +133,12 @@ interface OverworldSceneProps {
    * how streets join: no doorway, no tile to stand on, just the next map.
    */
   openEdges?: Partial<Record<Edge, true>>
+  /**
+   * Chairs at a table with nobody in them. Walking into one sits you down, from
+   * any side of the table, without asking the dealer.
+   */
+  openChairs?: Array<{ col: number; row: number; tableId: string }>
+  onSit?: (tableId: string) => void
   onLeaveEdge?: (edge: Edge, alongAxis: number) => void
   /**
    * Set while a scripted beat has the screen. Nobody moves — not you, not a
@@ -164,6 +170,8 @@ export function OverworldScene({
   areaName = '',
   theme = 'default',
   openEdges,
+  openChairs,
+  onSit,
   onLeaveEdge,
   paused = false,
   cues,
@@ -187,6 +195,10 @@ export function OverworldScene({
   onCaughtRef.current = onCaught
   const onExitRef = useRef(onExit)
   onExitRef.current = onExit
+  const chairsRef = useRef(openChairs)
+  chairsRef.current = openChairs
+  const onSitRef = useRef(onSit)
+  onSitRef.current = onSit
   const onLeaveEdgeRef = useRef(onLeaveEdge)
   onLeaveEdgeRef.current = onLeaveEdge
   const pausedRef = useRef(paused)
@@ -624,6 +636,14 @@ export function OverworldScene({
           onExitRef.current?.(door)
           return
         }
+        // An empty chair is taken by walking into it: you are sat down, not stood on it.
+        const chair = chairsRef.current?.find((c) => c.col === nextCol && c.row === nextRow)
+        if (chair && !isOccupied(nextCol, nextRow)) {
+          player.face(direction)
+          leaving = true
+          onSitRef.current?.(chair.tableId)
+          return
+        }
         player.tryMove(direction, map, isOccupied)
       }
 
@@ -869,7 +889,8 @@ export function OverworldScene({
       // the room it was trying to cross, which made failures look like missing
       // content. People are in here too, since they block movement: a route
       // planned without them walks into a shoulder and stops short.
-      // 'w' walkable, 'd' a door, 'o' someone standing there, '#' solid.
+      // 'w' walkable, 'd' a door, 'o' someone standing there (or a chair that
+      // sits you down), '#' solid.
       data-grid={map
         .map((row, r) =>
           row
@@ -877,7 +898,8 @@ export function OverworldScene({
               exits.some((e) => e.col === c && e.row === r)
                 ? 'd'
                 : interactables.some((i) => i.col === c && i.row === r) ||
-                    seated.some(({ sitter }) => sitter.col === c && sitter.row === r)
+                    seated.some(({ sitter }) => sitter.col === c && sitter.row === r) ||
+                    openChairs?.some((chair) => chair.col === c && chair.row === r)
                   ? 'o'
                   : isWalkable(map, c, r)
                     ? 'w'

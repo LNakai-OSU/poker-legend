@@ -10,7 +10,7 @@ import { PERIOD_LABEL } from '../game/time'
 import { CHARACTERS, charactersIn } from '../world/characters'
 import { EVENTS, eventFor, type GameEvent } from '../world/events'
 import { artForPoi, figureForCharacter, figuresForPois, figuresForSitters } from './casting'
-import { sittersIn } from '../world/seating'
+import { seatingFor } from '../world/seating'
 import type { SeatedConfig } from './sitters'
 import type { CastPlace, Cue } from '../game/eventMachine'
 import { besideTile } from './paths'
@@ -110,10 +110,14 @@ export function CityScene({
   const walks = cues
     .filter((cue) => cue.areaId === areaId)
     .flatMap((cue) => [...(cue.to === 'player' ? [] : [cue.to]), ...(cue.from ? [cue.from] : [])])
-  const sitters = sittersIn(area, {
+  const seatings = seatingFor(area, {
     present: scheduled.map(({ id, at }) => ({ id, col: at.col, row: at.row })),
     keepClear: [landing, ...walks],
   })
+  const sitters = seatings.flatMap((table) => table.sitters)
+  const chairs = seatings.flatMap((table) =>
+    table.tableId ? table.open.map((seat) => ({ col: seat.col, row: seat.row, tableId: table.tableId! })) : [],
+  )
   const sitterFigures = figuresForSitters(sitters, CHARACTERS, [
     ...scheduled.map((s) => s.figure),
     ...figures.values(),
@@ -221,6 +225,11 @@ export function CityScene({
       onCaught={onCaught}
       areaName={area.name}
       theme={city.theme}
+      openChairs={chairs}
+      onSit={(tableId) => {
+        const dealer = area.pois.find((p) => p.action.kind === 'table' && p.action.tableId === tableId)
+        if (dealer) onAction({ kind: 'table', tableId }, dealer)
+      }}
       openEdges={
         area.edges
           ? (Object.fromEntries(
