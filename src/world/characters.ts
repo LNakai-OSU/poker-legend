@@ -1107,6 +1107,121 @@ export const CHARACTERS: Record<string, CharacterDef> = {
       ],
     },
   },
+  // The lunatics: one per town, each the kind of person a card room breeds.
+  // They are on the floor in their own town and at the final table's rail (or
+  // its felt) at the end; the broadcast scouts them on the way (see events.ts).
+  dolores: {
+    name: 'Lucky Dolores',
+    style: 'Has a system. It is a rabbit foot.',
+    look: { skin: '#e0b894', hair: '#d8d8dc', hairStyle: 'tied', shirt: '#a8486a', accessory: 'glasses' },
+    seat: { skillTier: 'novice', archetype: 'station' },
+    lines: {
+      greeting: ['Dolores: Do not sit in the blue chair, honey. The blue chair took my husband.'],
+      raise: ['Dolores: The foot says raise.', 'Dolores: Hold my cigarette.'],
+      call: ['Dolores: I have a feeling about this one. I have the same feeling about all of them.'],
+      fold: ['Dolores: The foot says no. The foot is rarely wrong.'],
+      win: ['Dolores: Seventy-four years of this. You cannot teach it.'],
+      lose: ['Dolores: Beginner\'s luck. Mine was in 1971.'],
+    },
+    overworld: {
+      look: { garment: 'cardigan', garmentColor: '#8a3a5a', sleeves: 'long' },
+      lines: ['Dolores: Rub the foot. Go on. It does not bite. Much.'],
+      schedule: [
+        { period: 'afternoon', areaId: 'sc-floor', col: 13, row: 7, lines: [
+          'Dolores: I tip the dealer in cigarettes. They love it. They are not allowed to say.',
+        ] },
+        { period: 'evening', areaId: 'sc-floor', col: 13, row: 7, lines: [
+          'Dolores: Never play on a Tuesday. Never play on a Wednesday. Thursday I am in a mood.',
+        ] },
+        { period: 'night', areaId: 'sc-floor', col: 13, row: 7, lines: [
+          'Dolores: Honey, you look like a man who is about to be right. Do not let it show.',
+        ] },
+      ],
+    },
+  },
+  gaines: {
+    name: 'Reverend Gaines',
+    style: 'Tithes ten percent of every pot.',
+    look: { skin: '#7a4a2e', hair: '#1a1a1a', hairStyle: 'short', shirt: '#2a2a32', accessory: 'none' },
+    seat: { skillTier: 'competent', archetype: 'nit', stackMultiplier: 1.2 },
+    lines: {
+      greeting: ['Gaines: The Lord provides. I just need the flop.'],
+      raise: ['Gaines: Let us pray over this one.', 'Gaines: I am led to raise.'],
+      bet: ['Gaines: A small offering.'],
+      call: ['Gaines: I will see your sin and raise you nothing.'],
+      fold: ['Gaines: Forgive me. I cannot call that.'],
+      win: ['Gaines: Ten percent goes to the boat fund. The church boat. It is for souls.'],
+      lose: ['Gaines: The meek shall inherit it. Not today, evidently.'],
+    },
+    overworld: {
+      look: { garment: 'jacket', garmentColor: '#1c1c24', sleeves: 'long' },
+      lines: ['Gaines: Ten percent, my friend. Not for me. For the boat.'],
+      schedule: [
+        { period: 'evening', areaId: 'rb-boat', col: 17, row: 5, lines: [
+          'Gaines: I took up a collection. It was mostly me. It is called a bankroll, in the gospel.',
+        ] },
+        { period: 'night', areaId: 'rb-boat', col: 17, row: 5, lines: [
+          'Gaines: Folds to a river bet seven times in ten. The Lord does not hold with bluffing. He prefers to be asked.',
+        ] },
+      ],
+    },
+  },
+  contessa: {
+    name: 'The Contessa',
+    style: 'The accent comes and goes.',
+    look: { skin: '#f0d0b8', hair: '#6a2a18', hairStyle: 'long', shirt: '#2a2a62', accessory: 'shades' },
+    seat: { skillTier: 'sharp', archetype: 'maniac' },
+    lines: {
+      greeting: ['Contessa: Darling. Contessa Valmont. Of the Lyon Valmonts. Or Leeds.'],
+      raise: ['Contessa: Raise, darling. We are not here to be liked.', 'Contessa: Oh, I do not THINK so.'],
+      bet: ['Contessa: A little something.'],
+      call: ['Contessa: I call, mate. Darling. Mate.'],
+      fold: ['Contessa: Fold. How dreadfully middle class.'],
+      win: ['Contessa: Mine, mine, all mine. Like the Alps.'],
+      lose: ['Contessa: Bloody hell. Mon dieu.'],
+    },
+    overworld: {
+      look: { garment: 'vest', garmentColor: '#40204a', sleeves: 'short' },
+      lines: ['Contessa: My late husband left me everything. His name was Gary.'],
+      schedule: [
+        { period: 'evening', areaId: 'ch-cardroom', col: 9, row: 6, lines: [
+          'Contessa: Another cocktail, darling. A small one. The size of a Gary.',
+        ] },
+        { period: 'night', areaId: 'ch-cardroom', col: 9, row: 6, lines: [
+          'Contessa: Bluff? Me? I am an aristocrat. I do not need to. I simply bet.',
+        ] },
+      ],
+    },
+  },
+  zeke: {
+    name: 'Zeke "KingPin"',
+    style: 'Streams every hand. Mute for the river.',
+    look: { skin: '#d8a880', hair: '#f0c820', hairStyle: 'short', shirt: '#c82060', accessory: 'earring' },
+    seat: { skillTier: 'competent', archetype: 'regular' },
+    lines: {
+      greeting: ['Zeke: Chat, say hi to the new donk. Say hi, chat. Chat? Chat.'],
+      raise: ['Zeke: Chat, he is not going to call. Watch this.', 'Zeke: Smash that raise button.'],
+      call: ['Zeke: Standard call. Chat, tell him it is standard.'],
+      fold: ['Zeke: Fold. We love a disciplined fold. Subscribe.'],
+      win: ['Zeke: ABSOLUTELY ICONIC. Clip that. Clip it.'],
+      lose: ['Zeke: Chat, that was the nuts. That was fine. Do not clip that.'],
+    },
+    overworld: {
+      look: { garment: 'hoodie', garmentColor: '#c82060', sleeves: 'long' },
+      lines: ['Zeke: Live in four-three-two. Say something interesting.'],
+      schedule: [
+        { period: 'afternoon', areaId: 'nm-casino', col: 17, row: 8, lines: [
+          'Zeke: Eleven thousand watching. Eleven. And one is my mum.',
+        ] },
+        { period: 'evening', areaId: 'nm-casino', col: 17, row: 8, lines: [
+          'Zeke: I read three poker books and watched six hundred hours of solver. I have never won a hand against anyone in the same room.',
+        ] },
+        { period: 'night', areaId: 'nm-casino', col: 17, row: 8, lines: [
+          'Zeke: Stack of ten thousand, sub-goal of twenty. Be cool. Tip the streamer.',
+        ] },
+      ],
+    },
+  },
   nadia: {
     name: 'Nadia Okonkwo',
     style: 'Four years in the penthouse.',

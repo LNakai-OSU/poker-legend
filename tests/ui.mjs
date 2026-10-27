@@ -27,6 +27,10 @@ let browser
  * holds this list to the events in the game.
  */
 const STORY_SEEN = [
+  // The televised opening, before the flat.
+  'prologue',
+  // The final table: the lights come back on and you take the seat.
+  'final-table-start',
   // The opening: Dana walks you to the 14.
   'dana-walks-you-to-the-bus',
   'dana-at-the-depot',

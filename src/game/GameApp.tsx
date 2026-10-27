@@ -29,7 +29,6 @@ import {
   caughtByCollectors,
   huntingSponsorId,
   recordBust,
-  daysUntilRematch,
   initialState,
   lostFinalChallenge,
   payDebt,
@@ -220,7 +219,7 @@ export function GameApp() {
 
   const buyInAndSit = (table: (typeof TABLES)[string]) => {
     // The buy-in leaves your wallet and becomes chips in front of you.
-    setState((s) => ({ ...s, cash: s.cash - table.buyIn }))
+    if (!table.freeroll) setState((s) => ({ ...s, cash: s.cash - table.buyIn }))
     setView({ kind: 'table', tableId: table.id })
   }
 
@@ -240,18 +239,6 @@ export function GameApp() {
       setView({ kind: 'blocked', title: table.name, message: access.reason ?? 'You cannot sit down here.' })
       return
     }
-    // Losing the heads-up match means she will not rack it up again for a while;
-    // without this the climax is a button you can keep pressing until it pays.
-    if (table.isFinale && daysUntilRematch(state) > 0) {
-      setView({
-        kind: 'blocked',
-        title: table.name,
-        message:
-          `Nadia took your ${table.buyIn.toLocaleString()} and is not putting the match up again tonight. ` +
-          `Come back in ${daysUntilRematch(state)} day${daysUntilRematch(state) === 1 ? '' : 's'}.`,
-      })
-      return
-    }
     // The bankroll lesson is what earns this: the player can still sit, but they
     // are told what they are risking before the buy-in leaves their wallet.
     if (access.bankrollWarning && !skipBankrollCheck) {
@@ -260,7 +247,7 @@ export function GameApp() {
     }
     // The finale has no Leave button on purpose, and one side loses everything
     // they put up. Both of those have to be said before the money moves.
-    if (table.isFinale) {
+    if (table.isFinale && !table.freeroll) {
       setView({ kind: 'finaleCommit', tableId })
       return
     }
@@ -268,6 +255,28 @@ export function GameApp() {
   }
 
   const handleLeaveTable = (table: (typeof TABLES)[string], result: SessionResult) => {
+    // The final table is a story beat, not a cash game: what happens next is
+    // written as an event, whichever way it went.
+    if (table.isFinale && table.freeroll) {
+      const won = result.finaleWon === true
+      const after = advanceDay({
+        ...state,
+        cash: state.cash + (won ? (table.prize ?? 0) : 0),
+        stats: {
+          handsWon: state.stats.handsWon + result.handsWon,
+          biggestPot: Math.max(state.stats.biggestPot, result.biggestPot),
+          tablesPlayed: state.stats.tablesPlayed + 1,
+        },
+        record: won ? state.record : { ...state.record, challengeLost: state.record.challengeLost + 1 },
+        flags: won ? { ...state.flags, beatFinalRival: true, hasPenthouse: true } : state.flags,
+      })
+      setState(() => after)
+      backToCity()
+      const event = eventFor(EVENTS, { kind: won ? 'finaleWon' : 'finaleLost' }, after)
+      if (event) runEvent(event, won ? () => setView({ kind: 'ending' }) : undefined)
+      else setView({ kind: won ? 'ending' : 'finaleLost' })
+      return
+    }
     setState((s) => {
       const next = advanceDay({
         ...s,

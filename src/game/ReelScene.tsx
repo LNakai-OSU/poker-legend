@@ -53,6 +53,8 @@ export function ReelScene({
 
   if (!panel || !line) return null
   const speaker = CHARACTERS[line.who]?.name ?? line.who
+  // A line written "Marcus: …" is not introduced twice.
+  const text = line.text.startsWith(`${speaker}: `) ? line.text.slice(speaker.length + 2) : line.text
 
   return (
     <div
@@ -119,7 +121,7 @@ export function ReelScene({
       >
         Skip ▸▸
       </button>
-      <DialogueBox key={`${at.panel}-${at.line}`} speaker={speaker} lines={[line.text]} onFinish={next} />
+      <DialogueBox key={`${at.panel}-${at.line}`} speaker={speaker} lines={[text]} onFinish={next} />
     </div>
   )
 }

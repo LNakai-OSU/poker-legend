@@ -277,6 +277,9 @@ describe('the night of the first game, played through', () => {
       if (stage.dialogue) {
         said.push(...stage.dialogue.lines)
         h.machine.advance()
+      } else if (stage.reel) {
+        // The broadcast between towns: its lines are turned in the scene, not here.
+        h.machine.reelDone()
       } else if (stage.choice) {
         h.machine.choose(0)
       } else if (stage.cues.length > 0) {

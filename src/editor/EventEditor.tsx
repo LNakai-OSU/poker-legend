@@ -74,6 +74,8 @@ const TRIGGER_LABEL: Record<EventTrigger['kind'], string> = {
   enterArea: 'you walk into an area',
   standOn: 'you step on a tile',
   caught: 'the collectors catch you',
+  finaleWon: 'you win the final table',
+  finaleLost: 'you lose the final table',
 }
 
 const CONDITION_LABEL: Record<EventCondition['kind'], string> = {
@@ -691,6 +693,9 @@ function TriggerTarget({ trigger, options, onChange }: { trigger: EventTrigger; 
           <NumberBox label="Row" width={56} value={trigger.row} onChange={(row) => onChange({ ...trigger, row: row ?? 0 })} />
         </>
       )
+    case 'finaleWon':
+    case 'finaleLost':
+      return <span className="ed-muted ed-small">plays when the final table ends</span>
     case 'caught':
       return <span className="ed-muted ed-small">whoever&rsquo;s collectors they are: add a &ldquo;collectors are in town&rdquo; condition</span>
   }

@@ -50,6 +50,9 @@ export type EventTrigger =
    * the shakedown follows its last line; `hunted` says whose they are.
    */
   | { kind: 'caught' }
+  /** The final table is over: the last chip is yours, or you are out of them. */
+  | { kind: 'finaleWon' }
+  | { kind: 'finaleLost' }
 
 /** What has to be true for it to fire. All of them must hold. */
 export type EventCondition =
@@ -529,6 +532,10 @@ function sameTrigger(a: EventTrigger, b: EventTrigger): boolean {
       return b.kind === 'interact' && a.poiId === b.poiId
     case 'caught':
       return b.kind === 'caught'
+    case 'finaleWon':
+      return b.kind === 'finaleWon'
+    case 'finaleLost':
+      return b.kind === 'finaleLost'
   }
 }
 
@@ -1134,6 +1141,53 @@ export const EVENTS: GameEvent[] = [
       { kind: 'clearFlag', flag: 'marcusSeesYouOff' },
       { kind: 'moveNpc', characterId: 'marcus', to: { col: 10, row: 11 }, leaves: true },
       { kind: 'dialogue', lines: ['The low-stakes table is top left. The pit boss is waiting to seat you.'] },
+      { kind: 'wait', ms: 400 },
+      {
+        kind: 'reel',
+        title: 'The Road to the Final, part one',
+        panels: [
+          {
+            scene: 'booth',
+            ticker: 'YOU 15,000 · 7 BB · LAST OF 6',
+            lines: [
+              {
+                who: 'Chip',
+                text:
+                  'Folks, while the techs find the fuse box — the producers have asked us to ' +
+                  'run the package. "The Road to the Final."',
+              },
+              {
+                who: 'Dr. Anand',
+                text:
+                  'It is a retrospective. We have forty minutes of footage and one working ' +
+                  'light.',
+              },
+              {
+                who: 'Chip',
+                text:
+                  'And what a road, Doctor! It starts in a kitchen. A KITCHEN. A man named ' +
+                  'Marcus, a bag of chips, and the rent due in nine days!',
+              },
+              {
+                who: 'Dr. Anand',
+                text: 'Technically the rent was due in ten. The producers rounded for drama.',
+              },
+              {
+                who: 'Chip',
+                text:
+                  'Our player beats the table, takes the whole pot, and the next morning gets ' +
+                  'on a bus with a man who has apparently been crying since breakfast.',
+              },
+              {
+                who: 'Dr. Anand',
+                text:
+                  'I would like it noted that the bus is called "the 14". It is not a metaphor. ' +
+                  'I checked.',
+              },
+            ],
+          },
+        ],
+      },
     ],
   },
 
@@ -1231,6 +1285,89 @@ export const EVENTS: GameEvent[] = [
           'Ray: Go and be due somewhere else for me.',
         ],
       },
+      { kind: 'setFlag', flag: 'scoutedDolores' },
+      { kind: 'wait', ms: 300 },
+      {
+        kind: 'reel',
+        title: 'The Road to the Final, part two',
+        panels: [
+          {
+            scene: 'booth',
+            ticker: 'YOU 15,000 · 7 BB · LAST OF 6',
+            lines: [
+              {
+                who: 'Chip',
+                text:
+                  'Silver Creek! Carpet, cigarette smoke and a man named Ray who has been "due" ' +
+                  'since the Carter administration.',
+              },
+              {
+                who: 'Dr. Anand',
+                text:
+                  'Ray is a textbook calling station. He folds, on average, to a river bet ' +
+                  'roughly never.',
+              },
+              {
+                who: 'Chip',
+                text:
+                  'And look at this — the woman in the cardigan with the rabbit foot. That is ' +
+                  'Lucky Dolores.',
+              },
+              {
+                who: 'Dr. Anand',
+                text:
+                  'Seventy-four. Plays by feel, by moon and by what her late husband said at ' +
+                  'the blue chair. Folds a lot more than the foot suggests.',
+              },
+              {
+                who: 'Chip',
+                text:
+                  'She is in the building tonight, folks. Front row, on the rail. She has been ' +
+                  'banned from four casinos for blessing the cards.',
+              },
+            ],
+          },
+        ],
+      },
+      {
+        kind: 'if',
+        when: [
+          { kind: 'count', of: 'busted', atLeast: 1 },
+        ],
+        then: [
+          {
+            kind: 'reel',
+            panels: [
+              {
+                scene: 'booth',
+                ticker: 'YOU 15,000 · 7 BB · LAST OF 6',
+                lines: [
+                  {
+                    who: 'Chip',
+                    text: 'Now, there is a stretch here our producers called "a learning period."',
+                  },
+                  {
+                    who: 'Dr. Anand',
+                    text:
+                      'He went broke, Chip. Twice. Marcus had to deal him back in at the ' +
+                      'kitchen table.',
+                  },
+                  {
+                    who: 'Chip',
+                    text:
+                      'Resilience! That is what that is! Do not let the numbers tell you ' +
+                      'otherwise!',
+                  },
+                  {
+                    who: 'Dr. Anand',
+                    text: 'I will absolutely let the numbers tell you otherwise.',
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
     ],
   },
 
@@ -1326,6 +1463,84 @@ export const EVENTS: GameEvent[] = [
           'Deb: Twenty-five hundred. That is Harbor money, sweetheart.',
           'Deb: They wear suits down there and they will not tell you the rules. Learn them anyway.',
           'Deb: Been here longer than you. Do not come back and prove it.',
+        ],
+      },
+      { kind: 'setFlag', flag: 'scoutedGaines' },
+      { kind: 'wait', ms: 300 },
+      {
+        kind: 'reel',
+        title: 'The Road to the Final, part three',
+        panels: [
+          {
+            scene: 'booth',
+            ticker: 'YOU 15,000 · 7 BB · LAST OF 6',
+            lines: [
+              {
+                who: 'Chip',
+                text:
+                  "The riverboat! Neon on the water, a deckhand who knows everyone's business, " +
+                  'and a man in a clerical collar who is, I am told, a legitimate reverend.',
+              },
+              {
+                who: 'Dr. Anand',
+                text:
+                  'He is ordained by a website. He tithes ten percent of every pot to a charity ' +
+                  'called "the boat fund."',
+              },
+              {
+                who: 'Chip',
+                text: 'Reverend Gaines! A card player of God, folks, or at least of Gaines.',
+              },
+              {
+                who: 'Dr. Anand',
+                text:
+                  'Scouting note, and I want to be clear this is data: he folds to a river bet ' +
+                  'seven times in ten. He plays tight, bets small, and hates being asked a ' +
+                  'question twice.',
+              },
+              {
+                who: 'Chip',
+                text:
+                  'And Deb, the diner owner. She made our player win five pots to prove ' +
+                  'himself. FIVE POTS.',
+              },
+              {
+                who: 'Dr. Anand',
+                text: 'A very low bar. I have seen him miss a pot with the nuts.',
+              },
+            ],
+          },
+        ],
+      },
+      {
+        kind: 'if',
+        when: [
+          { kind: 'debt', status: ['owing', 'overdue'] },
+        ],
+        then: [
+          {
+            kind: 'reel',
+            panels: [
+              {
+                scene: 'phone',
+                ticker: 'YOU 15,000 · 7 BB · LAST OF 6',
+                lines: [
+                  {
+                    who: 'Chip',
+                    text:
+                      'And this is where our story takes the turn the lawyers asked us to ' +
+                      'describe as "a financing arrangement."',
+                  },
+                  {
+                    who: 'Dr. Anand',
+                    text: 'He borrowed money, Chip. From a woman named Cass who owns a riverboat.',
+                  },
+                  { who: 'Chip', text: 'A bold strategy!' },
+                  { who: 'Dr. Anand', text: 'A bold interest rate.' },
+                ],
+              },
+            ],
+          },
         ],
       },
     ],
@@ -1433,6 +1648,45 @@ export const EVENTS: GameEvent[] = [
           'Hal: I will be out there myself. The air is dry and the students do not listen.',
         ],
       },
+      { kind: 'setFlag', flag: 'scoutedContessa' },
+      { kind: 'wait', ms: 300 },
+      {
+        kind: 'reel',
+        title: 'The Road to the Final, part four',
+        panels: [
+          {
+            scene: 'booth',
+            ticker: 'YOU 15,000 · 7 BB · LAST OF 6',
+            lines: [
+              {
+                who: 'Chip',
+                text:
+                  'Crescent Harbor! Supper clubs, a very serious card room, and Hal — the one ' +
+                  'who taught Nadia Okonkwo herself!',
+              },
+              {
+                who: 'Dr. Anand',
+                text: 'And at the back of the room, the woman everyone asked about: the Contessa.',
+              },
+              { who: 'Chip', text: 'Darling! Of the Lyon Valmonts!' },
+              {
+                who: 'Dr. Anand',
+                text:
+                  'Of the Leeds Valmonts, it turns out. The accent slips when she is thrown. ' +
+                  'She is also the most aggressive player in this building, and I have the ' +
+                  'hand-history to prove it.',
+              },
+              { who: 'Chip', text: 'Does it work?' },
+              {
+                who: 'Dr. Anand',
+                text:
+                  'Against anyone who folds. Not against anyone who calls. It is the whole ' +
+                  'game, Chip.',
+              },
+            ],
+          },
+        ],
+      },
     ],
   },
 
@@ -1515,6 +1769,54 @@ export const EVENTS: GameEvent[] = [
           'Marcus: Thirty thousand. I am going home before I start believing in things.',
           'Marcus: The Mesa is all lights and people who read books about this. Do not let them make you boring.',
           'Marcus: Call me from the top.',
+        ],
+      },
+      { kind: 'setFlag', flag: 'scoutedBernard' },
+      { kind: 'wait', ms: 300 },
+      {
+        kind: 'reel',
+        title: 'The Road to the Final, part five',
+        panels: [
+          {
+            scene: 'booth',
+            ticker: 'YOU 15,000 · 7 BB · LAST OF 6',
+            lines: [
+              {
+                who: 'Chip',
+                text:
+                  'Palm Cay! Sun, sand, and a man named Bernard who has been at the same table ' +
+                  'for two days.',
+              },
+              {
+                who: 'Dr. Anand',
+                text: 'He is on his third bucket of chips. He believes it is Thursday. It is not.',
+              },
+              {
+                who: 'Chip',
+                text: "He is also, folks, on tonight's final table. Do not ask me how.",
+              },
+              {
+                who: 'Dr. Anand',
+                text:
+                  'A very rich relative arranged it. He calls everything. Everything. He has ' +
+                  'never folded a pair in his life and he is, statistically, on the wrong end ' +
+                  'of the maths. Which does not mean he can be ignored. He has more chips than ' +
+                  'the rest of the table combined.',
+              },
+              {
+                who: 'Chip',
+                text:
+                  'And Marcus! Marcus, who came on holiday and went home with a sunburn and a ' +
+                  'feeling.',
+              },
+              {
+                who: 'Dr. Anand',
+                text:
+                  'I have a note here. It says "thirty thousand, then home before he starts ' +
+                  'believing in things." Quoting directly.',
+              },
+            ],
+          },
         ],
       },
     ],
@@ -1611,6 +1913,49 @@ export const EVENTS: GameEvent[] = [
         speaker: 'dana',
         lines: ['Dana: Ninety. Take the plane.', 'Dana: I will be there before you. I usually am.'],
       },
+      { kind: 'setFlag', flag: 'scoutedZeke' },
+      { kind: 'wait', ms: 300 },
+      {
+        kind: 'reel',
+        title: 'The Road to the Final, part six',
+        panels: [
+          {
+            scene: 'booth',
+            ticker: 'YOU 15,000 · 7 BB · LAST OF 6',
+            lines: [
+              {
+                who: 'Chip',
+                text:
+                  'The Neon Mesa! Slots, noise, a casino that never sleeps, and a streamer who ' +
+                  'never stops talking.',
+              },
+              {
+                who: 'Dr. Anand',
+                text:
+                  'Zeke "KingPin." Plays to the camera, not the cards. He bluffs when the chat ' +
+                  'is bored and folds when the chat is scared.',
+              },
+              { who: 'Chip', text: 'He has eleven thousand people watching.' },
+              {
+                who: 'Dr. Anand',
+                text: 'And one of them is his mum. He told us. He tells everyone.',
+              },
+              {
+                who: 'Chip',
+                text:
+                  'And Dana! The woman who has been watching our player from the corner of ' +
+                  'every room since the first night!',
+              },
+              {
+                who: 'Dr. Anand',
+                text:
+                  'I would like to know who she is writing to. I have a theory. I will not ' +
+                  'share it on air.',
+              },
+            ],
+          },
+        ],
+      },
     ],
   },
 
@@ -1675,7 +2020,7 @@ export const EVENTS: GameEvent[] = [
         lines: [
           'Nadia: So you are the one from the kitchen table in Basin.',
           'Nadia: Somebody I trust has been writing to me about you since Marcus’s game.',
-          'Nadia: One match, heads up. A hundred and twenty thousand each. The winner takes the pot and the floor upstairs.',
+          'Nadia: Tonight is the final table of the Legends Invitational. Six chairs, one winner, and the floor upstairs goes with the trophy.',
           'Nadia: I have sent a car for your friend Marcus. A challenger should have somebody at the rail.',
         ],
       },
@@ -3041,9 +3386,10 @@ export const EVENTS: GameEvent[] = [
         speaker: 'nadia',
         lines: [
           'Nadia: You came back. They mostly do not.',
-          'Nadia: Same terms. A hundred and twenty thousand each, and the floor upstairs. Sit down when you are ready.',
+          'Nadia: Same seat. Same stack. The cameras are still rolling. Sit down when you are ready.',
         ],
       },
+      { kind: 'startTable', tableId: 'lumina-finale' },
     ],
   },
   {
@@ -3304,6 +3650,558 @@ export const EVENTS: GameEvent[] = [
         ],
       },
       { kind: 'setFlag', flag: 'cameBack' },
+    ],
+  },
+  {
+    id: 'prologue',
+    about:
+      'The opening: the televised final of the Legends Invitational, the lights failing, the ' +
+      'bathroom, the mirror — and a cut back to the start of the run. Plays once, the first ' +
+      'time a new game opens.',
+    trigger: { kind: 'enterArea', areaId: 'home', onLoad: true },
+    conditions: [
+      { kind: 'flag', flag: 'wonPokerNight', set: false },
+      { kind: 'flag', flag: 'metDana', set: false },
+      { kind: 'eventDone', eventId: 'poker-night', done: false },
+    ],
+    actions: [
+      { kind: 'fade', to: 'out' },
+      {
+        kind: 'reel',
+        title: 'The Legends Invitational',
+        panels: [
+          {
+            scene: 'studio',
+            ticker: 'FINAL TABLE · 6 LEFT · YOU 15,000 · 7 BB',
+            lines: [
+              {
+                who: 'Chip',
+                text:
+                  'And that is the end of the road for the short stack — all in, called, and, ' +
+                  'oh, he is drawing very thin.',
+              },
+              {
+                who: 'Dr. Anand',
+                text:
+                  'Eleven outs, Chip. Nineteen percent. I would say it is a coin flip but I ' +
+                  'would be lying and I have a PhD.',
+              },
+              {
+                who: 'Chip',
+                text:
+                  'The river! The river is... it is... the lights! WHAT HAPPENED TO THE LIGHTS!',
+              },
+            ],
+          },
+          {
+            scene: 'booth',
+            ticker: 'TECHNICAL DIFFICULTY · PLEASE STAND BY',
+            lines: [
+              {
+                who: 'Dr. Anand',
+                text:
+                  'We are experiencing a technical difficulty. The rig has tripped. Do not ' +
+                  'adjust your set.',
+              },
+              {
+                who: 'Chip',
+                text:
+                  'Play is suspended, folks, for fifteen minutes. Our player has, I believe, ' +
+                  'left the table.',
+              },
+              {
+                who: 'Dr. Anand',
+                text:
+                  'He has gone to the bathroom. At a final table. With four hundred thousand ' +
+                  "dollars of other people's money riding on a river card.",
+              },
+            ],
+          },
+          {
+            scene: 'bathroom',
+            caption:
+              "The men's room, Porto Lumina. A fluorescent tube hums. Somebody, somewhere, is " +
+              'applauding a sandwich.',
+            lines: [
+              {
+                who: 'You',
+                text:
+                  'Breathe. It is one hand. It is one hand. It is the one hand that decides ' +
+                  'everything.',
+              },
+              {
+                who: 'You',
+                text:
+                  'Cass wants her money. Mr. Emeka wants his money and also a handshake. The ' +
+                  'Consortium wants a word.',
+              },
+              {
+                who: 'You',
+                text: "Wen's people are in the lobby. They sent a fruit basket. It had a card.",
+              },
+            ],
+          },
+          {
+            scene: 'phone',
+            caption: 'Three missed calls. A text from an unknown number: "WE SEE YOU."',
+            lines: [
+              { who: 'You', text: 'The fruit basket has a tracker in it. I am almost sure.' },
+              {
+                who: 'Phone',
+                text: 'MARCUS: You got this. Also, did you take my hoodie. No pressure.',
+              },
+            ],
+          },
+          {
+            scene: 'mirror',
+            lines: [
+              { who: 'You', text: 'Look at you.' },
+              { who: 'You', text: 'Seven big blinds. A broadcast crew. A fruit basket.' },
+              { who: 'You', text: 'How... how did I get here?' },
+            ],
+          },
+        ],
+      },
+      { kind: 'wait', ms: 500 },
+      {
+        kind: 'reel',
+        title: 'Some time earlier',
+        panels: [
+          {
+            scene: 'night',
+            caption: 'Basin. A flat above a bakery. Some time earlier.',
+            lines: [
+              {
+                who: 'You',
+                text: 'It started small. A note on a table. A rent that did not pay itself.',
+              },
+            ],
+          },
+        ],
+      },
+      { kind: 'fade', to: 'in' },
+    ],
+  },
+  {
+    id: 'final-table-start',
+    about:
+      'Sitting down for the final: the lights come back on in the studio, the commentators ' +
+      'recap who you scouted, and you take the seat — at 7 big blinds, with the whole table ' +
+      'ahead of you. Repeatable, so Not yet is allowed.',
+    trigger: { kind: 'interact', poiId: 'nadia' },
+    repeatable: true,
+    conditions: [
+      { kind: 'eventDone', eventId: 'nadia-names-the-match' },
+      { kind: 'flag', flag: 'hasPenthouse', set: false },
+      { kind: 'cashAtLeast', amount: 120000 },
+      { kind: 'challenge', status: 'unplayed' },
+    ],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'nadia',
+        lines: [
+          'Nadia: The final is at nine. You have the proof of funds, so you have the seat. The seat is the one at the end.',
+          'Nadia: You will be the short stack. That is not an insult. That is the arithmetic.',
+        ],
+      },
+      {
+        kind: 'choice',
+        speaker: 'nadia',
+        prompt: 'Take your seat?',
+        options: [
+          {
+            label: 'Take it',
+            then: [
+              { kind: 'fade', to: 'out' },
+              {
+                kind: 'reel',
+                title: 'Back in the building',
+                panels: [
+                  {
+                    scene: 'studio',
+                    ticker: 'YOU 15,000 · 7 BB · LAST OF 6',
+                    lines: [
+                      {
+                        who: 'Chip',
+                        text:
+                          'The lights are back, folks! The rig is fixed and the short stack ' +
+                          'returns!',
+                      },
+                      {
+                        who: 'Dr. Anand',
+                        text:
+                          'He has been in the bathroom for fifteen minutes. I have a hypothesis ' +
+                          'about that and it is not flattering.',
+                      },
+                      {
+                        who: 'Chip',
+                        text:
+                          'We are back live. Five opponents and a very short stack. Seven big ' +
+                          'blinds. Do the maths, Doctor.',
+                      },
+                      {
+                        who: 'Dr. Anand',
+                        text:
+                          'Fifteen thousand. Against a combined stack of seven hundred and ' +
+                          'twenty thousand. I would say the odds are long.',
+                      },
+                    ],
+                  },
+                ],
+              },
+              {
+                kind: 'if',
+                when: [
+                  { kind: 'flag', flag: 'scoutedGaines' },
+                ],
+                then: [
+                  {
+                    kind: 'reel',
+                    panels: [
+                      {
+                        scene: 'booth',
+                        ticker: 'YOU 15,000 · 7 BB · LAST OF 6',
+                        lines: [
+                          {
+                            who: 'Dr. Anand',
+                            text:
+                              'He knows the Reverend folds to river pressure. He knows the ' +
+                              'Contessa overplays. He knows Bernard calls everything.',
+                          },
+                          {
+                            who: 'Chip',
+                            text: 'Does he know what any of that is worth with seven big blinds?',
+                          },
+                          {
+                            who: 'Dr. Anand',
+                            text:
+                              'It is worth exactly what he does with it. That is the whole game.',
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                ],
+              },
+              { kind: 'startTable', tableId: 'lumina-finale' },
+            ],
+          },
+          {
+            label: 'Not yet',
+            then: [
+              {
+                kind: 'dialogue',
+                speaker: 'nadia',
+                lines: ['Nadia: Everyone needs a minute. Take two. Not three.'],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'final-lost',
+    about:
+      "Out of chips at the final: you run out the back door, the sponsors' people on your " +
+      'heels, and the friends you made on the way get in their way. Then you go back in at the ' +
+      'same deficit. Plays every time the table is lost.',
+    trigger: { kind: 'finaleLost' },
+    repeatable: true,
+    actions: [
+      { kind: 'fade', to: 'out' },
+      {
+        kind: 'reel',
+        title: 'Bust',
+        panels: [
+          {
+            scene: 'studio',
+            ticker: 'ELIMINATED · 6TH PLACE',
+            lines: [
+              {
+                who: 'Chip',
+                text:
+                  'And that is it, folks! Our short stack is felted, all in and called, and the ' +
+                  'rail goes quiet.',
+              },
+              {
+                who: 'Dr. Anand',
+                text:
+                  'Statistically, this was the most likely outcome. I take no pleasure in being ' +
+                  'right.',
+              },
+            ],
+          },
+          {
+            scene: 'alley',
+            caption:
+              'The staff door, the loading dock. The air smells of fryer oil and consequences.',
+            lines: [
+              {
+                who: 'You',
+                text:
+                  'Four of them. Four men in suits, in the foyer. They did not bring a fruit ' +
+                  'basket this time.',
+              },
+              { who: 'You', text: 'Run.' },
+            ],
+          },
+        ],
+      },
+      {
+        kind: 'choice',
+        prompt: 'How do you get out?',
+        options: [
+          {
+            label: 'The fire stairs',
+            then: [
+              {
+                kind: 'reel',
+                panels: [
+                  {
+                    scene: 'alley',
+                    lines: [
+                      {
+                        who: 'You',
+                        text:
+                          'Up three flights. Down three flights. I forget which way I was going.',
+                      },
+                      {
+                        who: 'marcus',
+                        text:
+                          'Marcus: Left! No — your left! — I am blocking the door with a ' +
+                          'banquet chair. I have been blocking things since 1998.',
+                      },
+                      { who: 'Mr. Lowe', text: 'Mr. Lowe: Sir, that is a fire exit.' },
+                      { who: 'marcus', text: 'Marcus: Then it is a very well-attended one.' },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            label: 'Through the kitchen',
+            then: [
+              {
+                kind: 'reel',
+                panels: [
+                  {
+                    scene: 'alley',
+                    lines: [
+                      { who: 'You', text: 'Pans. Steam. A man shouting about a béarnaise.' },
+                      {
+                        who: 'dana',
+                        text:
+                          'Dana: They went that way. I said it in four languages. One of them ' +
+                          'was Latin.',
+                      },
+                      { who: 'Dutch', text: 'Dutch: She is lying. I can tell. Is she lying?' },
+                      {
+                        who: 'dana',
+                        text: 'Dana: Yes. But you will take a very long time to decide.',
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            label: 'Straight out, tip the doorman',
+            then: [
+              {
+                kind: 'reel',
+                panels: [
+                  {
+                    scene: 'alley',
+                    lines: [
+                      {
+                        who: 'You',
+                        text:
+                          'A twenty to the doorman. He looks at the twenty. He looks at me. He ' +
+                          'looks at the twenty.',
+                      },
+                      {
+                        who: 'hal',
+                        text:
+                          'Hal: Gentlemen. A word on pot odds. It will take about forty minutes.',
+                      },
+                      { who: 'Ms. Fong', text: 'Ms. Fong: We have a schedule, sir.' },
+                      { who: 'hal', text: 'Hal: So did Custer.' },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        kind: 'if',
+        when: [
+          { kind: 'flag', flag: 'stakedKit' },
+        ],
+        then: [
+          {
+            kind: 'reel',
+            panels: [
+              {
+                scene: 'alley',
+                lines: [
+                  { who: 'kit', text: 'Kit: I owe you for the stake. This is me paying in kind.' },
+                  {
+                    who: 'kit',
+                    text:
+                      "Kit: Do not look back. I have wrecked a lot of people's evenings. I am " +
+                      'very good at it.',
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        kind: 'reel',
+        title: 'Back in',
+        panels: [
+          {
+            scene: 'rail',
+            caption:
+              'A hand on the back of your jacket, and the loading dock door swings open on the ' +
+              'light.',
+            lines: [
+              {
+                who: 'marcus',
+                text:
+                  'Marcus: They have not called your name. Go back in. The seat is still warm. ' +
+                  'It is also, technically, still yours.',
+              },
+              {
+                who: 'Dolores',
+                text: 'Dolores: Rub the foot, honey. For luck. Do not tell the foot I said so.',
+              },
+              {
+                who: 'dana',
+                text: 'Dana: Seven big blinds. You have done more with less. Probably.',
+              },
+            ],
+          },
+          {
+            scene: 'studio',
+            ticker: 'YOU 15,000 · 7 BB · LAST OF 6',
+            lines: [
+              {
+                who: 'Chip',
+                text: 'And what is this! The short stack is BACK! He has returned to the table!',
+              },
+              {
+                who: 'Dr. Anand',
+                text:
+                  'I will say, with some professional reluctance, that this is not in the rules.',
+              },
+              {
+                who: 'Chip',
+                text: 'The rules, Doctor, are a suggestion. Fifteen thousand. Deal the cards!',
+              },
+            ],
+          },
+        ],
+      },
+      { kind: 'startTable', tableId: 'lumina-finale' },
+    ],
+  },
+  {
+    id: 'final-won',
+    about:
+      'The last chip is yours. The commentators lose it, the rail is on its feet, and the ' +
+      'credits roll — then the ending card, and open-ended play.',
+    trigger: { kind: 'finaleWon' },
+    actions: [
+      { kind: 'fade', to: 'out' },
+      {
+        kind: 'reel',
+        title: 'Champion',
+        panels: [
+          {
+            scene: 'studio',
+            ticker: 'WINNER · LEGENDS INVITATIONAL · $750,000',
+            lines: [
+              {
+                who: 'Chip',
+                text:
+                  'IT IS OVER! FROM SEVEN BIG BLINDS TO EVERY CHIP ON THE TABLE! I HAVE NEVER ' +
+                  'SEEN ANYTHING LIKE IT IN MY LIFE!',
+              },
+              {
+                who: 'Dr. Anand',
+                text:
+                  'That is a lie, Chip, we both watched the same thing in Tahoe in 2019. But I ' +
+                  'will grant you this is better.',
+              },
+              {
+                who: 'Dr. Anand',
+                text:
+                  'Nineteen percent, three times in a row. I need to sit down. I am sitting ' +
+                  'down. I am standing up again.',
+              },
+            ],
+          },
+          {
+            scene: 'rail',
+            caption: 'The rail comes over the ropes.',
+            lines: [
+              {
+                who: 'marcus',
+                text:
+                  'Marcus: THE KITCHEN TABLE STILL STANDS! I SAID IT WOULD! I SAID IT IN BASIN!',
+              },
+              {
+                who: 'dana',
+                text: 'Dana: I did not write this one down. Some things you only get to see once.',
+              },
+              { who: 'Dolores', text: 'Dolores: Told you. The foot knew. The foot always knows.' },
+            ],
+          },
+          {
+            scene: 'night',
+            caption: 'Porto Lumina, forty-one floors up, a long time after the cameras go dark.',
+            lines: [
+              { who: 'You', text: 'The lights are on. For once I do not need them.' },
+              { who: 'You', text: 'Somewhere a fruit basket is being very, very polite.' },
+            ],
+          },
+        ],
+      },
+      {
+        kind: 'reel',
+        title: 'Credits',
+        panels: [
+          {
+            scene: 'night',
+            caption: 'POKER LEGEND',
+            lines: [
+              { who: 'THE SHORT STACK', text: 'You' },
+              { who: 'THE KITCHEN TABLE', text: 'Marcus' },
+              { who: 'THE WATCHER', text: 'Dana' },
+              { who: 'THE ONE WHO WAS DUE', text: 'Ray' },
+              { who: 'THE FOOT', text: 'Lucky Dolores' },
+              { who: 'THE TITHE', text: 'Reverend Gaines' },
+              { who: 'THE ACCENT', text: 'The Contessa' },
+              { who: 'THE THURSDAY', text: 'Bernard' },
+              { who: 'THE CHAT', text: 'Zeke "KingPin"' },
+              { who: 'THE COACH WHO NEVER SOLD THE LAST LESSON', text: 'Hal' },
+              { who: 'THE FIVE-SECOND MIRACLE', text: 'Chip Van Doren' },
+              { who: 'THE APOLOGY FOR THE MATHS', text: 'Dr. Priyanka Anand' },
+              { who: 'THE FINAL BOSS', text: 'Nadia Okonkwo' },
+              { who: 'THE FRUIT BASKET', text: 'Nobody will say who sent it' },
+              { who: 'THANK YOU FOR PLAYING', text: 'Now go home. Tell somebody you won.' },
+            ],
+          },
+        ],
+      },
     ],
   },
 ]

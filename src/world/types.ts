@@ -54,6 +54,17 @@ export interface TableDef {
   /** Heads-up finale tables end the game rather than being a normal cash game. */
   isFinale?: boolean
   /**
+   * Your chips as a fraction of `buyIn`, when you do not sit down with the same
+   * as everybody: the final table, where you arrive short.
+   */
+  yourStack?: number
+  /** Nothing is paid to sit down, and nothing is kept for losing: the stack is given. */
+  freeroll?: boolean
+  /** Cash you must be holding, not spending, to be let in. */
+  proof?: number
+  /** What winning the table pays, in a freeroll. */
+  prize?: number
+  /**
    * Which room the table is in. Tables in the same room share one, so the
    * heads-up table on the Harbor floor looks like the Harbor floor.
    */

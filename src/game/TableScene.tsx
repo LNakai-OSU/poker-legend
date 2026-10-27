@@ -117,7 +117,7 @@ function resultAnnouncement(
 
 function buildPlayers(table: TableDef, seats: OpponentDef[]): PlayerConfig[] {
   return [
-    { id: 'you', name: 'You', isHuman: true, skillTier: 'amateur', startingStack: table.buyIn },
+    { id: 'you', name: 'You', isHuman: true, skillTier: 'amateur', startingStack: Math.round(table.buyIn * (table.yourStack ?? 1)) },
     ...seats.map((opponent) => ({
       id: opponent.id,
       name: opponent.name,
@@ -607,15 +607,27 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
         <EndPanel P={P} theme={theme} ending={ending}>
           {ending === 'finale-won' && (
             <>
-              <PxLine scale={P} wrap align="center" text="Nadia pushes her chair back, looks at you for a long moment, and offers her hand." />
-              <PxButton lines={['Take the room']} scale={P} role="raise" height={one} onClick={() => leaveWith(you.stack, true)} />
+              <PxLine
+                scale={P}
+                wrap
+                align="center"
+                text={table.freeroll ? 'The last stack slides across to you, and the whole rail is on its feet.' : 'Nadia pushes her chair back, looks at you for a long moment, and offers her hand.'}
+              />
+              <PxButton lines={[table.freeroll ? 'Take the trophy' : 'Take the room']} scale={P} role="raise" height={one} onClick={() => leaveWith(you.stack, true)} />
             </>
           )}
           {ending === 'finale-lost' && (
             <>
-              <PxLine scale={P} wrap align="center" text="Nadia stacks your last chips without ceremony. The penthouse stays hers." />
-              <PxLine scale={P} wrap align="center" ink={STAKE_INK} text={`The $${table.buyIn.toLocaleString()} you put up is hers. That was the bet.`} />
-              <PxButton lines={['Leave the room']} scale={P} role="plain" height={one} onClick={() => leaveWith(0, false)} />
+              <PxLine
+                scale={P}
+                wrap
+                align="center"
+                text={table.freeroll ? 'The dealer rakes in your last chips. Somewhere behind you a door bangs open.' : 'Nadia stacks your last chips without ceremony. The penthouse stays hers.'}
+              />
+              {!table.freeroll && (
+                <PxLine scale={P} wrap align="center" ink={STAKE_INK} text={`The $${table.buyIn.toLocaleString()} you put up is hers. That was the bet.`} />
+              )}
+              <PxButton lines={[table.freeroll ? 'Run' : 'Leave the room']} scale={P} role="plain" height={one} onClick={() => leaveWith(0, false)} />
             </>
           )}
           {ending === 'busted' && (

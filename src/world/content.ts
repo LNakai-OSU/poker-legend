@@ -118,20 +118,24 @@ export const TABLES: Record<string, TableDef> = {
     dressCode: 3,
     opponents: ['august', 'rhodes'],
   },
+  // The televised final of the Legends Invitational: six at the table, and you
+  // are the short stack by a mile — the story opens here and comes back to it
+  // until you win it. Nothing is paid to sit and nothing is kept for losing;
+  // `buyIn` is the unit everybody else's stack is a multiple of.
   'lumina-finale': {
     id: 'lumina-finale',
-    name: 'The Challenge — Heads Up',
+    name: 'The Legends Invitational — Final Table',
     theme: 'finale',
-    // Deep-stacked on purpose: the buy-in is the biggest in the game, but at
-    // 250/500 that was only 240bb and the match was decided by the first
-    // all-in. At 50/100 the same money is 1,200bb, so there is room to be
-    // out-played over a session instead of out-flipped in one hand.
-    smallBlind: 50,
-    bigBlind: 100,
-    buyIn: 120000,
+    smallBlind: 1000,
+    bigBlind: 2000,
+    buyIn: 100000,
+    yourStack: 0.15,
+    freeroll: true,
+    proof: 120000,
+    prize: 750000,
     dressCode: 4,
     isFinale: true,
-    opponents: ['nadia'],
+    opponents: ['nadia', 'gaines', 'contessa', 'bernard', 'zeke'],
   },
 }
 

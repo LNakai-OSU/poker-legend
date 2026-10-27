@@ -118,7 +118,14 @@ export function tableAccess(state: GameState, table: TableDef): TableAccess {
       bankrollWarning: null,
     }
   }
-  if (state.cash < table.buyIn) {
+  if (table.proof && state.cash < table.proof) {
+    return {
+      allowed: false,
+      reason: `The Invitational wants proof of funds: $${table.proof.toLocaleString()} in the bank, not spent. You have $${state.cash.toLocaleString()}.`,
+      bankrollWarning: null,
+    }
+  }
+  if (!table.freeroll && state.cash < table.buyIn) {
     return {
       allowed: false,
       reason: `The buy-in is $${table.buyIn.toLocaleString()}. You have $${state.cash.toLocaleString()}.`,

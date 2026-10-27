@@ -50,6 +50,29 @@ export const STORY_FLAGS = {
     clear: 'you did not brush Dana off',
   },
 
+  // The broadcast's scouting reports: each interlude names one town's lunatic,
+  // and the final table's recap reads what you were told.
+  scoutedDolores: {
+    set: 'the broadcast has scouted Lucky Dolores',
+    clear: 'the broadcast has not scouted Lucky Dolores',
+  },
+  scoutedGaines: {
+    set: 'the broadcast has scouted Reverend Gaines',
+    clear: 'the broadcast has not scouted Reverend Gaines',
+  },
+  scoutedContessa: {
+    set: 'the broadcast has scouted the Contessa',
+    clear: 'the broadcast has not scouted the Contessa',
+  },
+  scoutedBernard: {
+    set: 'the broadcast has scouted Bernard',
+    clear: 'the broadcast has not scouted Bernard',
+  },
+  scoutedZeke: {
+    set: 'the broadcast has scouted Zeke',
+    clear: 'the broadcast has not scouted Zeke',
+  },
+
   // The night of the first game and the morning after: Dana walks you home,
   // and Marcus rides the 14 out to Silver Creek with you.
   marcusSeesYouOff: {

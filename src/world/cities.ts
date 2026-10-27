@@ -2160,8 +2160,8 @@ const portoLumina: CityDef = {
           color: COLORS.finale,
           lines: [
             'Nadia: I know what you have been doing. Small rooms, then bigger ones.',
-            'Nadia: One match. A hundred and twenty thousand each, winner takes it.',
-            'Nadia: The penthouse upstairs comes with it. I have lived there four years.',
+            'Nadia: The final of the Legends Invitational. Six chairs, one winner, cameras on every one.',
+            'Nadia: The penthouse upstairs comes with the trophy. I have lived there four years.',
           ],
           action: { kind: 'table', tableId: 'lumina-finale' },
         },
