@@ -14,6 +14,7 @@ import { CITIES, LESSONS, MISSIONS, SPONSORS, TABLES, findArea } from '../world/
 import { hasFastTravel, missionStatus, tableAccess, travelCostTo } from './progression'
 import { clearSave, loadGame, saveGame } from './save'
 import { useEventRunner } from './useEventRunner'
+import { ReelScene } from './ReelScene'
 import { DialogueBox } from './DialogueBox'
 import { ChoiceBox } from './ChoiceBox'
 import { CHARACTERS } from '../world/characters'
@@ -648,6 +649,14 @@ export function GameApp() {
             onFinish={events.advance}
           />
         </div>
+      )}
+      {events.stage.reel && (
+        <ReelScene
+          key={events.stage.reel.id}
+          title={events.stage.reel.title}
+          panels={events.stage.reel.panels}
+          onDone={events.reelDone}
+        />
       )}
       {events.stage.choice && (
         <ChoiceBox

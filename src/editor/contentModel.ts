@@ -5,7 +5,7 @@ import { STORY_FLAGS as FLAG_MEANING, STORY_FLAG_IDS } from '../world/flags'
 import type { SoundName } from '../audio/audio'
 import { TIME_PERIODS, type TimePeriod } from '../game/time'
 import type { CharacterDef, Persona, ScheduleEntry, TableLines } from '../world/characters'
-import { ENDS_EVENT, type EventAction, type EventCondition, type EventTrigger, type GameEvent, type RideAction, type Spot } from '../world/events'
+import { ENDS_EVENT, type EventAction, type EventCondition, type EventTrigger, type GameEvent, type ReelScene, type RideAction, type Spot } from '../world/events'
 
 /**
  * What a character or an event is allowed to look like, for the editor.
@@ -98,6 +98,7 @@ export const CONDITION_KINDS = keysOf<EventCondition['kind']>({
 })
 export const ACTION_KINDS = keysOf<EventAction['kind']>({
   dialogue: true,
+  reel: true,
   choice: true,
   if: true,
   moveNpc: true,
@@ -122,6 +123,7 @@ export const ACTION_KINDS = keysOf<EventAction['kind']>({
 })
 
 /** What a forced ride may carry: talk, a pause, a quiet change of state. */
+export const REEL_SCENES: ReelScene[] = ['studio', 'bathroom', 'mirror', 'phone', 'booth', 'alley', 'rail', 'night']
 export const RIDE_ACTION_KINDS: Array<RideAction['kind']> = ['dialogue', 'wait', 'setFlag', 'clearFlag', 'giveItem', 'giveCash', 'playSound']
 
 /** Actions after which nothing else in the event runs: the table takes over. */
@@ -207,6 +209,8 @@ export function blankAction(
       return { kind, to: { col: 1, row: 1 } }
     case 'ride':
       return { kind, areaId: ids.area, col: 1, row: 1 }
+    case 'reel':
+      return { kind, panels: [{ scene: 'studio', lines: [{ who: 'Chip', text: '' }] }] }
     case 'takeStake':
     case 'repay':
       return { kind, sponsorId: ids.sponsor ?? 'cass' }
@@ -770,6 +774,27 @@ function actionShape(value: unknown, path: string, problems: Problems) {
         }
       }
       return
+    case 'reel': {
+      keys(value, path, ['kind', 'panels'], ['title'], problems)
+      if (value.title !== undefined && typeof value.title !== 'string') problems.push(`${path}.title should be text`)
+      if (!Array.isArray(value.panels) || value.panels.length === 0) {
+        problems.push(`${path}.panels should be a list with at least one scene`)
+        return
+      }
+      value.panels.forEach((panel, i) => {
+        const at = `${path}.panels[${i}]`
+        if (!isObj(panel)) return void problems.push(`${at} should be a scene`)
+        keys(panel, at, ['scene', 'lines'], ['caption', 'ticker'], problems)
+        oneOf(panel.scene, REEL_SCENES, `${at}.scene`, problems)
+        if (!Array.isArray(panel.lines)) return void problems.push(`${at}.lines should be a list`)
+        panel.lines.forEach((line, j) => {
+          if (!isObj(line) || typeof line.who !== 'string' || typeof line.text !== 'string') {
+            problems.push(`${at}.lines[${j}] should be { who, text }`)
+          }
+        })
+      })
+      return
+    }
     case 'takeStake':
     case 'repay':
       keys(value, path, ['kind', 'sponsorId'], [], problems)
@@ -1010,6 +1035,8 @@ export function describeAction(action: EventAction, names: Names): string {
       const company = action.with?.length ? ` with ${listOf(action.with.map(names.character))}` : ''
       return `you ride the bus to ${names.area(action.areaId)}${company}, and cannot get off`
     }
+    case 'reel':
+      return `a short film plays (${action.panels.length} scene${action.panels.length === 1 ? '' : 's'}${action.title ? `: ${action.title}` : ''})`
     case 'takeStake':
       return `you take ${names.sponsor?.(action.sponsorId) ?? action.sponsorId}'s stake`
     case 'repay':

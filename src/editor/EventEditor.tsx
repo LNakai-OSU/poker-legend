@@ -4,6 +4,8 @@ import {
   EVENTS,
   type ChoiceOption,
   type EventAction,
+  type ReelPanel,
+  type ReelScene,
   type EventCondition,
   type EventTrigger,
   type GameEvent,
@@ -17,6 +19,7 @@ import { TIME_PERIODS, type TimePeriod } from '../game/time'
 import { TOWN_ORDER, type CityId, type CountOf } from '../game/state'
 import {
   ACTION_KINDS,
+  REEL_SCENES,
   CHALLENGE_STATUSES,
   CONDITION_KINDS,
   COUNT_OF,
@@ -92,6 +95,7 @@ const CONDITION_LABEL: Record<EventCondition['kind'], string> = {
 
 const ACTION_LABEL: Record<EventAction['kind'], string> = {
   dialogue: 'somebody says',
+  reel: 'a short film: the broadcast, a night out',
   choice: 'the player decides',
   if: 'if something is true',
   moveNpc: 'somebody walks or runs',
@@ -1047,6 +1051,64 @@ function ActionFields({ action, testid, ctx, onChange }: { action: EventAction; 
           <LineList testid={`${id}-lines`} lines={action.lines} placeholder="Name: what they say" onChange={(lines) => onChange({ ...action, lines })} />
         </div>
       )
+    case 'reel':
+      return (
+        <div style={{ display: 'grid', gap: 8 }}>
+          <input
+            className="ed-input"
+            aria-label="Title"
+            placeholder="A title, for you (optional)"
+            data-testid={`${id}-title`}
+            value={action.title ?? ''}
+            onChange={(e) => onChange(optional(action, 'title', e.target.value || undefined))}
+          />
+          {action.panels.map((panel, i) => (
+            <div key={i} style={{ display: 'grid', gap: 6, borderLeft: '2px solid #4a4a66', paddingLeft: 8 }}>
+              <div className="ed-row">
+                <Pick
+                  label="Set"
+                  testid={`${id}-scene-${i}`}
+                  value={panel.scene}
+                  options={REEL_SCENES.map((scene): [string, string] => [scene, scene])}
+                  onChange={(scene) => onChange({ ...action, panels: action.panels.map((p, j) => (j === i ? { ...p, scene: scene as ReelScene } : p)) })}
+                />
+                <input
+                  className="ed-input"
+                  aria-label="Ticker"
+                  placeholder="Lower-third ticker (optional)"
+                  value={panel.ticker ?? ''}
+                  onChange={(e) => onChange({ ...action, panels: action.panels.map((p, j) => (j === i ? withTicker(p, e.target.value) : p)) })}
+                />
+              </div>
+              <LineList
+                testid={`${id}-lines-${i}`}
+                lines={panel.lines.map((l) => `${l.who}: ${l.text}`)}
+                placeholder="Who: what they say"
+                onChange={(lines) =>
+                  onChange({
+                    ...action,
+                    panels: action.panels.map((p, j) =>
+                      j === i
+                        ? { ...p, lines: lines.map((line) => { const at = line.indexOf(': '); return at < 0 ? { who: '', text: line } : { who: line.slice(0, at), text: line.slice(at + 2) } }) }
+                        : p,
+                    ),
+                  })
+                }
+              />
+            </div>
+          ))}
+          <div className="ed-row">
+            <button type="button" className="ed-button" onClick={() => onChange({ ...action, panels: [...action.panels, { scene: 'studio', lines: [{ who: 'Chip', text: '' }] }] })}>
+              Add a scene
+            </button>
+            {action.panels.length > 1 && (
+              <button type="button" className="ed-button" onClick={() => onChange({ ...action, panels: action.panels.slice(0, -1) })}>
+                Remove the last scene
+              </button>
+            )}
+          </div>
+        </div>
+      )
     case 'moveNpc': {
       const to: Tile = action.to === 'player' ? { col: 1, row: 1 } : action.to
       return (
@@ -1192,4 +1254,10 @@ function ActionFields({ action, testid, ctx, onChange }: { action: EventAction; 
     case 'startPokerNight':
       return null
   }
+}
+
+/** A reel panel with its ticker set, or without one when it is blank. */
+function withTicker(panel: ReelPanel, ticker: string): ReelPanel {
+  const { ticker: _old, ...rest } = panel
+  return ticker ? { ...rest, ticker } : rest
 }

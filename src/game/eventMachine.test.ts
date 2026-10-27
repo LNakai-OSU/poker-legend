@@ -384,3 +384,23 @@ describe('the night of the first game, played through', () => {
     expect(eventFor(EVENTS, { kind: 'enterArea', areaId: 'sc-street' }, walked)?.id).toBe('arrive-silvercreek')
   })
 })
+
+describe('a reel', () => {
+  it('holds the beat until it is over, then carries on', () => {
+    const h = harness()
+    h.machine.run(
+      beat([
+        { kind: 'reel', panels: [{ scene: 'bathroom', lines: [{ who: 'You', text: 'How did I get here?' }] }] },
+        { kind: 'dialogue', speaker: 'marcus', lines: ['Marcus: After.'] },
+      ]),
+    )
+    expect(h.stage.reel?.panels[0].scene).toBe('bathroom')
+    expect(h.stage.dialogue).toBeUndefined()
+    // Turning a text box does not end a film; only the film's own end does.
+    h.machine.advance()
+    expect(h.stage.reel).toBeDefined()
+    h.machine.reelDone()
+    expect(h.stage.reel).toBeUndefined()
+    expect(h.stage.dialogue?.lines[0]).toBe('Marcus: After.')
+  })
+})

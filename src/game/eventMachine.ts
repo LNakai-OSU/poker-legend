@@ -5,6 +5,7 @@ import {
   type EventCondition,
   type GameEvent,
   type Pace,
+  type ReelPanel,
   type RideAction,
   type Spot,
   type Tile,
@@ -61,6 +62,8 @@ export interface EventStage {
    * last page.
    */
   dialogue?: { id: number; speaker: string; lines: string[] }
+  /** The short film currently playing, if any. */
+  reel?: { id: number; title?: string; panels: ReelPanel[] }
   /** The question currently up, if any. */
   choice?: StageChoice & { id: number }
   /** Set while the screen is covered, for a `fade`. */
@@ -178,6 +181,13 @@ export class EventMachine {
     this.pump()
   }
 
+  /** The film is over, or the player skipped it. */
+  reelDone(): void {
+    if (!this.running || !this.stage.reel) return
+    this.setStage({ ...this.stage, reel: undefined })
+    this.pump()
+  }
+
   /** The player picked an answer, by its place in the list shown. False if it is closed. */
   choose(index: number): boolean {
     if (!this.running || !this.stage.choice) return false
@@ -286,6 +296,9 @@ export class EventMachine {
       switch (step.kind) {
         case 'dialogue':
           this.setStage({ ...this.stage, dialogue: { id: this.nextBox++, speaker: step.speaker ?? '', lines: step.lines } })
+          return
+        case 'reel':
+          this.setStage({ ...this.stage, reel: { id: this.nextBox++, title: step.title, panels: step.panels } })
           return
         case 'choice': {
           const state = this.host.getState()

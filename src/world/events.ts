@@ -116,6 +116,33 @@ export interface DialogueAction {
   lines: string[]
 }
 
+/** Where a reel panel is set: the broadcast and the nights around it. Drawn by `ReelScene`. */
+export type ReelScene =
+  | 'studio'
+  | 'bathroom'
+  | 'mirror'
+  | 'phone'
+  | 'booth'
+  | 'alley'
+  | 'rail'
+  | 'night'
+
+/** One thing said in a reel. `who` is a character id or a plain name, such as a commentator. */
+export interface ReelLine {
+  who: string
+  text: string
+}
+
+/** A set and what is said in front of it. */
+export interface ReelPanel {
+  scene: ReelScene
+  /** A line of stage direction under the picture. */
+  caption?: string
+  /** The broadcast's lower third: a stack, a blind level, a score. */
+  ticker?: string
+  lines: ReelLine[]
+}
+
 /** Things that change the state and nothing else: no movement, no change of scene. */
 export type QuietAction =
   | DialogueAction
@@ -212,6 +239,13 @@ export type EventAction =
       with?: string[]
       during?: RideAction[]
     }
+  /**
+   * A short film in front of the street: the televised final, the bathroom,
+   * the commentators in their booth, the night out the back. The player turns
+   * its lines like a text box and may skip the lot. Nothing is on the map while
+   * it plays.
+   */
+  | { kind: 'reel'; title?: string; panels: ReelPanel[] }
   /** Take a sponsor's stake on their usual terms, as their own menu would give it. */
   | { kind: 'takeStake'; sponsorId: string }
   /** Pay back everything owed to a sponsor. Nothing happens if you cannot cover it. */
