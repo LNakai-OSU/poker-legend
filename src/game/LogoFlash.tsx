@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { isActionKey, useKeyLayer } from './keys'
 import { useCrispScale } from './useCrispScale'
 import { Raster } from './pixel/raster'
-import { drawText } from './pixel/font'
+import { drawText, measureText } from './pixel/font'
 import { playSound } from '../audio/audio'
 
 /**
@@ -16,17 +16,20 @@ const W = 240
 const H = 135
 const TOTAL_MS = 3400
 
-/** A line of pixel type at a whole-number scale, in gold with a shadow and a lit top edge. */
+/**
+ * A line of pixel type at a whole-number scale: a solid dark outline all round
+ * so it reads against the rays, a flat gold body, and a pale top edge.
+ */
 function goldText(text: string, scale: number): HTMLCanvasElement {
-  const small = new Raster(text.length * 7 + 4, 14)
+  const small = new Raster(measureText(text) + 2, 9)
   drawText(small, text, 1, 1, '#ffffff')
   const src = small.toCanvas()
+  const pad = scale * 2
   const out = document.createElement('canvas')
-  out.width = src.width * scale + scale * 2
-  out.height = src.height * scale + scale * 2
+  out.width = src.width * scale + pad * 2
+  out.height = src.height * scale + pad * 2
   const c = out.getContext('2d')!
   c.imageSmoothingEnabled = false
-  // Shadow, body, then the highlight: the same shape three times.
   const tint = (color: string, dx: number, dy: number) => {
     const layer = document.createElement('canvas')
     layer.width = src.width
@@ -36,12 +39,15 @@ function goldText(text: string, scale: number): HTMLCanvasElement {
     l.globalCompositeOperation = 'source-in'
     l.fillStyle = color
     l.fillRect(0, 0, src.width, src.height)
-    c.drawImage(layer, dx, dy, layer.width * scale, layer.height * scale)
+    c.drawImage(layer, pad + dx, pad + dy, layer.width * scale, layer.height * scale)
   }
-  tint('#3a2208', scale * 2, scale * 2)
-  tint('#c8901c', scale, scale)
-  tint('#f8d048', scale, 0)
-  tint('#fff4b0', scale, -Math.max(1, Math.floor(scale / 3)))
+  const o = scale
+  for (const [dx, dy] of [[-o, -o], [0, -o], [o, -o], [-o, 0], [o, 0], [-o, o], [0, o], [o, o], [o, o * 2], [0, o * 2]]) {
+    tint('#1a0f04', dx, dy)
+  }
+  tint('#f8d048', 0, 0)
+  tint('#fff4b0', 0, -Math.max(1, Math.floor(scale / 3)))
+  tint('#f8d048', 0, 0)
   return out
 }
 
@@ -112,8 +118,8 @@ export function LogoFlash({ onDone }: { onDone: () => void }) {
   useEffect(() => {
     title.current = {
       legends: goldText('LEGENDS', 4),
-      invitational: goldText('INVITATIONAL', 2),
-      sub: goldText('FINAL TABLE · PORTO LUMINA', 1),
+      invitational: goldText('INVITATIONAL', 3),
+      sub: goldText('PORTO LUMINA', 2),
     }
     playSound('win')
     let frame = 0
@@ -153,11 +159,11 @@ export function LogoFlash({ onDone }: { onDone: () => void }) {
           laurel(c, cx, false)
           laurel(c, cx, true)
           crown(c, cx - 12, 14)
-          c.drawImage(legends, Math.round(cx - legends.width / 2), 44)
-          c.drawImage(invitational, Math.round(cx - invitational.width / 2), 80)
+          c.drawImage(legends, Math.round(cx - legends.width / 2), 40)
+          c.drawImage(invitational, Math.round(cx - invitational.width / 2), 77)
           c.restore()
           c.globalAlpha = Math.min(1, Math.max(0, (t - 900) / 400))
-          c.drawImage(sub, Math.round(cx - sub.width / 2), 106)
+          c.drawImage(sub, Math.round(cx - sub.width / 2), 109)
           c.globalAlpha = 1
           // The shine: a bright diagonal band sweeping across the lettering only.
           const sweep = (t - 1000) / 900
@@ -167,8 +173,8 @@ export function LogoFlash({ onDone }: { onDone: () => void }) {
             layer.height = H
             const l = layer.getContext('2d')!
             l.imageSmoothingEnabled = false
-            l.drawImage(legends, Math.round(cx - legends.width / 2), 44)
-            l.drawImage(invitational, Math.round(cx - invitational.width / 2), 80)
+            l.drawImage(legends, Math.round(cx - legends.width / 2), 40)
+            l.drawImage(invitational, Math.round(cx - invitational.width / 2), 77)
             l.globalCompositeOperation = 'source-atop'
             const x = -40 + sweep * (W + 80)
             const g = l.createLinearGradient(x - 14, 0, x + 14, 0)

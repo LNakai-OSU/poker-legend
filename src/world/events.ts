@@ -3959,6 +3959,8 @@ export const EVENTS: GameEvent[] = [
           },
         ],
       },
+      // Back from the mail: at the kitchen table where you read it, not at the door.
+      { kind: 'teleport', areaId: 'home', col: 3, row: 5 },
       { kind: 'fade', to: 'in' },
     ],
   },
