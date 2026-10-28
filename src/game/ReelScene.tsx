@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import type { ReelPanel } from '../world/events'
 import { CHARACTERS } from '../world/characters'
 import { DialogueBox } from './DialogueBox'
+import { BoothPanel } from './BoothPanel'
+import { CorridorWalk } from './CorridorWalk'
 import { REEL_H, REEL_W, drawReel } from './reelArt'
 
 /**
@@ -32,8 +34,13 @@ export function ReelScene({
   // An empty panel has nothing to turn; move past it rather than stall on it.
   useEffect(() => {
     if (!panel) done()
-    else if (!line) next()
+    else if (!line && !(panel.scene === 'booth' || panel.scene === 'corridor')) next()
   })
+
+  const nextPanel = () => {
+    if (at.panel + 1 < panels.length) setAt({ panel: at.panel + 1, line: 0 })
+    else done()
+  }
 
   const next = () => {
     if (at.line + 1 < panel.lines.length) setAt({ panel: at.panel, line: at.line + 1 })
@@ -51,10 +58,12 @@ export function ReelScene({
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  if (!panel || !line) return null
-  const speaker = CHARACTERS[line.who]?.name ?? line.who
+  if (!panel) return null
+  const custom = panel.scene === 'booth' || panel.scene === 'corridor'
+  if (!custom && !line) return null
+  const speaker = line ? (CHARACTERS[line.who]?.name ?? line.who) : ''
   // A line written "Marcus: …" is not introduced twice.
-  const text = line.text.startsWith(`${speaker}: `) ? line.text.slice(speaker.length + 2) : line.text
+  const text = line ? (line.text.startsWith(`${speaker}: `) ? line.text.slice(speaker.length + 2) : line.text) : ''
 
   return (
     <div
@@ -73,8 +82,10 @@ export function ReelScene({
         animation: 'fade-in 420ms ease-out both',
       }}
     >
-      <ReelCanvas key={at.panel} scene={panel.scene} />
-      {panel.ticker && (
+      {panel.scene === 'booth' && <BoothPanel key={at.panel} lines={panel.lines} ticker={panel.ticker} onDone={nextPanel} />}
+      {panel.scene === 'corridor' && <CorridorWalk key={at.panel} lines={panel.lines} onDone={nextPanel} />}
+      {!custom && <ReelCanvas key={at.panel} scene={panel.scene} />}
+      {!custom && panel.ticker && (
         <div
           data-testid="reel-ticker"
           style={{
@@ -95,7 +106,7 @@ export function ReelScene({
           <span>{panel.ticker}</span>
         </div>
       )}
-      {panel.caption && (
+      {!custom && panel.caption && (
         <div
           data-testid="reel-caption"
           style={{ color: '#9a9ab0', fontFamily: 'monospace', fontStyle: 'italic', padding: '10px 16px', textAlign: 'center', maxWidth: 640 }}
@@ -121,7 +132,7 @@ export function ReelScene({
       >
         Skip ▸▸
       </button>
-      <DialogueBox key={`${at.panel}-${at.line}`} speaker={speaker} lines={[text]} onFinish={next} />
+      {!custom && <DialogueBox key={`${at.panel}-${at.line}`} speaker={speaker} lines={[text]} onFinish={next} />}
     </div>
   )
 }
