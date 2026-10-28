@@ -815,9 +815,67 @@ export const EVENTS: GameEvent[] = [
           },
         ],
       },
-      { kind: 'dialogue', speaker: 'dana', lines: ['Dana: Middle door. He has been setting out chairs since lunch.'] },
-      { kind: 'moveNpc', characterId: 'dana', to: { col: 11, row: 3 }, youFollow: true, leaves: true },
-      { kind: 'dialogue', lines: ['Dana goes in ahead of you. The front room is lit, and somebody is shuffling a deck.'] },
+      {
+        kind: 'dialogue',
+        speaker: 'dana',
+        lines: ['Dana: Marcus is the middle door, up the street. Walk with me.'],
+      },
+      {
+        kind: 'moveNpc',
+        characterId: 'dana',
+        to: { col: 11, row: 5 },
+        youFollow: true,
+      },
+      { kind: 'dialogue', speaker: 'dana', lines: [
+        'Dana: Middle door. He has been setting out chairs since lunch.',
+        'Dana: After you. Wipe your feet. He will notice.',
+      ] },
+      { kind: 'fade', to: 'out' },
+      { kind: 'teleport', areaId: 'marcus-house', col: 7, row: 9, with: ['dana'] },
+      { kind: 'fade', to: 'in' },
+      {
+        kind: 'dialogue',
+        lines: ['Inside, the front room is lit, and somebody is shuffling a deck. Badly.'],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'dana',
+        lines: ['Dana: Table is this way. Stay close. The carpet bites.'],
+      },
+      {
+        kind: 'moveNpc',
+        characterId: 'dana',
+        to: { col: 7, row: 7 },
+        youFollow: true,
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'marcus',
+        lines: [
+          'Marcus: There they are! Sit, sit. Mind the rug, it is load-bearing.',
+          'Marcus: I have snacks. Pretzels. The good pretzels, the ones I told Patel were for a funeral.',
+        ],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'dana',
+        lines: [
+          'Dana: Marcus, you told Mr. Patel the funeral was yours.',
+          'Marcus: It will be, if I lose again.',
+          'Dana: You lose every Friday.',
+          'Marcus: That is called consistency. It is a quality.',
+        ],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'marcus',
+        lines: [
+          'Marcus: House rules. Everything on the table, winner takes the lot. If anyone cries, they cry quietly.',
+          'Marcus: Deal them in. Dana, you are in the big chair.',
+          'Dana: I am always in the big chair.',
+        ],
+      },
+      { kind: 'startPokerNight' },
     ],
   },
   {
@@ -894,9 +952,67 @@ export const EVENTS: GameEvent[] = [
           },
         ],
       },
-      { kind: 'dialogue', speaker: 'dana', lines: ['Dana: Middle door. He has been setting out chairs since lunch.'] },
-      { kind: 'moveNpc', characterId: 'dana', to: { col: 11, row: 3 }, youFollow: true, leaves: true },
-      { kind: 'dialogue', lines: ['Dana goes in ahead of you. The front room is lit, and somebody is shuffling a deck.'] },
+      {
+        kind: 'dialogue',
+        speaker: 'dana',
+        lines: ['Dana: Marcus is the middle door, up the street. Walk with me.'],
+      },
+      {
+        kind: 'moveNpc',
+        characterId: 'dana',
+        to: { col: 11, row: 5 },
+        youFollow: true,
+      },
+      { kind: 'dialogue', speaker: 'dana', lines: [
+        'Dana: Middle door. He has been setting out chairs since lunch.',
+        'Dana: After you. Wipe your feet. He will notice.',
+      ] },
+      { kind: 'fade', to: 'out' },
+      { kind: 'teleport', areaId: 'marcus-house', col: 7, row: 9, with: ['dana'] },
+      { kind: 'fade', to: 'in' },
+      {
+        kind: 'dialogue',
+        lines: ['Inside, the front room is lit, and somebody is shuffling a deck. Badly.'],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'dana',
+        lines: ['Dana: Table is this way. Stay close. The carpet bites.'],
+      },
+      {
+        kind: 'moveNpc',
+        characterId: 'dana',
+        to: { col: 7, row: 7 },
+        youFollow: true,
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'marcus',
+        lines: [
+          'Marcus: There they are! Sit, sit. Mind the rug, it is load-bearing.',
+          'Marcus: I have snacks. Pretzels. The good pretzels, the ones I told Patel were for a funeral.',
+        ],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'dana',
+        lines: [
+          'Dana: Marcus, you told Mr. Patel the funeral was yours.',
+          'Marcus: It will be, if I lose again.',
+          'Dana: You lose every Friday.',
+          'Marcus: That is called consistency. It is a quality.',
+        ],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'marcus',
+        lines: [
+          'Marcus: House rules. Everything on the table, winner takes the lot. If anyone cries, they cry quietly.',
+          'Marcus: Deal them in. Dana, you are in the big chair.',
+          'Dana: I am always in the big chair.',
+        ],
+      },
+      { kind: 'startPokerNight' },
     ],
   },
   {

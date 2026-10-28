@@ -144,11 +144,11 @@ async function newPage(save, device) {
 
 /** A fresh game opens on the televised final; the scenarios about walking the town skip it. */
 async function skipPrologue(page) {
-  // It begins a moment after the street does.
-  await page.waitForSelector('[data-testid="reel-skip"]', { timeout: 4000 }).catch(() => {})
-  for (let i = 0; i < 8; i++) {
-    if (!(await page.locator('[data-testid="reel-skip"]').isVisible({ timeout: 1500 }).catch(() => false))) break
-    await page.locator('[data-testid="reel-skip"]').click()
+  // Each film is skipped in turn; the next one starts a moment after the last.
+  for (let i = 0; i < 12; i++) {
+    const found = await page.waitForSelector('[data-testid="reel-skip"]', { timeout: i === 0 ? 4000 : 2500 }).then(() => true).catch(() => false)
+    if (!found) break
+    await page.locator('[data-testid="reel-skip"]').click().catch(() => {})
     await page.waitForTimeout(450)
   }
 }
@@ -261,7 +261,7 @@ async function moveTo(page, col, row, budget = 60) {
 }
 
 const promptOf = (page) =>
-  page.locator('text=/Press E or Space to talk|Tap E to talk/').first().textContent().catch(() => null)
+  page.locator('text=/Press E or Space to (talk to|read|use|look at)|Tap E to (talk to|read|use|look at)/').first().textContent().catch(() => null)
 
 /**
  * Walks up to a named person or object. Looks the tile up from the scene rather
@@ -877,7 +877,7 @@ async function readUntil(page, re, budget = 25000) {
   throw new Error(`never got to ${re} (last: ${(await dialogueNow(page)).slice(0, 100)}; at ${JSON.stringify(at)} in ${await areaNameOf(page)})`)
 }
 
-await test('the opening: Dana runs to you, walks you to the 14 and rides it with you to Marcus', async () => {
+await test('the opening: Dana runs to you and walks you to the 14 and rides it with you to Marcus and takes you in', async () => {
   const page = await newPage(null)
   await page.goto(BASE)
   await page.waitForSelector('canvas')
@@ -924,7 +924,7 @@ await test('the opening: Dana runs to you, walks you to the 14 and rides it with
   assert((await areaNameOf(page)).includes('Depot'), `not at the depot (${await areaNameOf(page)})`)
   const beside = await drawnAt(page, 'character-dana')
   const atStop = await posOf(page)
-  assert(beside && Math.abs(beside.col - atStop.col) + Math.abs(beside.row - atStop.row) === 1, 'Dana did not come with you to the stop')
+  assert(beside && Math.abs(beside.col - atStop.col) + Math.abs(beside.row - atStop.row) === 1, `Dana did not come with you to the stop (she is at ${JSON.stringify(beside)}, you at ${JSON.stringify(atStop)})`)
   await page.locator('[data-testid="dialogue-advance"]').click()
 
   // The ride: nobody gets off.
@@ -933,30 +933,38 @@ await test('the opening: Dana runs to you, walks you to the 14 and rides it with
   assert(await page.locator('[data-testid="bus-ride"][data-forced]').isVisible(), 'the ride is not a forced one')
   assert((await page.locator('button', { hasText: /Skip the ride|Step off/ }).count()) === 0, 'the ride can be skipped')
   assert(await page.locator('[data-testid="bus-companion"]').isVisible(), 'Dana is not sat with you')
-  await readUntil(page, /Middle door/)
+  // Put down at the end of the street, and walked up it with her to his door.
+  await readUntil(page, /Marcus is the middle door/)
   assert((await areaNameOf(page)).includes('Eastgate'), `the bus did not put you down at Eastgate (${await areaNameOf(page)})`)
+  await page.waitForTimeout(500)
+  const stop = await posOf(page)
+  assert(stop && stop.row >= 12, `you should be let off at the bus stop, not at his door (${JSON.stringify(stop)})`)
   await page.locator('[data-testid="dialogue-advance"]').click()
-  await readUntil(page, /goes in ahead of you/)
-  await page.locator('[data-testid="dialogue-advance"]').click()
-  await page.waitForTimeout(400)
+  await readUntil(page, /Middle door/)
   const door = (await exitsOf(page)).find((e) => e.label === "Marcus's")
-  const atDoor = await posOf(page)
-  assert(atDoor.col === door.col && atDoor.row === door.row + 1, `not stood at Marcus's door (${JSON.stringify(atDoor)})`)
+  const outside = await posOf(page)
+  assert(Math.abs(outside.col - door.col) <= 1 && outside.row <= door.row + 3, `Dana did not walk you up to his door (${JSON.stringify(outside)})`)
+  assert(await besideYou(page, 'character-dana'), 'Dana is not walking beside you')
+  // Dana takes you in: the next thing said is inside, with you in his doorway.
+  await readUntil(page, /Table is this way/)
+  assert((await areaNameOf(page)).includes("Marcus's Place"), `Dana did not take you inside (${await areaNameOf(page)})`)
+  const doorway = await posOf(page)
+  assert(doorway.col === 7 && doorway.row === 9, `not in his doorway (${JSON.stringify(doorway)})`)
+  assert(await besideYou(page, 'character-dana'), 'Dana did not come in with you')
+  // She leads you to the table and stays there: she is not put back at the door.
+  await readUntil(page, /load-bearing/)
+  const atTable = await posOf(page)
+  assert(!(atTable.col === 7 && atTable.row === 9), 'Dana did not lead you into the room')
+  assert(await besideYou(page, 'character-dana'), 'Dana is not at the table with you')
+  await readUntil(page, /always in the big chair/)
+  assert(await besideYou(page, 'character-dana'), 'Dana went back to the door before the game')
+  // Not a second click on the heels of the last one: that is a double click and is swallowed.
+  await page.waitForTimeout(450)
+  await page.keyboard.press(' ')
+  await page.waitForTimeout(1500)
+  assert(await page.locator('[data-testid="felt"]').isVisible(), `the game did not start (saw: ${(await page.locator('body').innerText()).slice(0, 200)})`)
 
-  const saved = await savedState(page)
-  assert(saved.completedEventIds.includes('dana-walks-you-to-the-bus'), 'the opening was not saved as over')
-  assert(saved.flags.brushedOffDana === true && saved.flags.metDana === true, 'what you said to Dana was not remembered')
-  assert(saved.period === 'afternoon', `the ride did not cost the hour (${saved.period})`)
-
-  // And Marcus's game starts as it always has.
-  await enterDoor(page, "Marcus's")
-  await approach(page, 'Marcus')
-  await page.keyboard.press('e')
-  await page.waitForTimeout(400)
-  await talkThrough(page)
-  await page.waitForTimeout(600)
-  const body = await page.locator('body').innerText()
-  assert(/winner takes|Poker Night|Sit down/i.test(body), `the game never started (saw: ${body.slice(0, 160)})`)
+  // The beat is saved when the night is over, as a beat that ends at a table always is.
   assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
 })
 
@@ -1873,6 +1881,37 @@ await test('coming back from a table or a machine puts you where you were' , asy
   await settle(page)
   const after = await posOf(page)
   assert(before && after && before.col === after.col && before.row === after.row, `you were at ${JSON.stringify(before)} and came back at ${JSON.stringify(after)}`)
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+})
+
+/** The sizing button the keyboard is pointing at, or the quiet choice (check, call, fold) if it is not on a size. */
+async function selectedSize(page) {
+  const ids = await page.locator('[data-selected="true"]').evaluateAll((els) => els.map((e) => e.getAttribute('data-testid') ?? ''))
+  return ids.find((id) => /^raise-/.test(id) && id !== 'raise-slider-go') ?? ids.find((id) => id !== '') ?? 'quiet'
+}
+
+await test('the side arrows walk through every bet size' , async () => {
+  const page = await newPage(baseSave())
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(400)
+  await enterDoor(page, 'Casino')
+  await talkTo(page, 'Pit Boss')
+  await page.waitForSelector('[data-testid="bet-keys-hint"]', { timeout: 20000 })
+  const picked = []
+  for (let i = 0; i < 9; i++) {
+    const id = await selectedSize(page)
+    if (picked[picked.length - 1] !== id) picked.push(id)
+    await page.keyboard.press('ArrowRight')
+  }
+  const raises = picked.filter((id) => /^raise-/.test(id ?? ''))
+  assert(raises.length >= 3, `Right should step through the raise sizes one by one (saw ${picked})`)
+  assert(new Set(raises).size === raises.length, `a size came round twice (saw ${picked})`)
+  // And Left comes back the way it went.
+  await page.keyboard.press('ArrowLeft')
+  const back = await selectedSize(page)
+  assert(back === raises[raises.length - 2] || back === raises[raises.length - 1], `Left did not step back (${back})`)
   assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
   await page.close()
 })

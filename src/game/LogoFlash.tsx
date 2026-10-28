@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { isActionKey, useKeyLayer } from './keys'
+import { useCrispScale } from './useCrispScale'
 import { Raster } from './pixel/raster'
 import { drawText } from './pixel/font'
 import { playSound } from '../audio/audio'
@@ -89,6 +90,7 @@ export function LogoFlash({ onDone }: { onDone: () => void }) {
   const canvas = useRef<HTMLCanvasElement>(null)
   const finished = useRef(false)
   const isTop = useKeyLayer(true)
+  const scale = useCrispScale(W, H, 8, 1)
   const title = useRef<{ legends: HTMLCanvasElement; invitational: HTMLCanvasElement; sub: HTMLCanvasElement } | null>(null)
 
   const done = () => {
@@ -141,14 +143,13 @@ export function LogoFlash({ onDone }: { onDone: () => void }) {
         // The slam: the name arrives large and settles, with a pop of brightness.
         const slam = Math.min(1, Math.max(0, (t - 200) / 380))
         const ease = 1 - Math.pow(1 - slam, 3)
-        const scale = 1.5 - 0.5 * ease
+        // It drops in from above and lands: whole pixels only, never a fractional scale.
+        const drop = Math.round((1 - ease) * -26)
         const { legends, invitational, sub } = title.current
         if (slam > 0) {
           c.save()
           c.globalAlpha = Math.min(1, slam * 2)
-          c.translate(cx, 72)
-          c.scale(scale, scale)
-          c.translate(-cx, -72)
+          c.translate(0, drop)
           laurel(c, cx, false)
           laurel(c, cx, true)
           crown(c, cx - 12, 14)
@@ -206,7 +207,7 @@ export function LogoFlash({ onDone }: { onDone: () => void }) {
         ref={canvas}
         width={W}
         height={H}
-        style={{ width: 'min(100vw, calc(100vh * 240 / 135))', aspectRatio: `${W} / ${H}`, imageRendering: 'pixelated', display: 'block' }}
+        style={{ width: W * scale, height: H * scale, imageRendering: 'pixelated', display: 'block' }}
       />
     </div>
   )

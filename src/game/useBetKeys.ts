@@ -5,10 +5,11 @@ import { isActionKey, useKeyLayer } from './keys'
 export type BetStop = 'fold' | 'check' | 'call' | 'raise'
 
 /**
- * Betting without the mouse: left and right (or A and D) move between the
- * buttons, up and down (W and S) step the raise through its sizes — the
- * minimum, the pot fractions, all in — and Space (or X, E, Enter) does what is
- * pointed at. The pointer starts on the quiet choice, check or call, so a
+ * Betting without the mouse: left and right (or A and D) walk along every
+ * choice in turn — Fold, Check or Call, then each raise size from the minimum
+ * through the pot fractions to all in — so one key reaches them all. Up and
+ * down (W and S) step the raise size directly, and Space (or X, E, Enter) does
+ * what is pointed at. The pointer starts on the quiet choice, check or call, so a
  * stray press is never a raise.
  */
 export function useBetKeys({
@@ -51,8 +52,19 @@ export function useBetKeys({
       const vertical = e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' ? 1 : e.key === 'ArrowDown' || e.key === 's' || e.key === 'S' ? -1 : 0
       if (horizontal !== 0) {
         e.preventDefault()
-        const at = stops.indexOf(here)
-        setCursor(stops[(at + horizontal + stops.length) % stops.length])
+        // One line of choices: the quiet ones first, then every raise size smallest to largest.
+        const line: Array<{ stop: BetStop; size?: number }> = [
+          ...stops.filter((stop) => stop !== 'raise').map((stop) => ({ stop })),
+          ...(stops.includes('raise') ? sizes.map((to) => ({ stop: 'raise' as BetStop, size: to })) : []),
+        ]
+        const at =
+          here === 'raise'
+            ? line.findIndex((item) => item.size === size)
+            : line.findIndex((item) => item.stop === here)
+        const next = line[Math.min(line.length - 1, Math.max(0, (at < 0 ? 0 : at) + horizontal))]
+        if (!next) return
+        setCursor(next.stop)
+        if (next.size !== undefined) setSize(next.size)
       } else if (vertical !== 0 && stops.includes('raise') && sizes.length > 0) {
         e.preventDefault()
         // The next size past the one showing, in the way pressed.

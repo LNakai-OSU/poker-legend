@@ -5,6 +5,7 @@ import { DialogueBox } from './DialogueBox'
 import { BoothPanel } from './BoothPanel'
 import { LogoFlash } from './LogoFlash'
 import { MailTable } from './MailTable'
+import { useCrispScale } from './useCrispScale'
 import { CorridorWalk } from './CorridorWalk'
 import { REEL_H, REEL_W, drawReel } from './reelArt'
 
@@ -23,6 +24,9 @@ export function ReelScene({
   onDone: () => void
 }) {
   const [at, setAt] = useState({ panel: 0, line: 0 })
+  // The stills are scaled to whole device pixels, as everything else in the opening is.
+  const stillScale = useCrispScale(REEL_W, REEL_H / 0.55, 6, 1)
+  const tickerWidth = REEL_W * stillScale
   const finished = useRef(false)
   const panel = panels[at.panel]
   const line = panel?.lines[at.line]
@@ -88,12 +92,12 @@ export function ReelScene({
       {panel.scene === 'mail' && <MailTable key={at.panel} lines={panel.lines} onDone={nextPanel} />}
       {panel.scene === 'logo' && <LogoFlash key={at.panel} onDone={nextPanel} />}
       {panel.scene === 'corridor' && <CorridorWalk key={at.panel} lines={panel.lines} onDone={nextPanel} />}
-      {!custom && <ReelCanvas key={at.panel} scene={panel.scene} />}
+      {!custom && <ReelCanvas key={at.panel} scene={panel.scene} scale={stillScale} />}
       {!custom && panel.ticker && (
         <div
           data-testid="reel-ticker"
           style={{
-            width: REEL_WIDTH,
+            width: tickerWidth,
             boxSizing: 'border-box',
             background: '#a8281f',
             color: '#f8f4e0',
@@ -141,11 +145,9 @@ export function ReelScene({
   )
 }
 
-/** As wide as the picture can be and still leave the text box room beneath it. */
-const REEL_WIDTH = `min(100vw, 960px, calc(55vh * ${REEL_W} / ${REEL_H}))`
 
 /** One set, redrawn each frame so lights flicker and tears fall. */
-function ReelCanvas({ scene }: { scene: ReelPanel['scene'] }) {
+function ReelCanvas({ scene, scale }: { scene: ReelPanel['scene']; scale: number }) {
   const ref = useRef<HTMLCanvasElement>(null)
   useEffect(() => {
     let frame = 0
@@ -163,8 +165,8 @@ function ReelCanvas({ scene }: { scene: ReelPanel['scene'] }) {
       width={REEL_W}
       height={REEL_H}
       style={{
-        width: REEL_WIDTH,
-        aspectRatio: `${REEL_W} / ${REEL_H}`,
+        width: REEL_W * scale,
+        height: REEL_H * scale,
         imageRendering: 'pixelated',
         background: '#000',
       }}

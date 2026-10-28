@@ -7,6 +7,7 @@ import { TABLE_THEMES } from './tableThemes'
 import { Panel } from './pixel/ui'
 import { PixelText } from './pixel/PixelText'
 import { INK } from './pixel/ink'
+import { useCrispScale } from './useCrispScale'
 import { Raster } from './pixel/raster'
 import { drawText } from './pixel/font'
 import { playSound } from '../audio/audio'
@@ -136,7 +137,6 @@ const hallPicture = () => (hallCanvas ??= HALL.toCanvas())
 export function CorridorWalk({ lines, onDone }: { lines: ReelLine[]; onDone: () => void }) {
   const canvas = useRef<HTMLCanvasElement>(null)
   const [thought, setThought] = useState<ReelLine | null>(null)
-  const [size, setSize] = useState(() => ({ w: window.innerWidth, h: window.innerHeight }))
   const finished = useRef(false)
   const isTop = useKeyLayer(true)
 
@@ -145,12 +145,6 @@ export function CorridorWalk({ lines, onDone }: { lines: ReelLine[]; onDone: () 
     finished.current = true
     onDone()
   }
-
-  useEffect(() => {
-    const onResize = () => setSize({ w: window.innerWidth, h: window.innerHeight })
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
-  }, [])
 
   // What you are thinking stops you in the hall until you have read it: a
   // thought is turned with Space (or E, X, Enter, a tap), never by the clock.
@@ -274,7 +268,7 @@ export function CorridorWalk({ lines, onDone }: { lines: ReelLine[]; onDone: () 
     return () => cancelAnimationFrame(frame)
   }, [])
 
-  const P = Math.max(2, Math.floor(Math.min(size.w / VIEW_W, (size.h - 12 * 6) / VIEW_H, 5)))
+  const P = useCrispScale(VIEW_W, VIEW_H + 40, 5)
 
   return (
     <div data-testid="corridor" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', height: '100%', paddingTop: 8 }}>

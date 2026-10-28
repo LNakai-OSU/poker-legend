@@ -9,6 +9,7 @@ import { TABLE_THEMES } from './tableThemes'
 import { Panel } from './pixel/ui'
 import { PixelText } from './pixel/PixelText'
 import { INK } from './pixel/ink'
+import { useCrispScale } from './useCrispScale'
 import { Raster } from './pixel/raster'
 import { drawText } from './pixel/font'
 
@@ -136,7 +137,6 @@ export function BoothPanel({
   const [index, setIndex] = useState(0)
   const [shown, setShown] = useState(0)
   const [tick, setTick] = useState(0)
-  const [size, setSize] = useState(() => ({ w: window.innerWidth, h: window.innerHeight }))
   const finished = useRef(false)
   const isTop = useKeyLayer(true)
   const touch = useTouchFirst()
@@ -148,12 +148,6 @@ export function BoothPanel({
   useEffect(() => {
     const timer = window.setInterval(() => setTick((t) => t + 1), 80)
     return () => window.clearInterval(timer)
-  }, [])
-
-  useEffect(() => {
-    const onResize = () => setSize({ w: window.innerWidth, h: window.innerHeight })
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
   }, [])
 
   // The line set out letter by letter; every line announces itself.
@@ -234,7 +228,7 @@ export function BoothPanel({
     return () => cancelAnimationFrame(frame)
   }, [])
 
-  const P = Math.max(2, Math.floor(Math.min(size.w / W, size.h / (H + 66), 5)))
+  const P = useCrispScale(W, H + 66, 5)
   const talk = Math.floor(tick / 3) % 2 === 0
 
   return (

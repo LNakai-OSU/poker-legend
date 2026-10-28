@@ -8,6 +8,7 @@ import { TABLE_THEMES } from './tableThemes'
 import { Panel } from './pixel/ui'
 import { PixelText } from './pixel/PixelText'
 import { INK } from './pixel/ink'
+import { snap, useCrispScale } from './useCrispScale'
 import { Raster } from './pixel/raster'
 import { drawText } from './pixel/font'
 import { playSound } from '../audio/audio'
@@ -92,20 +93,14 @@ type Step = 'pile' | 'rent' | 'invite'
 export function MailTable({ lines, onDone }: { lines: ReelLine[]; onDone: () => void }) {
   const canvas = useRef<HTMLCanvasElement>(null)
   const [step, setStep] = useState<Step>('pile')
-  const [size, setSize] = useState(() => ({ w: window.innerWidth, h: window.innerHeight }))
   const [tick, setTick] = useState(0)
   const finished = useRef(false)
   const isTop = useKeyLayer(true)
   const touch = useTouchFirst()
 
   useEffect(() => {
-    const onResize = () => setSize({ w: window.innerWidth, h: window.innerHeight })
-    window.addEventListener('resize', onResize)
     const timer = window.setInterval(() => setTick((t) => t + 1), 90)
-    return () => {
-      window.removeEventListener('resize', onResize)
-      window.clearInterval(timer)
-    }
+    return () => window.clearInterval(timer)
   }, [])
 
   const advance = () => {
@@ -198,7 +193,7 @@ export function MailTable({ lines, onDone }: { lines: ReelLine[]; onDone: () => 
     return () => cancelAnimationFrame(frame)
   }, [step])
 
-  const P = Math.max(2, Math.floor(Math.min(size.w / W, size.h / (H + 48), 4)))
+  const P = useCrispScale(W, H + 48, 4)
   const reaction = step === 'rent' ? lines[0] : step === 'invite' ? lines[1] : null
   const narration = step === 'pile' ? 'The mail. You have been stepping over it since Tuesday.' : null
 
@@ -258,7 +253,7 @@ const INVITE = {
 function Letter({ P, tilt, lines, stamp }: { P: number; tilt: number; lines: typeof RENT; stamp?: string }) {
   const paper = '#f4f0dc'
   // The type on the page is smaller than the type in the box: it is paper, not a menu.
-  const t = Math.max(1, Math.floor(P / 2))
+  const t = snap(Math.max(1, P / 2))
   return (
     <div
       data-testid="letter"

@@ -58,12 +58,12 @@ const NARROW_SCREEN_PX = 560
  * puts them where they were. A different arrival tile is a deliberate move (a
  * door, a ride, a beat placing them) and is honoured as it always was.
  */
-let lastStanding: { area: string; start: { col: number; row: number }; at: { col: number; row: number } } | null = null
+let lastStanding: { owner: object; area: string; start: { col: number; row: number }; at: { col: number; row: number } } | null = null
 
-function standingFor(area: string, start: { col: number; row: number }): { col: number; row: number } {
+function standingFor(owner: object, area: string, start: { col: number; row: number }): { col: number; row: number } {
   const last = lastStanding
   const resume = last && last.area === area && last.start.col === start.col && last.start.row === start.row ? last.at : start
-  lastStanding = { area, start, at: resume }
+  lastStanding = { owner, area, start, at: resume }
   return resume
 }
 
@@ -206,7 +206,9 @@ export function OverworldScene({
   const [playerTile, setPlayerTile] = useState(playerStart)
   // Fixed for the life of this scene: the tile it is built with.
   const resumeAt = useRef<{ col: number; row: number } | null>(null)
-  if (resumeAt.current === null) resumeAt.current = standingFor(areaName, playerStart)
+  // Who is writing the position down: the scene that is on screen, not the one being replaced.
+  const owner = useRef({})
+  if (resumeAt.current === null) resumeAt.current = standingFor(owner.current, areaName, playerStart)
   const [talkingId, setTalkingId] = useState<string | null>(null)
   const talkingRef = useRef<string | null>(null)
   // Read through a ref because the interaction handler lives inside the Pixi
@@ -348,7 +350,7 @@ export function OverworldScene({
 
       // Wherever you are standing now, should this effect run again part-way
       // through the scene: a rebuild is not a move.
-      const first = lastStanding && lastStanding.area === areaName ? lastStanding.at : resumeAt.current!
+      const first = lastStanding && lastStanding.owner === owner.current ? lastStanding.at : resumeAt.current!
       const player = new GridPlayer(first.col, first.row, { figure: HERO_FIGURE })
       actors.addChild(player.sprite)
       // Everybody standing on the map. Not fixed: a beat can bring somebody on
@@ -843,7 +845,7 @@ export function OverworldScene({
             .join(';')
           if (wrapper.dataset.people !== people) wrapper.dataset.people = people
         }
-        if (lastStanding) lastStanding.at = { col: player.col, row: player.row }
+        if (lastStanding && lastStanding.owner === owner.current) lastStanding.at = { col: player.col, row: player.row }
         setPlayerTile((current) =>
           current.col === player.col && current.row === player.row
             ? current
