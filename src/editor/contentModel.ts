@@ -99,6 +99,7 @@ export const CONDITION_KINDS = keysOf<EventCondition['kind']>({
 export const ACTION_KINDS = keysOf<EventAction['kind']>({
   dialogue: true,
   reel: true,
+  cinematic: true,
   choice: true,
   if: true,
   moveNpc: true,
@@ -123,7 +124,7 @@ export const ACTION_KINDS = keysOf<EventAction['kind']>({
 })
 
 /** What a forced ride may carry: talk, a pause, a quiet change of state. */
-export const REEL_SCENES: ReelScene[] = ['studio', 'bathroom', 'mirror', 'phone', 'booth', 'alley', 'rail', 'night']
+export const REEL_SCENES: ReelScene[] = ['studio', 'corridor', 'bathroom', 'mirror', 'phone', 'booth', 'alley', 'rail', 'night']
 export const RIDE_ACTION_KINDS: Array<RideAction['kind']> = ['dialogue', 'wait', 'setFlag', 'clearFlag', 'giveItem', 'giveCash', 'playSound']
 
 /** Actions after which nothing else in the event runs: the table takes over. */
@@ -213,6 +214,8 @@ export function blankAction(
       return { kind, areaId: ids.area, col: 1, row: 1 }
     case 'reel':
       return { kind, panels: [{ scene: 'studio', lines: [{ who: 'Chip', text: '' }] }] }
+    case 'cinematic':
+      return { kind, id: 'bad-beat' }
     case 'takeStake':
     case 'repay':
       return { kind, sponsorId: ids.sponsor ?? 'cass' }
@@ -778,6 +781,10 @@ function actionShape(value: unknown, path: string, problems: Problems) {
         }
       }
       return
+    case 'cinematic':
+      keys(value, path, ['kind', 'id'], [], problems)
+      oneOf(value.id, ['bad-beat'], `${path}.id`, problems)
+      return
     case 'reel': {
       keys(value, path, ['kind', 'panels'], ['title'], problems)
       if (value.title !== undefined && typeof value.title !== 'string') problems.push(`${path}.title should be text`)
@@ -1043,6 +1050,8 @@ export function describeAction(action: EventAction, names: Names): string {
       const company = action.with?.length ? ` with ${listOf(action.with.map(names.character))}` : ''
       return `you ride the bus to ${names.area(action.areaId)}${company}, and cannot get off`
     }
+    case 'cinematic':
+      return 'the opening plays: a bad beat on the final table, the lights fail, you walk out'
     case 'reel':
       return `a short film plays (${action.panels.length} scene${action.panels.length === 1 ? '' : 's'}${action.title ? `: ${action.title}` : ''})`
     case 'takeStake':

@@ -5,6 +5,7 @@ import {
   type EventCondition,
   type GameEvent,
   type Pace,
+  type CinematicId,
   type ReelPanel,
   type RideAction,
   type Spot,
@@ -62,6 +63,8 @@ export interface EventStage {
    * last page.
    */
   dialogue?: { id: number; speaker: string; lines: string[] }
+  /** A scripted scene on the game's own table, if one is playing. */
+  cinematic?: { id: number; scene: CinematicId }
   /** The short film currently playing, if any. */
   reel?: { id: number; title?: string; panels: ReelPanel[] }
   /** The question currently up, if any. */
@@ -181,6 +184,13 @@ export class EventMachine {
     this.pump()
   }
 
+  /** The scripted scene is over, or the player skipped it. */
+  cinematicDone(): void {
+    if (!this.running || !this.stage.cinematic) return
+    this.setStage({ ...this.stage, cinematic: undefined })
+    this.pump()
+  }
+
   /** The film is over, or the player skipped it. */
   reelDone(): void {
     if (!this.running || !this.stage.reel) return
@@ -296,6 +306,9 @@ export class EventMachine {
       switch (step.kind) {
         case 'dialogue':
           this.setStage({ ...this.stage, dialogue: { id: this.nextBox++, speaker: step.speaker ?? '', lines: step.lines } })
+          return
+        case 'cinematic':
+          this.setStage({ ...this.stage, cinematic: { id: this.nextBox++, scene: step.id } })
           return
         case 'reel':
           this.setStage({ ...this.stage, reel: { id: this.nextBox++, title: step.title, panels: step.panels } })

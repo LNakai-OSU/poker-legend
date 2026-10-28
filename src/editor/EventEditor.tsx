@@ -98,6 +98,7 @@ const CONDITION_LABEL: Record<EventCondition['kind'], string> = {
 const ACTION_LABEL: Record<EventAction['kind'], string> = {
   dialogue: 'somebody says',
   reel: 'a short film: the broadcast, a night out',
+  cinematic: 'a scripted scene on the real table',
   choice: 'the player decides',
   if: 'if something is true',
   moveNpc: 'somebody walks or runs',
@@ -1056,6 +1057,8 @@ function ActionFields({ action, testid, ctx, onChange }: { action: EventAction; 
           <LineList testid={`${id}-lines`} lines={action.lines} placeholder="Name: what they say" onChange={(lines) => onChange({ ...action, lines })} />
         </div>
       )
+    case 'cinematic':
+      return <span className="ed-muted ed-small">The opening: a bad beat at the final table, the lights fail, you walk out. Drawn by the game; nothing to edit here.</span>
     case 'reel':
       return (
         <div style={{ display: 'grid', gap: 8 }}>

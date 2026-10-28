@@ -1758,16 +1758,48 @@ await test('a bet can be made with the arrows and Space' , async () => {
 await test('a new game opens on the televised final and cuts back to the flat' , async () => {
   const page = await newPage(null)
   await page.goto(BASE)
-  await page.waitForSelector('[data-testid="reel"]', { timeout: 15000 })
+  await page.waitForSelector('[data-testid="bad-beat-intro"]', { timeout: 15000 })
+  const frames = new Set()
+  const phases = new Set()
   const scenes = new Set()
-  for (let i = 0; i < 40 && (await page.locator('[data-testid="reel"]').isVisible().catch(() => false)); i++) {
-    scenes.add(await page.locator('[data-testid="reel"]').getAttribute('data-scene'))
-    await page.keyboard.press(' ')
-    await page.waitForTimeout(120)
+  let sawBoard = 0
+  let sawDark = 0
+  for (let i = 0; i < 160; i++) {
+    // Read it all in one go: the scene can end between one question and the next.
+    const seen = await page.evaluate(() => {
+      const intro = document.querySelector('[data-testid="bad-beat-intro"]')
+      const reel = document.querySelector('[data-testid="reel"]')
+      if (intro) {
+        return {
+          kind: 'intro',
+          phase: intro.getAttribute('data-phase'),
+          frame: intro.getAttribute('data-frame'),
+          board: document.querySelectorAll('[data-testid="board"] > *').length,
+          dark: Number(document.querySelector('[data-testid="blackout"]')?.getAttribute('data-dark') ?? 0),
+        }
+      }
+      return reel ? { kind: 'reel', scene: reel.getAttribute('data-scene') } : null
+    })
+    if (seen?.kind === 'intro') {
+      phases.add(seen.phase)
+      frames.add(seen.frame)
+      sawBoard = Math.max(sawBoard, seen.board)
+      sawDark = Math.max(sawDark, seen.dark)
+      if (seen.phase === 'hand') await page.keyboard.press(' ')
+      else if (seen.phase === 'excuse') await page.locator('[data-testid="dialogue-advance"]').click().catch(() => {})
+    } else if (seen?.kind === 'reel') {
+      scenes.add(seen.scene)
+      await page.keyboard.press(' ')
+    } else if (phases.size > 0 && scenes.size > 0) break
+    await page.waitForTimeout(150)
   }
-  for (const scene of ['studio', 'booth', 'bathroom', 'mirror']) assert(scenes.has(scene), `the opening never showed the ${scene}`)
+  // The real table, a hand dealt out street by street, the room going dark, the walk out.
+  assert(frames.size >= 4, `the hand did not play out (frames ${[...frames]})`)
+  assert(sawBoard === 5, 'the board was never dealt')
+  for (const phase of ['hand', 'dark', 'excuse', 'walk']) assert(phases.has(phase), `the intro never reached ${phase} (saw ${[...phases]})`)
+  assert(sawDark > 0.5, 'the room did not go dark')
+  for (const scene of ['corridor', 'bathroom', 'mirror']) assert(scenes.has(scene), `the opening never showed the ${scene}`)
   await page.waitForSelector('canvas')
-  assert(!(await page.locator('[data-testid="reel"]').isVisible().catch(() => false)), 'the film did not end')
   assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
   await page.close()
 })

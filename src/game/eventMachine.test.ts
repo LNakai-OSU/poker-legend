@@ -456,3 +456,16 @@ describe('the final table', () => {
     expect((table.buyIn * (table.yourStack ?? 1)) / table.bigBlind).toBeLessThan(10)
   })
 })
+
+describe('a cinematic', () => {
+  it('holds the beat until the scene is over', () => {
+    const h = harness()
+    h.machine.run(beat([{ kind: 'cinematic', id: 'bad-beat' }, { kind: 'dialogue', speaker: 'marcus', lines: ['Marcus: After.'] }]))
+    expect(h.stage.cinematic?.scene).toBe('bad-beat')
+    h.machine.reelDone()
+    expect(h.stage.cinematic).toBeDefined()
+    h.machine.cinematicDone()
+    expect(h.stage.cinematic).toBeUndefined()
+    expect(h.stage.dialogue?.lines[0]).toBe('Marcus: After.')
+  })
+})

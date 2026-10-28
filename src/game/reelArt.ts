@@ -1,4 +1,6 @@
 import type { ReelScene } from '../world/events'
+import { HERO_FIGURE } from '../overworld/casting'
+import { drawPerson, type WalkFrame } from '../overworld/characterArt'
 
 /**
  * The sets of the short films, drawn at runtime like everything else: a small
@@ -47,33 +49,72 @@ const SCENES: Record<ReelScene, (c: Ctx, t: number) => void> = {
     for (let i = 0; i < 28; i++) rect(c, '#07060e', 4 + i * 5.6, 64 + (i % 3) * 3, 5, 26)
     rect(c, '#2a2a3a', 0, 86, REEL_W, 4)
   },
-  // Cold tile, a row of sinks, one stall door, a fluorescent tube that hums.
+  // The back corridor: brick, a row of sconces, the restroom door at the end —
+  // and you, in your own sprite, walking to it.
+  corridor(c, t) {
+    rect(c, '#1a1424', 0, 0, REEL_W, REEL_H)
+    for (let row = 0; row < 8; row++) {
+      for (let x = row % 2 ? 0 : -8; x < REEL_W; x += 16) rect(c, '#3a2a30', x, row * 6, 15, 5)
+    }
+    rect(c, '#241c2c', 0, 50, REEL_W, 40)
+    rect(c, '#2e2438', 0, 50, REEL_W, 2)
+    // Emergency strip along the floor, pulsing.
+    const pulse = Math.floor(t / 500) % 2
+    rect(c, pulse ? '#c82828' : '#7a1818', 0, 86, REEL_W, 2)
+    for (let i = 0; i < 4; i++) {
+      rect(c, '#f2c14e', 20 + i * 34, 12, 4, 6)
+      rect(c, '#3a2a18', 19 + i * 34, 10, 6, 2)
+    }
+    // The door, and the sign over it.
+    rect(c, '#5a3a2a', 126, 22, 24, 38)
+    rect(c, '#3a2418', 128, 24, 20, 34)
+    rect(c, '#e8ecea', 128, 12, 20, 7)
+    rect(c, '#2a2a30', 130, 14, 16, 3)
+    // Walking: frames cycle every 150ms, and the walk ends at the door.
+    const x = Math.min(112, -16 + t / 18)
+    const walking = x < 112
+    const frame = (walking ? Math.floor(t / 150) % 3 : 0) as WalkFrame
+    drawPerson(c, HERO_FIGURE, 'right', frame, { x: Math.round(x), y: 36 })
+  },
+  // Cold tile, a row of sinks, one stall door, a fluorescent tube that hums —
+  // you come in at the door and stop at the middle sink.
   bathroom(c, t) {
     rect(c, '#9db3ae', 0, 0, REEL_W, REEL_H)
     for (let y = 0; y < REEL_H; y += 10) rect(c, '#8aa19c', 0, y, REEL_W, 1)
     for (let x = 0; x < REEL_W; x += 10) rect(c, '#8aa19c', x, 0, 1, REEL_H)
     rect(c, '#4a5a58', 0, 64, REEL_W, 26)
-    rect(c, '#e8ecea', 20, 40, 34, 4)
-    rect(c, '#cfd6d4', 22, 44, 30, 14)
-    rect(c, '#e8ecea', 100, 40, 34, 4)
-    rect(c, '#cfd6d4', 102, 44, 30, 14)
-    rect(c, '#5a3a2a', 64, 10, 28, 56)
-    rect(c, '#3a2418', 66, 12, 24, 52)
+    // Three mirrors over three sinks.
+    for (const sx of [14, 62, 110]) {
+      rect(c, '#6a8088', sx - 1, 14, 38, 30)
+      rect(c, '#b8c9cc', sx, 15, 36, 28)
+      rect(c, '#e8ecea', sx + 2, 46, 32, 4)
+      rect(c, '#cfd6d4', sx + 4, 50, 28, 12)
+    }
+    // The stall.
+    rect(c, '#5a3a2a', 148, 12, 12, 52)
+    // The tap running at the middle sink.
+    const drip = Math.floor(t / 90) % 4
+    rect(c, '#8ec8f0', 79, 52 + drip, 1, 3)
     const hum = Math.floor(t / 90) % 11 === 0
-    rect(c, hum ? '#8b8b6a' : '#f4f2c8', 60, 2, 40, 3)
+    rect(c, hum ? '#8b8b6a' : '#f4f2c8', 50, 2, 60, 3)
+    // In at the door on the right, to the middle sink, and then up to the mirror.
+    const arrive = Math.min(1, t / 1800)
+    const x = 140 - arrive * (140 - 70)
+    const facing = arrive < 1 ? 'left' : 'up'
+    const frame = (arrive < 1 ? Math.floor(t / 150) % 3 : 0) as WalkFrame
+    drawPerson(c, HERO_FIGURE, facing, frame, { x: Math.round(x), y: 40 })
   },
-  // The mirror, close: a face that has not slept.
+  // The mirror, close: your own face in your own sprite, large, not having slept.
   mirror(c, t) {
     rect(c, '#2a3438', 0, 0, REEL_W, REEL_H)
-    rect(c, '#8fa4a8', 30, 6, 100, 78)
-    rect(c, '#b8c9cc', 34, 10, 92, 70)
-    person(c, 80, 30, '#c8a07a', '#2a2a3a', '#2a1c14')
-    rect(c, '#e8e8f0', 76, 36, 3, 3)
-    rect(c, '#e8e8f0', 84, 36, 3, 3)
+    rect(c, '#8fa4a8', 36, 2, 88, 84)
+    rect(c, '#b8c9cc', 40, 6, 80, 76)
+    const blink = Math.floor(t / 2200) % 3 === 0 && t % 2200 < 160
+    drawPerson(c, HERO_FIGURE, 'down', 0, { x: 56, y: 8, scale: 3, blink })
     // A tear that runs down on a loop.
-    const drip = Math.floor(t / 120) % 12
-    rect(c, '#8ec8f0', 84, 38 + drip, 1, 2)
-    rect(c, '#6a8088', 24, 80, 112, 4)
+    const drip = Math.floor(t / 130) % 14
+    rect(c, '#8ec8f0', 72, 30 + drip, 1, 2)
+    rect(c, '#6a8088', 30, 82, 100, 4)
   },
   // A phone on the sink: a lit screen with a lender's name on it.
   phone(c, t) {

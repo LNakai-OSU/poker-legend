@@ -1140,8 +1140,8 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     },
   },
   gaines: {
-    name: 'Reverend Gaines',
-    style: 'Tithes ten percent of every pot.',
+    name: 'Gaines',
+    style: 'The Reverend. Tithes ten percent of every pot.',
     look: { skin: '#7a4a2e', hair: '#1a1a1a', hairStyle: 'short', shirt: '#2a2a32', accessory: 'none' },
     seat: { skillTier: 'competent', archetype: 'nit', stackMultiplier: 1.2 },
     lines: {
@@ -1167,7 +1167,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     },
   },
   contessa: {
-    name: 'The Contessa',
+    name: 'Contessa Valmont',
     style: 'The accent comes and goes.',
     look: { skin: '#f0d0b8', hair: '#6a2a18', hairStyle: 'long', shirt: '#2a2a62', accessory: 'shades' },
     seat: { skillTier: 'sharp', archetype: 'maniac' },

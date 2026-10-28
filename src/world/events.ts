@@ -122,6 +122,7 @@ export interface DialogueAction {
 /** Where a reel panel is set: the broadcast and the nights around it. Drawn by `ReelScene`. */
 export type ReelScene =
   | 'studio'
+  | 'corridor'
   | 'bathroom'
   | 'mirror'
   | 'phone'
@@ -129,6 +130,9 @@ export type ReelScene =
   | 'alley'
   | 'rail'
   | 'night'
+
+/** The scripted scenes `cinematic` can play. */
+export type CinematicId = 'bad-beat'
 
 /** One thing said in a reel. `who` is a character id or a plain name, such as a commentator. */
 export interface ReelLine {
@@ -249,6 +253,11 @@ export type EventAction =
    * it plays.
    */
   | { kind: 'reel'; title?: string; panels: ReelPanel[] }
+  /**
+   * A scripted scene the game draws with its own table and sprites rather than
+   * a set: `bad-beat`, the opening's hand and the failing of the lights.
+   */
+  | { kind: 'cinematic'; id: CinematicId }
   /** Take a sponsor's stake on their usual terms, as their own menu would give it. */
   | { kind: 'takeStake'; sponsorId: string }
   /** Pay back everything owed to a sponsor. Nothing happens if you cannot cover it. */
@@ -3668,32 +3677,13 @@ export const EVENTS: GameEvent[] = [
     actions: [
       { kind: 'fade', to: 'out' },
       {
+        kind: 'cinematic',
+        id: 'bad-beat',
+      },
+      {
         kind: 'reel',
         title: 'The Legends Invitational',
         panels: [
-          {
-            scene: 'studio',
-            ticker: 'FINAL TABLE · 6 LEFT · YOU 15,000 · 7 BB',
-            lines: [
-              {
-                who: 'Chip',
-                text:
-                  'And that is the end of the road for the short stack — all in, called, and, ' +
-                  'oh, he is drawing very thin.',
-              },
-              {
-                who: 'Dr. Anand',
-                text:
-                  'Eleven outs, Chip. Nineteen percent. I would say it is a coin flip but I ' +
-                  'would be lying and I have a PhD.',
-              },
-              {
-                who: 'Chip',
-                text:
-                  'The river! The river is... it is... the lights! WHAT HAPPENED TO THE LIGHTS!',
-              },
-            ],
-          },
           {
             scene: 'booth',
             ticker: 'TECHNICAL DIFFICULTY · PLEASE STAND BY',
@@ -3715,6 +3705,22 @@ export const EVENTS: GameEvent[] = [
                 text:
                   'He has gone to the bathroom. At a final table. With four hundred thousand ' +
                   "dollars of other people's money riding on a river card.",
+              },
+            ],
+          },
+          {
+            scene: 'corridor',
+            caption: 'The back corridor. Somewhere behind you, the crew is shouting about a fuse.',
+            lines: [
+              {
+                who: 'You',
+                text: 'Do not run. Whatever you do, do not run. People are watching you leave.',
+              },
+              {
+                who: 'You',
+                text:
+                  "Four hundred thousand in other people's money, and I am walking toward the " +
+                  "men's room like it is a plan.",
               },
             ],
           },

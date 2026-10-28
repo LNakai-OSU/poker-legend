@@ -14,6 +14,7 @@ import { CITIES, LESSONS, MISSIONS, SPONSORS, TABLES, findArea } from '../world/
 import { hasFastTravel, missionStatus, tableAccess, travelCostTo } from './progression'
 import { clearSave, loadGame, saveGame } from './save'
 import { useEventRunner } from './useEventRunner'
+import { BadBeatIntro } from './BadBeatIntro'
 import { ReelScene } from './ReelScene'
 import { DialogueBox } from './DialogueBox'
 import { ChoiceBox } from './ChoiceBox'
@@ -659,6 +660,7 @@ export function GameApp() {
           />
         </div>
       )}
+      {events.stage.cinematic && <BadBeatIntro key={events.stage.cinematic.id} onDone={events.cinematicDone} />}
       {events.stage.reel && (
         <ReelScene
           key={events.stage.reel.id}
