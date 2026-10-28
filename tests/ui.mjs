@@ -956,7 +956,9 @@ await test('the opening: Dana runs to you and walks you to the 14 and rides it w
   const atTable = await posOf(page)
   assert(!(atTable.col === 7 && atTable.row === 9), 'Dana did not lead you into the room')
   assert(await besideYou(page, 'character-dana'), 'Dana is not at the table with you')
+  await shot(page, 'z-before')
   await readUntil(page, /always in the big chair/)
+  await shot(page, 'z-chair')
   assert(await besideYou(page, 'character-dana'), 'Dana went back to the door before the game')
   // Not a second click on the heels of the last one: that is a double click and is swallowed.
   await page.waitForTimeout(450)

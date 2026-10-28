@@ -149,6 +149,8 @@ export interface ReelPanel {
   caption?: string
   /** The broadcast's lower third: a stack, a blind level, a score. */
   ticker?: string
+  /** What the phone shows: one lock-screen card each, in the order they arrive. */
+  notifications?: { from: string; text: string }[]
   lines: ReelLine[]
 }
 
@@ -845,7 +847,8 @@ export const EVENTS: GameEvent[] = [
       {
         kind: 'moveNpc',
         characterId: 'dana',
-        to: { col: 7, row: 7 },
+        // Her chair at the table: the one her schedule keeps her in tonight.
+        to: { col: 9, row: 5 },
         youFollow: true,
       },
       {
@@ -982,7 +985,8 @@ export const EVENTS: GameEvent[] = [
       {
         kind: 'moveNpc',
         characterId: 'dana',
-        to: { col: 7, row: 7 },
+        // Her chair at the table: the one her schedule keeps her in tonight.
+        to: { col: 9, row: 5 },
         youFollow: true,
       },
       {
@@ -1651,6 +1655,11 @@ export const EVENTS: GameEvent[] = [
               {
                 scene: 'phone',
                 ticker: 'YOU 15,000 · 7 BB · LAST OF 6',
+                notifications: [
+                  { from: 'CASS', text: 'Day 9. Pay up.' },
+                  { from: 'MR. EMEKA', text: 'Call me. Handshake.' },
+                  { from: 'MARCUS', text: 'Eat something.' },
+                ],
                 lines: [
                   {
                     who: 'Chip',
@@ -3906,6 +3915,11 @@ export const EVENTS: GameEvent[] = [
           },
           {
             scene: 'phone',
+            notifications: [
+              { from: '3 MISSED CALLS', text: 'Cass, Mr. Emeka' },
+              { from: 'UNKNOWN', text: 'WE SEE YOU.' },
+              { from: 'MARCUS', text: 'You got this. Also, my hoodie.' },
+            ],
             caption: 'Three missed calls. A text from an unknown number: "WE SEE YOU."',
             lines: [
               { who: 'You', text: 'The fruit basket has a tracker in it. I am almost sure.' },

@@ -1,5 +1,7 @@
 import type { ReelScene } from '../world/events'
 import { HERO_FIGURE } from '../overworld/casting'
+import { Raster } from './pixel/raster'
+import { drawText, measureText, wrapText } from './pixel/font'
 import { drawPerson, type WalkFrame } from '../overworld/characterArt'
 
 /**
@@ -13,6 +15,14 @@ export const REEL_W = 160
 export const REEL_H = 90
 
 type Ctx = CanvasRenderingContext2D
+type Notification = { from: string; text: string }
+
+/** A line of the pixel font, drawn onto a still. */
+function drawLabel(c: Ctx, text: string, x: number, y: number, color: string) {
+  const r = new Raster(measureText(text) + 2, 9)
+  drawText(r, text, 1, 1, color)
+  c.drawImage(r.toCanvas(), x - 1, y - 1)
+}
 
 function rect(c: Ctx, color: string, x: number, y: number, w: number, h: number) {
   c.fillStyle = color
@@ -32,7 +42,7 @@ function person(c: Ctx, x: number, y: number, skin: string, shirt: string, hair:
   }
 }
 
-const SCENES: Record<ReelScene, (c: Ctx, t: number) => void> = {
+const SCENES: Record<ReelScene, (c: Ctx, t: number, notes?: Notification[]) => void> = {
   // The title card is its own component (`LogoFlash`); this is only what is behind it.
   logo(c) {
     rect(c, '#05040a', 0, 0, REEL_W, REEL_H)
@@ -124,17 +134,29 @@ const SCENES: Record<ReelScene, (c: Ctx, t: number) => void> = {
     rect(c, '#8ec8f0', 72, 30 + drip, 1, 2)
     rect(c, '#6a8088', 30, 82, 100, 4)
   },
-  // A phone on the sink: a lit screen with a lender's name on it.
-  phone(c, t) {
+  // A phone on the sink, held close: the lock screen, notifications landing one by one.
+  phone(c, t, notes = []) {
     rect(c, '#2a3438', 0, 0, REEL_W, REEL_H)
-    rect(c, '#cfd6d4', 0, 60, REEL_W, 30)
-    rect(c, '#111111', 62, 18, 36, 62)
+    rect(c, '#cfd6d4', 0, 76, REEL_W, 14)
+    rect(c, '#0b0b10', 14, 0, 132, 90)
+    rect(c, '#1c2a4a', 17, 3, 126, 87)
+    drawLabel(c, '9:04 PM', 22, 6, '#f2f2f6')
     const buzz = Math.floor(t / 250) % 2
-    rect(c, buzz ? '#3a6ac8' : '#2f58a8', 65, 22, 30, 54)
-    rect(c, '#f2f2f6', 68, 28, 24, 3)
-    rect(c, '#f2f2f6', 68, 36, 18, 3)
-    rect(c, '#e0605d', 68, 48, 24, 8)
-    rect(c, '#f2f2f6', 72, 50, 16, 3)
+    let y = 15
+    notes.forEach((note, i) => {
+      const age = t - i * 700
+      if (age < 0) return
+      const lines = wrapText(note.text, 108).slice(0, 2)
+      const h = 13 + lines.length * 8
+      if (y + h > 89) return
+      const accent = note.from === 'UNKNOWN' ? '#e0605d' : note.from === 'MARCUS' ? '#58c878' : '#f2c14e'
+      rect(c, '#e8ecf4', 21, y, 118, h - 1)
+      rect(c, accent, 21, y, 2, h - 1)
+      drawLabel(c, note.from, 27, y + 2, '#2a2a34')
+      lines.forEach((line, k) => drawLabel(c, line, 27, y + 10 + k * 8, '#14141c'))
+      y += h
+    })
+    if (!notes.length) rect(c, buzz ? '#3a6ac8' : '#2f58a8', 25, 20, 110, 30)
   },
   // The booth: two headsets, a monitor between them showing the feed.
   booth(c, t) {
@@ -196,9 +218,9 @@ const SCENES: Record<ReelScene, (c: Ctx, t: number) => void> = {
 }
 
 /** Draws one set on a REEL_W × REEL_H canvas. `t` is milliseconds, for the things that flicker. */
-export function drawReel(canvas: HTMLCanvasElement, scene: ReelScene, t: number) {
+export function drawReel(canvas: HTMLCanvasElement, scene: ReelScene, t: number, notes?: Notification[]) {
   const c = canvas.getContext('2d')
   if (!c) return
   c.imageSmoothingEnabled = false
-  SCENES[scene](c, t)
+  SCENES[scene](c, t, notes)
 }

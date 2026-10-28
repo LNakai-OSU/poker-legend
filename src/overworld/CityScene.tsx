@@ -212,7 +212,7 @@ export function CityScene({
 
   return (
     <OverworldScene
-      key={`${state.cityId}-${areaId}-${hunted}`}
+      key={`${state.cityId}-${areaId}-${hunted}-${landing.col},${landing.row}`}
       map={area.map}
       playerStart={landing}
       interactables={interactables}

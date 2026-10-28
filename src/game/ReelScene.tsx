@@ -92,7 +92,7 @@ export function ReelScene({
       {panel.scene === 'mail' && <MailTable key={at.panel} lines={panel.lines} onDone={nextPanel} />}
       {panel.scene === 'logo' && <LogoFlash key={at.panel} onDone={nextPanel} />}
       {panel.scene === 'corridor' && <CorridorWalk key={at.panel} lines={panel.lines} onDone={nextPanel} />}
-      {!custom && <ReelCanvas key={at.panel} scene={panel.scene} scale={stillScale} />}
+      {!custom && <ReelCanvas key={at.panel} scene={panel.scene} notifications={panel.notifications} scale={stillScale} />}
       {!custom && panel.ticker && (
         <div
           data-testid="reel-ticker"
@@ -147,13 +147,13 @@ export function ReelScene({
 
 
 /** One set, redrawn each frame so lights flicker and tears fall. */
-function ReelCanvas({ scene, scale }: { scene: ReelPanel['scene']; scale: number }) {
+function ReelCanvas({ scene, scale, notifications }: { scene: ReelPanel['scene']; scale: number; notifications?: ReelPanel['notifications'] }) {
   const ref = useRef<HTMLCanvasElement>(null)
   useEffect(() => {
     let frame = 0
     const start = performance.now()
     const tick = () => {
-      if (ref.current) drawReel(ref.current, scene, performance.now() - start)
+      if (ref.current) drawReel(ref.current, scene, performance.now() - start, notifications)
       frame = requestAnimationFrame(tick)
     }
     tick()

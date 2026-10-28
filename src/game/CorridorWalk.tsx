@@ -9,7 +9,7 @@ import { PixelText } from './pixel/PixelText'
 import { INK } from './pixel/ink'
 import { useCrispScale } from './useCrispScale'
 import { Raster } from './pixel/raster'
-import { drawText } from './pixel/font'
+import { drawText, measureText } from './pixel/font'
 import { playSound } from '../audio/audio'
 
 /**
@@ -119,14 +119,18 @@ function drawHall(): Raster {
   r.rect(158, 56, 26, 66, '#4a4a58')
   r.rect(160, 58, 22, 62, '#5a5a6a')
   r.rect(162, 76, 3, 5, '#c8a040')
-  r.rect(160, 44, 22, 8, '#e8ecea')
-  drawText(r, 'STAFF', 163, 46, '#a8281f')
+  const staffW = measureText('STAFF') + 6
+  r.rect(171 - Math.floor(staffW / 2), 44, staffW, 10, '#e8ecea')
+  drawText(r, 'STAFF', 171 - Math.floor(staffW / 2) + 3, 46, '#a8281f')
   // The restroom door at the end of the hall.
   r.rect(DOOR_X - 8, 40, 44, 84, '#2a1a14')
   r.rect(DOOR_X - 6, 42, 40, 80, '#14101a')
-  r.rect(DOOR_X - 10, 26, 48, 12, '#e8ecea')
-  r.rect(DOOR_X - 10, 26, 48, 1, '#ffffff')
-  drawText(r, 'RESTROOMS', DOOR_X - 6, 29, '#2a2a34')
+  // The sign is cut to the lettering, centred over the door, with a margin all round.
+  const signW = measureText('RESTROOMS') + 8
+  const signX = DOOR_X + 14 - Math.floor(signW / 2)
+  r.rect(signX, 24, signW, 14, '#e8ecea')
+  r.rect(signX, 24, signW, 1, '#ffffff')
+  drawText(r, 'RESTROOMS', signX + 4, 28, '#2a2a34')
   return r
 }
 

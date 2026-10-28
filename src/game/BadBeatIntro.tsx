@@ -290,7 +290,7 @@ export function BadBeatIntro({ onDone }: { onDone: () => void }) {
             {phase === 'hand' && (
               <PxLine
                 key={`${index}-${lineAt}`}
-                scale={layout.scale}
+                scale={layout.scale * 2}
                 wrap
                 align="center"
                 ink={{ color: '#2a5a9a', shadow: '#c8d8f0' }}
