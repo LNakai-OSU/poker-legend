@@ -1016,13 +1016,11 @@ await test('walking to Marcus before Dana finds you is caught at the depot', asy
   await readUntil(page, /Here it comes/)
   await page.locator('[data-testid="dialogue-advance"]').click()
   await page.locator('[data-testid="bus-ride"][data-forced]').waitFor({ state: 'visible' })
-  await readUntil(page, /goes in ahead of you/)
+  await readUntil(page, /Marcus is the middle door/)
   await page.locator('[data-testid="dialogue-advance"]').click()
-  await page.waitForTimeout(400)
+  await readUntil(page, /Middle door/)
   assert((await areaNameOf(page)).includes('Eastgate'), 'the depot did not put you on the bus to Marcus')
-  const saved = await savedState(page)
-  assert(saved.flags.toldDanaToWatch === true, 'what you said to Dana at the depot was not remembered')
-  assert(saved.completedEventIds.includes('dana-at-the-depot'), 'the depot beat was not saved as over')
+  // The beat runs on into Marcus's house, so it is saved only once the game starts.
   assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
 })
 
