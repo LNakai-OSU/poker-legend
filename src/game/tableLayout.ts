@@ -270,7 +270,8 @@ export function dockHeight(innerW: number, scale: number, coarse: boolean, needs
   const one = buttonHeight(1, scale, coarse)
   const two = buttonHeight(needs.kind === 'cash' ? 2 : 1, scale, coarse)
   const info = needs.infoTexts.reduce((sum, text) => sum + wrapText(text, innerW).length * LINE_HEIGHT, 0)
-  const infoH = info > 0 ? info + DOCK.gap : 0
+  // Each line is a child of the dock, so each has its gap.
+  const infoH = info > 0 ? info + DOCK.gap * needs.infoTexts.length : 0
 
   // Betting: Fold and Call, the slider, then the grid of sizes.
   const sizingRows = Math.ceil(sizingLabels(needs.kind, needs.sampleAmount).length / plan.sizingCols)

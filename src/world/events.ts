@@ -3374,8 +3374,9 @@ export const EVENTS: GameEvent[] = [
   },
   {
     id: 'nadia-rematch',
-    about: 'The week is up: Nadia will put the penthouse on the table again. Most do not come back.',
+    about: 'Back after a loss: Nadia seats you again, at once, at the same deficit. Every loss comes back to this.',
     trigger: { kind: 'interact', poiId: 'nadia' },
+    repeatable: true,
     conditions: [
       { kind: 'eventDone', eventId: 'nadia-names-the-match' },
       { kind: 'challenge', status: 'rematch' },

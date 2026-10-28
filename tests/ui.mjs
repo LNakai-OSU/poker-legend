@@ -142,6 +142,17 @@ async function newPage(save, device) {
   return page
 }
 
+/** A fresh game opens on the televised final; the scenarios about walking the town skip it. */
+async function skipPrologue(page) {
+  // It begins a moment after the street does.
+  await page.waitForSelector('[data-testid="reel-skip"]', { timeout: 4000 }).catch(() => {})
+  for (let i = 0; i < 8; i++) {
+    if (!(await page.locator('[data-testid="reel-skip"]').isVisible({ timeout: 1500 }).catch(() => false))) break
+    await page.locator('[data-testid="reel-skip"]').click()
+    await page.waitForTimeout(450)
+  }
+}
+
 async function step(page, key) {
   await page.keyboard.down(key)
   await page.waitForTimeout(90)
@@ -475,6 +486,7 @@ await test('fresh save starts in the apartment', async () => {
   const page = await newPage(null)
   await page.goto(BASE)
   await page.waitForSelector('canvas')
+  await skipPrologue(page)
   await page.waitForTimeout(400)
   assert((await page.locator('body').innerText()).includes('Your Apartment'), 'not in the apartment')
   assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
@@ -869,6 +881,7 @@ await test('the opening: Dana runs to you, walks you to the 14 and rides it with
   const page = await newPage(null)
   await page.goto(BASE)
   await page.waitForSelector('canvas')
+  await skipPrologue(page)
   await page.waitForTimeout(400)
   await enterDoor(page, 'Outside')
   await untilSaid(page, /calling after you/)
@@ -951,6 +964,7 @@ await test('a reload in the middle of the opening starts it again rather than sk
   const page = await newPage(null)
   await page.goto(BASE)
   await page.waitForSelector('canvas')
+  await skipPrologue(page)
   await page.waitForTimeout(400)
   await enterDoor(page, 'Outside')
   await readUntil(page, /What you|raised the river/)
@@ -1141,6 +1155,9 @@ await test('after the first game Dana walks you home and Marcus rides out with y
   await readUntil(page, /story I can tell/)
   await readUntil(page, /pit boss is waiting/)
   await page.locator('[data-testid="dialogue-advance"]').click()
+  // The broadcast's first interlude plays over the end of it.
+  await page.waitForSelector('[data-testid="reel"]', { timeout: 4000 })
+  await skipPrologue(page)
   await page.waitForTimeout(500)
   assert((await dialogueNow(page)) === '', 'the ride out did not end')
   assert(!(await drawnAt(page, 'character-marcus')), 'Marcus is still standing on the floor')
@@ -1377,21 +1394,19 @@ await test('an answer you cannot give is shown shut, and cannot be given', async
   assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
 })
 
-await test('a lost match: Nadia makes you wait, and Marcus says build it back', async () => {
-  const page = await newPage(
+await test('a lost match: Marcus says build it back, and Nadia seats you again at once' , async () => {
+  const seed = () =>
     baseSave({
       cityId: 'portoLumina',
       day: 20,
       period: 'evening',
-      // Enough for the buy-in, so what stops you is her week and not the money.
       cash: 130000,
       unlockedCityIds: ['apartment', 'portoLumina'],
       ownedItemIds: ['tuxedo'],
-      finaleRematchDay: 25,
       record: { busted: 0, challengeLost: 1, sponsors: {} },
-      completedEventIds: [...STORY_SEEN.filter((id) => id !== 'nadia-makes-you-wait'), 'marcus-at-the-rail', 'dana-reveal'],
-    }),
-  )
+      completedEventIds: [...STORY_SEEN.filter((id) => id !== 'nadia-rematch'), 'nadia-names-the-match', 'marcus-at-the-rail', 'dana-reveal'],
+    })
+  const page = await newPage(seed())
   await page.goto(BASE)
   await page.waitForSelector('canvas')
   await page.waitForTimeout(400)
@@ -1399,22 +1414,27 @@ await test('a lost match: Nadia makes you wait, and Marcus says build it back', 
   await approach(page, 'Nadia Okonkwo')
   await page.keyboard.press('e')
   await page.waitForTimeout(400)
-  const nadia = await dialogueText(page)
-  assert(/Not tonight/.test(nadia), `Nadia did not notice she beat you (saw: ${nadia.slice(0, 120)})`)
-  await talkThrough(page)
-  await page.keyboard.press('e')
-  await page.waitForTimeout(400)
-  await talkThrough(page)
-  assert(/Come back in 5 days/.test(await page.locator('body').innerText()), 'the rematch is not a week out')
-  await page.locator('button', { hasText: 'Step away' }).click()
-  await page.waitForTimeout(500)
-  await approach(page, 'Marcus')
-  await page.keyboard.press('e')
-  await page.waitForTimeout(400)
-  const marcus = await dialogueText(page)
+  assert(/came back/.test(await dialogueText(page)), 'Nadia did not take the rematch up')
+  for (let i = 0; i < 6 && !(await page.locator('[data-testid="stack-you"]').isVisible().catch(() => false)); i++) {
+    await page.keyboard.press(' ')
+    await page.waitForTimeout(200)
+  }
+  await page.waitForSelector('[data-testid="stack-you"]')
+  assert((await page.locator('[data-testid="stack-you"]').getAttribute('data-stack')) === '15000', 'the rematch should deal you in short again')
+  await page.close()
+
+  const talk = await newPage(seed())
+  await talk.goto(BASE)
+  await talk.waitForSelector('canvas')
+  await talk.waitForTimeout(400)
+  await enterDoor(talk, 'Casino')
+  await approach(talk, 'Marcus')
+  await talk.keyboard.press('e')
+  await talk.waitForTimeout(400)
+  const marcus = await dialogueText(talk)
   assert(/better tonight/.test(marcus), `Marcus said nothing about the match (saw: ${marcus.slice(0, 120)})`)
-  await talkThrough(page)
-  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await talkThrough(talk)
+  assert(talk.__errors.length === 0, `console errors: ${talk.__errors[0]}`)
 })
 
 await test('the town is one continuous place', async () => {
@@ -1541,6 +1561,7 @@ await test('the window in the apartment is scenery, not a person', async () => {
   const page = await newPage(null)
   await page.goto(BASE)
   await page.waitForSelector('canvas')
+  await skipPrologue(page)
   await page.waitForTimeout(400)
   const pois = await poisOf(page)
   const window = pois.find((p) => p.name === 'Window')
@@ -2478,25 +2499,25 @@ await test('holding a key still walks continuously', async () => {
   await page.close()
 })
 
-await test('the finale says up front that you are locked in', async () => {
+await test('Nadia names the final: six chairs and one winner' , async () => {
   const page = await newPage(
     baseSave({
       cityId: 'portoLumina',
       cash: 200000,
       unlockedCityIds: ['apartment', 'portoLumina'],
       ownedItemIds: ['tuxedo'], // the room's dress code, or she never deals
+      completedEventIds: STORY_SEEN.filter((id) => id !== 'nadia-names-the-match'),
     }),
   )
   await page.goto(BASE)
   await page.waitForSelector('canvas')
   await page.waitForTimeout(400)
   await enterDoor(page, 'Casino')
-  await talkTo(page, 'Nadia Okonkwo')
-  const text = await page.locator('body').innerText()
-  assert(/no cashing out and no standing up/.test(text), 'finale did not warn about being locked in')
-  assert(/120,000/.test(text), 'finale did not state the buy-in')
-  // The buy-in must not move until it is accepted.
-  assert(/200,000/.test(text), 'the roll changed before the money was put up')
+  await approach(page, 'Nadia Okonkwo')
+  await page.keyboard.press('e')
+  await page.waitForTimeout(400)
+  const said = await readUntil(page, /Legends Invitational/)
+  assert(!/120,000 each/.test(String(said)), 'the old heads-up buy-in is still being offered')
   await page.close()
 })
 
