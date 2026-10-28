@@ -37,6 +37,10 @@ const SCENES: Record<ReelScene, (c: Ctx, t: number) => void> = {
   logo(c) {
     rect(c, '#05040a', 0, 0, REEL_W, REEL_H)
   },
+  // The kitchen table and the mail is its own component (`MailTable`).
+  mail(c) {
+    rect(c, '#05040a', 0, 0, REEL_W, REEL_H)
+  },
   // The floodlit final table, a crowd in the dark behind the rail.
   studio(c, t) {
     rect(c, '#0b0a14', 0, 0, REEL_W, REEL_H)

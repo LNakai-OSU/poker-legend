@@ -10,8 +10,8 @@ import { TABLE_THEMES } from './tableThemes'
 import type { Announcement } from './HandAnnouncer'
 import type { SceneLayout, SceneNeeds } from './tableLayout'
 import { DialogueBox } from './DialogueBox'
+import { useTouchFirst } from './device'
 import { Panel, PxLine } from './pixel/ui'
-import { INK } from './pixel/ink'
 
 /**
  * The opening of the game: the final of the Legends Invitational, on the real
@@ -55,8 +55,6 @@ const NAMES: Record<Who, string> = {
 }
 
 interface Frame {
-  /** How long it stays before it moves on by itself. */
-  ms: number
   street: PublicState['street']
   boardCount: number
   pot: number
@@ -76,7 +74,6 @@ const START = { you: 90000, nadia: 100000, gaines: 120000, contessa: 100000, ber
 
 const FRAMES: Frame[] = [
   {
-    ms: 5200,
     street: 'preflop',
     boardCount: 0,
     pot: 21000,
@@ -88,7 +85,6 @@ const FRAMES: Frame[] = [
     sound: 'deal',
   },
   {
-    ms: 5200,
     street: 'flop',
     boardCount: 3,
     pot: 52000,
@@ -100,7 +96,6 @@ const FRAMES: Frame[] = [
     sound: 'deal',
   },
   {
-    ms: 4800,
     street: 'turn',
     boardCount: 4,
     pot: 112000,
@@ -112,7 +107,6 @@ const FRAMES: Frame[] = [
     sound: 'chip',
   },
   {
-    ms: 5400,
     street: 'river',
     boardCount: 5,
     pot: 165000,
@@ -124,7 +118,6 @@ const FRAMES: Frame[] = [
     sound: 'deal',
   },
   {
-    ms: 6200,
     street: 'showdown',
     boardCount: 5,
     pot: 165000,
@@ -179,7 +172,13 @@ function stateOf(f: Frame, handNumber: number): { state: PublicState; result: Ha
   return { state, result }
 }
 
-type Phase = 'hand' | 'dark' | 'excuse' | 'walk'
+/** What the booth says when the rig fails, a line at a time. */
+const LIGHTS = [
+  { who: 'Chip', text: 'WHAT HAPPENED TO THE LIGHTS! Folks, we have lost the rig — do not touch that dial!' },
+  { who: 'Dr. Anand', text: 'A technical difficulty. Play is suspended. Please stand by.' },
+]
+
+type Phase = 'hand' | 'dark' | 'lights' | 'excuse' | 'walk'
 
 /** The room dies in stutters: lamps drop and catch, drop and catch, and are gone. */
 const BLACKOUT_STEPS = [0, 0.35, 0.05, 0.55, 0.15, 0.8, 0.35, 0.96]
@@ -190,7 +189,9 @@ export function BadBeatIntro({ onDone }: { onDone: () => void }) {
   const [index, setIndex] = useState(0)
   const [dark, setDark] = useState(0)
   const [lineAt, setLineAt] = useState(0)
+  const [lightsAt, setLightsAt] = useState(0)
   const finished = useRef(false)
+  const touch = useTouchFirst()
   const frame = FRAMES[index]
 
   const done = () => {
@@ -209,10 +210,10 @@ export function BadBeatIntro({ onDone }: { onDone: () => void }) {
   }
   useEffect(() => {
     if (phase !== 'hand') return
+    // The hand moves on when the player says so, never by itself: a line of
+    // the broadcast is read before the next card is dealt.
     if (frame.sound) playSound(frame.sound)
     setLineAt(performance.now())
-    const timer = window.setTimeout(nextFrame, frame.ms)
-    return () => window.clearTimeout(timer)
   }, [phase, index])
 
   // The blackout: steps of darkness over a couple of seconds, then the excuse.
@@ -223,7 +224,7 @@ export function BadBeatIntro({ onDone }: { onDone: () => void }) {
     BLACKOUT_STEPS.forEach((level, i) => {
       timers.push(window.setTimeout(() => setDark(level), (BLACKOUT_MS / BLACKOUT_STEPS.length) * i))
     })
-    timers.push(window.setTimeout(() => setPhase('excuse'), BLACKOUT_MS + 700))
+    timers.push(window.setTimeout(() => setPhase('lights'), BLACKOUT_MS + 500))
     return () => timers.forEach((t) => window.clearTimeout(t))
   }, [phase])
 
@@ -297,8 +298,8 @@ export function BadBeatIntro({ onDone }: { onDone: () => void }) {
                 text={lineOf(frame.line)}
               />
             )}
-            {phase !== 'hand' && (
-              <PxLine scale={layout.scale} wrap align="center" ink={INK.dark} text={phase === 'dark' ? 'Chip: WHAT HAPPENED TO THE LIGHTS!' : 'Technical difficulty. Please stand by.'} />
+            {phase === 'hand' && (
+              <PxLine scale={layout.scale} align="center" ink={{ color: '#8a8a98', shadow: '#dcdce4' }} testId="intro-prompt" text={touch ? 'tap ▸' : 'space ▸'} />
             )}
           </Panel>
         )}
@@ -312,12 +313,12 @@ export function BadBeatIntro({ onDone }: { onDone: () => void }) {
           position: 'absolute',
           inset: 0,
           background: '#000',
-          opacity: phase === 'excuse' || phase === 'walk' ? 0.94 : dark,
+          opacity: phase === 'lights' || phase === 'excuse' || phase === 'walk' ? 0.94 : dark,
           transition: 'opacity 70ms steps(2)',
           pointerEvents: 'none',
         }}
       />
-      {(phase === 'excuse' || phase === 'walk') && (
+      {(phase === 'lights' || phase === 'excuse' || phase === 'walk') && (
         <div
           aria-hidden="true"
           style={{
@@ -330,6 +331,14 @@ export function BadBeatIntro({ onDone }: { onDone: () => void }) {
             animation: 'hunt-pulse 1.4s ease-in-out infinite',
             pointerEvents: 'none',
           }}
+        />
+      )}
+      {phase === 'lights' && (
+        <DialogueBox
+          key={`lights-${lightsAt}`}
+          speaker={LIGHTS[lightsAt].who}
+          lines={[LIGHTS[lightsAt].text]}
+          onFinish={() => (lightsAt + 1 < LIGHTS.length ? setLightsAt(lightsAt + 1) : setPhase('excuse'))}
         />
       )}
       {phase === 'excuse' && (

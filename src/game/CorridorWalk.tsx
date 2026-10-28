@@ -152,39 +152,51 @@ export function CorridorWalk({ lines, onDone }: { lines: ReelLine[]; onDone: () 
     return () => window.removeEventListener('resize', onResize)
   }, [])
 
-  // Space cuts the walk short.
+  // What you are thinking stops you in the hall until you have read it: a
+  // thought is turned with Space (or E, X, Enter, a tap), never by the clock.
+  const pause = useRef<ReelLine | null>(null)
+  const nextThought = useRef(0)
+  const press = () => {
+    if (!pause.current) return
+    playSound('dialogue')
+    pause.current = null
+    setThought(null)
+  }
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!isActionKey(e) || !isTop()) return
       e.preventDefault()
-      if (!e.repeat) done()
+      if (!e.repeat) press()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  // The thoughts come at set points along the hall, one after another.
-  useEffect(() => {
-    const timers: number[] = []
-    lines.forEach((line, i) => {
-      timers.push(window.setTimeout(() => { setThought(line); playSound('dialogue') }, 500 + i * 3000))
-      timers.push(window.setTimeout(() => setThought((t) => (t === line ? null : t)), 500 + i * 3000 + 2700))
-    })
-    return () => timers.forEach((t) => window.clearTimeout(t))
-  }, [])
-
   useEffect(() => {
     let frame = 0
-    const t0 = performance.now()
+    let last = performance.now()
+    // Time spent walking: it stops while a thought is up.
+    let t = 0
     const draw = () => {
       const el = canvas.current
-      const t = performance.now() - t0
+      const now = performance.now()
+      if (!pause.current) t += now - last
+      last = now
       if (el) {
         const c = el.getContext('2d')!
         c.imageSmoothingEnabled = false
         const reach = DOOR_X - 6
         const heroX = Math.min(reach + 16, START_X + (t / 1000) * SPEED)
         const arrived = heroX >= reach
+        // A thought comes at set points along the hall, and holds you there.
+        const stops = [START_X + 120, START_X + 400]
+        const due = lines[nextThought.current]
+        if (due && heroX >= stops[nextThought.current] && !pause.current) {
+          pause.current = due
+          nextThought.current += 1
+          setThought(due)
+          playSound('dialogue')
+        }
         const camX = Math.max(0, Math.min(WORLD_W - VIEW_W, heroX - 150))
         // The hall.
         c.clearRect(0, 0, VIEW_W, VIEW_H)
@@ -226,7 +238,7 @@ export function CorridorWalk({ lines, onDone }: { lines: ReelLine[]; onDone: () 
         c.fillStyle = `rgba(210,40,40,${0.35 + 0.4 * pulse})`
         c.fillRect(0, FLOOR_Y - 1, VIEW_W, 2)
         // You: shadow first, then the sprite, with a small bob on the steps.
-        const walking = !arrived
+        const walking = !arrived && !pause.current
         const frame3 = (walking ? Math.floor(t / 150) % 3 : 0) as WalkFrame
         const bob = walking && frame3 !== 0 ? 1 : 0
         const sx = Math.round(heroX - camX)

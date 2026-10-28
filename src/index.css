@@ -228,3 +228,12 @@ button {
   .announcement { animation-duration: 2600ms; animation-name: none; opacity: 1; }
   .deal-countdown { animation: none; transform: scaleX(1); }
 }
+
+@keyframes letter-in {
+  from { transform: translateX(-50%) translateY(18px) rotate(0deg); opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes stamp-thump {
+  from { transform: rotate(-14deg) scale(2.6); opacity: 0; }
+  to { transform: rotate(-14deg) scale(1); opacity: 0.92; }
+}

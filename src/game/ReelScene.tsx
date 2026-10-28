@@ -4,6 +4,7 @@ import { CHARACTERS } from '../world/characters'
 import { DialogueBox } from './DialogueBox'
 import { BoothPanel } from './BoothPanel'
 import { LogoFlash } from './LogoFlash'
+import { MailTable } from './MailTable'
 import { CorridorWalk } from './CorridorWalk'
 import { REEL_H, REEL_W, drawReel } from './reelArt'
 
@@ -35,7 +36,7 @@ export function ReelScene({
   // An empty panel has nothing to turn; move past it rather than stall on it.
   useEffect(() => {
     if (!panel) done()
-    else if (!line && !(panel.scene === 'booth' || panel.scene === 'corridor' || panel.scene === 'logo')) next()
+    else if (!line && !(panel.scene === 'booth' || panel.scene === 'corridor' || panel.scene === 'logo' || panel.scene === 'mail')) next()
   })
 
   const nextPanel = () => {
@@ -60,7 +61,7 @@ export function ReelScene({
   }, [])
 
   if (!panel) return null
-  const custom = panel.scene === 'booth' || panel.scene === 'corridor' || panel.scene === 'logo'
+  const custom = panel.scene === 'booth' || panel.scene === 'corridor' || panel.scene === 'logo' || panel.scene === 'mail'
   if (!custom && !line) return null
   const speaker = line ? (CHARACTERS[line.who]?.name ?? line.who) : ''
   // A line written "Marcus: …" is not introduced twice.
@@ -84,6 +85,7 @@ export function ReelScene({
       }}
     >
       {panel.scene === 'booth' && <BoothPanel key={at.panel} lines={panel.lines} ticker={panel.ticker} onDone={nextPanel} />}
+      {panel.scene === 'mail' && <MailTable key={at.panel} lines={panel.lines} onDone={nextPanel} />}
       {panel.scene === 'logo' && <LogoFlash key={at.panel} onDone={nextPanel} />}
       {panel.scene === 'corridor' && <CorridorWalk key={at.panel} lines={panel.lines} onDone={nextPanel} />}
       {!custom && <ReelCanvas key={at.panel} scene={panel.scene} />}

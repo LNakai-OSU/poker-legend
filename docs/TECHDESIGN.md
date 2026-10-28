@@ -208,6 +208,11 @@ One set of keys everywhere (`src/game/keys.ts`):
   (people, fixtures, signs, notes), turn a text box's page, pick an answer,
   press the button the cursor is on. A held key's auto-repeat is never a second
   press, and a text box or a question finishes once however fast it is pressed.
+- **Dialogue never moves on by itself.** A line, a caption or a thought stays up
+  until the player presses Space, E, X or Enter (or taps): the hand in the
+  opening, the commentators, the hall, the mail. Only motion (a walk, the lights
+  failing, a card dealt) runs on a clock. Table talk over a seat and the banner
+  over the pot are not dialogue boxes and still fade on their own.
 - **Escape:** leaves a menu scene, goes up a page in the side panel, closes it,
   and opens it from the street or the table when nothing else is on screen.
 - **Menu (☰):** a panel down the right edge (`SideNav.tsx`) — where you stand,

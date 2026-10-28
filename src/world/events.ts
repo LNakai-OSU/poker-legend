@@ -122,6 +122,7 @@ export interface DialogueAction {
 /** Where a reel panel is set: the broadcast and the nights around it. Drawn by `ReelScene`. */
 export type ReelScene =
   | 'logo'
+  | 'mail'
   | 'studio'
   | 'corridor'
   | 'bathroom'
@@ -3820,6 +3821,23 @@ export const EVENTS: GameEvent[] = [
               {
                 who: 'You',
                 text: 'It started small. A note on a table. A rent that did not pay itself.',
+              },
+            ],
+          },
+          {
+            scene: 'mail',
+            lines: [
+              {
+                who: 'You',
+                text:
+                  'Nine days. Nine days, forty dollars and a fridge that hums a different note ' +
+                  'every night.',
+              },
+              {
+                who: 'You',
+                text:
+                  'Marcus. Of course it is Marcus. He has never once been wrong about a bad ' +
+                  'idea.',
               },
             ],
           },

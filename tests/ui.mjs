@@ -1763,9 +1763,10 @@ await test('a new game opens on the televised final and cuts back to the flat' ,
   const phases = new Set()
   const scenes = new Set()
   const order = []
+  let quiet = 0
   let sawBoard = 0
   let sawDark = 0
-  for (let i = 0; i < 160; i++) {
+  for (let i = 0; i < 420; i++) {
     // Read it all in one go: the scene can end between one question and the next.
     const seen = await page.evaluate(() => {
       const intro = document.querySelector('[data-testid="bad-beat-intro"]')
@@ -1789,11 +1790,12 @@ await test('a new game opens on the televised final and cuts back to the flat' ,
       sawBoard = Math.max(sawBoard, seen.board)
       sawDark = Math.max(sawDark, seen.dark)
       if (seen.phase === 'hand') await page.keyboard.press(' ')
-      else if (seen.phase === 'excuse') await page.locator('[data-testid="dialogue-advance"]').click().catch(() => {})
+      else if (seen.phase === 'lights' || seen.phase === 'excuse') await page.keyboard.press(' ')
     } else if (seen?.kind === 'reel') {
       scenes.add(seen.scene)
       await page.keyboard.press(' ')
-    } else if (phases.size > 0 && scenes.size > 0) break
+    } else if (phases.size > 0 && scenes.has('mirror') && ++quiet > 40) break
+    if (seen) quiet = 0
     await page.waitForTimeout(150)
   }
   // The tournament's logo first, then the announcers, and only then the table.
@@ -1802,9 +1804,9 @@ await test('a new game opens on the televised final and cuts back to the flat' ,
   // The real table, a hand dealt out street by street, the room going dark, the walk out.
   assert(frames.size >= 4, `the hand did not play out (frames ${[...frames]})`)
   assert(sawBoard === 5, 'the board was never dealt')
-  for (const phase of ['hand', 'dark', 'excuse', 'walk']) assert(phases.has(phase), `the intro never reached ${phase} (saw ${[...phases]})`)
+  for (const phase of ['hand', 'dark', 'lights', 'excuse', 'walk']) assert(phases.has(phase), `the intro never reached ${phase} (saw ${[...phases]})`)
   assert(sawDark > 0.5, 'the room did not go dark')
-  for (const scene of ['corridor', 'bathroom', 'mirror']) assert(scenes.has(scene), `the opening never showed the ${scene}`)
+  for (const scene of ['corridor', 'bathroom', 'mirror', 'mail']) assert(scenes.has(scene), `the opening never showed the ${scene}`)
   await page.waitForSelector('canvas')
   assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
   await page.close()
