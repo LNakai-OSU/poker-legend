@@ -1758,10 +1758,11 @@ await test('a bet can be made with the arrows and Space' , async () => {
 await test('a new game opens on the televised final and cuts back to the flat' , async () => {
   const page = await newPage(null)
   await page.goto(BASE)
-  await page.waitForSelector('[data-testid="bad-beat-intro"]', { timeout: 15000 })
+  await page.waitForSelector('[data-testid="reel"]', { timeout: 15000 })
   const frames = new Set()
   const phases = new Set()
   const scenes = new Set()
+  const order = []
   let sawBoard = 0
   let sawDark = 0
   for (let i = 0; i < 160; i++) {
@@ -1780,6 +1781,8 @@ await test('a new game opens on the televised final and cuts back to the flat' ,
       }
       return reel ? { kind: 'reel', scene: reel.getAttribute('data-scene') } : null
     })
+    const tag = seen?.kind === 'intro' ? 'table' : seen?.kind === 'reel' ? seen.scene : null
+    if (tag && order[order.length - 1] !== tag) order.push(tag)
     if (seen?.kind === 'intro') {
       phases.add(seen.phase)
       frames.add(seen.frame)
@@ -1793,6 +1796,9 @@ await test('a new game opens on the televised final and cuts back to the flat' ,
     } else if (phases.size > 0 && scenes.size > 0) break
     await page.waitForTimeout(150)
   }
+  // The tournament's logo first, then the announcers, and only then the table.
+  assert(order[0] === 'logo', `the logo should open the game (saw ${order.slice(0, 4)})`)
+  assert(order[1] === 'booth' && order[2] === 'table', `the announcers should come before the table (saw ${order.slice(0, 5)})`)
   // The real table, a hand dealt out street by street, the room going dark, the walk out.
   assert(frames.size >= 4, `the hand did not play out (frames ${[...frames]})`)
   assert(sawBoard === 5, 'the board was never dealt')
@@ -1844,6 +1850,27 @@ await test('the final table seats you short against five' , async () => {
   assert((await page.locator('[data-testid="stack-you"]').getAttribute('data-stack')) === '15000', 'you should have 15,000')
   const seats = await page.locator('[data-testid^="seat-"]:not([data-testid="seat-you"])').count()
   assert(seats === 5, `five opponents should be seated, saw ${seats}`)
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+})
+
+await test('coming back from a table or a machine puts you where you were' , async () => {
+  const page = await newPage(baseSave({ cityId: 'apartment', areaId: 'sc-floor', period: 'evening', day: 2 }))
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await settle(page)
+  // Walk to the slot bank, well away from the door the room was entered by.
+  await approach(page, 'Slot Row')
+  const before = await posOf(page)
+  await page.keyboard.press('e')
+  await page.waitForTimeout(250)
+  await talkThrough(page)
+  await page.locator('button', { hasText: 'Walk away' }).waitFor({ state: 'visible' })
+  await page.locator('button', { hasText: 'Walk away' }).click()
+  await page.waitForSelector('canvas')
+  await settle(page)
+  const after = await posOf(page)
+  assert(before && after && before.col === after.col && before.row === after.row, `you were at ${JSON.stringify(before)} and came back at ${JSON.stringify(after)}`)
   assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
   await page.close()
 })

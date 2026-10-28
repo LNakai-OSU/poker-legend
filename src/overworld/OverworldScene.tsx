@@ -48,8 +48,27 @@ const WORLD_ZOOM = 2
  */
 const NARROW_SCREEN_PX = 560
 
+/**
+ * Where the player last stood, for a scene that is built again around them.
+ *
+ * The street is rebuilt whenever its React key changes or it is left and come
+ * back to — a table, a shop, a menu scene, a hunt starting — and it used to put
+ * the player back on the tile the area was entered at: a door, or the start of
+ * the map. Now a scene made for the same area, handed the same arrival tile,
+ * puts them where they were. A different arrival tile is a deliberate move (a
+ * door, a ride, a beat placing them) and is honoured as it always was.
+ */
+let lastStanding: { area: string; start: { col: number; row: number }; at: { col: number; row: number } } | null = null
+
+function standingFor(area: string, start: { col: number; row: number }): { col: number; row: number } {
+  const last = lastStanding
+  const resume = last && last.area === area && last.start.col === start.col && last.start.row === start.row ? last.at : start
+  lastStanding = { area, start, at: resume }
+  return resume
+}
+
 /** The prompt for a chair in front of you, which no person's name can equal. */
-const SIT_PROMPT = '\u0000sit'
+const SIT_PROMPT = { verb: 'sit', name: '' }
 
 function zoomFor(width: number): number {
   return width < NARROW_SCREEN_PX ? WORLD_ZOOM / 2 : WORLD_ZOOM
@@ -182,9 +201,12 @@ export function OverworldScene({
 }: OverworldSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
-  const [prompt, setPrompt] = useState<string | null>(null)
+  const [prompt, setPrompt] = useState<{ verb: string; name: string } | null>(null)
   // Only changes once per tile stepped, so driving React from it is cheap.
   const [playerTile, setPlayerTile] = useState(playerStart)
+  // Fixed for the life of this scene: the tile it is built with.
+  const resumeAt = useRef<{ col: number; row: number } | null>(null)
+  if (resumeAt.current === null) resumeAt.current = standingFor(areaName, playerStart)
   const [talkingId, setTalkingId] = useState<string | null>(null)
   const talkingRef = useRef<string | null>(null)
   // Read through a ref because the interaction handler lives inside the Pixi
@@ -324,7 +346,10 @@ export function OverworldScene({
       overlay.zIndex = LAYER.captions
       world.addChild(signs, actors, overlay)
 
-      const player = new GridPlayer(playerStart.col, playerStart.row, { figure: HERO_FIGURE })
+      // Wherever you are standing now, should this effect run again part-way
+      // through the scene: a rebuild is not a move.
+      const first = lastStanding && lastStanding.area === areaName ? lastStanding.at : resumeAt.current!
+      const player = new GridPlayer(first.col, first.row, { figure: HERO_FIGURE })
       actors.addChild(player.sprite)
       // Everybody standing on the map. Not fixed: a beat can bring somebody on
       // and walk them off again (see `syncPeople`).
@@ -818,6 +843,7 @@ export function OverworldScene({
             .join(';')
           if (wrapper.dataset.people !== people) wrapper.dataset.people = people
         }
+        if (lastStanding) lastStanding.at = { col: player.col, row: player.row }
         setPlayerTile((current) =>
           current.col === player.col && current.row === player.row
             ? current
@@ -834,7 +860,12 @@ export function OverworldScene({
           const playerTop = player.pixelY - PERSON_RISE * 2 + 4
           adjacent.label.position.set(anchor.x, (behindThem ? Math.min(anchor.y, playerTop) : anchor.y) - 1)
         }
-        setPrompt(adjacent ? adjacent.config.name : !talkingRef.current && facingChair() ? SIT_PROMPT : null)
+        const next = adjacent
+          ? { verb: adjacent.config.verb ?? 'talk to', name: adjacent.config.name }
+          : !talkingRef.current && facingChair()
+            ? SIT_PROMPT
+            : null
+        setPrompt((current) => (current?.verb === next?.verb && current?.name === next?.name ? current : next))
       })
 
       // Whatever arrived while the scene was being built.
@@ -976,13 +1007,13 @@ export function OverworldScene({
             pointerEvents: 'none',
           }}
         >
-          {prompt === SIT_PROMPT
+          {prompt.verb === 'sit'
             ? isTouch
               ? 'Tap E to sit down'
               : 'Press Space or X to sit down'
             : isTouch
-              ? `Tap E to talk to ${prompt}`
-              : `Press E or Space to talk to ${prompt}`}
+              ? `Tap E to ${prompt.verb} ${prompt.name}`
+              : `Press E or Space to ${prompt.verb} ${prompt.name}`}
         </div>
       )}
       {isTouch && !talking && !paused && (

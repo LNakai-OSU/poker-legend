@@ -24,6 +24,8 @@ export interface NpcConfig {
    * "Window" as if it were somebody standing against the wall.
    */
   labelled?: boolean
+  /** What you do with it, for the prompt: `talk to`, `read`, `use`, `look at`. Left out, you talk to it. */
+  verb?: string
   /** How a person looks. A stranger made up from their id if left out. */
   figure?: Figure
   /**

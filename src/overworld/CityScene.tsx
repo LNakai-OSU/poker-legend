@@ -9,7 +9,7 @@ import { useAmbientMusic } from '../audio/SoundToggle'
 import { PERIOD_LABEL } from '../game/time'
 import { CHARACTERS, charactersIn } from '../world/characters'
 import { EVENTS, eventFor, type GameEvent } from '../world/events'
-import { artForPoi, figureForCharacter, figuresForPois, figuresForSitters } from './casting'
+import { artForPoi, verbForPoi, figureForCharacter, figuresForPois, figuresForSitters } from './casting'
 import { seatingFor } from '../world/seating'
 import type { SeatedConfig } from './sitters'
 import type { CastPlace, Cue } from '../game/eventMachine'
@@ -148,6 +148,7 @@ export function CityScene({
         // People at a post keep their eyes on it; everybody else looks about.
         restless: art === 'person' && !behind(poi.col, poi.row) && (role === 'local' || role === 'tourist' || role === 'kid'),
         labelled: poi.labelled,
+        verb: verbForPoi(poi),
         lines: linesFor(state, poi),
         onFinish:
           poi.action.kind === 'flavor' || isLocked(state, poi)

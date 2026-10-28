@@ -121,6 +121,7 @@ export interface DialogueAction {
 
 /** Where a reel panel is set: the broadcast and the nights around it. Drawn by `ReelScene`. */
 export type ReelScene =
+  | 'logo'
   | 'studio'
   | 'corridor'
   | 'bathroom'
@@ -3676,6 +3677,44 @@ export const EVENTS: GameEvent[] = [
     ],
     actions: [
       { kind: 'fade', to: 'out' },
+      {
+        kind: 'reel',
+        title: 'Live from Porto Lumina',
+        panels: [
+          { scene: 'logo', lines: [] },
+          {
+            scene: 'booth',
+            ticker: 'FINAL TABLE · PORTO LUMINA · 6 LEFT',
+            lines: [
+              {
+                who: 'Chip',
+                text:
+                  'Good evening, and welcome to Porto Lumina, for the final table of the ' +
+                  'Legends Invitational! Six players left, one winner, and the keys to the ' +
+                  'penthouse!',
+              },
+              {
+                who: 'Dr. Anand',
+                text:
+                  'I am Dr. Priyanka Anand, that is Chip, and the prize is seven hundred and ' +
+                  'fifty thousand dollars. We are live.',
+              },
+              {
+                who: 'Chip',
+                text:
+                  'And there he is — in the orange jacket, seat six, the shortest stack at the ' +
+                  'table. That is our player, folks! Show them in!',
+              },
+              {
+                who: 'Dr. Anand',
+                text:
+                  'Seven big blinds. I have run the numbers and I would like to apologise in ' +
+                  'advance.',
+              },
+            ],
+          },
+        ],
+      },
       {
         kind: 'cinematic',
         id: 'bad-beat',

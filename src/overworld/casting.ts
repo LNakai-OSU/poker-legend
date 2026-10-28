@@ -117,6 +117,34 @@ export function artForPoi(poi: PoiDef): NpcArt {
   return 'person'
 }
 
+/**
+ * What you do with a thing, for the prompt over it: you talk to a person, read a
+ * note or a sign, and use a machine. Scenery you can only look at.
+ */
+export function verbForPoi(poi: PoiDef): string {
+  switch (poi.action.kind) {
+    case 'slots':
+    case 'craps':
+      return 'use'
+    case 'travel':
+      return 'read'
+  }
+  switch (artForPoi(poi)) {
+    case 'person':
+      return 'talk to'
+    case 'note':
+    case 'sign':
+      return 'read'
+    case 'gull':
+    case 'stall':
+    case 'none':
+      return 'look at'
+    default:
+      // A viewer, a window, a lift, a counter: something you work.
+      return 'use'
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Looks
 // ---------------------------------------------------------------------------

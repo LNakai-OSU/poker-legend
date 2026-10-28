@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { artForPoi, figureForCharacter, figuresForPois, lookFromId, roleForPoi } from './casting'
+import { artForPoi, figureForCharacter, figuresForPois, lookFromId, roleForPoi, verbForPoi } from './casting'
 import { visualKey } from './characterArt'
 import { CITIES, allAreas } from '../world/cities'
 import { CHARACTERS, charactersIn } from '../world/characters'
@@ -162,5 +162,22 @@ describe('what people wear', () => {
       look: { ...look, garment: 'hoodie', garmentColor: '#c83a3a', hat: 'cowboy' },
     })
     expect(dressed).toBe(plain)
+  })
+})
+
+describe('what you do with a thing', () => {
+  const thing = (name: string, action: PoiDef['action'], art?: PoiDef['art']): PoiDef => ({
+    id: name, name, col: 1, row: 1, color: 0, lines: [], action, ...(art ? { art } : {}),
+  })
+  it('talks to people, reads notes and signs, and uses machines', () => {
+    expect(verbForPoi(thing('Valet', { kind: 'flavor' }))).toBe('talk to')
+    expect(verbForPoi(thing('Pit Boss', { kind: 'table', tableId: 'x' }))).toBe('talk to')
+    expect(verbForPoi(thing('Note on the Table', { kind: 'flavor' }))).toBe('read')
+    expect(verbForPoi(thing('Billboard', { kind: 'flavor' }))).toBe('read')
+    expect(verbForPoi(thing('Bus Stop', { kind: 'travel' }))).toBe('read')
+    expect(verbForPoi(thing('Slot Machines', { kind: 'slots' }, 'none'))).toBe('use')
+    expect(verbForPoi(thing('Craps Table', { kind: 'craps' }, 'none'))).toBe('use')
+    expect(verbForPoi(thing('Viewpoint', { kind: 'flavor' }))).toBe('use')
+    expect(verbForPoi(thing('Gull', { kind: 'flavor' }))).toBe('look at')
   })
 })
