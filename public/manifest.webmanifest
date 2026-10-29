@@ -1,0 +1,11 @@
+{
+  "name": "Poker Legend",
+  "short_name": "Poker Legend",
+  "start_url": ".",
+  "scope": ".",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#07070c",
+  "theme_color": "#14141f",
+  "icons": [{ "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

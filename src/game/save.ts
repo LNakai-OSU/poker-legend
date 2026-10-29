@@ -1,7 +1,23 @@
 import { emptyRecord, initialState, type GameState, type RunRecord } from './state'
 import { TIME_PERIODS, type TimePeriod } from './time'
 
-const SAVE_KEY = 'poker-legend-save-v2'
+const LEGACY_SAVE_KEY = 'poker-legend-save-v2'
+
+/**
+ * Whose save this is. Each player gets a save of their own, so two testers
+ * sharing a browser (or one player with two tabs signed in as different names)
+ * never read or write each other's run. No profile means the original single
+ * save, which is what the test suites and old saves use.
+ */
+let profileKey: string | null = null
+
+export function setSaveProfile(slug: string | null): void {
+  profileKey = slug
+}
+
+function saveKey(): string {
+  return profileKey ? `${LEGACY_SAVE_KEY}:${profileKey}` : LEGACY_SAVE_KEY
+}
 
 /**
  * Checkpoints are hub locations only. Mid-hand table state is deliberately not
@@ -10,7 +26,7 @@ const SAVE_KEY = 'poker-legend-save-v2'
  */
 export function loadGame(): GameState | null {
   try {
-    const raw = localStorage.getItem(SAVE_KEY)
+    const raw = localStorage.getItem(saveKey())
     if (!raw) return null
     const parsed: unknown = JSON.parse(raw)
     return reconcile(parsed)
@@ -72,7 +88,7 @@ function reconcileRecord(saved: Partial<GameState>): RunRecord {
 
 export function saveGame(state: GameState): void {
   try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify(state))
+    localStorage.setItem(saveKey(), JSON.stringify(state))
   } catch {
     // Saving is best-effort; a failure shouldn't interrupt play.
   }
@@ -80,7 +96,7 @@ export function saveGame(state: GameState): void {
 
 export function clearSave(): void {
   try {
-    localStorage.removeItem(SAVE_KEY)
+    localStorage.removeItem(saveKey())
   } catch {
     // Nothing to do if storage is unavailable.
   }
