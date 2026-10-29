@@ -795,9 +795,19 @@ function actionShape(value: unknown, path: string, problems: Problems) {
       value.panels.forEach((panel, i) => {
         const at = `${path}.panels[${i}]`
         if (!isObj(panel)) return void problems.push(`${at} should be a scene`)
-        keys(panel, at, ['scene', 'lines'], ['caption', 'ticker'], problems)
+        keys(panel, at, ['scene', 'lines'], ['caption', 'ticker', 'notifications'], problems)
         oneOf(panel.scene, REEL_SCENES, `${at}.scene`, problems)
         if (!Array.isArray(panel.lines)) return void problems.push(`${at}.lines should be a list`)
+        if (panel.notifications !== undefined) {
+          if (!Array.isArray(panel.notifications)) problems.push(`${at}.notifications should be a list`)
+          else {
+            panel.notifications.forEach((n, j) => {
+              if (!isObj(n) || typeof n.from !== 'string' || typeof n.text !== 'string') {
+                problems.push(`${at}.notifications[${j}] should be { from, text }`)
+              }
+            })
+          }
+        }
         panel.lines.forEach((line, j) => {
           if (!isObj(line) || typeof line.who !== 'string' || typeof line.text !== 'string') {
             problems.push(`${at}.lines[${j}] should be { who, text }`)
