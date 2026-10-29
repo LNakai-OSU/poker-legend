@@ -110,8 +110,8 @@ describe('the scene at a given window', () => {
     }
   })
 
-  it('draws a laptop at two pixels to the art pixel and a phone at four device pixels', () => {
+  it('draws a laptop at two pixels to the art pixel and a phone at three device pixels (the bigger menu text takes the rest)', () => {
     expect(layoutScene({ w: 1100, h: 800, dpr: 1, coarse: false }, CASH).scale).toBe(2)
-    expect(layoutScene({ w: 390, h: 844, dpr: 3, coarse: true }, CASH).scale).toBeCloseTo(4 / 3)
+    expect(layoutScene({ w: 390, h: 844, dpr: 3, coarse: true }, CASH).scale).toBeCloseTo(1)
   })
 })

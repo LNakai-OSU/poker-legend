@@ -325,6 +325,12 @@ export interface SceneLayout {
   table: FeltLayout
   dockPlan: DockPlan
   coarse: boolean
+  /**
+   * How much bigger the betting menu's text and buttons are drawn than the
+   * table's art: the menu is what you read and press, so it is not the place
+   * to save space. The menu is laid out in its own, larger, art pixels.
+   */
+  dockZoom: number
   /** The betting menu stands to the right of the table instead of under it. */
   side: boolean
 }
@@ -338,11 +344,13 @@ const HEADER_FRAME = 4
 /** The betting menu beside the table, on a window wider than it is tall. */
 const SIDE_DOCK_WIDTHS = [150, 190, 230]
 const SIDE_GAP = 4
+/** The betting menu's text, relative to the table's pixels. */
+const DOCK_ZOOM = 1.5
 /** How far down the corner buttons reach, in CSS pixels. */
 const CORNER_CLEAR_CSS = 60
 const MIN_FELT_W = 250
 
-function sceneAt(scale: number, view: Viewport, needs: SceneNeeds, sideW = 0): { layout: SceneLayout; fits: boolean } {
+function sceneAt(scale: number, view: Viewport, needs: SceneNeeds, sideW = 0, zoom = 1): { layout: SceneLayout; fits: boolean } {
   const side = sideW > 0
   const w = Math.floor(view.w / scale)
   const h = Math.floor(view.h / scale)
@@ -365,7 +373,11 @@ function sceneAt(scale: number, view: Viewport, needs: SceneNeeds, sideW = 0): {
   )
 
   const dockW = side ? dockColW : feltW
-  const dockH = dockHeight(dockW - 2 * DOCK.inset, scale, view.coarse, needs)
+  // Whole device pixels per art pixel, as everywhere else.
+  const dpr = Math.max(1, view.dpr || 1)
+  const dockZoom = Math.round(scale * dpr * zoom) / Math.round(scale * dpr)
+  const dockInnerW = dockW / dockZoom - 2 * DOCK.inset
+  const dockH = dockHeight(dockInnerW, scale * dockZoom, view.coarse, needs) * dockZoom
   const feltMin = feltMinHeight(feltW, needs.opponents)
   const fixed = side ? PAD + headerH + 6 + PAD : PAD + headerH + 6 + 4 + dockH + PAD
   const available = h - fixed
@@ -391,7 +403,8 @@ function sceneAt(scale: number, view: Viewport, needs: SceneNeeds, sideW = 0): {
     felt: { x: feltX, y: feltY, w: feltW, h: feltH },
     dock: { x: dockX, y: dockY, w: dockW, h: side ? feltY + feltH - dockY : dockH },
     table: layoutFelt(feltW, feltH, needs.opponents),
-    dockPlan: planDock(dockW - 2 * DOCK.inset, needs),
+    dockPlan: planDock(dockInnerW, needs),
+    dockZoom,
     coarse: view.coarse,
     side,
   }
@@ -406,17 +419,22 @@ export function layoutScene(view: Viewport, needs: SceneNeeds): SceneLayout {
   const dpr = Math.max(1, view.dpr || 1)
   const kMax = Math.max(Math.round(dpr), Math.floor(MAX_SCALE * dpr))
   const wide = view.w >= view.h * 1.3
-  for (let k = kMax; k >= Math.round(dpr); k--) {
-    // Beside the table when the window is wide: height is what a wide window
-    // is short of, and a menu under the table spends it.
-    if (wide) {
-      for (const dockW of SIDE_DOCK_WIDTHS) {
-        const beside = sceneAt(k / dpr, view, needs, dockW)
-        if (beside.fits) return beside.layout
+  // Readable text first: a smaller table with a menu you can read beats a
+  // bigger one with a menu you squint at. Only a window too small for either
+  // gets the menu at the table's own size.
+  for (const zoom of [DOCK_ZOOM, 1]) {
+    for (let k = kMax; k >= Math.round(dpr); k--) {
+      // Beside the table when the window is wide: height is what a wide window
+      // is short of, and a menu under the table spends it.
+      if (wide) {
+        for (const dockW of SIDE_DOCK_WIDTHS) {
+          const beside = sceneAt(k / dpr, view, needs, dockW, zoom)
+          if (beside.fits) return beside.layout
+        }
       }
+      const attempt = sceneAt(k / dpr, view, needs, 0, zoom)
+      if (attempt.fits) return attempt.layout
     }
-    const attempt = sceneAt(k / dpr, view, needs)
-    if (attempt.fits) return attempt.layout
   }
   // Nothing fits even at one CSS pixel per art pixel: lay it out at that scale
   // and let the page scroll rather than draw things on top of each other.

@@ -65,3 +65,9 @@ behalf that you might want to revisit.
   - Facing an empty chair offers it ("Press Space or X to sit down"); Space or X takes it. Chairs that would wall the room off stay plain walkable tiles. *Decided:* only tables a dealer deals a game at offer a seat.
 - [x] Spacebar and arrows to bet.
   - ← → (or A D) move between Fold / Check / Call / Raise; ↑ ↓ (W S) step the raise through min, the pot fractions and all-in; Space, X, E or Enter does it. The pointer starts on check or call so a stray press is never a raise. Same keys at the poker night. A hint line under the buttons on a keyboard device.
+
+## Playtester notes (2026-10-29, phone)
+- [x] Mobile freezes on the corridor frame ("Do not run…"); fonts too small; make each player's action (check, raise…) obvious in all gameplay.
+  - **Freeze:** the corridor's thoughts only answered keys, so a phone could never turn them. A tap anywhere on the corridor now does (`CorridorWalk.tsx`).
+  - **Fonts:** the betting menu (buttons, odds, coaching lines) is drawn 1.5× the table's pixels (`dockZoom` in `tableLayout.ts`), and the layout prefers a slightly smaller table with a readable menu over the reverse. *Decided:* seat names/stacks and the header sign are unchanged for now — they sit in fixed-size plates; enlarging them means a bigger seat. Say if you want that next.
+  - **Actions:** each opponent's last action is a coloured banner over their portrait — CHECK / CALL (blue), BET (green), RAISE (orange), ALL IN (red), FOLD (grey). It lasts the street (a fold the hand). Same at the kitchen table and every cash table (`actionTag.ts`). *Decided:* no banner on your own seat; your action is already in the log line.

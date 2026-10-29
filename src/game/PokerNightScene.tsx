@@ -15,6 +15,7 @@ import { TABLE_THEMES } from './tableThemes'
 import { Panel, PxButton, PxLine } from './pixel/ui'
 import { PixelText } from './pixel/PixelText'
 import { INK } from './pixel/ink'
+import { useActionTags } from './actionTag'
 import { describeAction, LOG_LINES } from './actionLog'
 
 /**
@@ -91,6 +92,7 @@ export function PokerNightScene({ onWin, onLeave }: PokerNightSceneProps) {
 
   const table = tableRef.current
   const state = table.getState()
+  const { tags: actionTags, record: recordAction } = useActionTags(state.handNumber, state.street)
   const lastResult = table.getLastHandResult()
   const you = state.players.find((p) => p.id === 'you')!
   // The freezeout rule is "you win all the chips or you lose" — if you bust,
@@ -161,6 +163,7 @@ export function PokerNightScene({ onWin, onLeave }: PokerNightSceneProps) {
         const action = decideAiAction(ctx, defaultRng)
         playSound(action.type === 'fold' ? 'fold' : action.type === 'check' ? 'check' : 'chip')
         note(describeAction(actingPlayer.name, action, ctx))
+        recordAction(actingPlayer.id, action, ctx)
         table.submitAction(actingPlayer.id, action)
       }
       aiBusyRef.current = false
@@ -195,12 +198,14 @@ export function PokerNightScene({ onWin, onLeave }: PokerNightSceneProps) {
   const act = (type: 'fold' | 'check' | 'call') => {
     playSound(type === 'call' ? 'chip' : type)
     note(describeAction('You', { type }, { toCall, allInTo }))
+    recordAction('you', { type }, { toCall, allInTo })
     table.submitAction('you', { type })
     rerender()
   }
   const raiseTo = (to: number) => {
     playSound('chip')
     note(describeAction('You', { type: 'raise', to }, { toCall, allInTo }))
+    recordAction('you', { type: 'raise', to }, { toCall, allInTo })
     table.submitAction('you', { type: 'raise', to })
     rerender()
   }
@@ -266,7 +271,7 @@ export function PokerNightScene({ onWin, onLeave }: PokerNightSceneProps) {
   )
 
   const dock = (layout: SceneLayout) => {
-    const P = layout.scale
+    const P = layout.scale * layout.dockZoom
     const one = buttonHeight(1, P, layout.coarse)
     const plan = layout.dockPlan
     const row = { display: 'flex', flexWrap: 'wrap' as const, justifyContent: 'center', alignItems: 'center', gap: DOCK.gap * P }
@@ -436,7 +441,7 @@ export function PokerNightScene({ onWin, onLeave }: PokerNightSceneProps) {
         scale={P}
         testId="dock"
         style={{
-          minHeight: layout.dock.h * P,
+          minHeight: layout.dock.h * layout.scale,
           padding: 3 * P,
           display: 'flex',
           flexDirection: 'column',
@@ -457,6 +462,7 @@ export function PokerNightScene({ onWin, onLeave }: PokerNightSceneProps) {
         <PokerTableView
           blinds={levelFor(Math.max(1, state.handNumber))}
           showHeld={showHeld}
+          actionTags={actionTags}
           state={state}
           lastResult={lastResult}
           yourHole={yourHole}

@@ -21,6 +21,7 @@ import { useBetKeys, type BetStop } from './useBetKeys'
 import { PixelText } from './pixel/PixelText'
 import { INK } from './pixel/ink'
 import { chipTopUrl } from './pixel/chips'
+import { useActionTags } from './actionTag'
 import { describeAction, LOG_LINES } from './actionLog'
 
 export interface SessionResult {
@@ -199,6 +200,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
 
   const engine = tableRef.current
   const publicState = engine.getState()
+  const { tags: actionTags, record: recordAction } = useActionTags(publicState.handNumber, publicState.street)
   const lastResult = engine.getLastHandResult()
   const you = publicState.players.find((p) => p.id === 'you')!
   const youBusted = !publicState.handInProgress && you.stack <= 0
@@ -384,6 +386,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
         else if (action.type === 'check') say(actingPlayer.id, 'check')
         else if (action.type === 'fold') say(actingPlayer.id, 'fold')
         note(describeAction(actingPlayer.name, action, ctx))
+        recordAction(actingPlayer.id, action, ctx)
         engine.submitAction(actingPlayer.id, action)
       }
       aiBusyRef.current = false
@@ -512,12 +515,14 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
   const act = (type: 'fold' | 'check' | 'call') => {
     playSound(type === 'call' ? 'chip' : type)
     note(describeAction('You', { type }, { toCall, allInTo }))
+    recordAction('you', { type }, { toCall, allInTo })
     engine.submitAction('you', { type })
     rerender()
   }
   const raiseTo = (to: number) => {
     playSound('chip')
     note(describeAction('You', { type: 'raise', to }, { toCall, allInTo }))
+    recordAction('you', { type: 'raise', to }, { toCall, allInTo })
     engine.submitAction('you', { type: 'raise', to })
     rerender()
   }
@@ -595,7 +600,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
   const actingName = players.find((p) => p.id === publicState.actingPlayerId)?.name
 
   const dock = (layout: SceneLayout) => {
-    const P = layout.scale
+    const P = layout.scale * layout.dockZoom
     const one = buttonHeight(1, P, layout.coarse)
     const two = buttonHeight(2, P, layout.coarse)
     const plan = layout.dockPlan
@@ -840,7 +845,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
         scale={P}
         testId="dock"
         style={{
-          minHeight: layout.dock.h * P,
+          minHeight: layout.dock.h * layout.scale,
           padding: 3 * P,
           display: 'flex',
           flexDirection: 'column',
@@ -868,6 +873,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
           announcement={announcement}
           blinds={{ small: table.smallBlind, big: table.bigBlind }}
           showHeld={showHeld}
+          actionTags={actionTags}
           layout={layout}
           theme={theme}
         />

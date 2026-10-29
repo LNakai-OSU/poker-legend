@@ -18,6 +18,7 @@ import { INK, type Ink } from './pixel/ink'
 import { frameStyle } from './pixel/frame'
 import { panelFrames } from './pixel/themeFrames'
 import { chipStackUrl, dealerButtonUrl, tableMarkerUrl, DENOMINATIONS } from './pixel/chips'
+import { ACTION_WORD, type ActionKind } from './actionTag'
 import { fitWords, measureText, wrapText, LINE_HEIGHT } from './pixel/font'
 import { mix, shade } from './pixel/color'
 
@@ -46,6 +47,8 @@ interface PokerTableViewProps {
   announcement?: Announcement | null
   /** The stakes, written beside the pot so a change of blinds is on the felt. */
   blinds?: { small: number; big: number }
+  /** What each player did last this street, written over their portrait. */
+  actionTags?: Record<string, ActionKind>
   /** Turn a fold-win winner's cards face up, which the player asked to see. */
   showHeld?: boolean
   /** Where everything goes, and how big a pixel is. */
@@ -212,6 +215,15 @@ function Tag({ text, theme, P, ink = INK.dark, style }: { text: string; theme: T
   )
 }
 
+const ACTION_BG: Record<ActionKind, { bg: string; edge: string; lit: string }> = {
+  fold: { bg: '#5a5a6a', edge: '#2a2a36', lit: '#8a8a9a' },
+  check: { bg: '#2e6ec8', edge: '#14305f', lit: '#78aaf0' },
+  call: { bg: '#2e6ec8', edge: '#14305f', lit: '#78aaf0' },
+  bet: { bg: '#2f9a4a', edge: '#0f4020', lit: '#78d890' },
+  raise: { bg: '#d08418', edge: '#5a3408', lit: '#f8c868' },
+  allin: { bg: '#c82838', edge: '#6a1018', lit: '#f87080' },
+}
+
 const STACK_INK: Ink = { color: '#8a4c10', shadow: '#ecd8b0' }
 
 /** The widest a line of text under a seat may be, shadow included. */
@@ -278,6 +290,7 @@ export function PokerTableView({
   announcement,
   blinds,
   showHeld,
+  actionTags,
   layout,
   theme,
 }: PokerTableViewProps) {
@@ -368,6 +381,26 @@ export function PokerTableView({
                 )}
                 {position && (
                   <Tag text={position} theme={theme} P={P} style={{ position: 'absolute', left: 0, top: 0 }} />
+                )}
+                {!p.allIn && actionTags?.[p.id] && (
+                  <div
+                    data-testid={`action-${p.id}`}
+                    data-action={actionTags[p.id]}
+                    style={{
+                      position: 'absolute',
+                      left: 0,
+                      right: 0,
+                      bottom: 2 * P,
+                      height: 11 * P,
+                      background: ACTION_BG[actionTags[p.id]].bg,
+                      boxShadow: `0 ${P}px 0 ${ACTION_BG[actionTags[p.id]].edge}, 0 -${P}px 0 ${ACTION_BG[actionTags[p.id]].lit}`,
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <PixelText text={ACTION_WORD[actionTags[p.id]]} scale={P} ink={INK.light} />
+                  </div>
                 )}
                 {p.allIn && (
                   <div

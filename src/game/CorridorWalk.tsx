@@ -275,7 +275,7 @@ export function CorridorWalk({ lines, onDone }: { lines: ReelLine[]; onDone: () 
   const P = useCrispScale(VIEW_W, VIEW_H + 40, 5)
 
   return (
-    <div data-testid="corridor" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', height: '100%', paddingTop: 8 }}>
+    <div data-testid="corridor" onClick={press} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', height: '100%', paddingTop: 8 }}>
       <canvas
         ref={canvas}
         width={VIEW_W}
