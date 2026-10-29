@@ -380,7 +380,14 @@ function sceneAt(scale: number, view: Viewport, needs: SceneNeeds, sideW = 0, zo
   const dpr = Math.max(1, view.dpr || 1)
   const dockZoom = Math.round(scale * dpr * zoom) / Math.round(scale * dpr)
   const dockInnerW = dockW / dockZoom - 2 * DOCK.inset
-  const dockH = dockHeight(dockInnerW, scale * dockZoom, view.coarse, needs) * dockZoom
+  // The home game reserves as much menu as a casino does, so Marcus's table is
+  // scaled the same way as everywhere else instead of trading the menu for a
+  // bigger table.
+  const dockH =
+    Math.max(
+      dockHeight(dockInnerW, scale * dockZoom, view.coarse, needs),
+      dockHeight(dockInnerW, scale * dockZoom, view.coarse, { ...needs, kind: 'cash' }),
+    ) * dockZoom
   const feltMin = feltMinHeight(feltW, needs.opponents)
   const fixed = side ? PAD + headerH + 6 + PAD : PAD + headerH + 6 + 4 + dockH + PAD
   const available = h - fixed

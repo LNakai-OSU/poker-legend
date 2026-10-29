@@ -158,7 +158,8 @@ export function BoothPanel({
     const start = performance.now()
     const timer = window.setInterval(() => {
       const n = Math.min(line.text.length, Math.floor(((performance.now() - start) / 1000) * CPS))
-      setShown(n)
+      // Never shrink: a tap that completed the line must stick.
+      setShown((prev) => Math.max(prev, n))
       if (n >= line.text.length) window.clearInterval(timer)
     }, 40)
     return () => window.clearInterval(timer)

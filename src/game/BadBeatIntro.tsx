@@ -10,8 +10,7 @@ import { TABLE_THEMES } from './tableThemes'
 import type { Announcement } from './HandAnnouncer'
 import type { SceneLayout, SceneNeeds } from './tableLayout'
 import { DialogueBox } from './DialogueBox'
-import { useTouchFirst } from './device'
-import { Panel, PxLine } from './pixel/ui'
+import { BroadcastShot, type Shot } from './BroadcastShot'
 
 /**
  * The opening of the game: the final of the Legends Invitational, on the real
@@ -67,6 +66,14 @@ interface Frame {
   /** The broadcast, over the felt. */
   line: { who: string; text: string }
   announce?: Announcement
+  /** The close-up: who the camera is on, the banner, and the odds and actions on the side bars. */
+  shot: {
+    headline: string
+    focus: 'you' | 'contessa'
+    expression: Shot['expression']
+    odds: [number, number]
+    actions: [string, string]
+  }
   sound?: 'deal' | 'chip' | 'win' | 'lose'
 }
 
@@ -82,6 +89,7 @@ const FRAMES: Frame[] = [
     folded: ['nadia', 'gaines', 'bernard', 'zeke'],
     line: { who: 'Chip', text: 'Final table, six players left, and the short stack of the room has just picked up pocket aces!' },
     announce: { key: 'pre', text: 'Pocket aces', detail: 'Pot 21,000', tone: 'good' },
+    shot: { headline: 'POCKET ACES FOR THE SHORT STACK', focus: 'you', expression: 'stillness', odds: [82, 18], actions: ['RAISE', 'CALL'] },
     sound: 'deal',
   },
   {
@@ -93,6 +101,7 @@ const FRAMES: Frame[] = [
     folded: ['nadia', 'gaines', 'bernard', 'zeke'],
     line: { who: 'Dr. Anand', text: 'Nine, five, deuce, two of them diamonds. She has a king and a queen of diamonds. She has nine outs. That is nineteen percent.' },
     announce: { key: 'flop', text: 'Flop', detail: 'Pot 52,000', tone: 'neutral' },
+    shot: { headline: 'FLOP GIVES HER A FLUSH DRAW', focus: 'contessa', expression: 'thinking', odds: [81, 19], actions: ['BET', 'CALL'] },
     sound: 'deal',
   },
   {
@@ -104,6 +113,7 @@ const FRAMES: Frame[] = [
     folded: ['nadia', 'gaines', 'bernard', 'zeke'],
     line: { who: 'Chip', text: 'A jack of spades on the turn. Nothing! The aces are still best! She calls the bet!' },
     announce: { key: 'turn', text: 'Turn', detail: 'Pot 112,000', tone: 'neutral' },
+    shot: { headline: 'THE ACES HOLD ON THE TURN', focus: 'you', expression: 'neutral', odds: [80, 20], actions: ['RAISE', 'CALL'] },
     sound: 'chip',
   },
   {
@@ -115,6 +125,7 @@ const FRAMES: Frame[] = [
     folded: ['nadia', 'gaines', 'bernard', 'zeke'],
     line: { who: 'Dr. Anand', text: 'The river. The seven of diamonds. Oh no. Oh, I am so sorry. That is — that is a flush.' },
     announce: { key: 'river', text: 'River', detail: 'The seven of diamonds', tone: 'tense' },
+    shot: { headline: 'THE SEVEN OF DIAMONDS ON THE RIVER', focus: 'contessa', expression: 'glance', odds: [0, 100], actions: ['ALL IN', 'CALL'] },
     sound: 'deal',
   },
   {
@@ -127,6 +138,7 @@ const FRAMES: Frame[] = [
     showdown: true,
     line: { who: 'Chip', text: 'KING-QUEEN OF DIAMONDS! SHE HIT! The Contessa takes a hundred and sixty-five thousand off pocket aces! That is a bad beat for the books!' },
     announce: { key: 'beat', text: 'The Contessa wins', detail: 'A flush · 165,000', tone: 'bad' },
+    shot: { headline: 'A BAD BEAT FOR THE BOOKS', focus: 'contessa', expression: 'won', odds: [0, 100], actions: ['', 'WINNER'] },
     sound: 'lose',
   },
 ]
@@ -188,10 +200,8 @@ export function BadBeatIntro({ onDone }: { onDone: () => void }) {
   const [phase, setPhase] = useState<Phase>('hand')
   const [index, setIndex] = useState(0)
   const [dark, setDark] = useState(0)
-  const [lineAt, setLineAt] = useState(0)
   const [lightsAt, setLightsAt] = useState(0)
   const finished = useRef(false)
-  const touch = useTouchFirst()
   const frame = FRAMES[index]
 
   const done = () => {
@@ -213,7 +223,6 @@ export function BadBeatIntro({ onDone }: { onDone: () => void }) {
     // The hand moves on when the player says so, never by itself: a line of
     // the broadcast is read before the next card is dealt.
     if (frame.sound) playSound(frame.sound)
-    setLineAt(performance.now())
   }, [phase, index])
 
   // The blackout: steps of darkness over a couple of seconds, then the excuse.
@@ -251,9 +260,25 @@ export function BadBeatIntro({ onDone }: { onDone: () => void }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [phase, index])
 
+  const shot = useMemo<Shot>(() => {
+    const [youOdds, herOdds] = frame.shot.odds
+    const [youAct, herAct] = frame.shot.actions
+    return {
+      headline: frame.shot.headline,
+      focus: frame.shot.focus,
+      expression: frame.shot.expression,
+      seats: [
+        { who: 'you', hole: YOUR_HAND, odds: youOdds, action: youAct, stack: frame.stacks.you },
+        { who: 'contessa', hole: HER_HAND, odds: herOdds, action: herAct, stack: frame.stacks.contessa },
+      ],
+      board: BOARD.slice(0, frame.boardCount),
+      pot: frame.pot,
+      blinds: '1K / 2K',
+      commentary: `${frame.line.who}: ${frame.line.text}`,
+    }
+  }, [frame])
+  const onAir = phase === 'hand' || phase === 'dark'
   const { state, result } = useMemo(() => stateOf(frame, 1), [frame])
-
-  const lineOf = (line: Frame['line']) => `${line.who}: ${line.text}`
 
   return (
     <div
@@ -263,7 +288,8 @@ export function BadBeatIntro({ onDone }: { onDone: () => void }) {
       style={{ position: 'fixed', inset: 0, zIndex: 97, background: '#05040a', animation: 'fade-in 420ms ease-out both' }}
       onClick={() => phase === 'hand' && nextFrame()}
     >
-      <TableStage
+      {onAir && <BroadcastShot shot={shot} />}
+      {!onAir && <TableStage
         theme={THEME}
         needs={NEEDS}
         felt={(layout) => (
@@ -272,7 +298,7 @@ export function BadBeatIntro({ onDone }: { onDone: () => void }) {
               state={state}
               lastResult={result}
               yourHole={phase === 'walk' ? [] : YOUR_HAND}
-              announcement={phase === 'hand' ? frame.announce : null}
+              announcement={null}
               blinds={{ small: 1000, big: 2000 }}
               layout={layout}
               theme={THEME}
@@ -280,30 +306,8 @@ export function BadBeatIntro({ onDone }: { onDone: () => void }) {
             {phase === 'walk' && <WalkOff layout={layout} />}
           </div>
         )}
-        dock={(layout) => (
-          <Panel
-            theme={THEME}
-            scale={layout.scale}
-            testId="dock"
-            style={{ minHeight: layout.dock.h * layout.scale, padding: 3 * layout.scale, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 3 * layout.scale }}
-          >
-            {phase === 'hand' && (
-              <PxLine
-                key={`${index}-${lineAt}`}
-                scale={layout.scale * 2}
-                wrap
-                align="center"
-                ink={{ color: '#2a5a9a', shadow: '#c8d8f0' }}
-                testId="broadcast-line"
-                text={lineOf(frame.line)}
-              />
-            )}
-            {phase === 'hand' && (
-              <PxLine scale={layout.scale} align="center" ink={{ color: '#8a8a98', shadow: '#dcdce4' }} testId="intro-prompt" text={touch ? 'tap ▸' : 'space ▸'} />
-            )}
-          </Panel>
-        )}
-      />
+        dock={() => null}
+      />}
       {/* The rig failing: a black sheet that flickers up, with a red emergency strip along the floor. */}
       <div
         aria-hidden="true"

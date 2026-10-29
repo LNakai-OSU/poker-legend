@@ -28,6 +28,16 @@ export async function enterFullscreen(): Promise<void> {
   }
 }
 
+export async function exitFullscreen(): Promise<void> {
+  const d = document as FsDoc
+  try {
+    if (d.exitFullscreen) await d.exitFullscreen()
+    else d.webkitExitFullscreen?.()
+  } catch {
+    // Already out.
+  }
+}
+
 function useFullscreen(): boolean {
   const [full, setFull] = useState(() => isFull() || standalone())
   useEffect(() => {
@@ -76,15 +86,16 @@ export function FullscreenControls() {
   const can = canFullscreen()
 
   // Automated browsers drive the game as they find it: no overlay between them and the page.
-  if (!touch || navigator.webdriver) return null
+  if (navigator.webdriver) return null
 
   return (
     <>
-      {can && !full && !portrait && (
+      {can && (!touch || (!full && !portrait)) && (
         <button
           data-testid="fullscreen-button"
-          aria-label="Full screen"
-          onClick={() => void enterFullscreen()}
+          aria-label={full ? 'Exit full screen' : 'Full screen'}
+          title={full ? 'Exit full screen' : 'Full screen'}
+          onClick={() => void (isFull() ? exitFullscreen() : enterFullscreen())}
           style={{
             position: 'fixed',
             top: 'max(12px, env(safe-area-inset-top))',
@@ -101,10 +112,10 @@ export function FullscreenControls() {
             cursor: 'pointer',
           }}
         >
-          ⛶
+          {full && !touch ? '✕' : '⛶'}
         </button>
       )}
-      {portrait && (
+      {touch && portrait && (
         <div
           data-testid="rotate-prompt"
           style={{
