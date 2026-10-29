@@ -104,7 +104,8 @@ describe('the scene at a given window', () => {
         expect(Math.abs(device - Math.round(device)), `${name}: ${scene.scale}`).toBeLessThan(1e-9)
         expect(scene.h * scene.scale, `${name} with ${opponents} opponents`).toBeLessThanOrEqual(h)
         expect(scene.felt.x + scene.felt.w).toBeLessThanOrEqual(scene.w)
-        expect(scene.dock.y).toBeGreaterThanOrEqual(scene.felt.y + scene.felt.h)
+        if (scene.side) expect(scene.dock.x).toBeGreaterThanOrEqual(scene.felt.x + scene.felt.w)
+        else expect(scene.dock.y).toBeGreaterThanOrEqual(scene.felt.y + scene.felt.h)
       }
     }
   })

@@ -34,10 +34,16 @@ export const SEAT = {
 export const SEAT_H = SEAT.panelH + SEAT.gap + SEAT.tellH + SEAT.gap + SEAT.cardsH + SEAT.gap + SEAT.betH
 
 /** Your seat: a plate with your stack, and the row your bet goes in above it. */
-export const HERO = { plateH: 28, cardsW: 46, cardsH: 30, gap: 4 } as const
+/**
+ * Your cards and the board are drawn at CARD_ZOOM times the card art, so they
+ * can be read across a room: on a phone the old 22 by 30 cards were a few
+ * millimetres wide.
+ */
+export const CARD_ZOOM = 1.5
+export const HERO = { plateH: 28, cardsW: 69, cardsH: 45, gap: 4 } as const
 export const HERO_H = SEAT.betH + SEAT.gap + HERO.plateH
 
-export const BOARD = { cardW: 22, cardH: 30, gap: 2 } as const
+export const BOARD = { cardW: 33, cardH: 45, gap: 3 } as const
 export const BOARD_W = 5 * BOARD.cardW + 4 * BOARD.gap
 /** The line over the board: the pot, or whatever is being announced. */
 export const BAND = { w: 132, h: 26 } as const
@@ -49,7 +55,7 @@ const TOP_Y = 3
 
 const TEMPLATES: Record<number, { top: number[]; sides: boolean }> = {
   1: { top: [0.5], sides: false },
-  2: { top: [0.27, 0.73], sides: false },
+  2: { top: [0.2, 0.8], sides: false },
   3: { top: [0.5], sides: true },
   4: { top: [0.37, 0.63], sides: true },
   5: { top: [0.29, 0.5, 0.71], sides: true },
@@ -319,19 +325,31 @@ export interface SceneLayout {
   table: FeltLayout
   dockPlan: DockPlan
   coarse: boolean
+  /** The betting menu stands to the right of the table instead of under it. */
+  side: boolean
 }
 
 const PAD = 4
 const FELT_MAX_W = 440
+const MAX_SCALE = 4
 /** The menu and sound buttons sit in the top right corner, in CSS pixels. */
 const CORNER_BUTTONS_CSS = 112
 const HEADER_FRAME = 4
+/** The betting menu beside the table, on a window wider than it is tall. */
+const SIDE_DOCK_WIDTHS = [150, 190, 230]
+const SIDE_GAP = 4
+/** How far down the corner buttons reach, in CSS pixels. */
+const CORNER_CLEAR_CSS = 60
+const MIN_FELT_W = 250
 
-function sceneAt(scale: number, view: Viewport, needs: SceneNeeds): { layout: SceneLayout; fits: boolean } {
+function sceneAt(scale: number, view: Viewport, needs: SceneNeeds, sideW = 0): { layout: SceneLayout; fits: boolean } {
+  const side = sideW > 0
   const w = Math.floor(view.w / scale)
   const h = Math.floor(view.h / scale)
-  const feltW = Math.min(w - 2 * PAD, FELT_MAX_W)
-  const feltX = Math.floor((w - feltW) / 2)
+  const dockColW = sideW
+  const feltW = Math.min(w - 2 * PAD - (side ? dockColW + SIDE_GAP : 0), FELT_MAX_W)
+  const blockW = feltW + (side ? dockColW + SIDE_GAP : 0)
+  const feltX = Math.floor((w - blockW) / 2)
 
   const signRoom = w - 2 * PAD - Math.ceil(CORNER_BUTTONS_CSS / scale)
   const oneLine = measureText(`${needs.title}   ${needs.subtitle}`) + 2 * HEADER_FRAME + 6 <= signRoom
@@ -346,32 +364,36 @@ function sceneAt(scale: number, view: Viewport, needs: SceneNeeds): { layout: Sc
       6,
   )
 
-  const dockW = feltW
+  const dockW = side ? dockColW : feltW
   const dockH = dockHeight(dockW - 2 * DOCK.inset, scale, view.coarse, needs)
   const feltMin = feltMinHeight(feltW, needs.opponents)
-  const fixed = PAD + headerH + 6 + 4 + dockH + PAD
+  const fixed = side ? PAD + headerH + 6 + PAD : PAD + headerH + 6 + 4 + dockH + PAD
   const available = h - fixed
-  const fits = available >= feltMin
+  const fits = available >= feltMin && (!side || dockH <= available - Math.max(0, Math.ceil(CORNER_CLEAR_CSS / scale) - (PAD + headerH + 6))) && feltW >= MIN_FELT_W
 
   // Spare height goes first to the table, a little, and the rest to the room
   // above it: the wall behind the table is where each venue looks like itself.
   const comfortable = Math.max(feltMin, Math.min(feltMin + 8, Math.round(feltW * 0.72)))
-  const feltH = Math.max(feltMin, Math.min(available, comfortable))
+  // Beside the table there is no menu to make room for: it takes the height.
+  const feltH = side ? Math.max(feltMin, available) : Math.max(feltMin, Math.min(available, comfortable))
   const spare = Math.max(0, available - feltH)
   const feltY = PAD + headerH + 6 + spare
-  const dockY = feltY + feltH + 4
+  // Beside the table the menu starts under the menu and sound buttons in the corner.
+  const dockY = side ? Math.max(feltY, Math.ceil(CORNER_CLEAR_CSS / scale)) : feltY + feltH + 4
+  const dockX = side ? feltX + feltW + SIDE_GAP : feltX
 
   const layout: SceneLayout = {
     scale,
     w,
-    h: Math.max(h, dockY + dockH + PAD),
+    h: Math.max(h, side ? feltY + feltH + PAD : dockY + dockH + PAD),
     header: { x: PAD, y: PAD, w: headerW, h: headerH },
     headerLines,
     felt: { x: feltX, y: feltY, w: feltW, h: feltH },
-    dock: { x: feltX, y: dockY, w: dockW, h: dockH },
+    dock: { x: dockX, y: dockY, w: dockW, h: side ? feltY + feltH - dockY : dockH },
     table: layoutFelt(feltW, feltH, needs.opponents),
     dockPlan: planDock(dockW - 2 * DOCK.inset, needs),
     coarse: view.coarse,
+    side,
   }
   return { layout, fits }
 }
@@ -382,9 +404,17 @@ function sceneAt(scale: number, view: Viewport, needs: SceneNeeds): { layout: Sc
  */
 export function layoutScene(view: Viewport, needs: SceneNeeds): SceneLayout {
   const dpr = Math.max(1, view.dpr || 1)
-  const ceiling = Math.min(view.w / 250, view.h / 280, 4)
-  const kMax = Math.max(Math.round(dpr), Math.floor(ceiling * dpr))
+  const kMax = Math.max(Math.round(dpr), Math.floor(MAX_SCALE * dpr))
+  const wide = view.w >= view.h * 1.3
   for (let k = kMax; k >= Math.round(dpr); k--) {
+    // Beside the table when the window is wide: height is what a wide window
+    // is short of, and a menu under the table spends it.
+    if (wide) {
+      for (const dockW of SIDE_DOCK_WIDTHS) {
+        const beside = sceneAt(k / dpr, view, needs, dockW)
+        if (beside.fits) return beside.layout
+      }
+    }
     const attempt = sceneAt(k / dpr, view, needs)
     if (attempt.fits) return attempt.layout
   }

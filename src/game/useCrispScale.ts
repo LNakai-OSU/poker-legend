@@ -16,7 +16,7 @@ export function snap(css: number, dpr = window.devicePixelRatio || 1): number {
 }
 
 /** The scale at which `artW` by `artH` fits the window, on whole device pixels, at most `max` CSS pixels per art pixel. */
-export function useCrispScale(artW: number, artH: number, max = 6, min = 2): number {
+export function useCrispScale(artW: number, artH: number, max = 6, min = 1): number {
   const read = () => {
     const dpr = window.devicePixelRatio || 1
     return snap(Math.max(min, Math.min(window.innerWidth / artW, window.innerHeight / artH, max)), dpr)

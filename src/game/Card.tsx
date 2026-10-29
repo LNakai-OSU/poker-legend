@@ -1,4 +1,5 @@
 import type { Card as CardData } from '../engine/types'
+import { snap } from './useCrispScale'
 import { CARD_ART, cardBackUrl, cardFaceUrl, slotUrl, type CardBack } from './pixel/cards'
 
 const RANK_LABEL: Record<number, string> = { 11: 'J', 12: 'Q', 13: 'K', 14: 'A' }
@@ -16,6 +17,8 @@ interface CardProps {
   faceDown?: boolean
   /** An undealt community-card slot, drawn as an empty space on the felt. */
   placeholder?: boolean
+  /** Draw the card this many times larger than the scene's pixel size (whole device pixels). */
+  zoom?: number
   /** Opponent hole cards on the felt, where space is tight. */
   small?: boolean
   /** 'deal' slides in from the deck, 'flip' turns face-up at showdown. */
@@ -37,7 +40,8 @@ interface CardProps {
  * printed back. Every card carries `data-card` — the card itself, or "back" —
  * so a test can find a card without knowing how it happens to be drawn.
  */
-export function Card({ card, faceDown, placeholder, anim, delayMs = 0, small, scale, back, felt }: CardProps) {
+export function Card({ card, faceDown, placeholder, anim, delayMs = 0, small, zoom = 1, scale: sceneScale, back, felt }: CardProps) {
+  const scale = zoom === 1 ? sceneScale : snap(sceneScale * zoom)
   const size = small ? 'small' : 'big'
   const { w, h } = CARD_ART[size]
   const style = {

@@ -9,7 +9,7 @@ import { portraitBackdropUrl, portraitUrl, PORTRAIT_SIZE } from './portraits'
 import { personalityFor } from '../world/characters'
 import { tellCue } from './tellFlavor'
 import { HandAnnouncer, type Announcement } from './HandAnnouncer'
-import { BOARD, HERO, SEAT, SEAT_H, type Rect, type SceneLayout } from './tableLayout'
+import { BOARD, CARD_ZOOM, HERO, SEAT, SEAT_H, type Rect, type SceneLayout } from './tableLayout'
 import type { TableTheme } from './tableThemes'
 import { paintTable } from './pixel/tableArt'
 import { Panel } from './pixel/ui'
@@ -493,10 +493,10 @@ export function PokerTableView({
 
       <div data-testid="board" style={{ ...at(t.board, P), display: 'flex', gap: BOARD.gap * P }}>
         {state.board.map((c, i) => (
-          <Card key={`${state.handNumber}-${i}`} card={c} anim="deal" delayMs={i * 70} scale={P} back={back} felt={felt} />
+          <Card key={`${state.handNumber}-${i}`} card={c} anim="deal" delayMs={i * 70} scale={P} zoom={CARD_ZOOM} back={back} felt={felt} />
         ))}
         {Array.from({ length: 5 - state.board.length }).map((_, i) => (
-          <Card key={`hidden-${i}`} placeholder scale={P} back={back} felt={felt} />
+          <Card key={`hidden-${i}`} placeholder scale={P} zoom={CARD_ZOOM} back={back} felt={felt} />
         ))}
       </div>
 
@@ -532,9 +532,9 @@ export function PokerTableView({
           )}
         </div>
       )}
-      <div data-testid="hero-cards" style={{ ...at(t.heroCards, P), display: 'flex', gap: 2 * P }}>
+      <div data-testid="hero-cards" style={{ ...at(t.heroCards, P), display: 'flex', gap: BOARD.gap * P }}>
         {yourHole.map((c, i) => (
-          <Card key={`${state.handNumber}-${i}`} card={c} anim="deal" delayMs={i * 70} scale={P} back={back} felt={felt} />
+          <Card key={`${state.handNumber}-${i}`} card={c} anim="deal" delayMs={i * 70} scale={P} zoom={CARD_ZOOM} back={back} felt={felt} />
         ))}
       </div>
 
@@ -593,7 +593,9 @@ function SpeechBubble({ seat, text, playerId, layout }: { seat: Rect; text: stri
   let x = Math.round(Math.min(maxX, Math.max(minX, centre - w / 2)))
   const y = seat.y - h - 3
   const rect = { x, y, w, h }
-  const column = { x: t.band.x, y: t.band.y, w: t.band.w, h: t.board.y + t.board.h - t.band.y }
+  // The board is wider than the band over it, so the column is the wider of the two.
+  const colX = Math.min(t.band.x, t.board.x)
+  const column = { x: colX, y: t.band.y, w: Math.max(t.band.x + t.band.w, t.board.x + t.board.w) - colX, h: t.board.y + t.board.h - t.band.y }
   if (rect.x < column.x + column.w && column.x < rect.x + rect.w && rect.y < column.y + column.h && column.y < rect.y + rect.h) {
     x = centre < t.w / 2 ? Math.min(x, column.x - w - 2) : Math.max(x, column.x + column.w + 2)
   }

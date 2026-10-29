@@ -18,6 +18,7 @@ import { TouchControls, useIsTouchDevice } from './TouchControls'
 import { cameraOffset } from './camera'
 import type { Edge } from '../world/types'
 import { Minimap } from './Minimap'
+import { snap } from '../game/useCrispScale'
 import { pathBeside, pathTo, type Tile } from './paths'
 
 const MOVE_KEYS: Record<string, Direction> = {
@@ -39,14 +40,16 @@ const MAX_BUFFERED_TAPS = 2
 const WORLD_ZOOM = 2
 
 /**
- * Below this width the world is drawn at half the zoom.
+ * How much of the street the screen should hold, in tiles: at least this many
+ * down and across, however small the window.
  *
- * At 2x on a phone the viewport holds about ten tiles, which on a 24-wide street
- * meant the screen contained the player and some empty pavement — no shopfront, no
- * person, nothing to walk towards. An overworld you cannot navigate is the whole
- * premise of the game gone on the form factor it is meant for.
+ * At a flat 2x a phone held sideways (390 CSS pixels tall) showed six tiles
+ * from top to bottom — the player, and a doorway at best. The zoom now comes
+ * from the window's height as well as its width, rounded down to whole device
+ * pixels so the art stays crisp, and never above WORLD_ZOOM.
  */
-const NARROW_SCREEN_PX = 560
+const TILES_DOWN = 8
+const TILES_ACROSS = 10
 
 /**
  * Where the player last stood, for a scene that is built again around them.
@@ -70,8 +73,9 @@ function standingFor(owner: object, area: string, start: { col: number; row: num
 /** The prompt for a chair in front of you, which no person's name can equal. */
 const SIT_PROMPT = { verb: 'sit', name: '' }
 
-function zoomFor(width: number): number {
-  return width < NARROW_SCREEN_PX ? WORLD_ZOOM / 2 : WORLD_ZOOM
+function zoomFor(width: number, height: number): number {
+  const fit = Math.min(height / (TILES_DOWN * TILE_SIZE), width / (TILES_ACROSS * TILE_SIZE))
+  return snap(Math.min(WORLD_ZOOM, Math.max(1, fit)))
 }
 
 export interface Interactable extends NpcConfig {
@@ -311,7 +315,7 @@ export function OverworldScene({
       container.appendChild(instance.canvas)
 
       // Fixed for the life of the scene; a rotation remounts it.
-      const zoom = zoomFor(instance.screen.width)
+      const zoom = zoomFor(instance.screen.width, instance.screen.height)
       const world = buildTileLayer(map, theme)
       // Objects over the tiles, under everybody who walks about on them, and
       // what of them glows after dark.

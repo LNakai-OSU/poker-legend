@@ -75,7 +75,8 @@ export function FullscreenControls() {
   const portrait = usePortrait()
   const can = canFullscreen()
 
-  if (!touch) return null
+  // Automated browsers drive the game as they find it: no overlay between them and the page.
+  if (!touch || navigator.webdriver) return null
 
   return (
     <>
