@@ -71,3 +71,9 @@ behalf that you might want to revisit.
   - **Freeze:** the corridor's thoughts only answered keys, so a phone could never turn them. A tap anywhere on the corridor now does (`CorridorWalk.tsx`).
   - **Fonts:** the betting menu (buttons, odds, coaching lines) is drawn 1.5× the table's pixels (`dockZoom` in `tableLayout.ts`), and the layout prefers a slightly smaller table with a readable menu over the reverse. *Decided:* seat names/stacks and the header sign are unchanged for now — they sit in fixed-size plates; enlarging them means a bigger seat. Say if you want that next.
   - **Actions:** each opponent's last action is a coloured banner over their portrait — CHECK / CALL (blue), BET (green), RAISE (orange), ALL IN (red), FOLD (grey). It lasts the street (a fold the hand). Same at the kitchen table and every cash table (`actionTag.ts`). *Decided:* no banner on your own seat; your action is already in the log line.
+
+## Playtester notes (2026-10-29, phone, round 2)
+- [x] Larger seat names, stacks and header sign; move player descriptions into a box shown on click; much bigger table cards (like the GG Poker reference).
+  - **Text:** names, stacks, your plate and the header sign are drawn 1.5× (`TEXT_ZOOM`); seat plates widened to 64 and a stack too long for the plate falls back to normal size.
+  - **Descriptions:** gone from under the seats; tap an opponent to open a box with their name and description, tap it (or the seat) again to close (`info-<id>`). Tells and showdown hands still show under the seat.
+  - **Cards:** board and your hole cards are now 2× the card art (44×60, were 33×45). *Decided:* on a short phone the whole table scales down a step to fit them; the layout now weighs menu text size against table size (`score` in `layoutScene`) rather than always preferring either.

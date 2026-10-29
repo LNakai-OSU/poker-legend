@@ -21,10 +21,10 @@ export type { Rect }
 
 /** An opponent's seat: plate with portrait, a line for tells, cards, a bet. */
 export const SEAT = {
-  w: 56,
+  w: 64,
   frame: 3,
   portrait: 48,
-  panelH: 76,
+  panelH: 83,
   /** Three lines: room for a tell, or most of the line a regular introduces themselves with. */
   tellH: 30,
   cardsH: 20,
@@ -39,11 +39,13 @@ export const SEAT_H = SEAT.panelH + SEAT.gap + SEAT.tellH + SEAT.gap + SEAT.card
  * can be read across a room: on a phone the old 22 by 30 cards were a few
  * millimetres wide.
  */
-export const CARD_ZOOM = 1.5
-export const HERO = { plateH: 28, cardsW: 69, cardsH: 45, gap: 4 } as const
+export const CARD_ZOOM = 2
+/** Names, stacks and the sign are set this much bigger than the table's other text. */
+export const TEXT_ZOOM = 1.5
+export const HERO = { plateH: 43, cardsW: 92, cardsH: 60, gap: 4 } as const
 export const HERO_H = SEAT.betH + SEAT.gap + HERO.plateH
 
-export const BOARD = { cardW: 33, cardH: 45, gap: 3 } as const
+export const BOARD = { cardW: 44, cardH: 60, gap: 3 } as const
 export const BOARD_W = 5 * BOARD.cardW + 4 * BOARD.gap
 /** The line over the board: the pot, or whatever is being announced. */
 export const BAND = { w: 132, h: 26 } as const
@@ -360,14 +362,15 @@ function sceneAt(scale: number, view: Viewport, needs: SceneNeeds, sideW = 0, zo
   const feltX = Math.floor((w - blockW) / 2)
 
   const signRoom = w - 2 * PAD - Math.ceil(CORNER_BUTTONS_CSS / scale)
-  const oneLine = measureText(`${needs.title}   ${needs.subtitle}`) + 2 * HEADER_FRAME + 6 <= signRoom
+  const oneLine = measureText(`${needs.title}   ${needs.subtitle}`) * TEXT_ZOOM + 2 * HEADER_FRAME + 6 <= signRoom
   const headerLines = oneLine ? 1 : 2
-  const headerH = headerLines * LINE_HEIGHT + 2 * HEADER_FRAME
+  const headerH = headerLines * LINE_HEIGHT * TEXT_ZOOM + 2 * HEADER_FRAME
   const headerW = Math.min(
     signRoom,
     (oneLine
       ? measureText(`${needs.title}   ${needs.subtitle}`)
-      : Math.max(measureText(needs.title), measureText(needs.subtitle))) +
+      : Math.max(measureText(needs.title), measureText(needs.subtitle))) *
+      TEXT_ZOOM +
       2 * HEADER_FRAME +
       6,
   )
@@ -419,23 +422,22 @@ export function layoutScene(view: Viewport, needs: SceneNeeds): SceneLayout {
   const dpr = Math.max(1, view.dpr || 1)
   const kMax = Math.max(Math.round(dpr), Math.floor(MAX_SCALE * dpr))
   const wide = view.w >= view.h * 1.3
-  // Readable text first: a smaller table with a menu you can read beats a
-  // bigger one with a menu you squint at. Only a window too small for either
-  // gets the menu at the table's own size.
-  for (const zoom of [DOCK_ZOOM, 1]) {
-    for (let k = kMax; k >= Math.round(dpr); k--) {
+  // Readable text first, but not at any price: a menu drawn bigger is worth a
+  // smaller table, up to a point (see `score`), and a window that only fits
+  // the table at one pixel to the art pixel is better served by a plain menu.
+  let best: { layout: SceneLayout; score: number } | null = null
+  for (let k = kMax; k >= Math.round(dpr); k--) {
+    for (const zoom of [DOCK_ZOOM, 1]) {
       // Beside the table when the window is wide: height is what a wide window
       // is short of, and a menu under the table spends it.
-      if (wide) {
-        for (const dockW of SIDE_DOCK_WIDTHS) {
-          const beside = sceneAt(k / dpr, view, needs, dockW, zoom)
-          if (beside.fits) return beside.layout
-        }
-      }
-      const attempt = sceneAt(k / dpr, view, needs, 0, zoom)
-      if (attempt.fits) return attempt.layout
+      const tries = wide ? [...SIDE_DOCK_WIDTHS.map((w) => sceneAt(k / dpr, view, needs, w, zoom)), sceneAt(k / dpr, view, needs, 0, zoom)] : [sceneAt(k / dpr, view, needs, 0, zoom)]
+      const found = tries.find((t) => t.fits)
+      if (!found) continue
+      const score = k * found.layout.dockZoom + 0.25 * k
+      if (!best || score > best.score) best = { layout: found.layout, score }
     }
   }
+  if (best) return best.layout
   // Nothing fits even at one CSS pixel per art pixel: lay it out at that scale
   // and let the page scroll rather than draw things on top of each other.
   return sceneAt(1, view, needs).layout

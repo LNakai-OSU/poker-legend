@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, type ReactNode } from 'react'
-import { layoutScene, type SceneLayout, type SceneNeeds } from './tableLayout'
+import { TEXT_ZOOM, layoutScene, type SceneLayout, type SceneNeeds } from './tableLayout'
 import type { TableTheme } from './tableThemes'
 import { paintRoom } from './pixel/rooms'
 import { Panel } from './pixel/ui'
@@ -115,8 +115,8 @@ export function TableStage({ theme, needs, felt, dock }: TableStageProps) {
           justifyContent: 'center',
         }}
       >
-        <PixelText text={titleLine} scale={P} ink={INK.dark} />
-        {layout.headerLines === 2 && <PixelText text={needs.subtitle} scale={P} ink={INK.dark} />}
+        <PixelText text={titleLine} scale={P * TEXT_ZOOM} ink={INK.dark} />
+        {layout.headerLines === 2 && <PixelText text={needs.subtitle} scale={P * TEXT_ZOOM} ink={INK.dark} />}
       </Panel>
 
       <div

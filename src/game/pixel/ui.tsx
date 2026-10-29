@@ -106,9 +106,11 @@ export function Panel({
   children,
   testId,
   className,
+  onClick,
 }: {
   theme: TableTheme
   scale: number
+  onClick?: () => void
   kind?: 'panel' | 'acting' | 'tag'
   style?: CSSProperties
   children?: ReactNode
@@ -116,7 +118,7 @@ export function Panel({
   className?: string
 }) {
   return (
-    <div data-testid={testId} className={className} style={{ ...frameStyle(panelFrames(theme)[kind], scale), ...style }}>
+    <div data-testid={testId} className={className} onClick={onClick} style={{ ...frameStyle(panelFrames(theme)[kind], scale), ...style }}>
       {children}
     </div>
   )

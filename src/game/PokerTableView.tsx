@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useEffect, type CSSProperties } from 'react'
+import { useCallback, useMemo, useRef, useEffect, useState, type CSSProperties } from 'react'
 import type { HandResult, PublicState } from '../engine/table'
 import { bestHand, HAND_CATEGORY_NAMES } from '../engine/handRank'
 import type { Card as CardData, PlayerConfig } from '../engine/types'
@@ -9,7 +9,7 @@ import { portraitBackdropUrl, portraitUrl, PORTRAIT_SIZE } from './portraits'
 import { personalityFor } from '../world/characters'
 import { tellCue } from './tellFlavor'
 import { HandAnnouncer, type Announcement } from './HandAnnouncer'
-import { BOARD, CARD_ZOOM, HERO, SEAT, SEAT_H, type Rect, type SceneLayout } from './tableLayout'
+import { BOARD, CARD_ZOOM, HERO, SEAT, SEAT_H, TEXT_ZOOM, type Rect, type SceneLayout } from './tableLayout'
 import type { TableTheme } from './tableThemes'
 import { paintTable } from './pixel/tableArt'
 import { Panel } from './pixel/ui'
@@ -20,7 +20,6 @@ import { panelFrames } from './pixel/themeFrames'
 import { chipStackUrl, dealerButtonUrl, tableMarkerUrl, DENOMINATIONS } from './pixel/chips'
 import { ACTION_WORD, type ActionKind } from './actionTag'
 import { fitWords, measureText, wrapText, LINE_HEIGHT } from './pixel/font'
-import { mix, shade } from './pixel/color'
 
 export interface TableInsights {
   /** Unlocked by the mentor's position lesson. */
@@ -235,8 +234,13 @@ const SEAT_LINE = SEAT.w - 1
  * is hers either way.
  */
 function plateName(name: string): string {
-  const room = SEAT.w - 2 * SEAT.frame - 1
+  const room = (SEAT.w - 2 * SEAT.frame - 1) / TEXT_ZOOM
   return measureText(name) <= room ? name : name.split(' ')[0]
+}
+
+/** The zoom a plate line is drawn at: the big one, unless the text would not fit in it. */
+function plateZoom(text: string): number {
+  return measureText(text) * TEXT_ZOOM <= SEAT.w - 2 * SEAT.frame ? TEXT_ZOOM : 1
 }
 
 /** Who posts which blind this hand: the two seats after the button (the button itself heads-up). */
@@ -306,9 +310,8 @@ export function PokerTableView({
   const back = theme.cardBack
   const felt = theme.table.felt
 
-  const flavourInk: Ink = theme.table.shape === 'kitchen'
-    ? { color: '#4a2c14', shadow: mix(theme.table.felt, '#ffffff', 0.25) }
-    : { color: mix(theme.table.felt, '#ffffff', 0.62), shadow: shade(theme.table.felt, 0.45) }
+  const [inspected, setInspected] = useState<string | null>(null)
+  const inspectedSeat = inspected ? opponents.findIndex((o) => o.id === inspected) : -1
 
   return (
     <div data-testid="felt" style={{ position: 'relative', width: t.w * P, height: t.h * P }}>
@@ -342,7 +345,9 @@ export function PokerTableView({
           <div
             key={p.id}
             data-testid={`seat-${p.id}`}
+            onClick={() => setInspected((now) => (now === p.id ? null : p.id))}
             style={{
+              cursor: 'pointer',
               ...at({ x: rect.x, y: rect.y, w: SEAT.w, h: SEAT_H }, P),
               // No z-index, isolation or opacity here on purpose: each of them
               // makes the seat its own stacking context, and that once let a
@@ -360,7 +365,7 @@ export function PokerTableView({
             >
               <div
                 style={{
-                  ...at({ x: 1, y: 1, w: PORTRAIT_SIZE, h: PORTRAIT_SIZE }, P),
+                  ...at({ x: (SEAT.w - 2 * SEAT.frame - PORTRAIT_SIZE) / 2, y: 1, w: PORTRAIT_SIZE, h: PORTRAIT_SIZE }, P),
                   backgroundImage: `url(${portraitBackdropUrl(theme.ui.portraitBg)})`,
                   backgroundSize: '100% 100%',
                   imageRendering: 'pixelated',
@@ -421,15 +426,15 @@ export function PokerTableView({
                   </div>
                 )}
               </div>
-              <div style={{ ...at({ x: 0, y: 50, w: SEAT.w - 2 * SEAT.frame, h: LINE_HEIGHT }, P), display: 'flex', justifyContent: 'center', overflow: 'hidden' }}>
-                <PixelText text={plateName(p.name)} scale={P} ink={INK.dark} />
+              <div style={{ ...at({ x: 0, y: 50, w: SEAT.w - 2 * SEAT.frame, h: LINE_HEIGHT * TEXT_ZOOM }, P), display: 'flex', justifyContent: 'center', overflow: 'hidden' }}>
+                <PixelText text={plateName(p.name)} scale={P * TEXT_ZOOM} ink={INK.dark} />
               </div>
               <div
                 data-testid={`stack-${p.id}`}
                 data-stack={p.stack}
-                style={{ ...at({ x: 0, y: 60, w: SEAT.w - 2 * SEAT.frame, h: LINE_HEIGHT }, P), display: 'flex', justifyContent: 'center' }}
+                style={{ ...at({ x: 0, y: 50 + LINE_HEIGHT * TEXT_ZOOM, w: SEAT.w - 2 * SEAT.frame, h: LINE_HEIGHT * TEXT_ZOOM }, P), display: 'flex', justifyContent: 'center' }}
               >
-                <PixelText text={p.stack.toLocaleString()} scale={P} ink={STACK_INK} />
+                <PixelText text={p.stack.toLocaleString()} scale={P * plateZoom(p.stack.toLocaleString())} ink={STACK_INK} />
               </div>
             </Panel>
             {winners.has(p.id) && (
@@ -454,11 +459,7 @@ export function PokerTableView({
                 </div>
               ) : made ? (
                 <PixelText text={fitWords(made, SEAT_LINE)} scale={P} wrap maxLines={3} align="center" ink={winners.has(p.id) ? INK.gold : INK.light} />
-              ) : (
-                <div className="seat-flavour">
-                  <PixelText text={fitWords(personality.style, SEAT_LINE)} scale={P} wrap maxLines={3} align="center" ink={flavourInk} />
-                </div>
-              )}
+              ) : null}
             </div>
 
             <div
@@ -495,6 +496,35 @@ export function PokerTableView({
           </div>
         )
       })}
+
+      {/* Who they are: tapped open from a seat, tapped shut again. */}
+      {inspectedSeat >= 0 && (() => {
+        const p = opponents[inspectedSeat]
+        const rect = t.seats[inspectedSeat] ?? t.seats[0]
+        const w = Math.min(t.w - 8, 150)
+        const x = Math.max(4, Math.min(t.w - 4 - w, rect.x + SEAT.w / 2 - w / 2))
+        const personality = personalityFor(p.id, personas?.[p.id])
+        const zoom = TEXT_ZOOM
+        const lines = wrapText(personality.style, (w - 12) / zoom).length + 1
+        return (
+          <Panel
+            theme={theme}
+            scale={P}
+            testId={`info-${p.id}`}
+            style={{
+              ...at({ x, y: rect.y + SEAT.panelH + 2, w, h: lines * LINE_HEIGHT * zoom + 10 }, P),
+              zIndex: 5,
+              cursor: 'pointer',
+              padding: `${2 * P}px ${3 * P}px`,
+              boxSizing: 'border-box',
+            }}
+            onClick={() => setInspected(null)}
+          >
+            <PixelText text={p.name} scale={P * zoom} ink={INK.dark} />
+            <PixelText text={personality.style} scale={P * zoom} wrap ink={INK.dark} />
+          </Panel>
+        )
+      })()}
 
       {/* The pot, on its own line over the board. */}
       <div style={{ ...at(t.band, P), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -550,14 +580,14 @@ export function PokerTableView({
               justifyContent: 'center',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 2 * P, height: LINE_HEIGHT * P }}>
-              <PixelText text="You" scale={P} ink={INK.dark} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 2 * P, height: LINE_HEIGHT * TEXT_ZOOM * P }}>
+              <PixelText text="You" scale={P * TEXT_ZOOM} ink={INK.dark} />
               {labels?.get('you') && <PixelText text={labels.get('you')!} scale={P} ink={INK.blue} />}
               {blindOf.has('you') && <BlindChip kind={blindOf.get('you')!} amount={blinds?.[blindOf.get('you') === 'sb' ? 'small' : 'big']} P={P} />}
               {you.isDealer && <DealerButton P={P} />}
             </div>
-            <div data-testid="stack-you" data-stack={you.stack} style={{ height: LINE_HEIGHT * P }}>
-              <PixelText text={you.allIn ? 'ALL IN' : you.stack.toLocaleString()} scale={P} ink={you.allIn ? INK.red : STACK_INK} />
+            <div data-testid="stack-you" data-stack={you.stack} style={{ height: LINE_HEIGHT * TEXT_ZOOM * P }}>
+              <PixelText text={you.allIn ? 'ALL IN' : you.stack.toLocaleString()} scale={P * plateZoom(you.allIn ? 'ALL IN' : you.stack.toLocaleString())} ink={you.allIn ? INK.red : STACK_INK} />
             </div>
           </Panel>
           {winners.has('you') && (
