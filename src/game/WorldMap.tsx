@@ -36,8 +36,9 @@ export function layoutOf(city: CityDef): TownLayout {
     for (const link of Object.values(a.edges ?? {})) if (link && !link.blocked) walk(link.toAreaId)
   }
   const road = Object.values(areas).find((a) => a.id.startsWith('road-'))
-  walk(road?.id ?? city.entryAreaId)
-  walk(city.entryAreaId)
+  // The street a town starts on may be a building (the flat), so start from any area that has a way along.
+  const joined = Object.values(areas).find((a) => Object.values(a.edges ?? {}).some((l) => l && areas[l.toAreaId]))
+  walk(road?.id ?? joined?.id ?? city.entryAreaId)
   streets.sort((a, b) => Number(b.id.startsWith('road-')) - Number(a.id.startsWith('road-')))
 
   const buildings = new Map<string, AreaDef>()
@@ -159,7 +160,7 @@ export function WorldMap({ state, onClose }: { state: GameState; onClose: () => 
                   {i + 1}. {t.city.name}
                 </h3>
                 <div style={{ fontSize: 11, color: DIM }}>
-                  {visited ? `$${t.city.unlockCash.toLocaleString()} to reach` : `Not reached yet · $${t.city.unlockCash.toLocaleString()} to reach`}
+                  {[visited ? 'Reached' : 'Not reached yet', t.city.unlockCash > 0 ? `$${t.city.unlockCash.toLocaleString()} to get in` : 'free to enter'].join(' · ')}
                 </div>
                 <div style={{ fontSize: 11, color: DIM, marginTop: 4 }}>STREETS</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>

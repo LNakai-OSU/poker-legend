@@ -8,6 +8,8 @@ import type { OpponentDef, TableDef } from '../world/types'
 import { PokerTableView, ShowdownSummary, handTakings, potWinnerIds, type SeatSpeech } from './PokerTableView'
 import type { Announcement } from './HandAnnouncer'
 import { personalityFor, seatsOf } from '../world/characters'
+import { talkOf } from '../world/talk'
+import { chooseSpeaker, speaksAboutOwnAction, type Moment } from './tableTalk'
 import type { GameState } from './state'
 import { tableAccess, tellClarity } from './progression'
 import { playSound } from '../audio/audio'
@@ -180,7 +182,9 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
     // what they were doing.
     if (speechTimer.current) window.clearTimeout(speechTimer.current)
     setSpeech(null)
-    if (!always && Math.random() > 0.45) return
+    // Some people never speak and some will not stop: how often is theirs.
+    if (talkOf(playerId).chatty <= 0) return
+    if (!always && !speaksAboutOwnAction(playerId, Math.random)) return
     const pools = personalityFor(playerId, personas[playerId]).lines
     // Betting and checking are the two commonest actions and had no lines at all,
     // so most actions were narrated by whatever was said last.
@@ -197,6 +201,17 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
     },
     [],
   )
+
+  /** Somebody remarks on the hand, in their own voice, if they are the type. */
+  const remark = (moment: Moment) => {
+    const inHand = publicState.players.filter((p) => p.id !== 'you' && !p.folded).map((p) => p.id)
+    const chosen = chooseSpeaker(inHand, moment, Math.random)
+    if (!chosen) return
+    if (speechTimer.current) window.clearTimeout(speechTimer.current)
+    const name = personalityFor(chosen.playerId, personas[chosen.playerId]).name
+    setSpeech({ playerId: chosen.playerId, text: `${name}: ${chosen.text}` })
+    speechTimer.current = window.setTimeout(() => setSpeech(null), SPEECH_MS)
+  }
 
   const engine = tableRef.current
   const publicState = engine.getState()
@@ -231,6 +246,15 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
       detail: `Pot ${publicState.pot.toLocaleString()}`,
       tone: 'neutral',
     })
+  }, [publicState.street, publicState.handNumber])
+
+  // A card comes down and somebody has a thing to say about it, a beat after the dealer.
+  useEffect(() => {
+    if (!publicState.handInProgress) return
+    const street = publicState.street
+    if (street !== 'flop' && street !== 'turn' && street !== 'river') return
+    const timer = window.setTimeout(() => remark(street), 900)
+    return () => window.clearTimeout(timer)
   }, [publicState.street, publicState.handNumber])
 
   // Somebody shoving is the loudest thing that happens in a hand.
@@ -520,6 +544,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
     note(describeAction('You', { type }, { toCall, allInTo }))
     recordAction('you', { type }, { toCall, allInTo })
     engine.submitAction('you', { type })
+    if (type === 'fold') window.setTimeout(() => remark('youFold'), 400)
     rerender()
   }
   const raiseTo = (to: number) => {
@@ -527,6 +552,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
     note(describeAction('You', { type: 'raise', to }, { toCall, allInTo }))
     recordAction('you', { type: 'raise', to }, { toCall, allInTo })
     engine.submitAction('you', { type: 'raise', to })
+    window.setTimeout(() => remark(to >= allInTo ? 'shove' : 'youRaise'), 450)
     rerender()
   }
 
