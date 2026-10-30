@@ -5,7 +5,7 @@ compatibility_date = "2025-01-01"
 # npx wrangler kv namespace create SAVES   -> paste the id below
 [[kv_namespaces]]
 binding = "SAVES"
-id = "REPLACE_WITH_NAMESPACE_ID"
+id = "aa06bf44811749618d3602c0efd159f6"
 
 [vars]
-# ALLOWED_ORIGINS = "https://lnakai-osu.github.io"
+ALLOWED_ORIGINS = "https://lnakai-osu.github.io,http://localhost:5173"
