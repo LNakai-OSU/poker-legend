@@ -1,10 +1,10 @@
-import { Container, Sprite, type Texture } from 'pixi.js'
+import { Container, Rectangle, Sprite, Texture } from 'pixi.js'
 import { FRAME_MS, SCALE, UNIT, placementVariants, stampLayers } from './stampArt'
 import type { GlowField, LightSource } from './lighting'
-import { TILE_SIZE, type TileGrid } from './tiles'
+import { TILE_SIZE, isWalkable, type TileGrid } from './tiles'
 import { cellArt, cellTextures, paintedGrid } from './cells'
 import { WATER_FRAME_MS } from './ground'
-import type { PlacedStamp } from '../world/stamps'
+import { STAMP_BY_ID, stampSize, type PlacedStamp } from '../world/stamps'
 
 // Re-exported so callers have a single import for map data plus rendering.
 export * from './tiles'
@@ -73,6 +73,14 @@ export interface StampScene {
   /** What glows after dark, drawn over the darkness. Hidden by day. */
   litUnder: Container
   litOver: Container
+  /**
+   * Strips of stamps drawn in the same container as the people, ordered among
+   * them by the row they stand on (only when asked for with `rowSort`). Add them
+   * to the people's container; `setLight` tints and lights them.
+   */
+  sorted: Sprite[]
+  /** The hour's light for the sorted strips: the colour of the air, and whether lamps are lit. */
+  setLight: (tint: number, lamps: boolean) => void
   /** Pools of light thrown by lamp posts and the like, in art units of the map. */
   lights: LightSource[]
   /** What everything lit gives off, summed per art unit of a map this size, for the halos. */
@@ -120,7 +128,14 @@ function glowOf(stampId: string, canvas: HTMLCanvasElement | null) {
  * the `over` layer. And after dark every lit window, bulb and lantern is drawn a
  * second time, over the darkness, from each stamp's night pass.
  */
-export function buildStampScene(stamps: PlacedStamp[]): StampScene {
+export interface RowSort {
+  /** The map, to tell which rows of a stamp are solid. */
+  map: TileGrid
+  /** Sort the solid rows of the under layer too (rooms; outdoors the light map owns them). */
+  under: boolean
+}
+
+export function buildStampScene(stamps: PlacedStamp[], rowSort?: RowSort): StampScene {
   const under = new Container()
   const over = new Container()
   const litUnder = new Container()
@@ -135,6 +150,49 @@ export function buildStampScene(stamps: PlacedStamp[]): StampScene {
   const lights: LightSource[] = []
   const glowing: Array<{ stampId: string; x: number; y: number; canvas: HTMLCanvasElement }> = []
 
+  const sorted: Sprite[] = []
+  const sortedOver: Sprite[] = []
+  const sortedLit: Sprite[] = []
+
+  /**
+   * A stamp's picture cut into one strip per tile row. Each strip stands in the
+   * people's container at the depth of its row, so somebody south of a bar is in
+   * front of it and somebody north of a table is behind it, whatever the
+   * picture's bleed. `depth` is where among the people a row's strip goes.
+   */
+  const strips = (
+    frames: Texture[],
+    x: number,
+    y: number,
+    placed: PlacedStamp,
+    rows: number,
+    bleedTop: number,
+    solid: (k: number) => boolean,
+    depth: (row: number) => number,
+    flat: Container,
+    into: Sprite[],
+  ) => {
+    const { width, height } = frames[0].frame
+    const edge = (k: number) => (k <= 0 ? 0 : k >= rows ? height : Math.min(height, bleedTop * SCALE + k * TILE_SIZE))
+    let k = 0
+    while (k < rows) {
+      let end = k + 1
+      const isSolid = solid(k)
+      // Solid rows are a strip each, so each sits at its own depth; the rest are one flat piece.
+      while (!isSolid && end < rows && !solid(end)) end++
+      const cut = frames.map((f) => new Texture({ source: f.source, frame: new Rectangle(f.frame.x, f.frame.y + edge(k), width, edge(end) - edge(k)) }))
+      const sprite = new Sprite(cut[0])
+      sprite.position.set(x, y + edge(k))
+      if (isSolid) {
+        sprite.zIndex = depth(placed.row + k)
+        sorted.push(sprite)
+        into.push(sprite)
+      } else flat.addChild(sprite)
+      if (cut.length > 1) animated.push({ sprite, frames: cut })
+      k = end
+    }
+  }
+
   const variants = placementVariants(stamps)
   for (const [i, placed] of stamps.entries()) {
     const art = stampLayers(placed.stampId, variants[i])
@@ -147,8 +205,26 @@ export function buildStampScene(stamps: PlacedStamp[]): StampScene {
       [litUnder, art.litUnder],
       [litOver, art.litOver],
     ]
+    const stamp = STAMP_BY_ID[placed.stampId]
+    const rows = stamp ? stampSize(stamp).rows : 0
+    const cols = stamp ? stampSize(stamp).cols : 0
+    const solidRow = (k: number) => {
+      for (let c = 0; c < cols; c++) if (!isWalkable(rowSort!.map, placed.col + c, placed.row + k)) return true
+      return false
+    }
+    const behind = (row: number) => row * TILE_SIZE + TILE_SIZE / 2
+    const front = (row: number) => (row + 1) * TILE_SIZE + 1
     for (const [layer, frames] of parts) {
       if (!frames) continue
+      if (rowSort && rows > 0) {
+        const isOver = layer === over || layer === litOver
+        const isLit = layer === litUnder || layer === litOver
+        const base = isOver ? front : behind
+        const nudge = layer === litUnder ? 0.1 : layer === litOver ? 0.5 : 0
+        const solid = isOver ? () => true : rowSort.under ? solidRow : () => false
+        strips(frames, x, y, placed, rows, art.bleed.top, solid, (row) => base(row) + nudge, layer, isOver && !isLit ? sortedOver : isLit ? sortedLit : [])
+        continue
+      }
       const sprite = new Sprite(frames[0])
       sprite.position.set(x, y)
       layer.addChild(sprite)
@@ -202,5 +278,11 @@ export function buildStampScene(stamps: PlacedStamp[]): StampScene {
     return { width, height, rgb }
   }
 
-  return { under, over, litUnder, litOver, lights, glow }
+  for (const sprite of sortedLit) sprite.visible = false
+  const setLight = (tint: number, lamps: boolean) => {
+    for (const sprite of sortedOver) sprite.tint = tint
+    for (const sprite of sortedLit) sprite.visible = lamps
+  }
+
+  return { under, over, litUnder, litOver, sorted, setLight, lights, glow }
 }

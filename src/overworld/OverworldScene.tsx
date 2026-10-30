@@ -332,7 +332,7 @@ export function OverworldScene({
       const world = buildTileLayer(map, theme)
       // Objects over the tiles, under everybody who walks about on them, and
       // what of them glows after dark.
-      const stampScene = buildStampScene(stamps ?? [])
+      const stampScene = buildStampScene(stamps ?? [], { map, under: !outdoors })
       world.addChild(stampScene.under, stampScene.over, stampScene.litUnder, stampScene.litOver)
       // The hour's light, multiplied over the street. Only out of doors.
       const artWidth = map[0].length * (TILE_SIZE / 2)
@@ -364,6 +364,8 @@ export function OverworldScene({
       actors.zIndex = LAYER.actors
       overlay.zIndex = LAYER.captions
       world.addChild(signs, actors, overlay)
+      // The fronts of objects stand among the people, row by row.
+      for (const strip of stampScene.sorted) actors.addChild(strip)
 
       // Wherever you are standing now, should this effect run again part-way
       // through the scene: a rebuild is not a move.
@@ -498,6 +500,7 @@ export function OverworldScene({
         // The fronts of things are drawn over the people, so over the light map
         // too; they take the hour's colour as a tint instead.
         stampScene.over.tint = next ? parseInt(next.ambient.slice(1), 16) : 0xffffff
+        stampScene.setLight(next ? parseInt(next.ambient.slice(1), 16) : 0xffffff, lamps)
         if (!next) for (const sprite of people()) sprite.tint = 0xffffff
         if (!lamps) for (const rim of rims.values()) rim.visible = false
       }
@@ -652,6 +655,10 @@ export function OverworldScene({
       }
 
       let leaving = false
+      // A shut door or a highway said its piece, and the press that walked into it
+      // is still down: don't walk into it again until the player lets go or turns,
+      // or the message comes back the moment it is dismissed.
+      let refusedFacing: Direction | null = null
 
       /**
        * A step, except that a door is opened from in front of it rather than
@@ -679,6 +686,7 @@ export function OverworldScene({
           player.face(direction)
           const refusal = refuseRef.current?.({ kind: 'edge', edge })
           if (refusal) {
+            refusedFacing = direction
             onRefusedRef.current?.(refusal)
             return
           }
@@ -693,6 +701,7 @@ export function OverworldScene({
           player.face(direction)
           const refusal = refuseRef.current?.({ kind: 'door', col: door.col, row: door.row })
           if (refusal) {
+            refusedFacing = direction
             onRefusedRef.current?.(refusal)
             return
           }
@@ -784,13 +793,14 @@ export function OverworldScene({
         } else {
           const touchDir = touchDirRef.current
           const heldKey = keysDown.values().next().value
+          if (!touchDir && heldKey === undefined) refusedFacing = null
           if (touchDir) {
-            step(touchDir)
+            if (touchDir !== refusedFacing) step(touchDir)
             tapQueue.length = 0
           } else if (heldKey !== undefined) {
             // Still held: walk continuously, and drop the buffered tap that
             // started this hold so releasing doesn't add a phantom extra step.
-            step(MOVE_KEYS[heldKey])
+            if (MOVE_KEYS[heldKey] !== refusedFacing) step(MOVE_KEYS[heldKey])
             tapQueue.length = 0
           } else if (tapQueue.length > 0 && !player.moving) {
             // Released already. Serve the tap now, one step per press — and only

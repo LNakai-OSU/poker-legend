@@ -708,6 +708,33 @@ await test(`pressing "Let's go" on the arrival card walks you into the casino`, 
 })
 
 /**
+ * A stop sign that does not nag. Walking into the highway edge (or a shut private
+ * room) says its piece; a player still holding the key was told it again the
+ * moment the box closed, and so on for ever.
+ */
+await test('a refusal is said once while the key is held, and again on a fresh press', async () => {
+  const page = await newPage(
+    baseSave({ cityId: 'silverCreek', areaId: 'road-silvercreek', unlockedCityIds: ['apartment', 'silverCreek'] }),
+  )
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(500)
+  const card = page.locator('[data-testid="event-dialogue"]')
+  await page.keyboard.down('ArrowLeft')
+  await card.waitFor({ state: 'visible', timeout: 20000 })
+  assert(/highway/.test(await card.innerText()), 'the highway was not mentioned')
+  await page.locator('[data-testid="dialogue-advance"]').click()
+  await page.waitForTimeout(1200)
+  assert(!(await card.isVisible().catch(() => false)), 'the message came straight back with the key still held')
+  await page.keyboard.up('ArrowLeft')
+  await page.waitForTimeout(100)
+  await page.keyboard.down('ArrowLeft')
+  await card.waitFor({ state: 'visible', timeout: 5000 })
+  await page.keyboard.up('ArrowLeft')
+  await page.close()
+})
+
+/**
  * Losing is part of the story (docs/STORYBOARD.md, "When it goes wrong").
  *
  * The collectors used to be a man in a suit and a full-screen apology, and
