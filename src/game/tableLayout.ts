@@ -344,7 +344,7 @@ const MAX_SCALE = 4
 const CORNER_BUTTONS_CSS = 112
 const HEADER_FRAME = 4
 /** The betting menu beside the table, on a window wider than it is tall. */
-const SIDE_DOCK_WIDTHS = [150, 190, 230]
+const SIDE_DOCK_WIDTHS = [150, 190, 230, 280, 330, 380, 430]
 const SIDE_GAP = 4
 /** The betting menu's text, relative to the table's pixels. */
 const DOCK_ZOOM = 1.5
@@ -433,8 +433,11 @@ export function layoutScene(view: Viewport, needs: SceneNeeds): SceneLayout {
   // smaller table, up to a point (see `score`), and a window that only fits
   // the table at one pixel to the art pixel is better served by a plain menu.
   let best: { layout: SceneLayout; score: number } | null = null
-  for (let k = kMax; k >= Math.round(dpr); k--) {
-    for (const zoom of [DOCK_ZOOM, 1]) {
+  // A 3x phone may draw the whole scene at two thirds, still in whole device pixels,
+  // rather than push the menu below the screen.
+  const kMin = Math.max(1, Math.round(dpr * 0.75))
+  for (let k = kMax; k >= kMin; k--) {
+    for (const zoom of [2, DOCK_ZOOM, 1.25, 1]) {
       // Beside the table when the window is wide: height is what a wide window
       // is short of, and a menu under the table spends it.
       const tries = wide ? [...SIDE_DOCK_WIDTHS.map((w) => sceneAt(k / dpr, view, needs, w, zoom)), sceneAt(k / dpr, view, needs, 0, zoom)] : [sceneAt(k / dpr, view, needs, 0, zoom)]

@@ -1327,6 +1327,55 @@ for (const [label, size, device] of [
   })
 }
 
+for (const [label, width, height] of [
+  ['phone landscape', 844, 390],
+  ['phone landscape in Safari', 844, 340],
+  ['small phone landscape', 667, 320],
+]) {
+  await test(`the first poker night keeps its betting menu beside the table and on screen (${label})`, async () => {
+    const device = { ...devices['iPhone 13'], viewport: { width, height }, screen: { width, height } }
+    const page = await newPage(BROKE_AT_HOME(), device)
+    await page.goto(BASE)
+    await page.waitForSelector('canvas')
+    await page.waitForTimeout(500)
+    await approach(page, 'Marcus')
+    await page.keyboard.press('e')
+    await page.waitForTimeout(400)
+    await talkThrough(page)
+    await answer(page, 1)
+    await page.waitForSelector('[data-testid="dock"] button', { timeout: 20000 })
+    await page.waitForTimeout(800)
+    const seen = await page.evaluate(() => {
+      const dock = document.querySelector('[data-testid="dock"]').getBoundingClientRect()
+      const buttons = [...document.querySelectorAll('[data-testid="dock"] button')].map((el) => {
+        const r = el.getBoundingClientRect()
+        const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)
+        return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, onTop: !!hit && el.contains(hit) }
+      })
+      const tables = [...document.querySelectorAll('[data-testid="felt"]')].map((el) => el.getBoundingClientRect())
+      return {
+        w: window.innerWidth,
+        h: window.innerHeight,
+        scrollH: document.documentElement.scrollHeight,
+        dock: { left: dock.left, right: dock.right, top: dock.top, bottom: dock.bottom },
+        tableRight: Math.max(0, ...tables.map((r) => r.right)),
+        buttons,
+      }
+    })
+    await shot(page, `poker-night-${label}`)
+    assert(seen.buttons.length >= 2, `no betting buttons (saw ${seen.buttons.length})`)
+    assert(seen.dock.top >= 0 && seen.dock.bottom <= seen.h + 0.5, `the menu runs off the bottom (${seen.dock.top}..${seen.dock.bottom} of ${seen.h})`)
+    assert(seen.dock.right <= seen.w + 0.5, `the menu runs off the right (${seen.dock.right} of ${seen.w})`)
+    assert(seen.scrollH <= seen.h + 1, `the page scrolls: ${seen.scrollH} tall in ${seen.h}`)
+    assert(seen.dock.left >= seen.tableRight - 4, `the menu is under the table, not beside it (menu left ${seen.dock.left}, table right ${seen.tableRight})`)
+    for (const [i, b] of seen.buttons.entries()) {
+      assert(b.onTop, `button ${i} is covered`)
+      assert(b.bottom <= seen.h + 0.5 && b.right <= seen.w + 0.5, `button ${i} is off screen`)
+    }
+    assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  })
+}
+
 await test('the keys answer a question, and the answer is remembered', async () => {
   const page = await newPage(BROKE_AT_HOME())
   await page.goto(BASE)
