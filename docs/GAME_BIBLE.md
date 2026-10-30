@@ -30,9 +30,11 @@ them are enforced by tests rather than trusted.
 2. **Difficulty is skill, not luck.** A harder table is better opponents —
    tighter ranges, better bet sizing, more reliable hand reading — never worse
    cards for the player.
-3. **The world is one continuous place.** Towns join at their edges and you
-   walk between them. A door leads inside a building; a road is never a door.
-   The bus is a shortcut across a world you could also walk.
+3. **The bus is the only way between towns.** Within a town, streets join at
+   their edges and you walk them; a door leads inside a building; a road is never
+   a door. Between towns the highway is walkable only as far as the town's own
+   outskirts, then it stops you ("Oop, just the highway over there.") — no one
+   walks into the next casino without having beaten the boss behind them.
 4. **Days are the scarce resource.** Debts come due on a day count and a
    session at a table costs a day. Time pressure is the game's only real
    antagonist, so nothing may quietly hand the player more days.
@@ -43,7 +45,8 @@ them are enforced by tests rather than trusted.
    colour, and two opponents may not be the same bot with different captions.
 7. **The player is never stranded.** Every point of interest has somewhere to
    stand next to it, every door has somewhere to stand in front of it, and
-   every area is reachable on foot from where the player starts.
+   every area of a town is reachable on foot from where the player enters it
+   (the bus puts you down inside every town).
 
 ---
 
@@ -119,6 +122,11 @@ interior, a casino floor. Areas join two ways:
 - **Edges** — `edges: { east: { toAreaId: 'depot', offset: -2 } }`. You walk off
   one side and onto the next map, keeping your place along the shared side.
   This is how streets and towns join. No transition, nothing to step on.
+- **Blocked edges** — an edge with `blocked: 'line'` is written down like any
+  other (the two maps still agree on how they line up) but stops the player
+  and says the line. Every edge that crosses from one town to another is
+  blocked on both sides (`HIGHWAY` in `cities.ts`); the content tests fail on one
+  that is not.
 - **Doors** — `exits: [{ col, row, toAreaId, toCol, toRow, label }]`. Only for
   going inside a building. You stop in front of a door and it takes you through;
   you never stand on it.
@@ -157,6 +165,32 @@ room are drawn differently without being told to (`placementVariants` in
 A room should not be one rug on a bare floor: the content tests fail on a
 five-by-five square of floor with nothing on it, and its floor should not be
 the same floor as another room in its town.
+
+### Casino goals — `src/world/goals.ts`
+
+Every casino town but the last asks for something besides money. Behind its
+casino floor is a **private room** with a **boss** who plays you one on one.
+
+- The door (`privateRoomOf` on the floor's exit) is shut until you have *won*
+  `winTarget` at that town's poker tables — net, over the whole run, counted when
+  you leave a table. Reaching it opens the room for good; a bad night after does
+  not shut it again. Slots, craps and the freerolls do not count.
+- The boss's table (`bossOf` on the `TableDef`) is a match, like the final: your
+  buy-in against theirs, no rebuy and no standing up, winner takes every chip. A
+  loss costs the buy-in and a day, and you may try again.
+- **Beating the boss is what lets the bus take you to the next town.** The travel
+  list greys the town out with "Beat the boss of … first" (`bossBlocking`). A town
+  you have already been to is never locked, which is how older saves and the
+  story's own first ride are not stranded.
+- Bosses climb the skill tiers one step per town (`novice` Lou → `elite` Vale),
+  and the win target and stake climb with them; `goals.test.ts` holds the ladder.
+  Lumina has no boss: its goal is the final table.
+- The goal is in the side menu ("Goals"), on the street HUD, and said at the shut
+  door with the numbers.
+
+Adding a town's goal is: a line in `CASINO_GOALS`, a boss in `characters.ts`, a
+table in `content.ts`, and a `bossRoom(...)` in `cities.ts` with its door cut
+into the casino floor's wall.
 
 ### Events — `src/world/events.ts`
 

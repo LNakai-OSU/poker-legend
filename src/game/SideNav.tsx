@@ -3,7 +3,8 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { audio } from '../audio/audio'
 import { LESSONS, MISSIONS, findItem } from '../world/content'
 import { PERIOD_LABEL } from './time'
-import { missionStatus, standing } from './progression'
+import { goalStatus, missionStatus, standing } from './progression'
+import { GOAL_ORDER } from '../world/goals'
 import { totalOwed, type GameState } from './state'
 import { PxButton } from './pixel/ui'
 import { PixelText } from './pixel/PixelText'
@@ -33,7 +34,7 @@ import { useTouchFirst } from './device'
  * their way into it by accident.
  */
 
-type Page = 'main' | 'bag' | 'jobs' | 'record'
+type Page = 'main' | 'bag' | 'jobs' | 'goals' | 'record'
 
 /**
  * What the broadcast has told you about the people at the final table. True at
@@ -191,6 +192,24 @@ export function SideNav({
         })}
       </>
     )
+  } else if (page === 'goals') {
+    const towns = GOAL_ORDER.filter((g) => state.unlockedCityIds.includes(g.cityId))
+    body = (
+      <>
+        {item('nav-back', '< Back', () => setPage('main'))}
+        {heading('Goals')}
+        {towns.length === 0 ? line('Get to a casino town first.', INK.dim) : null}
+        {towns.map((g) => {
+          const status = goalStatus(state, g.cityId)!
+          return (
+            <div key={g.cityId} data-testid={`goal-${g.cityId}`} style={{ display: 'grid', gap: scale }}>
+              {line(g.casino, status.phase === 'done' ? INK.dim : INK.light)}
+              {line(status.line, status.phase === 'done' ? INK.green : INK.dim)}
+            </div>
+          )
+        })}
+      </>
+    )
   } else if (page === 'record') {
     body = (
       <>
@@ -229,6 +248,7 @@ export function SideNav({
         {item('nav-bag', 'Bag', () => setPage('bag'))}
         {item('nav-jobs', 'Jobs', () => setPage('jobs'))}
         {item('nav-record', 'Record', () => setPage('record'))}
+        {item('nav-goals', 'Goals', () => setPage('goals'))}
         {rule}
         {heading('Settings')}
         {item('nav-sound', muted ? 'Sound: off' : 'Sound: on', () => {
@@ -278,7 +298,7 @@ export function SideNav({
     )
   }
 
-  const title = page === 'main' ? 'Menu' : page === 'bag' ? 'Bag' : page === 'jobs' ? 'Jobs' : 'Record'
+  const title = page === 'main' ? 'Menu' : page === 'bag' ? 'Bag' : page === 'jobs' ? 'Jobs' : page === 'goals' ? 'Goals' : 'Record'
 
   return (
     <div data-testid="side-nav" className={closing ? 'side-nav closing' : 'side-nav'} style={{ position: 'fixed', inset: 0, zIndex: 100 }}>

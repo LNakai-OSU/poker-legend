@@ -118,6 +118,58 @@ export const TABLES: Record<string, TableDef> = {
     dressCode: 3,
     opponents: ['august', 'rhodes'],
   },
+  // The bosses: one on one in each casino's private room, the buy-in against the
+  // buy-in. Each is a better player than the one before. See `CASINO_GOALS`.
+  'silvercreek-boss': {
+    id: 'silvercreek-boss',
+    name: 'Lou’s Back Table',
+    theme: 'silvercreek',
+    smallBlind: 5,
+    bigBlind: 10,
+    buyIn: 500,
+    bossOf: 'silverCreek',
+    opponents: ['lou'],
+  },
+  'riverbend-boss': {
+    id: 'riverbend-boss',
+    name: 'The Captain’s Cabin',
+    theme: 'riverboat',
+    smallBlind: 15,
+    bigBlind: 30,
+    buyIn: 1500,
+    bossOf: 'riverbend',
+    opponents: ['odette'],
+  },
+  'crescent-boss': {
+    id: 'crescent-boss',
+    name: 'Mr. Bellamy’s Table',
+    theme: 'backroom',
+    smallBlind: 50,
+    bigBlind: 100,
+    buyIn: 5000,
+    bossOf: 'crescentHarbor',
+    opponents: ['bellamy'],
+  },
+  'palmcay-boss': {
+    id: 'palmcay-boss',
+    name: 'The Owner’s Table',
+    theme: 'palmcay',
+    smallBlind: 150,
+    bigBlind: 300,
+    buyIn: 15000,
+    bossOf: 'palmCay',
+    opponents: ['ines'],
+  },
+  'mesa-boss': {
+    id: 'mesa-boss',
+    name: 'The Vale Suite',
+    theme: 'invitational',
+    smallBlind: 500,
+    bigBlind: 1000,
+    buyIn: 50000,
+    bossOf: 'neonMesa',
+    opponents: ['vale'],
+  },
   // The televised final of the Legends Invitational: six at the table, and you
   // are the short stack by a mile — the story opens here and comes back to it
   // until you win it. Nothing is paid to sit and nothing is kept for losing;

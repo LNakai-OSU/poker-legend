@@ -1,6 +1,8 @@
 import { CITIES, MISSIONS, findItem } from '../world/content'
+import { CHARACTERS } from '../world/characters'
+import { CASINO_GOALS, goalOf } from '../world/goals'
 import type { MissionGoal, TableDef } from '../world/types'
-import { reputation, type CityId, type GameState } from './state'
+import { reputation, TOWN_ORDER, type CityId, type GameState } from './state'
 
 /** Best dress-code level across everything the player owns. */
 export function dressCodeLevel(state: GameState): number {
@@ -77,6 +79,52 @@ export function travelCostTo(state: GameState, cityId: CityId): number {
   return Math.round(city.travelCost * (1 - travelDiscount(state)))
 }
 
+/**
+ * The boss standing between you and a town: the previous town's, unless you have
+ * already been here (a run that is past it never has to go back).
+ */
+export function bossBlocking(state: GameState, cityId: CityId): string | null {
+  if (state.unlockedCityIds.includes(cityId)) return null
+  const previous = TOWN_ORDER[TOWN_ORDER.indexOf(cityId) - 1]
+  const goal = previous ? goalOf(previous) : undefined
+  if (!goal || state.casino.bossBeaten.includes(goal.cityId)) return null
+  return goal.bossId
+}
+
+/** Whether the private room off a town's casino is open to this player. */
+export function privateRoomOpen(state: GameState, cityId: CityId): boolean {
+  return state.casino.roomOpen.includes(cityId)
+}
+
+export interface GoalStatus {
+  goal: (typeof CASINO_GOALS)[string]
+  phase: 'win' | 'boss' | 'done'
+  /** What to do next, in a sentence. */
+  line: string
+}
+
+/**
+ * Where the player stands on a town's casino goal: win enough on the floor, then
+ * beat the boss in the private room, then the road to the next town is open.
+ */
+export function goalStatus(state: GameState, cityId: CityId): GoalStatus | null {
+  const goal = goalOf(cityId)
+  if (!goal) return null
+  const boss = CHARACTERS[goal.bossId]?.name ?? 'the boss'
+  if (state.casino.bossBeaten.includes(cityId)) {
+    return { goal, phase: 'done', line: `Beat ${boss}. The way to the next town is open.` }
+  }
+  if (state.casino.roomOpen.includes(cityId)) {
+    return { goal, phase: 'boss', line: `Beat ${boss} one on one in the private room at the ${goal.casino}.` }
+  }
+  const won = Math.max(0, state.casino.net[cityId] ?? 0)
+  return {
+    goal,
+    phase: 'win',
+    line: `Win $${goal.winTarget.toLocaleString()} at the ${goal.casino} ($${won.toLocaleString()} so far) to earn a game with ${boss}.`,
+  }
+}
+
 export interface TravelOption {
   cityId: CityId
   name: string
@@ -94,9 +142,13 @@ export function travelOptions(state: GameState): TravelOption[] {
       const visited = state.unlockedCityIds.includes(city.id)
       const bankrollShort = state.cash < city.unlockCash
       const cantAfford = state.cash < cost
-      const locked = (!visited && bankrollShort) || cantAfford
+      const bossName = bossBlocking(state, city.id)
+      const locked = (!visited && bankrollShort) || cantAfford || bossName !== null
       let lockReason: string | null = null
-      if (!visited && bankrollShort) lockReason = `Needs a bankroll of $${city.unlockCash.toLocaleString()}`
+      if (bossName !== null) {
+        const goal = goalOf(TOWN_ORDER[TOWN_ORDER.indexOf(city.id) - 1])!
+        lockReason = `Beat the boss of ${goal.casino} first`
+      } else if (!visited && bankrollShort) lockReason = `Needs a bankroll of $${city.unlockCash.toLocaleString()}`
       else if (cantAfford) lockReason = `Travel costs $${cost.toLocaleString()}`
       return { cityId: city.id, name: city.name, blurb: city.blurb, cost, locked, lockReason }
     })
@@ -110,6 +162,13 @@ export interface TableAccess {
 }
 
 export function tableAccess(state: GameState, table: TableDef): TableAccess {
+  if (table.bossOf && !privateRoomOpen(state, table.bossOf)) {
+    return {
+      allowed: false,
+      reason: `The boss only plays people who have won $${(CASINO_GOALS[table.bossOf]?.winTarget ?? 0).toLocaleString()} on this floor.`,
+      bankrollWarning: null,
+    }
+  }
   const dress = dressCodeLevel(state)
   if (table.dressCode && dress < table.dressCode) {
     return {

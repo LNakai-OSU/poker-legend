@@ -1,4 +1,4 @@
-import { emptyRecord, initialState, type GameState, type RunRecord } from './state'
+import { emptyRecord, initialState, TOWN_ORDER, type CasinoProgress, type GameState, type RunRecord } from './state'
 import { TIME_PERIODS, type TimePeriod } from './time'
 
 const LEGACY_SAVE_KEY = 'poker-legend-save-v2'
@@ -67,8 +67,28 @@ function reconcile(parsed: unknown): GameState | null {
     flags: { ...base.flags, ...(saved.flags ?? {}) },
     completedEventIds: Array.isArray(saved.completedEventIds) ? saved.completedEventIds : base.completedEventIds,
     record: reconcileRecord(saved),
+    casino: reconcileCasino(saved),
     stats: { ...base.stats, ...(saved.stats ?? {}) },
   }
+}
+
+/**
+ * Casino goals arrived after saves did. A run that has already been to a later
+ * town was never asked to beat the bosses behind it, so it is given them.
+ */
+function reconcileCasino(saved: Partial<GameState>): CasinoProgress {
+  const stored = saved.casino
+  if (typeof stored === 'object' && stored !== null) {
+    return {
+      net: typeof stored.net === 'object' && stored.net !== null ? stored.net : {},
+      roomOpen: Array.isArray(stored.roomOpen) ? stored.roomOpen : [],
+      bossBeaten: Array.isArray(stored.bossBeaten) ? stored.bossBeaten : [],
+    }
+  }
+  const visited = Array.isArray(saved.unlockedCityIds) ? saved.unlockedCityIds : []
+  const furthest = Math.max(0, ...visited.map((id) => TOWN_ORDER.indexOf(id)))
+  const behind = TOWN_ORDER.filter((_, i) => i > 0 && i < furthest)
+  return { net: {}, roomOpen: behind, bossBeaten: behind }
 }
 
 /**

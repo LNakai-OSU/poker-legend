@@ -10,6 +10,9 @@ import type { CityId } from '../game/state'
  * facade — stepping onto the door takes you inside.
  */
 
+/** What you are told at the end of the road: the way between towns is the bus. */
+const HIGHWAY = 'Oop, just the highway over there.'
+
 const COLORS = {
   person: 0x6ea8fe,
   dealer: 0x3a9d5c,
@@ -315,7 +318,7 @@ const SILVER_CREEK_FLOOR = parseMap(`
 ^FFFF,,,,,,,,,,FFFF^
 ^FFFF,,,,,,,,,,FFFF^
 ^,,,,,,,,,,,,,,,,,,^
-^^^^^^^^^^D^^^^^^^^^
+^^^^^^^^^^D^^^D^^^^^
 `)
 
 /** The riverboat saloon: navy carpet with a gold lattice, varnished cabin walls, portholes on the river side. */
@@ -330,7 +333,7 @@ const RIVERBOAT_FLOOR = parseMap(`
 ^FFFFRRRRRRRRRRRRFFFF^
 ^FFFFRRRRRRRRRRRRFFFF^
 ^RRRRRRRRRRRRRRRRRRRR^
-^^^^^^^^^^^D^^^^^^^^^^
+^^^^^^^D^^^D^^^^^^^^^^
 `)
 
 /** The Harbor card room: baize and mahogany, green-and-gold carpet, lamps over four tables, no machines. */
@@ -347,7 +350,7 @@ const CARDROOM_FLOOR = parseMap(`
 ^;;FFF;;;;;;;;;FF;;^
 ^;;FFF;FF;;;FF;;;;;^
 ^;;;;;;;;;;;;;;;;;;^
-^^^^^^^^^^D^^^^^^^^^
+^^^^^^^^^^D^^^^^^D^^
 `)
 
 /** The Cay Room: bamboo walls, teal carpet, a tiki bar, palms between two long tables. */
@@ -364,7 +367,7 @@ const CAY_FLOOR = parseMap(`
 ^'FFFF''''''''FFFF'^
 ^'FFFF''''''''FFFF'^
 ^F''''''''''''''''F^
-^^^^^^^^^^D^^^^^^^^^
+^^^^^^D^^^D^^^^^^^^^
 `)
 
 /** The Mesa Casino: near-black carpet with neon trim, neon walls, a progressive bank, the high-roller door roped off. */
@@ -382,7 +385,7 @@ const MESA_FLOOR = parseMap(`
 ^FFFFFFFFF!!FFFFFFFFF^
 ^!!!!!!!!!!!!!!!!!!!!^
 ^!!!!!!!!!!!!!!!!!!!!^
-^^^^^^^^^^^D^^^^^^^^^^
+^^^^D^^^^^^D^^^^^^^^^^
 `)
 
 /** Porto Lumina: white marble, gold columns, chandelier light, a roped salon in burgundy for the last game. */
@@ -686,6 +689,67 @@ function area(
   return { id, name, map, playerStart, background, pois, exits, edges }
 }
 
+/**
+ * The private room behind a casino floor, with the town's boss at its one table.
+ *
+ * Every one is the same plan — a back wall, four plants and chairs in the
+ * corners, a heads-up table in the middle — in the town's own walls and floor.
+ * The door is shut until the player has won enough on the floor (`CASINO_GOALS`),
+ * and the boss across the felt is the best player they have met so far.
+ */
+function bossRoom(o: {
+  id: string
+  name: string
+  wall: string
+  floor: string
+  background: string
+  tableId: string
+  dealerLine: string
+  /** Where the floor's door lets you out. */
+  floorId: string
+  floorDoor: { col: number; row: number }
+}): AreaDef {
+  const w = o.wall.repeat(12)
+  const f = o.floor
+  const row = (middle: string) => `^${middle}^`
+  const open = f.repeat(12)
+  const corners = `F${f.repeat(10)}F`
+  const felt = `${f.repeat(5)}FF${f.repeat(5)}`
+  const map = parseMap(
+    [
+      '^'.repeat(14),
+      row(w),
+      row(corners),
+      row(open),
+      row(open),
+      row(felt),
+      row(open),
+      row(corners),
+      row(open),
+      '^'.repeat(7) + 'D' + '^'.repeat(6),
+    ].join('\n'),
+  )
+  return area(
+    o.id,
+    o.name,
+    map,
+    { col: 7, row: 8 },
+    o.background,
+    [
+      {
+        id: `${o.id}-dealer`,
+        name: 'Dealer',
+        col: 7,
+        row: 4,
+        color: COLORS.dealer,
+        lines: [o.dealerLine],
+        action: { kind: 'table', tableId: o.tableId },
+      },
+    ],
+    [{ col: 7, row: 9, toAreaId: o.floorId, toCol: o.floorDoor.col, toRow: o.floorDoor.row, label: 'Out' }],
+  )
+}
+
 /** Ambient locals, so a street has people on it rather than just shopfronts. */
 function local(
   id: string,
@@ -976,7 +1040,7 @@ const apartmentCity: CityDef = {
       {
         west: { toAreaId: 'seventh', offset: 2 },
         north: { toAreaId: 'eastgate' },
-        east: { toAreaId: 'road-silvercreek' },
+        east: { toAreaId: 'road-silvercreek', blocked: HIGHWAY },
       },
     ),
     eastgate: area(
@@ -1095,7 +1159,7 @@ const silverCreek: CityDef = {
         ]),
       ],
       [],
-      { west: { toAreaId: 'depot', offset: 0 }, east: { toAreaId: 'sc-street', offset: 3 } },
+      { west: { toAreaId: 'depot', offset: 0, blocked: HIGHWAY }, east: { toAreaId: 'sc-street', offset: 3 } },
     ),
     'sc-street': area(
       'sc-street',
@@ -1141,7 +1205,7 @@ const silverCreek: CityDef = {
         { col: 16, row: 4, toAreaId: 'sc-floor', toCol: 10, toRow: 10, label: 'Casino' },
         { col: 9, row: 16, toAreaId: 'sc-gift', toCol: 6, toRow: 7, label: 'Gift Shop' },
       ],
-      { west: { toAreaId: 'road-silvercreek', offset: -3 }, east: { toAreaId: 'road-riverbend', offset: -3 } },
+      { west: { toAreaId: 'road-silvercreek', offset: -3 }, east: { toAreaId: 'road-riverbend', offset: -3, blocked: HIGHWAY } },
     ),
     'sc-floor': area(
       'sc-floor',
@@ -1194,8 +1258,22 @@ const silverCreek: CityDef = {
           'Bartender: Ray has a tab. Ray has had a tab since 1994.',
         ]),
       ],
-      [{ col: 10, row: 11, toAreaId: 'sc-street', toCol: 16, toRow: 5, label: 'Out' }],
+      [
+        { col: 10, row: 11, toAreaId: 'sc-street', toCol: 16, toRow: 5, label: 'Out' },
+        { col: 14, row: 11, toAreaId: 'sc-private', toCol: 7, toRow: 8, label: 'Private Room', privateRoomOf: 'silverCreek' },
+      ],
     ),
+    'sc-private': bossRoom({
+      id: 'sc-private',
+      name: 'Lou’s Back Room',
+      wall: 'w',
+      floor: 'W',
+      background: '#161018',
+      tableId: 'silvercreek-boss',
+      dealerLine: 'Dealer: One match. Five hundred each. Nobody leaves until one of you has all of it.',
+      floorId: 'sc-floor',
+      floorDoor: { col: 14, row: 10 },
+    }),
     'sc-gift': area(
       'sc-gift',
       'Gift Shop',
@@ -1248,7 +1326,7 @@ const riverbend: CityDef = {
         ]),
       ],
       [],
-      { west: { toAreaId: 'sc-street', offset: 3 }, east: { toAreaId: 'rb-street', offset: 3 } },
+      { west: { toAreaId: 'sc-street', offset: 3, blocked: HIGHWAY }, east: { toAreaId: 'rb-street', offset: 3 } },
     ),
     'rb-street': area(
       'rb-street',
@@ -1290,7 +1368,7 @@ const riverbend: CityDef = {
         { col: 5, row: 15, toAreaId: 'rb-diner', toCol: 7, toRow: 8, label: 'Diner' },
         { col: 26, row: 15, toAreaId: 'rb-outfitters', toCol: 6, toRow: 7, label: 'Outfitters' },
       ],
-      { west: { toAreaId: 'road-riverbend', offset: -3 }, east: { toAreaId: 'road-crescent', offset: -3 } },
+      { west: { toAreaId: 'road-riverbend', offset: -3 }, east: { toAreaId: 'road-crescent', offset: -3, blocked: HIGHWAY } },
     ),
     'rb-boat': area(
       'rb-boat',
@@ -1323,8 +1401,22 @@ const riverbend: CityDef = {
           action: { kind: 'slots' },
         },
       ],
-      [{ col: 11, row: 10, toAreaId: 'rb-street', toCol: 9, toRow: 6, label: 'Ashore' }],
+      [
+        { col: 11, row: 10, toAreaId: 'rb-street', toCol: 9, toRow: 6, label: 'Ashore' },
+        { col: 7, row: 10, toAreaId: 'rb-private', toCol: 7, toRow: 8, label: 'Captain’s Cabin', privateRoomOf: 'riverbend' },
+      ],
     ),
+    'rb-private': bossRoom({
+      id: 'rb-private',
+      name: 'The Captain’s Cabin',
+      wall: 's',
+      floor: 'B',
+      background: '#101828',
+      tableId: 'riverbend-boss',
+      dealerLine: 'Dealer: Fifteen hundred each, one match. The Captain does not like to be kept waiting.',
+      floorId: 'rb-boat',
+      floorDoor: { col: 7, row: 9 },
+    }),
     'rb-diner': area(
       'rb-diner',
       'The Landing Diner',
@@ -1408,7 +1500,7 @@ const crescentHarbor: CityDef = {
         ]),
       ],
       [],
-      { west: { toAreaId: 'rb-street', offset: 3 }, east: { toAreaId: 'ch-street', offset: 3 } },
+      { west: { toAreaId: 'rb-street', offset: 3, blocked: HIGHWAY }, east: { toAreaId: 'ch-street', offset: 3 } },
     ),
     'ch-street': area(
       'ch-street',
@@ -1465,7 +1557,7 @@ const crescentHarbor: CityDef = {
         { col: 8, row: 4, toAreaId: 'ch-supper', toCol: 7, toRow: 8, label: 'Supper Club' },
         { col: 3, row: 4, toAreaId: 'ch-club', toCol: 7, toRow: 8, label: 'The Harbour Room' },
       ],
-      { west: { toAreaId: 'road-crescent', offset: -3 }, east: { toAreaId: 'road-palmcay', offset: -3 } },
+      { west: { toAreaId: 'road-crescent', offset: -3 }, east: { toAreaId: 'road-palmcay', offset: -3, blocked: HIGHWAY } },
     ),
     'ch-cardroom': area(
       'ch-cardroom',
@@ -1505,8 +1597,22 @@ const crescentHarbor: CityDef = {
           'Cashier: Thousand to sit at five-ten. We do not do credit. We do not do favours.',
         ]),
       ],
-      [{ col: 10, row: 12, toAreaId: 'ch-street', toCol: 14, toRow: 5, label: 'Out' }],
+      [
+        { col: 10, row: 12, toAreaId: 'ch-street', toCol: 14, toRow: 5, label: 'Out' },
+        { col: 17, row: 12, toAreaId: 'ch-private', toCol: 7, toRow: 8, label: 'Private Room', privateRoomOf: 'crescentHarbor' },
+      ],
     ),
+    'ch-private': bossRoom({
+      id: 'ch-private',
+      name: 'Mr. Bellamy’s Study',
+      wall: 'g',
+      floor: 'W',
+      background: '#10181a',
+      tableId: 'crescent-boss',
+      dealerLine: 'Dealer: Five thousand each. Mr. Bellamy will not be hurried, and neither should you.',
+      floorId: 'ch-cardroom',
+      floorDoor: { col: 17, row: 11 },
+    }),
     'ch-menswear': area(
       'ch-menswear',
       'Harbor Menswear',
@@ -1641,7 +1747,7 @@ const palmCay: CityDef = {
         ]),
       ],
       [],
-      { west: { toAreaId: 'ch-street', offset: 3 }, east: { toAreaId: 'pc-street', offset: 3 } },
+      { west: { toAreaId: 'ch-street', offset: 3, blocked: HIGHWAY }, east: { toAreaId: 'pc-street', offset: 3 } },
     ),
     'pc-street': area(
       'pc-street',
@@ -1687,7 +1793,7 @@ const palmCay: CityDef = {
         { col: 23, row: 15, toAreaId: 'pc-grill', toCol: 7, toRow: 8, label: 'Shoreline Grill' },
         { col: 5, row: 4, toAreaId: 'pc-marina', toCol: 7, toRow: 8, label: 'Marina Motors' },
       ],
-      { west: { toAreaId: 'road-palmcay', offset: -3 }, east: { toAreaId: 'road-mesa', offset: -3 } },
+      { west: { toAreaId: 'road-palmcay', offset: -3 }, east: { toAreaId: 'road-mesa', offset: -3, blocked: HIGHWAY } },
     ),
     'pc-casino': area(
       'pc-casino',
@@ -1731,8 +1837,22 @@ const palmCay: CityDef = {
           'Barman: Something with an umbrella in it? Everyone has something with an umbrella in it.',
         ]),
       ],
-      [{ col: 10, row: 12, toAreaId: 'pc-street', toCol: 13, toRow: 5, label: 'Out' }],
+      [
+        { col: 10, row: 12, toAreaId: 'pc-street', toCol: 13, toRow: 5, label: 'Out' },
+        { col: 6, row: 12, toAreaId: 'pc-private', toCol: 7, toRow: 8, label: 'Owner’s Table', privateRoomOf: 'palmCay' },
+      ],
     ),
+    'pc-private': bossRoom({
+      id: 'pc-private',
+      name: 'The Owner’s Table',
+      wall: 'b',
+      floor: "'",
+      background: '#0f2226',
+      tableId: 'palmcay-boss',
+      dealerLine: 'Dealer: Fifteen thousand each. Miss Calloway is feeling generous. That should worry you.',
+      floorId: 'pc-casino',
+      floorDoor: { col: 6, row: 11 },
+    }),
     'pc-boutique': area(
       'pc-boutique',
       'Cay Boutique',
@@ -1829,7 +1949,7 @@ const neonMesa: CityDef = {
         ]),
       ],
       [],
-      { west: { toAreaId: 'pc-street', offset: 3 }, east: { toAreaId: 'nm-street', offset: 5 } },
+      { west: { toAreaId: 'pc-street', offset: 3, blocked: HIGHWAY }, east: { toAreaId: 'nm-street', offset: 5 } },
     ),
     'nm-street': area(
       'nm-street',
@@ -1891,7 +2011,7 @@ const neonMesa: CityDef = {
         { col: 20, row: 5, toAreaId: 'nm-motors', toCol: 7, toRow: 8, label: 'Mesa Motors' },
         { col: 27, row: 5, toAreaId: 'nm-club', toCol: 7, toRow: 8, label: 'Ultraviolet' },
       ],
-      { west: { toAreaId: 'road-mesa', offset: -5 }, east: { toAreaId: 'road-lumina', offset: -5 } },
+      { west: { toAreaId: 'road-mesa', offset: -5 }, east: { toAreaId: 'road-lumina', offset: -5, blocked: HIGHWAY } },
     ),
     'nm-casino': area(
       'nm-casino',
@@ -1992,8 +2112,22 @@ const neonMesa: CityDef = {
           action: { kind: 'craps' },
         },
       ],
-      [{ col: 11, row: 13, toAreaId: 'nm-street', toCol: 6, toRow: 6, label: 'Out' }],
+      [
+        { col: 11, row: 13, toAreaId: 'nm-street', toCol: 6, toRow: 6, label: 'Out' },
+        { col: 4, row: 13, toAreaId: 'nm-private', toCol: 7, toRow: 8, label: 'Vale Suite', privateRoomOf: 'neonMesa' },
+      ],
     ),
+    'nm-private': bossRoom({
+      id: 'nm-private',
+      name: 'The Vale Suite',
+      wall: 'n',
+      floor: '%',
+      background: '#1a1020',
+      tableId: 'mesa-boss',
+      dealerLine: 'Dealer: Fifty thousand each, one match. Mr. Vale has not lost in this room in nine years.',
+      floorId: 'nm-casino',
+      floorDoor: { col: 4, row: 12 },
+    }),
     'nm-luxury': area(
       'nm-luxury',
       'Mesa Luxury',
@@ -2096,7 +2230,7 @@ const portoLumina: CityDef = {
         ]),
       ],
       [],
-      { west: { toAreaId: 'nm-street', offset: 5 }, east: { toAreaId: 'pl-street', offset: 4 } },
+      { west: { toAreaId: 'nm-street', offset: 5, blocked: HIGHWAY }, east: { toAreaId: 'pl-street', offset: 4 } },
     ),
     'pl-street': area(
       'pl-street',
@@ -2255,6 +2389,58 @@ export function allAreas(city: CityDef): AreaDef[] {
  * furniture, so the game is correct with or without it.
  */
 export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
+  'sc-private': [
+    { stampId: 'clock', col: 3, row: 1 },
+    { stampId: 'painting-horse', col: 9, row: 1 },
+    { stampId: 'poker-table', col: 5, row: 4 },
+    { stampId: 'light-pool', col: 5, row: 4 },
+    { stampId: 'cactus', col: 1, row: 2 },
+    { stampId: 'cactus', col: 12, row: 2 },
+    { stampId: 'armchair', col: 1, row: 7 },
+    { stampId: 'side-table', col: 12, row: 7 },
+  ],
+  'rb-private': [
+    { stampId: 'porthole', col: 3, row: 1 },
+    { stampId: 'porthole', col: 6, row: 1 },
+    { stampId: 'porthole', col: 9, row: 1 },
+    { stampId: 'poker-table-baize-4', col: 5, row: 4 },
+    { stampId: 'light-pool', col: 5, row: 4 },
+    { stampId: 'fern', col: 1, row: 2 },
+    { stampId: 'fern', col: 12, row: 2 },
+    { stampId: 'armchair', col: 1, row: 7 },
+    { stampId: 'side-table', col: 12, row: 7 },
+  ],
+  'ch-private': [
+    { stampId: 'painting-portrait', col: 3, row: 1 },
+    { stampId: 'clock', col: 6, row: 1 },
+    { stampId: 'painting-ship', col: 9, row: 1 },
+    { stampId: 'poker-table-baize-4', col: 5, row: 4 },
+    { stampId: 'light-pool', col: 5, row: 4 },
+    { stampId: 'fern', col: 1, row: 2 },
+    { stampId: 'fern', col: 12, row: 2 },
+    { stampId: 'armchair-green', col: 1, row: 7 },
+    { stampId: 'side-table', col: 12, row: 7 },
+  ],
+  'pc-private': [
+    { stampId: 'painting-landscape', col: 3, row: 1 },
+    { stampId: 'porthole', col: 9, row: 1 },
+    { stampId: 'poker-table', col: 5, row: 4 },
+    { stampId: 'light-pool', col: 5, row: 4 },
+    { stampId: 'fern', col: 1, row: 2 },
+    { stampId: 'fern', col: 12, row: 2 },
+    { stampId: 'plant-tall', col: 1, row: 7 },
+    { stampId: 'side-table', col: 12, row: 7 },
+  ],
+  'nm-private': [
+    { stampId: 'neon-vip', col: 3, row: 1 },
+    { stampId: 'painting-abstract', col: 9, row: 1 },
+    { stampId: 'poker-table-neon-4', col: 5, row: 4 },
+    { stampId: 'light-pool', col: 5, row: 4 },
+    { stampId: 'cactus', col: 1, row: 2 },
+    { stampId: 'cactus', col: 12, row: 2 },
+    { stampId: 'floor-lamp', col: 1, row: 7 },
+    { stampId: 'floor-lamp', col: 12, row: 7 },
+  ],
   'sc-floor': [
     { stampId: 'slot-bank-western', col: 1, row: 1 },
     { stampId: 'slot-bank-western', col: 5, row: 1 },

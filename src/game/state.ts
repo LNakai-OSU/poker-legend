@@ -146,6 +146,11 @@ export interface GameState {
   finaleRematchDay: number
   flags: Record<StoryFlag, boolean>
   /**
+   * The other goal in every casino town: win enough at its tables to be let into
+   * the private room, then beat the boss in it. See `CASINO_GOALS` in `goals.ts`.
+   */
+  casino: CasinoProgress
+  /**
    * Scripted beats that have already happened.
    *
    * Kept apart from `flags` because they answer different questions: a flag is
@@ -160,6 +165,51 @@ export interface GameState {
     handsWon: number
     biggestPot: number
     tablesPlayed: number
+  }
+}
+
+/** Where the player stands on each town's casino goal, by town. */
+export interface CasinoProgress {
+  /** Net winnings at that town's poker tables, over the whole run. Can be negative. */
+  net: Partial<Record<CityId, number>>
+  /** Towns whose private room the player has earned: it stays open once it is. */
+  roomOpen: CityId[]
+  /** Towns whose boss the player has beaten. */
+  bossBeaten: CityId[]
+}
+
+export function emptyCasino(): CasinoProgress {
+  return { net: {}, roomOpen: [], bossBeaten: [] }
+}
+
+/**
+ * A session at a town's poker tables is over: what you walked away with, less
+ * what you put in. Reaching `winTarget` opens the private room for good — a bad
+ * night afterwards does not shut it again.
+ */
+export function recordCasinoSession(
+  state: GameState,
+  cityId: CityId,
+  net: number,
+  winTarget: number | undefined,
+): GameState {
+  const total = (state.casino.net[cityId] ?? 0) + net
+  const open =
+    winTarget !== undefined && total >= winTarget && !state.casino.roomOpen.includes(cityId)
+      ? [...state.casino.roomOpen, cityId]
+      : state.casino.roomOpen
+  return { ...state, casino: { ...state.casino, net: { ...state.casino.net, [cityId]: total }, roomOpen: open } }
+}
+
+export function recordBossBeaten(state: GameState, cityId: CityId): GameState {
+  if (state.casino.bossBeaten.includes(cityId)) return state
+  return {
+    ...state,
+    casino: {
+      ...state.casino,
+      bossBeaten: [...state.casino.bossBeaten, cityId],
+      roomOpen: state.casino.roomOpen.includes(cityId) ? state.casino.roomOpen : [...state.casino.roomOpen, cityId],
+    },
   }
 }
 
@@ -182,6 +232,7 @@ export function initialState(): GameState {
     restedUntilDay: 0,
     finaleRematchDay: 0,
     flags: clearFlags(),
+    casino: emptyCasino(),
     completedEventIds: [],
     record: emptyRecord(),
     stats: { handsWon: 0, biggestPot: 0, tablesPlayed: 0 },

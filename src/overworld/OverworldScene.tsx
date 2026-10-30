@@ -167,6 +167,13 @@ interface OverworldSceneProps {
   onSit?: (tableId: string) => void
   onLeaveEdge?: (edge: Edge, alongAxis: number) => void
   /**
+   * Asked before a door or an edge is crossed: a message means the way is shut,
+   * and the player is stopped where they stand and told it (`onRefused`) rather
+   * than carried through. A highway the bus owns, a private room not yet earned.
+   */
+  refuse?: (way: { kind: 'edge'; edge: Edge } | { kind: 'door'; col: number; row: number }) => string | null
+  onRefused?: (message: string) => void
+  /**
    * Set while a scripted beat has the screen. Nobody moves — not you, not a
    * collector — and nothing else can be talked to, so a beat that fires as you
    * walk in is not read while you walk straight out the other side. Nobody but
@@ -199,6 +206,8 @@ export function OverworldScene({
   openChairs,
   onSit,
   onLeaveEdge,
+  refuse,
+  onRefused,
   paused = false,
   cues,
   onCueDone,
@@ -232,6 +241,10 @@ export function OverworldScene({
   onSitRef.current = onSit
   const onLeaveEdgeRef = useRef(onLeaveEdge)
   onLeaveEdgeRef.current = onLeaveEdge
+  const refuseRef = useRef(refuse)
+  refuseRef.current = refuse
+  const onRefusedRef = useRef(onRefused)
+  onRefusedRef.current = onRefused
   const pausedRef = useRef(paused)
   pausedRef.current = paused
   const onCueDoneRef = useRef(onCueDone)
@@ -664,6 +677,11 @@ export function OverworldScene({
           : null
         if (edge && openEdges?.[edge]) {
           player.face(direction)
+          const refusal = refuseRef.current?.({ kind: 'edge', edge })
+          if (refusal) {
+            onRefusedRef.current?.(refusal)
+            return
+          }
           leaving = true
           onLeaveEdgeRef.current?.(edge, edge === 'north' || edge === 'south' ? player.col : player.row)
           return
@@ -673,6 +691,11 @@ export function OverworldScene({
         if (door) {
           // Face the door and stay put. The transition is the move.
           player.face(direction)
+          const refusal = refuseRef.current?.({ kind: 'door', col: door.col, row: door.row })
+          if (refusal) {
+            onRefusedRef.current?.(refusal)
+            return
+          }
           leaving = true
           onExitRef.current?.(door)
           return

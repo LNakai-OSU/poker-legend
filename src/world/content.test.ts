@@ -214,7 +214,9 @@ describe('city content', () => {
         if (!current) continue
         const onward = [
           ...current.exits.map((exit) => exit.toAreaId),
-          ...Object.values(current.edges ?? {}).map((link) => link.toAreaId),
+          ...Object.values(current.edges ?? {})
+            .filter((link) => !link.blocked)
+            .map((link) => link.toAreaId),
         ]
         for (const next of onward) {
           if (!seen.has(next)) {
@@ -229,13 +231,25 @@ describe('city content', () => {
     }
   })
 
-  it('lets you walk from your front door to the last town', () => {
+  it('keeps the towns apart on foot', () => {
     /*
-     * The whole world is one continuous place. Towns are joined by roads you can
-     * walk, and the bus is a shortcut through it rather than the only way across —
-     * so every town has to be reachable on foot from the apartment, using doors
-     * and open edges and nothing else.
+     * The bus is the only way between towns. Every edge that would carry you from
+     * one town into another is blocked, on both sides, with a line to say so — you
+     * are stopped at the end of the road rather than walked into the next casino
+     * without having beaten the boss behind you — and nothing outside your own
+     * town can be reached by walking.
      */
+    for (const { city, area } of areas) {
+      for (const [side, link] of Object.entries(area.edges ?? {})) {
+        const other = AREAS[link.toAreaId]
+        if (other.cityId === city.id) {
+          expect(link.blocked, `${area.name}: ${side} edge stays inside ${city.name}`).toBeUndefined()
+        } else {
+          expect(link.blocked, `${city.name}/${area.name}: ${side} edge crosses into ${other.cityId} on foot`).toBeTruthy()
+        }
+      }
+    }
+
     const start = CITIES.apartment.entryAreaId
     const seen = new Set([start])
     const queue = [start]
@@ -244,7 +258,9 @@ describe('city content', () => {
       if (!current) continue
       const onward = [
         ...current.exits.map((exit) => exit.toAreaId),
-        ...Object.values(current.edges ?? {}).map((link) => link.toAreaId),
+        ...Object.values(current.edges ?? {})
+          .filter((link) => !link.blocked)
+          .map((link) => link.toAreaId),
       ]
       for (const next of onward) {
         if (!seen.has(next)) {
@@ -253,13 +269,9 @@ describe('city content', () => {
         }
       }
     }
-
-    for (const city of cities) {
-      const unreachable = allAreas(city).filter((area) => !seen.has(area.id))
-      expect(
-        unreachable.map((a) => a.name),
-        `${city.name} cannot be walked to from your front door`,
-      ).toEqual([])
+    for (const city of cities.filter((c) => c.id !== 'apartment')) {
+      const walked = allAreas(city).filter((a) => seen.has(a.id))
+      expect(walked.map((a) => a.name), `${city.name} can be walked to from your front door`).toEqual([])
     }
   })
 

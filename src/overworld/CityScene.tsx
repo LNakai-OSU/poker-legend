@@ -1,7 +1,8 @@
 import { OverworldScene, type ChaserConfig, type Interactable, type SceneCue, type SceneExit } from './OverworldScene'
 import { AREAS, CITIES, MISSIONS, SPONSORS, collectorSpawn, findArea } from '../world/content'
 import { isWalkable } from './tileRenderer'
-import { missionStatus } from '../game/progression'
+import { goalStatus, missionStatus, privateRoomOpen } from '../game/progression'
+import { CASINO_GOALS } from '../world/goals'
 import { daysUntilDue, huntingSponsorId, totalOwed, type GameState, type StoryFlag } from '../game/state'
 import type { PoiAction, PoiDef } from '../world/types'
 import type { NpcArt } from './Npc'
@@ -34,6 +35,8 @@ interface CitySceneProps {
   onCueDone?: (id: number, at?: { col: number; row: number }) => void
   /** Set while an event has the screen: the street holds still until it is done. */
   paused?: boolean
+  /** Something to say to a player who has been stopped at a shut door or a highway. */
+  onNotice?: (lines: string[]) => void
 }
 
 export function CityScene({
@@ -47,6 +50,7 @@ export function CityScene({
   cues = [],
   onCueDone,
   paused,
+  onNotice,
 }: CitySceneProps) {
   // Areas resolve globally, not within a city: walking off the edge of a street
   // can take you into the next town, which is the point of the world being one
@@ -209,6 +213,7 @@ export function CityScene({
 
   const owed = totalOwed(state)
   const due = daysUntilDue(state)
+  const goal = goalStatus(state, city.id)
 
   return (
     <OverworldScene
@@ -238,6 +243,15 @@ export function CityScene({
             ) as Partial<Record<'north' | 'south' | 'east' | 'west', true>>)
           : undefined
       }
+      refuse={(way) => {
+        if (way.kind === 'edge') return area.edges?.[way.edge]?.blocked ?? null
+        const door = area.exits.find((e) => e.col === way.col && e.row === way.row)
+        const goal = door?.privateRoomOf ? CASINO_GOALS[door.privateRoomOf] : undefined
+        if (!goal || privateRoomOpen(state, goal.cityId)) return null
+        const won = Math.max(0, state.casino.net[goal.cityId] ?? 0)
+        return `${goal.shut} (You have won $${won.toLocaleString()} of the $${goal.winTarget.toLocaleString()} it takes.)`
+      }}
+      onRefused={(message) => onNotice?.([message])}
       onLeaveEdge={(edge, alongAxis) => {
         const link = area.edges?.[edge]
         if (!link) return
@@ -303,6 +317,11 @@ export function CityScene({
             {city.name} &middot; Day {state.day} &middot; {PERIOD_LABEL[state.period]}
           </div>
           <div>Cash: ${state.cash.toLocaleString()}</div>
+          {goal && goal.phase !== 'done' && (
+            <div data-testid="goal-hud" style={{ color: '#9ad0ff', fontSize: 12, maxWidth: 220 }}>
+              Goal: {goal.line}
+            </div>
+          )}
           {owed > 0 && (
             <div style={{ color: due !== null && due < 0 ? '#e05a5a' : '#f2c14e' }}>
               Owed: ${owed.toLocaleString()}

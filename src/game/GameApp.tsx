@@ -12,6 +12,7 @@ import { SideNav } from './SideNav'
 import { anyKeyLayer } from './keys'
 import { CITIES, LESSONS, MISSIONS, SPONSORS, TABLES, findArea } from '../world/content'
 import { hasFastTravel, missionStatus, tableAccess, travelCostTo } from './progression'
+import { CASINO_GOALS } from '../world/goals'
 import { clearSave, loadGame, saveGame } from './save'
 import { useEventRunner } from './useEventRunner'
 import { BadBeatIntro } from './BadBeatIntro'
@@ -33,6 +34,8 @@ import {
   initialState,
   lostFinalChallenge,
   payDebt,
+  recordBossBeaten,
+  recordCasinoSession,
   takeStake,
   travelTo,
   unlockTable,
@@ -133,6 +136,15 @@ export function GameApp() {
   const lastArea = useRef<string | null>(null)
   const runEvent = events.run
   const clearCast = events.clearCast
+  /** A few lines said to the player where they stand: a shut door, a highway. */
+  const notice = (lines: string[]) =>
+    runEvent({
+      id: 'notice',
+      about: 'Something said to a player who has been stopped.',
+      trigger: { kind: 'interact', poiId: 'notice' },
+      repeatable: true,
+      actions: [{ kind: 'dialogue', lines }],
+    })
   useEffect(() => {
     if (view.kind !== 'city') return
     const areaId = state.areaId ?? CITIES[state.cityId].entryAreaId
@@ -218,8 +230,12 @@ export function GameApp() {
     }
   }
 
+  /** What this sitting has cost so far (buy-in and rebuys), to work out what it won. */
+  const sessionSpend = useRef(0)
+
   const buyInAndSit = (table: (typeof TABLES)[string]) => {
     // The buy-in leaves your wallet and becomes chips in front of you.
+    sessionSpend.current = table.freeroll ? 0 : table.buyIn
     if (!table.freeroll) setState((s) => ({ ...s, cash: s.cash - table.buyIn }))
     setView({ kind: 'table', tableId: table.id })
   }
@@ -248,7 +264,7 @@ export function GameApp() {
     }
     // The finale has no Leave button on purpose, and one side loses everything
     // they put up. Both of those have to be said before the money moves.
-    if (table.isFinale && !table.freeroll) {
+    if ((table.isFinale && !table.freeroll) || table.bossOf) {
       setView({ kind: 'finaleCommit', tableId })
       return
     }
@@ -256,31 +272,41 @@ export function GameApp() {
   }
 
   const handleLeaveTable = (table: (typeof TABLES)[string], result: SessionResult) => {
-    // The final table is a story beat, not a cash game: what happens next is
-    // written as an event, whichever way it went.
-    if (table.isFinale && table.freeroll) {
+    // A town's boss, one on one: win and the bus to the next town will take you.
+    if (table.bossOf) {
+      const goal = CASINO_GOALS[table.bossOf]
+      const boss = CHARACTERS[goal.bossId]
       const won = result.finaleWon === true
-      const after = advanceDay({
+      const settled = advanceDay({
         ...state,
-        cash: state.cash + (won ? (table.prize ?? 0) : 0),
+        cash: state.cash + (won ? result.chipsCashedOut : 0),
         stats: {
           handsWon: state.stats.handsWon + result.handsWon,
           biggestPot: Math.max(state.stats.biggestPot, result.biggestPot),
           tablesPlayed: state.stats.tablesPlayed + 1,
         },
-        record: won ? state.record : { ...state.record, challengeLost: state.record.challengeLost + 1 },
-        flags: won ? { ...state.flags, beatFinalRival: true, hasPenthouse: true } : state.flags,
       })
+      const after = won ? recordBossBeaten(settled, table.bossOf) : settled.cash < BUST_LINE ? recordBust(settled) : settled
       setState(() => after)
-      backToCity()
-      const event = eventFor(EVENTS, { kind: won ? 'finaleWon' : 'finaleLost' }, after)
-      if (event) runEvent(event, won ? () => setView({ kind: 'ending' }) : undefined)
-      else setView({ kind: won ? 'ending' : 'finaleLost' })
+      getUpFromTable()
+      playSound(won ? 'cash' : 'lose')
+      notice(won ? goal.beaten : [boss.lines?.win?.[0] ?? `${boss.name}: Better luck next time.`])
       return
     }
+    // Everything else at a poker table counts toward the town's private room.
+    const net = result.chipsCashedOut - sessionSpend.current
+    sessionSpend.current = 0
+    const goal = table.isFinale ? undefined : CASINO_GOALS[state.cityId]
+    let unlocked: string[] | null = null
+    if (goal && !state.casino.roomOpen.includes(goal.cityId)) {
+      if ((state.casino.net[goal.cityId] ?? 0) + net >= goal.winTarget) {
+        unlocked = [`That is $${goal.winTarget.toLocaleString()} won at the ${goal.casino}. A door at the back of the floor has just been unlocked for you, and somebody is waiting behind it.`]
+      }
+    }
     setState((s) => {
+      const counted = table.isFinale ? s : recordCasinoSession(s, s.cityId, net, CASINO_GOALS[s.cityId]?.winTarget)
       const next = advanceDay({
-        ...s,
+        ...counted,
         cash: s.cash + result.chipsCashedOut,
         stats: {
           handsWon: s.stats.handsWon + result.handsWon,
@@ -300,7 +326,10 @@ export function GameApp() {
       return settled
     })
     if (table.isFinale) setView({ kind: result.finaleWon ? 'ending' : 'finaleLost' })
-    else getUpFromTable()
+    else {
+      getUpFromTable()
+      if (unlocked) notice(unlocked)
+    }
   }
 
   const handleCaught = () => {
@@ -401,7 +430,10 @@ export function GameApp() {
           key={view.tableId}
           table={table}
           state={state}
-          onRebuy={(amount) => setState((s) => ({ ...s, cash: s.cash - amount }))}
+          onRebuy={(amount) => {
+            sessionSpend.current += amount
+            setState((s) => ({ ...s, cash: s.cash - amount }))
+          }}
           onLeave={(result) => handleLeaveTable(table, result)}
         />
       )
@@ -438,6 +470,7 @@ export function GameApp() {
 
     case 'finaleCommit': {
       const table = TABLES[view.tableId]
+      const rival = table.bossOf ? CHARACTERS[CASINO_GOALS[table.bossOf].bossId].name : 'her'
       return (
         <MenuScreen title={table.name} onBack={backToCity} backLabel="Not tonight">
           <p data-testid="finale-commitment" style={{ color: '#f2c14e' }}>
@@ -448,8 +481,9 @@ export function GameApp() {
             &mdash; it is over when one of you has all the chips.
           </p>
           <p>
-            If that is her, the ${table.buyIn.toLocaleString()} is hers, and she will not put the
-            match up again for another week.
+            {table.bossOf
+              ? `If that is ${rival}, the $${table.buyIn.toLocaleString()} is theirs, and you do not get to the next town until you have beaten them.`
+              : `If that is her, the $${table.buyIn.toLocaleString()} is hers, and she will not put the match up again for another week.`}
           </p>
           <p style={{ color: '#9a9ab0' }}>
             Your roll ${state.cash.toLocaleString()} &rarr; ${(state.cash - table.buyIn).toLocaleString()} once
@@ -605,6 +639,7 @@ export function GameApp() {
               setEntryTile({ col, row })
             }}
             onCaught={handleCaught}
+            onNotice={notice}
             onEvent={events.run}
             cast={events.stage.cast}
             cues={events.stage.cues}
@@ -619,7 +654,8 @@ export function GameApp() {
   // The finale still hides the button. Settings no longer unmounts the table, so
   // it is not an escape hatch any more, but the match is meant to feel like a
   // door that has shut behind you and a menu button undercuts that.
-  const lockedInAtTable = view.kind === 'table' && TABLES[view.tableId]?.isFinale === true
+  const lockedInAtTable =
+    view.kind === 'table' && (TABLES[view.tableId]?.isFinale === true || TABLES[view.tableId]?.bossOf !== undefined)
 
   // Escape opens the menu when nothing else has the keys — no text box, no
   // question, no menu of its own (where Escape is the way out instead).

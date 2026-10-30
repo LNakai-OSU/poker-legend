@@ -69,6 +69,14 @@ export interface TableDef {
    * heads-up table on the Harbor floor looks like the Harbor floor.
    */
   theme?: TableThemeId
+  /**
+   * This is the boss of that town's casino, one on one in the private room.
+   *
+   * A match, like the final: your buy-in against theirs, no cashing out and no
+   * standing up, over when one of you has every chip. Beating them is what lets
+   * you travel to the next town. See `CASINO_GOALS` in `goals.ts`.
+   */
+  bossOf?: CityId
 }
 
 export type ItemEffect =
@@ -252,6 +260,13 @@ export type Edge = 'north' | 'south' | 'east' | 'west'
 export interface EdgeLink {
   toAreaId: string
   /**
+   * Set and the side is a wall of road: walking into it stops you and says this,
+   * instead of crossing. The link stays written down so the two maps still agree
+   * on how they would line up, but no one crosses it on foot. This is how towns
+   * stay apart: the bus is the only way between them.
+   */
+  blocked?: string
+  /**
    * How the two maps line up along the shared side: added to the coordinate you
    * leave on to get the one you arrive at. A map whose neighbour starts four
    * tiles further north uses -4.
@@ -268,6 +283,11 @@ export interface ExitDef {
   toRow: number
   /** Shown as a signpost over the door. */
   label: string
+  /**
+   * The private room behind a casino door: it stays shut until you have won
+   * enough at that town's casino (see `CASINO_GOALS`).
+   */
+  privateRoomOf?: CityId
 }
 
 /**
