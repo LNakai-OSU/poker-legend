@@ -15,6 +15,7 @@ import { buttonHeight } from './tableLayout'
 import { useViewport } from './useViewport'
 import { swallowDoubleClick, useMenuKeys } from './keys'
 import { useTouchFirst } from './device'
+import type { SaveOutcome } from './save'
 
 /**
  * The menu behind the ☰ button: a panel that slides in from the right edge,
@@ -66,11 +67,15 @@ export function SideNav({
   state,
   onClose,
   onNewGame,
+  onSave,
 }: {
   state: GameState
   onClose: () => void
   onNewGame: () => void
+  /** Null when saving is not allowed right now (at a table, mid-scene). */
+  onSave: (() => Promise<SaveOutcome>) | null
 }) {
+  const [saveNote, setSaveNote] = useState<{ text: string; colour: typeof INK.dim } | null>(null)
   const view = useViewport()
   const touch = useTouchFirst()
   const [page, setPage] = useState<Page>('main')
@@ -249,6 +254,24 @@ export function SideNav({
         {item('nav-jobs', 'Jobs', () => setPage('jobs'))}
         {item('nav-record', 'Record', () => setPage('record'))}
         {item('nav-goals', 'Goals', () => setPage('goals'))}
+        {rule}
+        {onSave ? (
+          item('nav-save', 'Save', () => {
+            setSaveNote({ text: 'Saving…', colour: INK.dim })
+            void onSave().then((outcome) =>
+              setSaveNote(
+                outcome === 'account'
+                  ? { text: 'Saved here, and to your account.', colour: INK.gold }
+                  : outcome === 'device'
+                    ? { text: 'Saved on this device.', colour: INK.gold }
+                    : { text: 'Could not save: storage is blocked.', colour: INK.red },
+              ),
+            )
+          })
+        ) : (
+          line("Can't save at a table or mid-scene.", INK.dim)
+        )}
+        {saveNote && <div data-testid="save-note">{line(saveNote.text, saveNote.colour)}</div>}
         {rule}
         {heading('Settings')}
         {item('nav-sound', muted ? 'Sound: off' : 'Sound: on', () => {

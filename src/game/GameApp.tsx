@@ -13,7 +13,8 @@ import { anyKeyLayer } from './keys'
 import { CITIES, LESSONS, MISSIONS, SPONSORS, TABLES, findArea } from '../world/content'
 import { hasFastTravel, missionStatus, tableAccess, travelCostTo } from './progression'
 import { CASINO_GOALS } from '../world/goals'
-import { clearSave, loadGame, saveGame } from './save'
+import { clearSave, loadGame, saveGame, saveHere } from './save'
+import { currentStanding } from '../overworld/OverworldScene'
 import { useEventRunner } from './useEventRunner'
 import { BadBeatIntro } from './BadBeatIntro'
 import { ReelScene } from './ReelScene'
@@ -81,11 +82,16 @@ type View =
   | { kind: 'finaleLost' }
 
 export function GameApp() {
-  const [state, setState] = useState<GameState>(() => loadGame() ?? initialState())
+  const [loaded] = useState<GameState>(() => loadGame() ?? initialState())
+  const [state, setState] = useState<GameState>(loaded)
   const [view, setView] = useState<View>({ kind: 'city' })
   // Where to stand when walking through a door, so you appear at the doorway
-  // rather than at the area's default spawn.
-  const [entryTile, setEntryTile] = useState<{ col: number; row: number } | null>(null)
+  // rather than at the area's default spawn. A save the player made themselves
+  // starts them on the tile they saved on.
+  const [entryTile, setEntryTile] = useState<{ col: number; row: number } | null>(loaded.resume ?? null)
+  // The state the player last saved by hand. The automatic save leaves it alone
+  // until something else changes, so loading the game doesn't erase the spot.
+  const handSaved = useRef<GameState | null>(loaded.resume ? loaded : null)
   /**
    * Settings is laid over the game rather than being somewhere you go.
    *
@@ -118,6 +124,7 @@ export function GameApp() {
   // middle of one puts you back where it started rather than somewhere it was
   // carrying you, with nobody beside you and the beat forgotten.
   useEffect(() => {
+    if (state === handSaved.current) return
     if (view.kind === 'city' && !events.isRunning) saveGame(state)
   }, [state, view.kind, events.isRunning])
 
@@ -749,6 +756,15 @@ export function GameApp() {
       {menuOpen && (
         <SideNav
           state={state}
+          onSave={
+            view.kind === 'city' && !events.isRunning
+              ? async () => {
+                  const outcome = await saveHere(state, currentStanding())
+                  handSaved.current = state
+                  return outcome
+                }
+              : null
+          }
           onNewGame={() => {
             clearSave()
             setState(initialState())

@@ -70,6 +70,11 @@ function standingFor(owner: object, area: string, start: { col: number; row: num
   return resume
 }
 
+/** The tile the player on screen stands on, for a save that remembers the exact spot. */
+export function currentStanding(): { col: number; row: number } | null {
+  return lastStanding ? { ...lastStanding.at } : null
+}
+
 /** The prompt for a chair in front of you, which no person's name can equal. */
 const SIT_PROMPT = { verb: 'sit', name: '' }
 

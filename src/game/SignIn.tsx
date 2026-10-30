@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { cloudEnabled, tokenFor, type AuthError } from './cloud'
 import { cleanName, knownProfiles, lastProfile, profileSlug } from './session'
 
 const panel: React.CSSProperties = {
@@ -27,12 +28,36 @@ const button: React.CSSProperties = {
   cursor: 'pointer',
 }
 
+const MESSAGES: Record<AuthError, string> = {
+  'name-taken': 'That name already has an account. Log in instead, or pick another name.',
+  'wrong-login': 'Wrong name or password.',
+  'bad-credentials-format': 'Use a name, and a password of at least 6 characters.',
+  offline: "Couldn't reach the account server. Check your connection and try again.",
+}
+
 /** Who is playing: a name is all an account is, and it keeps their save to themselves. */
-export function SignIn({ onSignIn }: { onSignIn: (name: string) => void }) {
+export function SignIn({
+  onSignIn,
+}: {
+  onSignIn: (name: string, password: string, creating: boolean) => Promise<AuthError | null> | void
+}) {
   const [name, setName] = useState(lastProfile)
+  const [password, setPassword] = useState('')
+  const [creating, setCreating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  // With accounts on, a device that has never logged this name in needs the password.
+  const needsPassword = cloudEnabled() && !tokenFor(profileSlug(cleanName(name)))
   const known = knownProfiles()
-  const ok = profileSlug(cleanName(name)).length > 0
-  const submit = () => ok && onSignIn(cleanName(name))
+  const ok = profileSlug(cleanName(name)).length > 0 && (!needsPassword || password.length >= 6) && !busy
+  const submit = async () => {
+    if (!ok) return
+    setBusy(true)
+    setError(null)
+    const failure = await onSignIn(cleanName(name), password, creating)
+    setBusy(false)
+    if (failure) setError(MESSAGES[failure])
+  }
 
   return (
     <div style={panel} data-testid="sign-in">
@@ -45,7 +70,9 @@ export function SignIn({ onSignIn }: { onSignIn: (name: string) => void }) {
       >
         <h1 style={{ margin: 0, color: '#f0d27a', fontSize: 28, textAlign: 'center' }}>Poker Legend</h1>
         <p style={{ margin: 0, textAlign: 'center', color: '#a8a8c0', fontSize: 14 }}>
-          Pick a name. Your run is saved under it on this device, apart from everyone else's.
+          {cloudEnabled()
+            ? 'Log in to carry your run to any device, or create an account.'
+            : "Pick a name. Your run is saved under it on this device, apart from everyone else's."}
         </p>
         <input
           autoFocus
@@ -65,16 +92,59 @@ export function SignIn({ onSignIn }: { onSignIn: (name: string) => void }) {
             padding: '0 12px',
           }}
         />
+        {needsPassword && (
+          <input
+            aria-label="Password"
+            type="password"
+            value={password}
+            maxLength={100}
+            placeholder={creating ? 'Choose a password (6+ characters)' : 'Password'}
+            autoComplete={creating ? 'new-password' : 'current-password'}
+            onChange={(e) => setPassword(e.target.value)}
+            style={{
+              minHeight: 44,
+              borderRadius: 8,
+              border: '1px solid #4a4a66',
+              background: '#10101a',
+              color: '#e8e8f0',
+              fontFamily: 'monospace',
+              fontSize: 16,
+              padding: '0 12px',
+            }}
+          />
+        )}
+        {error && (
+          <p role="alert" style={{ margin: 0, color: '#ff8a8a', fontSize: 14, textAlign: 'center' }}>
+            {error}
+          </p>
+        )}
         <button type="submit" disabled={!ok} style={{ ...button, opacity: ok ? 1 : 0.5 }}>
-          {known.some((n) => profileSlug(n) === profileSlug(name)) ? 'Continue' : 'Start'}
+          {busy
+            ? 'One moment…'
+            : needsPassword
+              ? creating
+                ? 'Create account'
+                : 'Log in'
+              : known.some((n) => profileSlug(n) === profileSlug(name))
+                ? 'Continue'
+                : 'Start'}
         </button>
+        {needsPassword && (
+          <button
+            type="button"
+            onClick={() => setCreating((c) => !c)}
+            style={{ ...button, minHeight: 36, fontSize: 14, border: '1px solid #4a4a66', background: 'transparent', color: '#a8a8c0' }}
+          >
+            {creating ? 'I already have an account' : 'New here? Create an account'}
+          </button>
+        )}
         {known.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
             {known.map((n) => (
               <button
                 key={n}
                 type="button"
-                onClick={() => onSignIn(n)}
+                onClick={() => (tokenFor(profileSlug(n)) || !cloudEnabled() ? void onSignIn(n, '', false) : setName(n))}
                 style={{ ...button, minHeight: 36, fontSize: 14, border: '1px solid #4a4a66', background: '#10101a', color: '#e8e8f0' }}
               >
                 {n}

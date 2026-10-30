@@ -1,4 +1,5 @@
 import { emptyRecord, initialState, TOWN_ORDER, type CasinoProgress, type GameState, type RunRecord } from './state'
+import { pull, push, tokenFor } from './cloud'
 import { TIME_PERIODS, type TimePeriod } from './time'
 
 const LEGACY_SAVE_KEY = 'poker-legend-save-v2'
@@ -52,6 +53,8 @@ function reconcile(parsed: unknown): GameState | null {
     ...base,
     ...saved,
     cash: Math.max(0, saved.cash),
+    savedAt: typeof saved.savedAt === 'number' ? saved.savedAt : undefined,
+    resume: validTile(saved.resume) ? { col: saved.resume.col, row: saved.resume.row } : undefined,
     day: typeof saved.day === 'number' && saved.day > 0 ? saved.day : base.day,
     // Saves written before the clock existed start their next walk in the morning.
     period: TIME_PERIODS.includes(saved.period as TimePeriod) ? (saved.period as TimePeriod) : base.period,
@@ -70,6 +73,11 @@ function reconcile(parsed: unknown): GameState | null {
     casino: reconcileCasino(saved),
     stats: { ...base.stats, ...(saved.stats ?? {}) },
   }
+}
+
+function validTile(t: unknown): t is { col: number; row: number } {
+  const tile = t as { col?: unknown; row?: unknown } | null | undefined
+  return typeof tile === 'object' && tile !== null && Number.isInteger(tile.col) && Number.isInteger(tile.row)
 }
 
 /**
@@ -106,11 +114,70 @@ function reconcileRecord(saved: Partial<GameState>): RunRecord {
   }
 }
 
-export function saveGame(state: GameState): void {
+let pushTimer: ReturnType<typeof setTimeout> | undefined
+
+function writeLocal(state: GameState): GameState {
+  const stamped = { ...state, savedAt: Date.now() }
   try {
-    localStorage.setItem(saveKey(), JSON.stringify(state))
+    localStorage.setItem(saveKey(), JSON.stringify(stamped))
   } catch {
     // Saving is best-effort; a failure shouldn't interrupt play.
+  }
+  return stamped
+}
+
+/** The automatic save: a checkpoint, with no exact spot, copied to the account a moment later. */
+export function saveGame(state: GameState): void {
+  const stamped = writeLocal({ ...state, resume: undefined })
+  const slug = profileKey
+  if (!slug || !tokenFor(slug)) return
+  clearTimeout(pushTimer)
+  pushTimer = setTimeout(() => void push(slug, stamped, stamped.savedAt ?? Date.now()), 1500)
+}
+
+export type SaveOutcome = 'account' | 'device' | 'failed'
+
+/**
+ * The player's own save: exactly where they stand, written at once and sent to
+ * the account before it answers. Stays that way until an automatic save
+ * (reaching a new area, winning, buying) replaces it.
+ */
+export async function saveHere(state: GameState, at: { col: number; row: number } | null): Promise<SaveOutcome> {
+  const stamped = writeLocal({ ...state, resume: at ?? undefined })
+  try {
+    if (localStorage.getItem(saveKey()) === null) return 'failed'
+  } catch {
+    return 'failed'
+  }
+  const slug = profileKey
+  if (!slug || !tokenFor(slug)) return 'device'
+  clearTimeout(pushTimer)
+  return (await push(slug, stamped, stamped.savedAt ?? Date.now())) ? 'account' : 'device'
+}
+
+/**
+ * On signing in: whichever of this device's save and the account's is newer
+ * wins, and the other is brought up to date.
+ */
+export async function syncWithAccount(slug: string): Promise<void> {
+  const remote = await pull(slug)
+  const key = `${LEGACY_SAVE_KEY}:${slug}`
+  let local: { savedAt?: number } | null = null
+  try {
+    const raw = localStorage.getItem(key)
+    local = raw ? (JSON.parse(raw) as { savedAt?: number }) : null
+  } catch {
+    local = null
+  }
+  const localAt = local?.savedAt ?? 0
+  if (remote && remote.savedAt > localAt) {
+    try {
+      localStorage.setItem(key, JSON.stringify(remote.save))
+    } catch {
+      // Played from the account's copy next time.
+    }
+  } else if (local && (!remote || localAt > remote.savedAt)) {
+    await push(slug, local, localAt || Date.now())
   }
 }
 

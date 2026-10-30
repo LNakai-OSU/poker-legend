@@ -100,6 +100,10 @@ export type CountOf = 'busted' | 'challengeLost' | keyof SponsorRecord
 export const BUST_LINE = 100
 
 export interface GameState {
+  /** When this save was written (ms); the newer of device and account wins. */
+  savedAt?: number
+  /** Where the player stood when they chose Save; absent for an automatic save. */
+  resume?: { col: number; row: number }
   day: number
   /**
    * What time of day it is.

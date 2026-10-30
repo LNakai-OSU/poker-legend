@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { GameApp } from './game/GameApp'
 import { Editor } from './editor/Editor'
 import { FullscreenControls } from './game/Fullscreen'
-import { setSaveProfile } from './game/save'
+import { setSaveProfile, syncWithAccount } from './game/save'
+import { cloudEnabled, createAccount, logIn, tokenFor } from './game/cloud'
 import { activeProfile, profileSlug, signIn, useTabClaim } from './game/session'
 import { Displaced, SignIn } from './game/SignIn'
 
@@ -37,9 +38,16 @@ function Player() {
   if (name === null) {
     return (
       <SignIn
-        onSignIn={(n) => {
+        onSignIn={async (n, password, creating) => {
+          const slug = profileSlug(n)
+          // Already logged in on this device: no password asked.
+          if (cloudEnabled() && !tokenFor(slug)) {
+            const failure = await (creating ? createAccount : logIn)(slug, n, password)
+            if (failure) return failure
+          }
           signIn(n)
           setName(n)
+          return null
         }}
       />
     )
@@ -53,6 +61,17 @@ function Session({ name }: { name: string }) {
   // each change of player.
   setSaveProfile(slug || null)
   const { displaced, reclaim } = useTabClaim(slug)
+  // Whichever is newer, this device's save or the account's, is the one played.
+  const [synced, setSynced] = useState(slug === '' || !cloudEnabled())
+  useEffect(() => {
+    if (synced) return
+    let live = true
+    void syncWithAccount(slug).finally(() => live && setSynced(true))
+    return () => {
+      live = false
+    }
+  }, [slug, synced])
+  if (!synced) return <div style={{ position: 'fixed', inset: 0, background: '#07070c', color: '#a8a8c0', fontFamily: 'monospace', display: 'grid', placeItems: 'center' }}>Loading your run…</div>
 
   return (
     <>

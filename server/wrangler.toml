@@ -1,0 +1,11 @@
+name = "poker-legend-accounts"
+main = "worker.ts"
+compatibility_date = "2025-01-01"
+
+# npx wrangler kv namespace create SAVES   -> paste the id below
+[[kv_namespaces]]
+binding = "SAVES"
+id = "REPLACE_WITH_NAMESPACE_ID"
+
+[vars]
+# ALLOWED_ORIGINS = "https://lnakai-osu.github.io"
