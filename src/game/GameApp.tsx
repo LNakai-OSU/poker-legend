@@ -10,6 +10,8 @@ import { CrapsScene, SlotsScene } from './CasinoGameScenes'
 import { PenthouseScene, VenueScene } from './VenueScenes'
 import { SideNav } from './SideNav'
 import { OpenWorldMap, WorldMap } from './WorldMap'
+import { PlaytestPanel } from './PlaytestPanel'
+import { checkpointAt } from './playtest'
 import { anyKeyLayer } from './keys'
 import { CITIES, LESSONS, MISSIONS, SPONSORS, TABLES, findArea } from '../world/content'
 import { hasFastTravel, missionStatus, tableAccess, travelCostTo } from './progression'
@@ -82,7 +84,7 @@ type View =
   | { kind: 'ending' }
   | { kind: 'finaleLost' }
 
-export function GameApp() {
+export function GameApp({ playtest = false }: { playtest?: boolean }) {
   const [loaded] = useState<GameState>(() => loadGame() ?? initialState())
   const [state, setState] = useState<GameState>(loaded)
   const [view, setView] = useState<View>({ kind: 'city' })
@@ -105,6 +107,7 @@ export function GameApp() {
    */
   const [menuOpen, setMenuOpen] = useState(false)
   const [worldMapOpen, setWorldMapOpen] = useState(false)
+  const [playtestOpen, setPlaytestOpen] = useState(false)
   /** Whose collectors it was, for the shakedown screen; the hunt is over by the time it shows. */
   const [caughtBy, setCaughtBy] = useState<string | null>(null)
   useAudioUnlock()
@@ -131,6 +134,16 @@ export function GameApp() {
   }, [state, view.kind, events.isRunning])
 
   const backToCity = () => setView({ kind: 'city' })
+
+  /** Playtest account: stand in any place on the map. */
+  const goTo = (areaId: string) => {
+    const found = findArea(areaId)
+    if (!found) return
+    setState((s) => arriveAt(s, areaId, found.cityId))
+    setEntryTile(found.area.playerStart)
+    setWorldMapOpen(false)
+    setView({ kind: 'city' })
+  }
 
   /**
    * Walking into somewhere is a moment a beat can be written for.
@@ -654,7 +667,7 @@ export function GameApp() {
             cues={events.stage.cues}
             onCueDone={events.cueDone}
             // The menu is a pause: nobody walks, nobody chases, while it is open.
-            paused={events.isRunning || menuOpen || worldMapOpen}
+            paused={events.isRunning || menuOpen || worldMapOpen || playtestOpen}
           />
         )
     }
@@ -758,6 +771,14 @@ export function GameApp() {
       {menuOpen && (
         <SideNav
           state={state}
+          onPlaytest={
+            playtest
+              ? () => {
+                  setMenuOpen(false)
+                  setPlaytestOpen(true)
+                }
+              : undefined
+          }
           onWorldMap={() => {
             setMenuOpen(false)
             setWorldMapOpen(true)
@@ -785,7 +806,33 @@ export function GameApp() {
           }}
         />
       )}
-      {worldMapOpen && <WorldMap state={state} onClose={() => setWorldMapOpen(false)} />}
+      {worldMapOpen && (
+        <WorldMap state={state} onClose={() => setWorldMapOpen(false)} onGoTo={playtest ? goTo : undefined} />
+      )}
+      {playtest && playtestOpen && (
+        <PlaytestPanel
+          state={state}
+          setState={setState}
+          onWorldMap={() => {
+            setPlaytestOpen(false)
+            setWorldMapOpen(true)
+          }}
+          onCheckpoint={(cityId) => {
+            const next = checkpointAt(state, cityId)
+            setState(() => next)
+            const area = findArea(next.areaId)
+            setEntryTile(area ? area.area.playerStart : null)
+            setPlaytestOpen(false)
+            setView({ kind: 'city' })
+          }}
+          onPlayEvent={(event) => {
+            setPlaytestOpen(false)
+            setView({ kind: 'city' })
+            events.run(event)
+          }}
+          onClose={() => setPlaytestOpen(false)}
+        />
+      )}
     </OpenWorldMap.Provider>
   )
 }

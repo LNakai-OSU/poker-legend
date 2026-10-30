@@ -69,6 +69,7 @@ export function SideNav({
   onNewGame,
   onSave,
   onWorldMap,
+  onPlaytest,
 }: {
   state: GameState
   onClose: () => void
@@ -76,6 +77,8 @@ export function SideNav({
   /** Null when saving is not allowed right now (at a table, mid-scene). */
   onSave: (() => Promise<SaveOutcome>) | null
   onWorldMap: () => void
+  /** Only the playtest account is given this. */
+  onPlaytest?: () => void
 }) {
   const [saveNote, setSaveNote] = useState<{ text: string; colour: typeof INK.dim } | null>(null)
   const view = useViewport()
@@ -257,6 +260,7 @@ export function SideNav({
         {item('nav-record', 'Record', () => setPage('record'))}
         {item('nav-goals', 'Goals', () => setPage('goals'))}
         {item('nav-world-map', 'World map', onWorldMap)}
+        {onPlaytest && item('nav-playtest', 'Playtest tools', onPlaytest)}
         {rule}
         {onSave ? (
           item('nav-save', 'Save', () => {

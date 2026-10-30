@@ -56,7 +56,16 @@ const INK = '#e8e8f0'
 const DIM = '#8d93ab'
 const GOLD = '#f0d27a'
 
-export function WorldMap({ state, onClose }: { state: GameState; onClose: () => void }) {
+export function WorldMap({
+  state,
+  onClose,
+  onGoTo,
+}: {
+  state: GameState
+  onClose: () => void
+  /** Set for the playtest account only: each place becomes a way to get there. */
+  onGoTo?: (areaId: string) => void
+}) {
   const isTop = useKeyLayer(true, 5)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -86,7 +95,18 @@ export function WorldMap({ state, onClose }: { state: GameState; onClose: () => 
         key={a.id}
         data-testid={`map-place-${a.id}`}
         data-here={you || undefined}
+        role={onGoTo ? 'button' : undefined}
+        title={onGoTo ? `Go to ${a.name}` : undefined}
+        onClick={
+          onGoTo
+            ? (e) => {
+                e.stopPropagation()
+                onGoTo(a.id)
+              }
+            : undefined
+        }
         style={{
+          cursor: onGoTo ? 'pointer' : undefined,
           padding: '4px 8px',
           borderRadius: 4,
           background: colours[0],
@@ -119,7 +139,10 @@ export function WorldMap({ state, onClose }: { state: GameState; onClose: () => 
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <h2 style={{ margin: 0, color: GOLD, fontSize: 18 }}>The road to the penthouse</h2>
+        <h2 style={{ margin: 0, color: GOLD, fontSize: 18 }}>
+          The road to the penthouse
+          {onGoTo && <span style={{ color: '#c084fc', fontSize: 12 }}> · playtest: click any place to go there</span>}
+        </h2>
         <button
           type="button"
           data-testid="world-map-close"

@@ -95,3 +95,8 @@ behalf that you might want to revisit.
   - **World map:** tap the corner map or ☰ → World map. Laid out from the town data (`game/WorldMap.tsx`), so new towns appear by themselves: streets, casino, private room, other places; unreached towns dimmed; "you" marked.
   - **Saloon:** the repeated "$500" posters in the Silver Creek room (`pixel/rooms.ts`) are now a rotation of horseshoe, sunset, antlers, trade blanket, sheriff's star and a dead man's hand. Other rooms had no such banners.
   - **Talk:** `world/talk.ts` gives each character `chatty` (0 silent … 1) and `mood` (jolly, grumpy, dry, nervous); Dmitri and Marchetti never speak, Gus/Whitaker/Dolores/Zeke nearly always. Besides their own actions they now remark when the flop, turn and river come down, when you raise or shove, and when you fold (`game/tableTalk.ts`), one speaker at a time. Tune it by editing the numbers in `talk.ts`.
+
+## Playtest account (2026-10-30)
+- [x] Account `playtest` / `playtest` with tools for checking scenes without playing to them.
+  - ☰ → **Playtest tools** (`game/PlaytestPanel.tsx`): set cash (typed or presets), day and time of day, **checkpoints** (arrive in any town as if you had played to it: earlier towns visited, rooms open, bosses beaten, enough cash — `checkpointAt` in `game/playtest.ts`), and a filterable list of every scripted scene with Play / Reset. ☰ → World map: every place is clickable and takes you there. Arrival scenes still fire, as they would for a player.
+  - *Decided:* gated by the name alone (`isPlaytester`); the deployed server holds the name behind the password above, which is weak and written here on purpose — change it if the game goes public. Nobody else sees any of it.

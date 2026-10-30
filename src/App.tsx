@@ -5,6 +5,7 @@ import { FullscreenControls } from './game/Fullscreen'
 import { setSaveProfile, syncWithAccount } from './game/save'
 import { cloudEnabled, createAccount, logIn, tokenFor } from './game/cloud'
 import { activeProfile, profileSlug, signIn, useTabClaim } from './game/session'
+import { isPlaytester } from './game/playtest'
 import { Displaced, SignIn } from './game/SignIn'
 
 /**
@@ -76,7 +77,7 @@ function Session({ name }: { name: string }) {
   return (
     <>
       <FullscreenControls />
-      {displaced ? <Displaced name={name} onReclaim={reclaim} /> : <GameApp key={slug} />}
+      {displaced ? <Displaced name={name} onReclaim={reclaim} /> : <GameApp key={slug} playtest={isPlaytester(slug)} />}
     </>
   )
 }
