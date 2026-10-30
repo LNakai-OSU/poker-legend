@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { useOpenWorldMap } from '../game/WorldMap'
 import { DOOR, FURNITURE, GRASS, ROAD, SIDEWALK, WALL, WATER, type TileGrid } from './tiles'
 
 /**
@@ -43,6 +44,7 @@ export function Minimap({
   areaName: string
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const openWorld = useOpenWorldMap()
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -82,6 +84,9 @@ export function Minimap({
   return (
     <div
       data-testid="minimap"
+      role={openWorld ? 'button' : undefined}
+      aria-label={openWorld ? 'Open the world map' : undefined}
+      onClick={openWorld ?? undefined}
       data-player={`${player.col},${player.row}`}
       style={{
         position: 'absolute',
@@ -95,11 +100,12 @@ export function Minimap({
         background: 'rgba(10,10,16,0.82)',
         border: '1px solid #2c3d5e',
         fontFamily: 'monospace',
-        pointerEvents: 'none',
+        pointerEvents: openWorld ? 'auto' : 'none',
+        cursor: openWorld ? 'pointer' : undefined,
       }}
     >
       <canvas ref={canvasRef} style={{ display: 'block', imageRendering: 'pixelated' }} />
-      <div style={{ fontSize: 9, color: '#9aa4b8', marginTop: 4, textAlign: 'center' }}>{areaName}</div>
+      <div style={{ fontSize: 9, color: '#9aa4b8', marginTop: 4, textAlign: 'center' }}>{areaName}{openWorld ? ' ⌕' : ''}</div>
     </div>
   )
 }

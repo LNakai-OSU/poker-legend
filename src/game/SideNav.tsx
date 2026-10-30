@@ -68,12 +68,14 @@ export function SideNav({
   onClose,
   onNewGame,
   onSave,
+  onWorldMap,
 }: {
   state: GameState
   onClose: () => void
   onNewGame: () => void
   /** Null when saving is not allowed right now (at a table, mid-scene). */
   onSave: (() => Promise<SaveOutcome>) | null
+  onWorldMap: () => void
 }) {
   const [saveNote, setSaveNote] = useState<{ text: string; colour: typeof INK.dim } | null>(null)
   const view = useViewport()
@@ -254,6 +256,7 @@ export function SideNav({
         {item('nav-jobs', 'Jobs', () => setPage('jobs'))}
         {item('nav-record', 'Record', () => setPage('record'))}
         {item('nav-goals', 'Goals', () => setPage('goals'))}
+        {item('nav-world-map', 'World map', onWorldMap)}
         {rule}
         {onSave ? (
           item('nav-save', 'Save', () => {

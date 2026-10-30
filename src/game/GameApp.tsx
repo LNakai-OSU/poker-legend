@@ -9,6 +9,7 @@ import { CaughtScene, EndingScene, FinaleLostScene } from './EndScenes'
 import { CrapsScene, SlotsScene } from './CasinoGameScenes'
 import { PenthouseScene, VenueScene } from './VenueScenes'
 import { SideNav } from './SideNav'
+import { OpenWorldMap, WorldMap } from './WorldMap'
 import { anyKeyLayer } from './keys'
 import { CITIES, LESSONS, MISSIONS, SPONSORS, TABLES, findArea } from '../world/content'
 import { hasFastTravel, missionStatus, tableAccess, travelCostTo } from './progression'
@@ -103,6 +104,7 @@ export function GameApp() {
    * back exactly where you were.
    */
   const [menuOpen, setMenuOpen] = useState(false)
+  const [worldMapOpen, setWorldMapOpen] = useState(false)
   /** Whose collectors it was, for the shakedown screen; the hunt is over by the time it shows. */
   const [caughtBy, setCaughtBy] = useState<string | null>(null)
   useAudioUnlock()
@@ -652,7 +654,7 @@ export function GameApp() {
             cues={events.stage.cues}
             onCueDone={events.cueDone}
             // The menu is a pause: nobody walks, nobody chases, while it is open.
-            paused={events.isRunning || menuOpen}
+            paused={events.isRunning || menuOpen || worldMapOpen}
           />
         )
     }
@@ -678,7 +680,7 @@ export function GameApp() {
   }, [menuOpen, lockedInAtTable])
 
   return (
-    <>
+    <OpenWorldMap.Provider value={view.kind === 'city' ? () => setWorldMapOpen(true) : null}>
       <SoundToggle />
       {events.stage.faded && (
         <div
@@ -756,6 +758,10 @@ export function GameApp() {
       {menuOpen && (
         <SideNav
           state={state}
+          onWorldMap={() => {
+            setMenuOpen(false)
+            setWorldMapOpen(true)
+          }}
           onSave={
             view.kind === 'city' && !events.isRunning
               ? async () => {
@@ -779,6 +785,7 @@ export function GameApp() {
           }}
         />
       )}
-    </>
+      {worldMapOpen && <WorldMap state={state} onClose={() => setWorldMapOpen(false)} />}
+    </OpenWorldMap.Provider>
   )
 }
