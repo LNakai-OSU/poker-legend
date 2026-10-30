@@ -553,29 +553,98 @@ const ROOMS: Record<TableThemeId, Painter> = {
     planks(r, { x: 0, y: 0, w: g.w, h: wall.floor }, { base: '#7a4e2c', light: '#94643a', dark: '#4a2c16', size: 9, vertical: true })
     r.rect(0, 0, g.w, wall.ceiling, '#3a2212')
     r.hline(0, wall.ceiling, g.w, '#c89050')
-    // Wanted posters along the wall, curling at the corners, a face and a price.
+    // Things nailed to the saloon wall, no two in a row alike: a horseshoe, a
+    // sunset with a cactus, antlers, a trade blanket, a sheriff's star, and a
+    // dead man's hand framed above the bar.
+    let nth = 0
     along(g, 76, 18, (x) => {
-      const ph = Math.min(32, Math.max(14, wall.room - 6))
+      const ph = Math.min(30, Math.max(14, wall.room - 6))
       const pw = 28
       const py = wall.hang - Math.floor(ph / 2)
-      r.rect(x, py, pw, ph, '#ecdcae')
-      r.box(x, py, pw, ph, '#b89860')
-      r.put(x + pw - 1, py + ph - 1, '#c8b080')
-      r.put(x + pw - 2, py + ph - 1, '#d8c890')
-      r.rect(x + 2, py + 2, pw - 4, 2, '#8a2a18')
-      if (ph >= 24) {
-        // A sketched face over the bounty.
-        r.rect(x + 10, py + 6, 8, 9, '#d8b888')
-        r.box(x + 10, py + 6, 8, 9, '#6a4a28')
-        r.rect(x + 10, py + 6, 8, 3, '#5a3a20')
-        r.put(x + 12, py + 10, '#3a2412')
-        r.put(x + 15, py + 10, '#3a2412')
-        r.hline(x + 12, py + 13, 4, '#6a4a28')
-        drawText(r, '$500', x + 3, py + ph - 10, '#5a2a10')
-      } else {
-        drawText(r, '$500', x + 3, py + Math.max(5, ph - 10), '#5a2a10')
+      const cx = x + Math.floor(pw / 2)
+      switch (nth++ % 6) {
+        case 0: {
+          // An iron horseshoe, open end up for luck, on a nail.
+          r.put(cx, py + 1, '#303030')
+          const top = py + Math.floor(ph / 2) - 6
+          for (let i = 0; i < 9; i++) {
+            const inset = i < 6 ? 0 : i - 5
+            r.rect(cx - 5 + inset, top + i, 2, 1, '#8a8e98')
+            r.rect(cx + 4 - inset, top + i, 2, 1, '#8a8e98')
+          }
+          r.rect(cx - 3, top + 8, 6, 1, '#6a6e78')
+          for (const nx of [cx - 4, cx + 4]) r.put(nx, top + 2, '#303030')
+          break
+        }
+        case 1:
+          // A sunset over the desert, with a saguaro.
+          picture(r, x, py, pw, ph, '#6a4224', (rr, c) => {
+            vGradient(rr, c.x, c.y, c.w, c.h, '#f0a050', '#f8d890', 4)
+            rr.rect(c.x, c.y + c.h - 4, c.w, 4, '#b86a38')
+            rr.rect(c.x + 4, c.y + c.h - 9, 2, 6, '#3a7a3a')
+            rr.rect(c.x + 2, c.y + c.h - 7, 2, 1, '#3a7a3a')
+            rr.rect(c.x + 6, c.y + c.h - 8, 2, 1, '#3a7a3a')
+            rr.rect(c.x + c.w - 9, c.y + 2, 4, 4, '#f8e8a8')
+          })
+          break
+        case 2: {
+          // A pair of antlers on a shield of boards.
+          const sy = py + Math.floor(ph / 2) - 1
+          r.rect(cx - 6, sy, 12, 9, '#5a3a20')
+          r.box(cx - 6, sy, 12, 9, '#3a2412')
+          r.hline(cx - 5, sy + 4, 10, '#7a5230')
+          for (let i = 0; i < 9; i++) {
+            r.put(cx - 7 - i, sy - 1 - Math.floor(i / 2), '#e8dcc0')
+            r.put(cx + 7 + i, sy - 1 - Math.floor(i / 2), '#e8dcc0')
+            if (i % 3 === 2) {
+              r.rect(cx - 7 - i, sy - 4 - Math.floor(i / 2), 1, 3, '#d8caa8')
+              r.rect(cx + 7 + i, sy - 4 - Math.floor(i / 2), 1, 3, '#d8caa8')
+            }
+          }
+          break
+        }
+        case 3: {
+          // A trade blanket hung to dry: zig-zag bands.
+          r.rect(x + 2, py, pw - 4, ph, '#e8d8b0')
+          for (let row = 3; row < ph - 2; row += 6) {
+            for (let i = 0; i < pw - 6; i++) {
+              const zig = (Math.floor(i / 3) % 2) * 2
+              r.put(x + 3 + i, py + row + zig, '#b8382a')
+              r.put(x + 3 + i, py + row + zig + 1, '#2a7a8a')
+            }
+          }
+          r.hline(x + 2, py, pw - 4, '#7a5230')
+          r.vline(x + 2, py + ph, 1, '#e8d8b0')
+          break
+        }
+        case 4: {
+          // A sheriff's star: points, and a ring around the middle.
+          const sy = py + Math.floor(ph / 2)
+          const rad = Math.min(8, Math.floor(ph / 2) - 1)
+          r.rect(cx - 2, sy - rad, 5, rad * 2 + 1, '#d8b038')
+          r.rect(cx - rad, sy - 2, rad * 2 + 1, 5, '#d8b038')
+          for (let d = 1; d < rad - 1; d++) {
+            r.put(cx - d - 1, sy - d - 1, '#d8b038')
+            r.put(cx + d + 1, sy - d - 1, '#d8b038')
+            r.put(cx - d - 1, sy + d + 1, '#d8b038')
+            r.put(cx + d + 1, sy + d + 1, '#d8b038')
+          }
+          r.rect(cx - 1, sy - 1, 3, 3, '#8a6a18')
+          r.put(cx, sy, '#f8e890')
+          break
+        }
+        default: {
+          // Aces and eights, framed: the hand Wild Bill died holding.
+          picture(r, x + 3, py, pw - 6, ph, '#3a2412', (rr, c) => {
+            rr.rect(c.x, c.y, c.w, c.h, '#2a5a3a')
+            const cw = Math.max(5, Math.floor((c.w - 2) / 2))
+            rr.rect(c.x + 1, c.y + 1, cw, c.h - 2, '#f4f0e0')
+            rr.rect(c.x + 1 + cw - 1, c.y + 2, cw, c.h - 3, '#f4f0e0')
+            rr.rect(c.x + 2, c.y + 2, 2, 2, '#202020')
+            rr.rect(c.x + cw + 1, c.y + 3, 2, 2, '#b82a2a')
+          })
+        }
       }
-      r.put(x + Math.floor(pw / 2), py + 1, '#303030')
     })
     along(g, 76, 56, (x) => lantern(r, x, wall.hang - 7, '#4a3a2a', '#f8c860'))
     // A longhorn skull over the middle of the table.
