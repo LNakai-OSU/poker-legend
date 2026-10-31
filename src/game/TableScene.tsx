@@ -17,7 +17,7 @@ import { tableAccess, tellClarity } from './progression'
 import { playSound } from '../audio/audio'
 import { useAmbientMusic } from '../audio/SoundToggle'
 import { TableStage } from './TableStage'
-import { BAR, DOCK, buttonHeight, planDock, type SceneLayout, type SceneNeeds } from './tableLayout'
+import { BAR, DOCK, barMetrics, buttonHeight, planDock, type SceneLayout, type SceneNeeds } from './tableLayout'
 import { themeFor, type TableTheme } from './tableThemes'
 import { Panel, PxButton, PxLine } from './pixel/ui'
 import { useTouchFirst } from './device'
@@ -637,16 +637,36 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
   const actingName = players.find((p) => p.id === publicState.actingPlayerId)?.name
 
   const dock = (layout: SceneLayout) => {
-    const P = layout.scale * layout.dockZoom
+    // Text floating over the table: the table's own pixel, but never so small a phone cannot read it.
+    const P = Math.max(layout.scale * layout.dockZoom, 2)
     const one = buttonHeight(1, P, layout.coarse)
     const two = buttonHeight(2, P, layout.coarse)
     const row = { display: 'flex', flexWrap: 'wrap' as const, justifyContent: 'center', alignItems: 'center', gap: DOCK.gap * P }
 
+    // What floats over the foot of the table (a result, a rebuy, coaching lines)
+    // and what sits in the bar itself: only ever one row of buttons.
     let body: ReactNode
     let sheet: ReactNode = null
-    // The betting row and its waiting line sit straight on the dark bar; the
-    // other states (a result, a rebuy) are read in a pale panel inside it.
-    let bare = false
+    let barRow: ReactNode = null
+    let hint: ReactNode = null
+    const bm = barMetrics(layout.scale, layout.coarse)
+    // The bar's own pixel: buttons and labels scale with the table, with floors.
+    const sb = bm.textScale / BAR.textZoom
+    const barH = bm.buttonCss / sb
+    const barButton = (label: string, role: 'barFold' | 'barCall' | 'barRaise', onClick: () => void, opts: { testId?: string; selected?: boolean; zoom?: number } = {}) => (
+      <PxButton
+        key={label}
+        lines={[label]}
+        scale={sb}
+        role={role}
+        height={barH}
+        textZoom={opts.zoom ?? BAR.textZoom}
+        testId={opts.testId}
+        selected={opts.selected}
+        flex
+        onClick={onClick}
+      />
+    )
     if (ending) {
       body = (
         <EndPanel P={P} theme={theme} ending={ending}>
@@ -721,18 +741,14 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
       body = (
         <>
           {handOver && lastResult && <ShowdownSummary result={lastResult} players={players} scale={P} />}
-          <div data-testid="hand-over-bar" style={{ ...row, marginTop: DOCK.gap * P }}>
-            {heldWinner && !showHeld && (
-              <PxButton lines={['See their cards']} scale={P} role="plain" height={one} onClick={() => setShowHeld(true)} />
-            )}
-            {canPlayOn && (
-              <PxButton lines={['Next hand (space)']} scale={P} role="primary" height={one} onClick={dealNextHand} />
-            )}
-            {!isFinale && (
-              <PxButton lines={[`Leave table ($${you.stack.toLocaleString()})`]} scale={P} role="plain" height={one} onClick={() => leaveWith(you.stack)} />
-            )}
-          </div>
         </>
+      )
+      barRow = (
+        <div data-testid="hand-over-bar" style={{ display: 'flex', gap: 3 * P, width: '100%' }}>
+          {heldWinner && !showHeld && barButton('See their cards', 'barFold', () => setShowHeld(true), { zoom: 1.5 })}
+          {canPlayOn && barButton('Next hand (space)', 'barCall', dealNextHand, { zoom: 1.5 })}
+          {!isFinale && barButton(`Leave table ($${you.stack.toLocaleString()})`, 'barFold', () => leaveWith(you.stack), { zoom: 1.5 })}
+        </div>
       )
     } else {
       const info = (
@@ -760,15 +776,16 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
         </>
       )
       if (!canAct) {
-        bare = true
-        body = (
-          <>
-            <div data-testid="action-log" style={{ display: 'none' }}>
-              {log.join(' ')}
-            </div>
-            <PxLine scale={P * 1.25} align="center" text={actingName ? `${actingName} to act…` : 'Dealing…'} ink={INFO_INK} />
-            {info}
-          </>
+        body = handRead || potOdds ? info : null
+        hint = (
+          <div data-testid="action-log" style={{ display: 'none' }}>
+            {log.join(' ')}
+          </div>
+        )
+        barRow = (
+          <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+            <PxLine scale={sb * 1.5} align="center" text={actingName ? `${actingName} to act…` : 'Dealing…'} ink={INK.dim} />
+          </div>
         )
       } else {
         const raiseOpen = legalActions.some((a) => a.type === 'raise')
@@ -778,44 +795,20 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
         // Pointing at a raise size with the keys opens the sheet too: the sizes
         // are what the keys are walking along.
         const sheetShown = raiseOpen && (raiseSheet || betCursor === 'raise')
-        bare = true
-        body = (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: DOCK.gap * P }}>
-            {info}
-            <div style={{ ...row, flexWrap: 'nowrap', gap: 3 * P }}>
-              {legalActions.some((a) => a.type === 'fold') && (
-                <PxButton lines={['Fold']} scale={P} role="barFold" height={BAR.buttonH} textZoom={BAR.textZoom} selected={betCursor === 'fold'} onClick={() => act('fold')} flex />
+        body = handRead || potOdds ? info : null
+        hint = !touch ? <PxLine scale={P} align="left" ink={INK.dim} testId="bet-keys-hint" text={BET_KEYS_HINT} /> : null
+        barRow = (
+          <div style={{ display: 'flex', gap: 3 * P, width: '100%' }}>
+            {legalActions.some((a) => a.type === 'fold') && barButton('Fold', 'barFold', () => act('fold'), { selected: betCursor === 'fold' })}
+            {legalActions.some((a) => a.type === 'check') && barButton('Check', 'barCall', () => act('check'), { selected: betCursor === 'check' })}
+            {legalActions.some((a) => a.type === 'call') && barButton(`Call ${toCall}`, 'barCall', () => act('call'), { selected: betCursor === 'call' })}
+            {raiseOpen &&
+              barButton(
+                canSize ? (sheetShown ? 'Raise -' : 'Raise +') : `All in ${allInTo.toLocaleString()}`,
+                'barRaise',
+                () => (canSize ? setRaiseSheet((open) => !open) : raiseTo(allInTo)),
+                { testId: 'raise-toggle' },
               )}
-              {legalActions.some((a) => a.type === 'check') && (
-                <PxButton lines={['Check']} scale={P} role="barCall" height={BAR.buttonH} textZoom={BAR.textZoom} selected={betCursor === 'check'} onClick={() => act('check')} flex />
-              )}
-              {legalActions.some((a) => a.type === 'call') && (
-                <PxButton lines={[`Call ${toCall}`]} scale={P} role="barCall" height={BAR.buttonH} textZoom={BAR.textZoom} selected={betCursor === 'call'} onClick={() => act('call')} flex />
-              )}
-              {raiseOpen && (
-                <PxButton
-                  lines={[canSize ? (sheetShown ? 'Raise -' : 'Raise +') : `All in ${allInTo.toLocaleString()}`]}
-                  scale={P}
-                  role="barRaise"
-                  height={BAR.buttonH}
-                  textZoom={BAR.textZoom}
-                  testId="raise-toggle"
-                  // The sizes in the sheet carry the pointer once it is on a raise.
-                  selected={false}
-                  flex
-                  onClick={() => (canSize ? setRaiseSheet((open) => !open) : raiseTo(allInTo))}
-                />
-              )}
-            </div>
-            {!touch && (
-              <PxLine
-                scale={P}
-                align="center"
-                ink={LOG_INK}
-                testId="bet-keys-hint"
-                text={BET_KEYS_HINT}
-              />
-            )}
           </div>
         )
         if (sheetShown && canSize) {
@@ -925,6 +918,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
       }
     }
 
+    const contentW = Math.min(layout.dock.w * layout.scale, 1000)
     return (
       <div
         data-testid="dock"
@@ -934,55 +928,66 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
           marginLeft: -layout.dock.x * layout.scale,
           width: '100vw',
           boxSizing: 'border-box',
-          minHeight: layout.dock.h * layout.scale,
+          height: bm.totalCss,
           marginBottom: -4 * layout.scale,
           display: 'flex',
           justifyContent: 'center',
+          alignItems: 'center',
           background: 'linear-gradient(rgba(11,15,24,0.93), rgba(6,8,14,0.97))',
-          borderTop: `${Math.max(1, Math.round(P))}px solid ${theme.ui.band}`,
-          padding: `${2 * P}px 0 ${6 * layout.scale}px`,
+          borderTop: `${Math.max(1, Math.round(layout.scale))}px solid ${theme.ui.band}`,
+          paddingBottom: Math.max(1, Math.round(layout.scale)),
         }}
       >
-        <div
-          style={{
-            position: 'relative',
-            width: layout.dock.w * layout.scale,
-            maxWidth: '100%',
-            boxSizing: 'border-box',
-            padding: `0 ${3 * P}px`,
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            gap: DOCK.gap * P,
-          }}
-        >
-          {!ending && (
-            <TableCaption
-              P={P}
-              theme={theme}
-              speech={speech}
-              personas={personas}
-              tells={publicState.players
-                .filter((p) => p.id !== 'you' && p.tell && !p.folded)
-                .map((p) => ({ playerId: p.id, name: p.name, cue: tellCue(p.tell!), alpha: tellAlphaOf(p.tell!, insights) }))}
-              made={
-                handOver && lastResult
-                  ? publicState.players
-                      .filter((p) => p.id !== 'you' && lastResult.revealed.some((r) => r.playerId === p.id))
-                      .map((p) => ({ name: p.name, hand: madeHand(lastResult, p.id) ?? '', won: potWinnerIds(lastResult).has(p.id) }))
-                  : []
-              }
-              fallback={handOver ? undefined : log[log.length - 1]}
-              onDismiss={() => setSpeech(null)}
-            />
-          )}
-          {bare ? (
-            body
-          ) : (
-            <Panel theme={theme} scale={P} style={{ padding: 3 * P, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: DOCK.gap * P }}>
-              {body}
-            </Panel>
-          )}
+        <div style={{ position: 'relative', width: contentW, maxWidth: '100%', boxSizing: 'border-box', padding: `0 ${3 * layout.scale}px` }}>
+          {barRow}
+          {/* Over the foot of the table, taking no room of its own. */}
+          <div
+            style={{
+              position: 'absolute',
+              left: 3 * layout.scale,
+              bottom: `calc(100% + ${3 * layout.scale}px)`,
+              width: '58%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              gap: DOCK.gap * P,
+              pointerEvents: 'none',
+              zIndex: 7,
+            }}
+          >
+            {!ending && (
+              <TableCaption
+                P={P}
+                theme={theme}
+                speech={speech}
+                personas={personas}
+                tells={publicState.players
+                  .filter((p) => p.id !== 'you' && p.tell && !p.folded)
+                  .map((p) => ({ playerId: p.id, name: p.name, cue: tellCue(p.tell!), alpha: tellAlphaOf(p.tell!, insights) }))}
+                made={
+                  handOver && lastResult
+                    ? publicState.players
+                        .filter((p) => p.id !== 'you' && lastResult.revealed.some((r) => r.playerId === p.id))
+                        .map((p) => ({ name: p.name, hand: madeHand(lastResult, p.id) ?? '', won: potWinnerIds(lastResult).has(p.id) }))
+                    : []
+                }
+                onDismiss={() => setSpeech(null)}
+              />
+            )}
+            {hint}
+            {body && ending ? (
+              <div style={{ pointerEvents: 'auto', maxWidth: '100%' }}>{body}</div>
+            ) : body ? (
+              <Panel
+                theme={theme}
+                scale={P}
+                testId="dock-float"
+                style={{ padding: 3 * P, display: 'flex', flexDirection: 'column', gap: DOCK.gap * P, pointerEvents: 'auto', maxWidth: '100%' }}
+              >
+                {body}
+              </Panel>
+            ) : null}
+          </div>
           {sheet}
         </div>
       </div>
@@ -1015,8 +1020,6 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
 
 /** Information over the betting buttons: odds and reads the lessons paid for. */
 const INFO_INK = INK.blue
-/** Older lines of narration, faded back. */
-const LOG_INK = INK.dim
 /** Money that is about to change hands. */
 const STAKE_INK = { color: '#8a5a10', shadow: '#ecd8b0' }
 

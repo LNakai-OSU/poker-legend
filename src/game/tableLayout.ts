@@ -58,6 +58,18 @@ export const HERO_H = SEAT.betH + SEAT.gap + HERO.plateH
 /** The casino table's bar: three big buttons across the foot of the screen. */
 export const BAR = { buttonH: 30, textZoom: 2 } as const
 
+/**
+ * The bar is exactly as tall as its buttons: nothing else lives in it. Sizes are
+ * in CSS pixels because a button is a finger target and a label to read before it
+ * is part of the picture, so they follow the pixel scale but never fall below
+ * what a thumb or an eye needs.
+ */
+export function barMetrics(scale: number, coarse: boolean): { buttonCss: number; totalCss: number; textScale: number } {
+  const buttonCss = Math.max(Math.round(BAR.buttonH * scale), coarse ? 56 : 46)
+  const pad = Math.max(4, Math.round(2 * scale))
+  return { buttonCss, totalCss: buttonCss + 2 * pad + Math.max(1, Math.round(scale)), textScale: Math.max(BAR.textZoom * scale, 3) }
+}
+
 export const CAPTION = { face: 18, lines: 2 } as const
 export const CAPTION_H = Math.max(CAPTION.face, CAPTION.lines * LINE_HEIGHT)
 
@@ -391,7 +403,7 @@ const CORNER_CLEAR_CSS = 60
 function sceneAt(scale: number, view: Viewport, needs: SceneNeeds, zoom = 1): { layout: SceneLayout; fits: boolean } {
   const w = Math.floor(view.w / scale)
   const h = Math.floor(view.h / scale)
-  const widest = Math.min(w - 2 * PAD, FELT_MAX_W)
+  const widest = needs.kind === 'cash' ? w - 2 * PAD : Math.min(w - 2 * PAD, FELT_MAX_W)
   let last: { layout: SceneLayout; fits: boolean } | null = null
   for (let feltW = widest; feltW >= minFeltWidth(needs.opponents); feltW -= 10) {
     last = sceneWith(scale, view, needs, zoom, w, h, feltW)
@@ -433,19 +445,22 @@ function sceneWith(
   // scaled the same way as everywhere else instead of trading the menu for a
   // bigger table.
   const dockH =
-    Math.max(
-      dockHeight(dockInnerW, scale * dockZoom, view.coarse, needs),
-      dockHeight(dockInnerW, scale * dockZoom, view.coarse, { ...needs, kind: 'cash' }),
-    ) * dockZoom
+    needs.kind === 'cash'
+      ? barMetrics(scale, view.coarse).totalCss / scale
+      : Math.max(
+          dockHeight(dockInnerW, scale * dockZoom, view.coarse, needs),
+          dockHeight(dockInnerW, scale * dockZoom, view.coarse, { ...needs, kind: 'cash' }),
+        ) * dockZoom
   const feltMin = feltMinHeight(feltW, needs.opponents)
-  const fixed = PAD + headerH + 6 + 4 + dockH + PAD
+  const fixed = PAD + headerH + 6 + 4 + dockH + 2
   const available = h - fixed
   const fits = available >= feltMin && feltW >= minFeltWidth(needs.opponents)
 
   // Spare height goes first to the table, a little, and the rest to the room
   // above it: the wall behind the table is where each venue looks like itself.
+  // The casino table is stretched to fill the window: all the height there is.
   const comfortable = Math.max(feltMin, Math.min(feltMin + 8, Math.round(feltW * 0.72)))
-  const feltH = Math.max(feltMin, Math.min(available, comfortable))
+  const feltH = needs.kind === 'cash' ? Math.max(feltMin, available) : Math.max(feltMin, Math.min(available, comfortable))
   const spare = Math.max(0, available - feltH)
   const feltY = PAD + headerH + 6 + spare
   const dockY = feltY + feltH + 4
@@ -453,7 +468,7 @@ function sceneWith(
   const layout: SceneLayout = {
     scale,
     w,
-    h: Math.max(h, dockY + dockH + PAD),
+    h: Math.max(h, dockY + dockH + 2),
     header: { x: PAD, y: PAD, w: headerW, h: headerH },
     headerLines,
     felt: { x: feltX, y: feltY, w: feltW, h: feltH },
@@ -557,7 +572,8 @@ export function layoutScene(view: Viewport, needs: SceneNeeds): SceneLayout {
   // rather than push the menu below the screen.
   const kMin = Math.max(1, Math.round(dpr * 0.75))
   for (let k = kMax; k >= kMin; k--) {
-    for (const zoom of [2, DOCK_ZOOM, 1.25, 1]) {
+    // The casino bar has no big menu to read, so it needs no zoom: the table gets the room.
+    for (const zoom of needs.kind === 'cash' ? [1] : [2, DOCK_ZOOM, 1.25, 1]) {
       // Under the table: a casino menu is one row, so it costs little height and
       // the table gets the whole width.
       const wide = view.w >= view.h * 1.3

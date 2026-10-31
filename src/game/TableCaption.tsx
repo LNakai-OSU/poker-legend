@@ -28,7 +28,6 @@ export function TableCaption({
   personas,
   tells,
   made,
-  fallback,
   onDismiss,
 }: {
   /** CSS pixels per art pixel, in the menu's own (zoomed) pixels. */
@@ -39,11 +38,22 @@ export function TableCaption({
   tells: CaptionTell[]
   /** What each player who showed down made, for a line when nothing else is on. */
   made: Array<{ name: string; hand: string; won: boolean }>
-  /** A quiet line for when nothing is said or noticed: what was just done, whose turn it is. */
-  fallback?: string
   onDismiss: () => void
 }) {
-  const box = { height: CAPTION_H * P, display: 'flex', alignItems: 'center', gap: 3 * P, overflow: 'hidden' } as const
+  // A pill floating over the table's foot, there only while it has something to say.
+  const box = {
+    minHeight: CAPTION_H * P,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 3 * P,
+    overflow: 'hidden',
+    background: 'rgba(11,15,24,0.9)',
+    border: `${Math.max(1, Math.round(P / 2))}px solid ${theme.ui.band}`,
+    borderRadius: 2 * P,
+    padding: `${P}px ${3 * P}px`,
+    maxWidth: '100%',
+    pointerEvents: 'auto',
+  } as const
 
   if (speech) {
     const look = personalityFor(speech.playerId, personas?.[speech.playerId]).look
@@ -108,9 +118,5 @@ export function TableCaption({
     )
   }
 
-  return (
-    <div style={box}>
-      {fallback ? <PixelText text={fallback} scale={P} wrap maxLines={CAPTION.lines} ink={{ color: '#9aa4b8', shadow: '#0b0f18' }} /> : null}
-    </div>
-  )
+  return null
 }
