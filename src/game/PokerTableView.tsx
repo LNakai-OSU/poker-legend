@@ -262,6 +262,18 @@ function blindSeats(state: PublicState): Map<string, 'sb' | 'bb'> {
 }
 
 /** The blind chip, drawn in the same round style as the dealer button. */
+/** The blind chips and the dealer button, in art pixels: four times the size they were, so they read across the table. */
+const MARKER = 36
+
+/** The chips beside a seat, on the side facing away from the middle of the table's edge so they stay on the felt. */
+function Markers({ children, left, top, P }: { children: React.ReactNode; left: number; top: number; P: number }) {
+  return (
+    <div style={{ position: 'absolute', left: left * P, top: top * P, display: 'flex', flexDirection: 'column', gap: 2 * P, zIndex: 3, pointerEvents: 'none' }}>
+      {children}
+    </div>
+  )
+}
+
 function BlindChip({ kind, amount, P, style }: { kind: 'sb' | 'bb'; amount?: number; P: number; style?: CSSProperties }) {
   const word = kind === 'sb' ? 'Small blind' : 'Big blind'
   return (
@@ -271,7 +283,7 @@ function BlindChip({ kind, amount, P, style }: { kind: 'sb' | 'bb'; amount?: num
       alt={kind === 'sb' ? 'SB' : 'BB'}
       src={tableMarkerUrl(kind)}
       draggable={false}
-      style={{ width: 9 * P, height: 9 * P, imageRendering: 'pixelated', flex: 'none', ...style }}
+      style={{ width: MARKER * P, height: MARKER * P, imageRendering: 'pixelated', flex: 'none', ...style }}
     />
   )
 }
@@ -285,7 +297,7 @@ function DealerButton({ P, style }: { P: number; style?: CSSProperties }) {
       alt="D"
       src={dealerButtonUrl()}
       draggable={false}
-      style={{ width: 9 * P, height: 9 * P, imageRendering: 'pixelated', flex: 'none', ...style }}
+      style={{ width: MARKER * P, height: MARKER * P, imageRendering: 'pixelated', flex: 'none', ...style }}
     />
   )
 }
@@ -377,12 +389,6 @@ export function PokerTableView({
                   draggable={false}
                   style={{ display: 'block', width: PORTRAIT_SIZE * P, height: PORTRAIT_SIZE * P, imageRendering: 'pixelated', marginLeft: -((PORTRAIT_SIZE - SEAT.portraitW) / 2) * P }}
                 />
-                {(p.isDealer || blindOf.has(p.id)) && (
-                  <div style={{ position: 'absolute', right: P, top: P, display: 'flex', gap: P }}>
-                    {blindOf.has(p.id) && <BlindChip kind={blindOf.get(p.id)!} amount={blinds?.[blindOf.get(p.id) === 'sb' ? 'small' : 'big']} P={P} />}
-                    {p.isDealer && <DealerButton P={P} />}
-                  </div>
-                )}
                 {position && (
                   <Tag text={position} theme={theme} P={P} style={{ position: 'absolute', left: 0, top: 0 }} />
                 )}
@@ -438,6 +444,12 @@ export function PokerTableView({
             </Panel>
             {winners.has(p.id) && (
               <div className="seat-win" aria-hidden="true" style={{ ...frameStyle(panelFrames(theme).acting, P), ...at({ x: 0, y: 0, w: SEAT.w, h: SEAT.panelH }, P), borderImageSlice: '3', pointerEvents: 'none' }} />
+            )}
+            {(p.isDealer || blindOf.has(p.id)) && (
+              <Markers P={P} top={0} left={rect.x + SEAT.w / 2 < t.w / 2 ? SEAT.w + 2 : -(MARKER + 2)}>
+                {blindOf.has(p.id) && <BlindChip kind={blindOf.get(p.id)!} amount={blinds?.[blindOf.get(p.id) === 'sb' ? 'small' : 'big']} P={P} />}
+                {p.isDealer && <DealerButton P={P} />}
+              </Markers>
             )}
             {p.isActing && <ActingCursor P={P} theme={theme} />}
 
@@ -563,13 +575,17 @@ export function PokerTableView({
             <div style={{ display: 'flex', alignItems: 'center', gap: 2 * P, height: LINE_HEIGHT * TEXT_ZOOM * P }}>
               <PixelText text="You" scale={P * TEXT_ZOOM} ink={INK.dark} />
               {labels?.get('you') && <PixelText text={labels.get('you')!} scale={P} ink={INK.blue} />}
-              {blindOf.has('you') && <BlindChip kind={blindOf.get('you')!} amount={blinds?.[blindOf.get('you') === 'sb' ? 'small' : 'big']} P={P} />}
-              {you.isDealer && <DealerButton P={P} />}
             </div>
             <div data-testid="stack-you" data-stack={you.stack} style={{ height: LINE_HEIGHT * TEXT_ZOOM * P }}>
               <PixelText text={you.allIn ? 'ALL IN' : you.stack.toLocaleString()} scale={P * plateZoom(you.allIn ? 'ALL IN' : you.stack.toLocaleString())} ink={you.allIn ? INK.red : STACK_INK} />
             </div>
           </Panel>
+          {(you.isDealer || blindOf.has('you')) && (
+            <Markers P={P} top={SEAT.betH + SEAT.gap} left={-(MARKER + 2)}>
+              {blindOf.has('you') && <BlindChip kind={blindOf.get('you')!} amount={blinds?.[blindOf.get('you') === 'sb' ? 'small' : 'big']} P={P} />}
+              {you.isDealer && <DealerButton P={P} />}
+            </Markers>
+          )}
           {winners.has('you') && (
             <div className="seat-win" aria-hidden="true" style={{ ...frameStyle(panelFrames(theme).acting, P), ...at({ x: 0, y: SEAT.betH + SEAT.gap, w: SEAT.w, h: HERO.plateH }, P), borderImageSlice: '3', pointerEvents: 'none' }} />
           )}

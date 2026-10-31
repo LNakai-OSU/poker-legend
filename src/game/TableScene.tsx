@@ -746,9 +746,9 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
       )
       barRow = (
         <div data-testid="hand-over-bar" style={{ display: 'flex', gap: 3 * P, width: '100%' }}>
-          {heldWinner && !showHeld && barButton('See their cards', 'barFold', () => setShowHeld(true), { zoom: 1.5 })}
-          {canPlayOn && barButton('Next hand (space)', 'barCall', dealNextHand, { zoom: 1.5 })}
           {!isFinale && barButton(`Leave table ($${you.stack.toLocaleString()})`, 'barFold', () => leaveWith(you.stack), { zoom: 1.5 })}
+          {heldWinner && !showHeld && barButton('See their cards', 'barRaise', () => setShowHeld(true), { zoom: 1.5 })}
+          {canPlayOn && barButton('Next hand (space)', 'barCall', dealNextHand, { zoom: 1.5 })}
         </div>
       )
     } else {
