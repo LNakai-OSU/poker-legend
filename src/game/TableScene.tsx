@@ -643,6 +643,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
     const two = buttonHeight(2, P, layout.coarse)
     const row = { display: 'flex', flexWrap: 'wrap' as const, justifyContent: 'center', alignItems: 'center', gap: DOCK.gap * P }
 
+    const contentW = Math.min(layout.dock.w * layout.scale, 1000)
     // What floats over the foot of the table (a result, a rebuy, coaching lines)
     // and what sits in the bar itself: only ever one row of buttons.
     let body: ReactNode
@@ -815,9 +816,10 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
           // As wide as the sizes need, up to most of the dock, standing on the dock.
           // Beside your cards rather than over them: about a third of the dock, but
           // always wide enough for two columns of sizes.
-          const dockArt = Math.floor(layout.dock.w / layout.dockZoom) - 2 * DOCK.inset
           const cell = planDock(1000, needs).sizingCellW
-          const sheetInner = Math.min(dockArt, Math.max(Math.floor(dockArt * 0.36), 2 * cell + DOCK.gap))
+          // The right-hand side of the bar, clear of your cards in the middle.
+          const roomCss = contentW / 2 - 52 * layout.scale - 3 * layout.scale
+          const sheetInner = Math.max(2 * cell + DOCK.gap, Math.floor(roomCss / P) - 2 * DOCK.inset)
           const sheetPlan = planDock(sheetInner, needs)
           const sheetW = (sheetInner + 2 * DOCK.inset) * P
           sheet = (
@@ -918,7 +920,6 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
       }
     }
 
-    const contentW = Math.min(layout.dock.w * layout.scale, 1000)
     return (
       <div
         data-testid="dock"
