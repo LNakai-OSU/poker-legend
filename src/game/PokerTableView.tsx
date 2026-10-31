@@ -7,9 +7,8 @@ import { ChipStack } from './ChipStack'
 import { expressionFor, type Expression } from './avatars'
 import { portraitBackdropUrl, portraitUrl, PORTRAIT_SIZE } from './portraits'
 import { personalityFor } from '../world/characters'
-import { tellCue } from './tellFlavor'
 import { HandAnnouncer, type Announcement } from './HandAnnouncer'
-import { BOARD, CARD_ZOOM, HERO, SEAT, SEAT_H, TEXT_ZOOM, type Rect, type SceneLayout } from './tableLayout'
+import { BOARD, CARD_ZOOM, HERO, SEAT, SEAT_H, SEAT_TEXT_W, TEXT_ZOOM, type Rect, type SceneLayout } from './tableLayout'
 import type { TableTheme } from './tableThemes'
 import { paintTable } from './pixel/tableArt'
 import { Panel } from './pixel/ui'
@@ -19,7 +18,7 @@ import { frameStyle } from './pixel/frame'
 import { panelFrames } from './pixel/themeFrames'
 import { chipStackUrl, dealerButtonUrl, tableMarkerUrl, DENOMINATIONS } from './pixel/chips'
 import { ACTION_WORD, type ActionKind } from './actionTag'
-import { fitWords, measureText, wrapText, LINE_HEIGHT } from './pixel/font'
+import { measureText, wrapText, LINE_HEIGHT } from './pixel/font'
 
 export interface TableInsights {
   /** Unlocked by the mentor's position lesson. */
@@ -40,8 +39,6 @@ interface PokerTableViewProps {
    * usual one — Vance one on one talks differently from Vance six-handed.
    */
   personas?: Record<string, string>
-  /** A line of table talk currently on screen. */
-  speech?: SeatSpeech | null
   /** The current key moment, announced over the felt instead of in a panel. */
   announcement?: Announcement | null
   /** The stakes, written beside the pot so a change of blinds is on the felt. */
@@ -98,7 +95,15 @@ export function potWinnerIds(result: HandResult): Set<string> {
   return new Set(result.pots.filter((pot) => !pot.uncalled).flatMap((pot) => pot.winnerIds))
 }
 
-function madeHand(result: HandResult, playerId: string): string | null {
+/** How plainly a tell shows: a faint read unless the player has learned to see them. */
+export function tellAlphaOf(tell: { visibility: number }, insights?: TableInsights): number {
+  return Math.min(
+    1,
+    (insights?.sharpEyes ? Math.max(0.8, 0.4 + tell.visibility * 0.6) : 0.4 + tell.visibility * 0.6) + (insights?.tellClarity ?? 0),
+  )
+}
+
+export function madeHand(result: HandResult, playerId: string): string | null {
   const shown = result.revealed.find((r) => r.playerId === playerId)
   return shown ? HAND_CATEGORY_NAMES[bestHand([...shown.holeCards, ...result.board]).category] : null
 }
@@ -226,7 +231,6 @@ const ACTION_BG: Record<ActionKind, { bg: string; edge: string; lit: string }> =
 const STACK_INK: Ink = { color: '#8a4c10', shadow: '#ecd8b0' }
 
 /** The widest a line of text under a seat may be, shadow included. */
-const SEAT_LINE = SEAT.w - 1
 
 /**
  * The name on a seat's plate: the whole name if it fits, else the first one.
@@ -234,13 +238,13 @@ const SEAT_LINE = SEAT.w - 1
  * is hers either way.
  */
 function plateName(name: string): string {
-  const room = (SEAT.w - 2 * SEAT.frame - 1) / TEXT_ZOOM
+  const room = SEAT_TEXT_W / TEXT_ZOOM
   return measureText(name) <= room ? name : name.split(' ')[0]
 }
 
 /** The zoom a plate line is drawn at: the big one, unless the text would not fit in it. */
 function plateZoom(text: string): number {
-  return measureText(text) * TEXT_ZOOM <= SEAT.w - 2 * SEAT.frame ? TEXT_ZOOM : 1
+  return measureText(text) * TEXT_ZOOM <= SEAT_TEXT_W ? TEXT_ZOOM : 1
 }
 
 /** Who posts which blind this hand: the two seats after the button (the button itself heads-up). */
@@ -290,7 +294,6 @@ export function PokerTableView({
   yourHole,
   insights,
   personas,
-  speech,
   announcement,
   blinds,
   showHeld,
@@ -331,14 +334,6 @@ export function PokerTableView({
           lostLast: handOver && !winners.has(p.id) && !p.folded,
         })
         const won = handOver && winners.has(p.id) ? handTakings(lastResult, p.id).won : 0
-        const made = revealed ? madeHand(lastResult!, p.id) : null
-        const tellAlpha = p.tell
-          ? Math.min(
-              1,
-              (insights?.sharpEyes ? Math.max(0.8, 0.4 + p.tell.visibility * 0.6) : 0.4 + p.tell.visibility * 0.6) +
-                (insights?.tellClarity ?? 0),
-            )
-          : 0
         const position = labels?.get(p.id)
 
         return (
@@ -365,10 +360,11 @@ export function PokerTableView({
             >
               <div
                 style={{
-                  ...at({ x: (SEAT.w - 2 * SEAT.frame - PORTRAIT_SIZE) / 2, y: 1, w: PORTRAIT_SIZE, h: PORTRAIT_SIZE }, P),
+                  ...at({ x: 0, y: 1, w: SEAT.portraitW, h: SEAT.portraitH }, P),
                   backgroundImage: `url(${portraitBackdropUrl(theme.ui.portraitBg)})`,
                   backgroundSize: '100% 100%',
                   imageRendering: 'pixelated',
+                  overflow: 'hidden',
                 }}
               >
                 <img
@@ -376,7 +372,7 @@ export function PokerTableView({
                   alt={`${p.name}, looking ${expression}`}
                   data-expression={expression}
                   draggable={false}
-                  style={{ display: 'block', width: PORTRAIT_SIZE * P, height: PORTRAIT_SIZE * P, imageRendering: 'pixelated' }}
+                  style={{ display: 'block', width: PORTRAIT_SIZE * P, height: PORTRAIT_SIZE * P, imageRendering: 'pixelated', marginLeft: -((PORTRAIT_SIZE - SEAT.portraitW) / 2) * P }}
                 />
                 {(p.isDealer || blindOf.has(p.id)) && (
                   <div style={{ position: 'absolute', right: P, top: P, display: 'flex', gap: P }}>
@@ -426,13 +422,13 @@ export function PokerTableView({
                   </div>
                 )}
               </div>
-              <div style={{ ...at({ x: 0, y: 50, w: SEAT.w - 2 * SEAT.frame, h: LINE_HEIGHT * TEXT_ZOOM }, P), display: 'flex', justifyContent: 'center', overflow: 'hidden' }}>
+              <div style={{ ...at({ x: SEAT.portraitW + 3, y: 3, w: SEAT_TEXT_W, h: LINE_HEIGHT * TEXT_ZOOM }, P), display: 'flex', justifyContent: 'flex-start', overflow: 'hidden' }}>
                 <PixelText text={plateName(p.name)} scale={P * TEXT_ZOOM} ink={INK.dark} />
               </div>
               <div
                 data-testid={`stack-${p.id}`}
                 data-stack={p.stack}
-                style={{ ...at({ x: 0, y: 50 + LINE_HEIGHT * TEXT_ZOOM, w: SEAT.w - 2 * SEAT.frame, h: LINE_HEIGHT * TEXT_ZOOM }, P), display: 'flex', justifyContent: 'center' }}
+                style={{ ...at({ x: SEAT.portraitW + 3, y: 3 + LINE_HEIGHT * TEXT_ZOOM + 2, w: SEAT_TEXT_W, h: LINE_HEIGHT * TEXT_ZOOM }, P), display: 'flex', justifyContent: 'flex-start' }}
               >
                 <PixelText text={p.stack.toLocaleString()} scale={P * plateZoom(p.stack.toLocaleString())} ink={STACK_INK} />
               </div>
@@ -442,31 +438,12 @@ export function PokerTableView({
             )}
             {p.isActing && <ActingCursor P={P} theme={theme} />}
 
-            {/* One reserved line under the plate: a tell when there is one, what
-                they made at a showdown, and otherwise how they introduce
-                themselves. It never changes the seat's size. */}
-            <div style={{ ...at({ x: 0, y: SEAT.panelH + SEAT.gap, w: SEAT.w, h: SEAT.tellH }, P), overflow: 'hidden' }}>
-              {p.tell && !p.folded ? (
-                <div data-testid={`tell-${p.id}`} className={`tell-${p.tell.kind}`}>
-                  <PixelText
-                    text={fitWords(tellCue(p.tell), SEAT_LINE)}
-                    scale={P}
-                    wrap
-                    maxLines={3}
-                    align="center"
-                    ink={{ color: `rgba(248, 208, 72, ${tellAlpha})`, shadow: `rgba(40, 24, 8, ${tellAlpha})` }}
-                  />
-                </div>
-              ) : made ? (
-                <PixelText text={fitWords(made, SEAT_LINE)} scale={P} wrap maxLines={3} align="center" ink={winners.has(p.id) ? INK.gold : INK.light} />
-              ) : null}
-            </div>
-
             <div
               style={{
-                ...at({ x: 0, y: SEAT.panelH + SEAT.gap + SEAT.tellH + SEAT.gap, w: SEAT.w, h: SEAT.cardsH }, P),
+                ...at({ x: 0, y: SEAT.panelH + SEAT.gap, w: 44, h: SEAT.cardsH }, P),
                 display: 'flex',
-                justifyContent: 'center',
+                justifyContent: 'flex-start',
+                paddingLeft: 3 * P,
                 gap: 2 * P,
               }}
             >
@@ -486,7 +463,7 @@ export function PokerTableView({
 
             {/* What they have out in front of them this street — or, once the
                 hand is over, what they took from it. */}
-            <div style={at({ x: 0, y: SEAT_H - SEAT.betH, w: SEAT.w, h: SEAT.betH }, P)}>
+            <div style={at({ x: 46, y: SEAT.panelH + SEAT.gap + (SEAT.cardsH - SEAT.betH) / 2, w: SEAT.w - 46, h: SEAT.betH }, P)}>
               {won > 0 ? (
                 <ChipStack amount={won} scale={P} height={SEAT.betH} testId={`won-${p.id}`} prefix="+" ink={INK.green} />
               ) : (
@@ -601,11 +578,6 @@ export function PokerTableView({
         ))}
       </div>
 
-      {speech && (() => {
-        const index = opponents.findIndex((p) => p.id === speech.playerId)
-        if (index < 0) return null
-        return <SpeechBubble key={speech.text} seat={t.seats[index]} text={speech.text} playerId={speech.playerId} layout={layout} />
-      })()}
     </div>
   )
 }
@@ -629,74 +601,5 @@ function ActingCursor({ P, theme }: { P: number; theme: TableTheme }) {
       <path d="M1 1h7v1h-7zM2 2h5v1h-5zM3 3h3v1h-3zM4 4h1v1h-1z" fill={theme.ui.accent} />
       <path d="M1 1h2v1h-2zM2 2h1v1h-1z" fill="#ffffff" />
     </svg>
-  )
-}
-
-const BUBBLE_FRAME = { rings: ['#202028', '#f8f8f8'], fill: '#f8f8f8', radius: 2 }
-
-/**
- * Table talk: a white box over the speaker with a tail pointing at them.
- *
- * Placed over the seat and kept on screen, and never over the board or the pot —
- * if a seat's bubble would reach the middle column it is pushed out to the side.
- */
-function SpeechBubble({ seat, text, playerId, layout }: { seat: Rect; text: string; playerId: string; layout: SceneLayout }) {
-  const P = layout.scale
-  const t = layout.table
-  const maxInner = 104
-  const lines = wrapText(text, maxInner).slice(0, 3)
-  const innerW = Math.max(...lines.map((l) => measureText(l) + 1))
-  const w = innerW + 2 * 2 + 4
-  const h = lines.length * LINE_HEIGHT + 2 * 2 + 2
-  const centre = seat.x + seat.w / 2
-  // Keep it on screen: the felt sits inside the scene, so it may reach past the
-  // table's own edges into the margins either side.
-  const minX = -layout.felt.x + 2
-  const maxX = layout.w - layout.felt.x - w - 2
-  let x = Math.round(Math.min(maxX, Math.max(minX, centre - w / 2)))
-  const y = seat.y - h - 3
-  const rect = { x, y, w, h }
-  // The board is wider than the band over it, so the column is the wider of the two.
-  const colX = Math.min(t.band.x, t.board.x)
-  const column = { x: colX, y: t.band.y, w: Math.max(t.band.x + t.band.w, t.board.x + t.board.w) - colX, h: t.board.y + t.board.h - t.band.y }
-  if (rect.x < column.x + column.w && column.x < rect.x + rect.w && rect.y < column.y + column.h && column.y < rect.y + rect.h) {
-    x = centre < t.w / 2 ? Math.min(x, column.x - w - 2) : Math.max(x, column.x + column.w + 2)
-  }
-  const tailX = Math.round(Math.min(x + w - 6, Math.max(x + 3, centre - 2)))
-  return (
-    <>
-      <div
-        data-testid={`speech-${playerId}`}
-        className="speech-bubble"
-        style={{
-          ...frameStyle(BUBBLE_FRAME, P),
-          position: 'absolute',
-          left: x * P,
-          top: y * P,
-          width: w * P,
-          height: h * P,
-          zIndex: 6,
-          padding: `${P}px ${2 * P}px`,
-          pointerEvents: 'none',
-        }}
-      >
-        {lines.map((line, i) => (
-          <PixelText key={i} text={line} scale={P} ink={INK.dark} />
-        ))}
-      </div>
-      <svg
-        aria-hidden="true"
-        className="speech-bubble"
-        width={5 * P}
-        height={4 * P}
-        viewBox="0 0 5 4"
-        shapeRendering="crispEdges"
-        style={{ position: 'absolute', left: tailX * P, top: (y + h - 1) * P, zIndex: 7, pointerEvents: 'none' }}
-      >
-        <path d="M0 0h5v1h-5z" fill="#f8f8f8" />
-        <path d="M0 0h1v1h-1zM4 0h1v1h-1zM1 1h3v1h-3zM2 2h1v1h-1z" fill="#202028" />
-        <path d="M1 0h3v1h-3zM2 1h1v1h-1z" fill="#f8f8f8" />
-      </svg>
-    </>
   )
 }

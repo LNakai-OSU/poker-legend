@@ -36,6 +36,8 @@ interface PxButtonProps {
   buttonRef?: (el: HTMLButtonElement | null) => void
   /** Pointed at with the keyboard: shows the cursor the way hovering does. */
   selected?: boolean
+  /** Shares the row's width with its neighbours instead of being as wide as its label. */
+  flex?: boolean
 }
 
 /**
@@ -43,7 +45,7 @@ interface PxButtonProps {
  * letters are drawn over the same words kept in the document — so a test or a
  * screen reader finds "Call 20" exactly where a player sees it.
  */
-export function PxButton({ lines, scale, role = 'plain', width, height, onClick, testId, style, disabled, subInk, buttonRef, selected }: PxButtonProps) {
+export function PxButton({ lines, scale, role = 'plain', width, height, onClick, testId, style, disabled, subInk, buttonRef, selected, flex }: PxButtonProps) {
   const w = width ?? buttonWidth(lines)
   return (
     <button
@@ -57,7 +59,8 @@ export function PxButton({ lines, scale, role = 'plain', width, height, onClick,
       aria-disabled={disabled || undefined}
       style={{
         ...frameStyle(buttonFrame(role), scale),
-        width: w * scale,
+        width: flex ? undefined : w * scale,
+        minWidth: flex ? w * scale : undefined,
         height: height * scale,
         minHeight: 0,
         padding: 0,
@@ -70,7 +73,7 @@ export function PxButton({ lines, scale, role = 'plain', width, height, onClick,
         alignItems: 'center',
         justifyContent: 'center',
         position: 'relative',
-        flex: 'none',
+        flex: flex ? '1 1 0' : 'none',
         ...style,
       }}
     >

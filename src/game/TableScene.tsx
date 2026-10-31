@@ -5,7 +5,9 @@ import { bestHand, HAND_CATEGORY_NAMES } from '../engine/handRank'
 import { defaultRng } from '../engine/rng'
 import type { PlayerConfig } from '../engine/types'
 import type { OpponentDef, TableDef } from '../world/types'
-import { PokerTableView, ShowdownSummary, handTakings, potWinnerIds, type SeatSpeech } from './PokerTableView'
+import { PokerTableView, ShowdownSummary, handTakings, madeHand, potWinnerIds, tellAlphaOf, type SeatSpeech } from './PokerTableView'
+import { TableCaption } from './TableCaption'
+import { tellCue } from './tellFlavor'
 import type { Announcement } from './HandAnnouncer'
 import { personalityFor, seatsOf } from '../world/characters'
 import { talkOf } from '../world/talk'
@@ -15,7 +17,7 @@ import { tableAccess, tellClarity } from './progression'
 import { playSound } from '../audio/audio'
 import { useAmbientMusic } from '../audio/SoundToggle'
 import { TableStage } from './TableStage'
-import { DOCK, buttonHeight, buttonWidth, type SceneLayout, type SceneNeeds } from './tableLayout'
+import { DOCK, buttonHeight, planDock, type SceneLayout, type SceneNeeds } from './tableLayout'
 import { themeFor, type TableTheme } from './tableThemes'
 import { Panel, PxButton, PxLine } from './pixel/ui'
 import { useTouchFirst } from './device'
@@ -56,7 +58,7 @@ const BET_KEYS_HINT = '← → choose · ↑ ↓ bet size · Space confirm'
  */
 
 /** How long a line of table talk stays up. */
-const SPEECH_MS = 2200
+const SPEECH_MS = 3200
 
 /**
  * An opponent sitting behind less than this share of a buy-in tops back up to one
@@ -539,7 +541,12 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
       ? { toCall, breakEven: toCall / (publicState.pot + toCall) }
       : null
 
+  /** The raise sizes are a sheet over the table, opened from the Raise button. */
+  const [raiseSheet, setRaiseSheet] = useState(false)
+  useEffect(() => setRaiseSheet(false), [publicState.handNumber, publicState.street, publicState.currentBet])
+
   const act = (type: 'fold' | 'check' | 'call') => {
+    setRaiseSheet(false)
     playSound(type === 'call' ? 'chip' : type)
     note(describeAction('You', { type }, { toCall, allInTo }))
     recordAction('you', { type }, { toCall, allInTo })
@@ -548,6 +555,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
     rerender()
   }
   const raiseTo = (to: number) => {
+    setRaiseSheet(false)
     playSound('chip')
     note(describeAction('You', { type: 'raise', to }, { toCall, allInTo }))
     recordAction('you', { type: 'raise', to }, { toCall, allInTo })
@@ -632,10 +640,10 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
     const P = layout.scale * layout.dockZoom
     const one = buttonHeight(1, P, layout.coarse)
     const two = buttonHeight(2, P, layout.coarse)
-    const plan = layout.dockPlan
     const row = { display: 'flex', flexWrap: 'wrap' as const, justifyContent: 'center', alignItems: 'center', gap: DOCK.gap * P }
 
     let body: ReactNode
+    let sheet: ReactNode = null
     if (ending) {
       body = (
         <EndPanel P={P} theme={theme} ending={ending}>
@@ -764,108 +772,36 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
         const raiseOpen = legalActions.some((a) => a.type === 'raise')
         const sliderValue = Math.min(Math.max(sliderTo, publicState.minRaiseTo), allInTo)
         const raiseLabel = `Raise to ${sliderValue.toLocaleString()}`
+        const canSize = raiseOpen && publicState.minRaiseTo < allInTo
+        // Pointing at a raise size with the keys opens the sheet too: the sizes
+        // are what the keys are walking along.
+        const sheetShown = raiseOpen && (raiseSheet || betCursor === 'raise')
         body = (
           <div style={{ display: 'flex', flexDirection: 'column', gap: DOCK.gap * P }}>
             {info}
             <div style={row}>
               {legalActions.some((a) => a.type === 'fold') && (
-                <PxButton lines={['Fold']} scale={P} role="fold" height={one} selected={betCursor === 'fold'} onClick={() => act('fold')} />
+                <PxButton lines={['Fold']} scale={P} role="fold" height={one} selected={betCursor === 'fold'} onClick={() => act('fold')} flex />
               )}
               {legalActions.some((a) => a.type === 'check') && (
-                <PxButton lines={['Check']} scale={P} role="primary" height={one} selected={betCursor === 'check'} onClick={() => act('check')} />
+                <PxButton lines={['Check']} scale={P} role="primary" height={one} selected={betCursor === 'check'} onClick={() => act('check')} flex />
               )}
               {legalActions.some((a) => a.type === 'call') && (
-                <PxButton lines={[`Call ${toCall}`]} scale={P} role="primary" height={one} selected={betCursor === 'call'} onClick={() => act('call')} />
+                <PxButton lines={[`Call ${toCall}`]} scale={P} role="primary" height={one} selected={betCursor === 'call'} onClick={() => act('call')} flex />
               )}
-              {raiseOpen && publicState.minRaiseTo < allInTo && (
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: DOCK.gap * P,
-                    flex: plan.raiseJoinsPrimary ? `1 1 ${(DOCK.sliderMinW + DOCK.gap + buttonWidth([raiseLabel])) * P}px` : '1 1 100%',
-                  }}
-                >
-                  <input
-                    data-testid="raise-slider"
-                    type="range"
-                    aria-label="Raise amount"
-                    className="px-slider"
-                    min={publicState.minRaiseTo}
-                    max={allInTo}
-                    value={sliderValue}
-                    onChange={(e) => setSliderTo(Number(e.target.value))}
-                    style={
-                      {
-                        flex: 1,
-                        minWidth: DOCK.sliderMinW * P,
-                        height: one * P,
-                        '--px': `${P}px`,
-                        '--thumb': `url(${chipTopUrl()})`,
-                      } as CSSProperties
-                    }
-                  />
-                  <PxButton
-                    lines={[raiseLabel]}
-                    scale={P}
-                    role="raise"
-                    height={one}
-                    testId="raise-slider-go"
-                    selected={betCursor === 'raise'}
-                    onClick={() => raiseTo(sliderValue)}
-                  />
-                </div>
+              {raiseOpen && (
+                <PxButton
+                  lines={[canSize ? (sheetShown ? 'Raise -' : 'Raise +') : `All in ${allInTo.toLocaleString()}`]}
+                  scale={P}
+                  role="raise"
+                  height={one}
+                  testId="raise-toggle"
+                  selected={betCursor === 'raise'}
+                  flex
+                  onClick={() => (canSize ? setRaiseSheet((open) => !open) : raiseTo(allInTo))}
+                />
               )}
             </div>
-            {raiseOpen && (
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: `repeat(${plan.sizingCols}, ${plan.sizingCellW * P}px)`,
-                  justifyContent: 'center',
-                  gap: DOCK.gap * P,
-                }}
-              >
-                {publicState.minRaiseTo < allInTo && (
-                  <PxButton
-                    lines={['Min raise', `to ${publicState.minRaiseTo.toLocaleString()}`]}
-                    scale={P}
-                    role="raise"
-                    width={plan.sizingCellW}
-                    height={two}
-                    testId="raise-min"
-                    selected={betCursor === 'raise' && sliderValue === publicState.minRaiseTo}
-                    onClick={() => raiseTo(publicState.minRaiseTo)}
-                  />
-                )}
-                {raisePresets.map((preset) => (
-                  // The first line names the sizing, the second is the total it
-                  // raises you to. Printing the total *as* the label read "Pot
-                  // 300" when the pot was 150.
-                  <PxButton
-                    key={preset.key}
-                    lines={[preset.label, `to ${preset.to.toLocaleString()}`]}
-                    scale={P}
-                    role="raise"
-                    width={plan.sizingCellW}
-                    height={two}
-                    testId={`raise-${preset.key}`}
-                    selected={betCursor === 'raise' && sliderValue === preset.to}
-                    onClick={() => raiseTo(preset.to)}
-                  />
-                ))}
-                <PxButton
-                  lines={['All in', `to ${allInTo.toLocaleString()}`]}
-                  scale={P}
-                  role="allin"
-                  width={plan.sizingCellW}
-                  height={two}
-                  testId="raise-all-in"
-                  selected={betCursor === 'raise' && sliderValue === allInTo}
-                  onClick={() => raiseTo(allInTo)}
-                />
-              </div>
-            )}
             {!touch && (
               <PxLine
                 scale={P}
@@ -877,6 +813,106 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
             )}
           </div>
         )
+        if (sheetShown && canSize) {
+          // As wide as the sizes need, up to most of the dock, standing on the dock.
+          const sheetInner = Math.floor((layout.dock.w * 0.72) / layout.dockZoom) - 2 * DOCK.inset
+          const sheetPlan = planDock(sheetInner, needs)
+          const sheetW = (sheetInner + 2 * DOCK.inset) * P
+          sheet = (
+            <Panel
+              theme={theme}
+              scale={P}
+              testId="raise-sheet"
+              style={{
+                position: 'absolute',
+                right: 0,
+                bottom: 'calc(100% + ' + DOCK.gap * P + 'px)',
+                width: sheetW,
+                padding: 3 * P,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: DOCK.gap * P,
+                zIndex: 8,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: DOCK.gap * P }}>
+                <input
+                  data-testid="raise-slider"
+                  type="range"
+                  aria-label="Raise amount"
+                  className="px-slider"
+                  min={publicState.minRaiseTo}
+                  max={allInTo}
+                  value={sliderValue}
+                  onChange={(e) => setSliderTo(Number(e.target.value))}
+                  style={
+                    {
+                      flex: 1,
+                      minWidth: DOCK.sliderMinW * P * 0.6,
+                      height: one * P,
+                      '--px': `${P}px`,
+                      '--thumb': `url(${chipTopUrl()})`,
+                    } as CSSProperties
+                  }
+                />
+                <PxButton
+                  lines={[raiseLabel]}
+                  scale={P}
+                  role="raise"
+                  height={one}
+                  testId="raise-slider-go"
+                  selected={betCursor === 'raise'}
+                  onClick={() => raiseTo(sliderValue)}
+                />
+              </div>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: `repeat(${sheetPlan.sizingCols}, ${sheetPlan.sizingCellW * P}px)`,
+                  justifyContent: 'center',
+                  gap: DOCK.gap * P,
+                }}
+              >
+                <PxButton
+                  lines={['Min raise', `to ${publicState.minRaiseTo.toLocaleString()}`]}
+                  scale={P}
+                  role="raise"
+                  width={sheetPlan.sizingCellW}
+                  height={two}
+                  testId="raise-min"
+                  selected={betCursor === 'raise' && sliderValue === publicState.minRaiseTo}
+                  onClick={() => raiseTo(publicState.minRaiseTo)}
+                />
+                {raisePresets.map((preset) => (
+                  // The first line names the sizing, the second is the total it
+                  // raises you to. Printing the total *as* the label read "Pot
+                  // 300" when the pot was 150.
+                  <PxButton
+                    key={preset.key}
+                    lines={[preset.label, `to ${preset.to.toLocaleString()}`]}
+                    scale={P}
+                    role="raise"
+                    width={sheetPlan.sizingCellW}
+                    height={two}
+                    testId={`raise-${preset.key}`}
+                    selected={betCursor === 'raise' && sliderValue === preset.to}
+                    onClick={() => raiseTo(preset.to)}
+                  />
+                ))}
+                <PxButton
+                  lines={['All in', `to ${allInTo.toLocaleString()}`]}
+                  scale={P}
+                  role="allin"
+                  width={sheetPlan.sizingCellW}
+                  height={two}
+                  testId="raise-all-in"
+                  selected={betCursor === 'raise' && sliderValue === allInTo}
+                  onClick={() => raiseTo(allInTo)}
+                />
+              </div>
+            </Panel>
+          )
+        }
       }
     }
 
@@ -892,9 +928,30 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
           flexDirection: 'column',
           justifyContent: 'center',
           gap: DOCK.gap * P,
+          position: 'relative',
         }}
       >
+        {!ending && (
+          <TableCaption
+            P={P}
+            theme={theme}
+            speech={speech}
+            personas={personas}
+            tells={publicState.players
+              .filter((p) => p.id !== 'you' && p.tell && !p.folded)
+              .map((p) => ({ playerId: p.id, name: p.name, cue: tellCue(p.tell!), alpha: tellAlphaOf(p.tell!, insights) }))}
+            made={
+              handOver && lastResult
+                ? publicState.players
+                    .filter((p) => p.id !== 'you' && lastResult.revealed.some((r) => r.playerId === p.id))
+                    .map((p) => ({ name: p.name, hand: madeHand(lastResult, p.id) ?? '', won: potWinnerIds(lastResult).has(p.id) }))
+                : []
+            }
+            onDismiss={() => setSpeech(null)}
+          />
+        )}
         {body}
+        {sheet}
       </Panel>
     )
   }
@@ -910,7 +967,6 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
           yourHole={yourHole}
           insights={insights}
           personas={personas}
-          speech={speech}
           announcement={announcement}
           blinds={{ small: table.smallBlind, big: table.bigBlind }}
           showHeld={showHeld}

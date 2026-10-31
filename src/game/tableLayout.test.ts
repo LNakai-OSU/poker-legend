@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { APRON } from './pixel/tableArt'
 import {
+  minFeltWidth,
   SEAT,
   feltMinHeight,
   layoutFelt,
@@ -51,7 +52,7 @@ function clashes(w: number, h: number, count: number): string[] {
 describe('the table layout', () => {
   it('never lets anything touch the board, the pot or anybody else', () => {
     for (let count = 1; count <= 5; count++) {
-      for (let w = 236; w <= 440; w += 6) {
+      for (let w = minFeltWidth(count); w <= 440; w += 6) {
         const min = feltMinHeight(w, count)
         for (let h = min; h <= min + 90; h += 10) {
           expect(clashes(w, h, count), `${count} opponents on ${w}x${h}`).toEqual([])
@@ -71,7 +72,7 @@ describe('the table layout', () => {
 
   it('puts your cards below the board, not on it', () => {
     for (let count = 1; count <= 5; count++) {
-      for (const w of [242, 284, 440]) {
+      for (const w of [minFeltWidth(count), 440]) {
         const t = layoutFelt(w, feltMinHeight(w, count), count)
         expect(t.heroCards.y).toBeGreaterThanOrEqual(t.board.y + t.board.h)
         expect(t.hero.y).toBeGreaterThanOrEqual(t.board.y + t.board.h)

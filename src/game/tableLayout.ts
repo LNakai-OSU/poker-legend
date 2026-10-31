@@ -21,17 +21,20 @@ export type { Rect }
 
 /** An opponent's seat: plate with portrait, a line for tells, cards, a bet. */
 export const SEAT = {
-  w: 64,
+  w: 100,
   frame: 3,
-  portrait: 48,
-  panelH: 83,
-  /** Three lines: room for a tell, or most of the line a regular introduces themselves with. */
-  tellH: 30,
+  /** The face: a crop of the 48 by 48 portrait, head and shoulders, so its pixels stay whole. */
+  portraitW: 34,
+  portraitH: 34,
+  panelH: 42,
   cardsH: 20,
   betH: 15,
   gap: 2,
 } as const
-export const SEAT_H = SEAT.panelH + SEAT.gap + SEAT.tellH + SEAT.gap + SEAT.cardsH + SEAT.gap + SEAT.betH
+/** The width left for a name and a stack beside the face. */
+export const SEAT_TEXT_W = SEAT.w - 2 * SEAT.frame - SEAT.portraitW - 3
+/** The plate, then one row under it: their cards on the left and what they have bet on the right. */
+export const SEAT_H = SEAT.panelH + SEAT.gap + SEAT.cardsH
 
 /** Your seat: a plate with your stack, and the row your bet goes in above it. */
 /**
@@ -44,6 +47,16 @@ export const CARD_ZOOM = 2
 export const TEXT_ZOOM = 1.5
 export const HERO = { plateH: 43, cardsW: 92, cardsH: 60, gap: 4 } as const
 export const HERO_H = SEAT.betH + SEAT.gap + HERO.plateH
+
+/**
+ * The line of talk at the top of the betting menu: who is speaking and what they
+ * say, or the tell you are meant to catch, or what a showdown turned over. It
+ * used to be a bubble over the seat and a line under it, a few pixels tall at
+ * every seat; here it is one place, in the menu's larger type, and it costs the
+ * table no height.
+ */
+export const CAPTION = { face: 18, lines: 2 } as const
+export const CAPTION_H = Math.max(CAPTION.face, CAPTION.lines * LINE_HEIGHT)
 
 export const BOARD = { cardW: 44, cardH: 60, gap: 3 } as const
 export const BOARD_W = 5 * BOARD.cardW + 4 * BOARD.gap
@@ -124,7 +137,7 @@ function place(w: number, h: number, count: number): Placement {
   const sideR = { x: w - INSET - SEAT.w, w: SEAT.w }
   let cardsX = Math.round(w / 2 - HERO.cardsW / 2)
   let plateX = cardsX - HERO.gap - SEAT.w
-  if (template.sides && plateX < sideL.x + sideL.w + 4) {
+  if (plateX < INSET || (template.sides && plateX < sideL.x + sideL.w + 4)) {
     const blockW = SEAT.w + HERO.gap + HERO.cardsW
     plateX = Math.round((w - blockW) / 2)
     cardsX = plateX + SEAT.w + HERO.gap
@@ -175,6 +188,15 @@ function place(w: number, h: number, count: number): Placement {
   const needed = Math.max(neededForColumn, neededForSides, neededForHero, neededForTops)
 
   return { w, h, seats, band, board, hero, heroCards, needed }
+}
+
+/**
+ * The narrowest table that holds the far row of seats side by side: three seats
+ * across need three seats' width, whatever the window.
+ */
+export function minFeltWidth(count: number): number {
+  const across = TEMPLATES[Math.max(1, Math.min(5, count))].top.length
+  return Math.max(MIN_FELT_W, across * (SEAT.w + 6) - 6 + 2 * INSET)
 }
 
 /** The shortest table, in art pixels, that seats `count` opponents at width `w`. */
@@ -274,23 +296,20 @@ export function planDock(innerW: number, needs: DockNeeds): DockPlan {
 
 /** The tallest the dock gets, in art pixels, across everything it shows. */
 export function dockHeight(innerW: number, scale: number, coarse: boolean, needs: DockNeeds): number {
-  const plan = planDock(innerW, needs)
   const one = buttonHeight(1, scale, coarse)
-  const two = buttonHeight(needs.kind === 'cash' ? 2 : 1, scale, coarse)
   const info = needs.infoTexts.reduce((sum, text) => sum + wrapText(text, innerW).length * LINE_HEIGHT, 0)
   // Each line is a child of the dock, so each has its gap.
   const infoH = info > 0 ? info + DOCK.gap * needs.infoTexts.length : 0
 
-  // Betting: Fold and Call, the slider, then the grid of sizes.
-  const sizingRows = Math.ceil(sizingLabels(needs.kind, needs.sampleAmount).length / plan.sizingCols)
-  const primaryRows = needs.kind === 'cash' ? (plan.raiseJoinsPrimary ? 1 : 2) : 1
-  const betting = infoH + primaryRows * one + (primaryRows - 1) * DOCK.gap + DOCK.gap + sizingRows * two + (sizingRows - 1) * DOCK.gap
+  // Betting: one row (Fold, Check or Call, Raise). The raise sizes are a sheet
+  // opened over the table, so they take none of the dock's height.
+  const betting = infoH + one + CAPTION_H + DOCK.gap
 
   // Between hands: who won, then the bar that deals the next hand.
   const bar = ['Next hand ▬▬▬▬▬', 'Deal now (space)', 'Hold', `Leave table ($${needs.sampleAmount})`].map(
     (l) => buttonWidth([l]),
   )
-  const between = 2 * LINE_HEIGHT + DOCK.gap + packRows(bar, innerW) * (one + DOCK.gap)
+  const between = 2 * LINE_HEIGHT + DOCK.gap + packRows(bar, innerW) * (one + DOCK.gap) + CAPTION_H + DOCK.gap
 
   return 2 * DOCK.inset + Math.max(betting, between)
 }
@@ -343,23 +362,38 @@ const MAX_SCALE = 4
 /** The menu and sound buttons sit in the top right corner, in CSS pixels. */
 const CORNER_BUTTONS_CSS = 112
 const HEADER_FRAME = 4
-/** The betting menu beside the table, on a window wider than it is tall. */
-const SIDE_DOCK_WIDTHS = [150, 190, 230, 280, 330, 380, 430]
-const SIDE_GAP = 4
 /** The betting menu's text, relative to the table's pixels. */
 const DOCK_ZOOM = 1.5
-/** How far down the corner buttons reach, in CSS pixels. */
-const CORNER_CLEAR_CSS = 60
 const MIN_FELT_W = 250
 
-function sceneAt(scale: number, view: Viewport, needs: SceneNeeds, sideW = 0, zoom = 1): { layout: SceneLayout; fits: boolean } {
-  const side = sideW > 0
+/**
+ * The scene at one pixel scale and menu zoom, with the table as wide as the
+ * window lets it be: the whole width up to FELT_MAX_W, and narrower only when
+ * the window is too short for a table that wide (a table's height is set by its
+ * width, and a short window would otherwise force a smaller pixel scale).
+ */
+function sceneAt(scale: number, view: Viewport, needs: SceneNeeds, zoom = 1): { layout: SceneLayout; fits: boolean } {
   const w = Math.floor(view.w / scale)
   const h = Math.floor(view.h / scale)
-  const dockColW = sideW
-  const feltW = Math.min(w - 2 * PAD - (side ? dockColW + SIDE_GAP : 0), FELT_MAX_W)
-  const blockW = feltW + (side ? dockColW + SIDE_GAP : 0)
-  const feltX = Math.floor((w - blockW) / 2)
+  const widest = Math.min(w - 2 * PAD, FELT_MAX_W)
+  let last: { layout: SceneLayout; fits: boolean } | null = null
+  for (let feltW = widest; feltW >= minFeltWidth(needs.opponents); feltW -= 10) {
+    last = sceneWith(scale, view, needs, zoom, w, h, feltW)
+    if (last.fits) return last
+  }
+  return last ?? sceneWith(scale, view, needs, zoom, w, h, widest)
+}
+
+function sceneWith(
+  scale: number,
+  view: Viewport,
+  needs: SceneNeeds,
+  zoom: number,
+  w: number,
+  h: number,
+  feltW: number,
+): { layout: SceneLayout; fits: boolean } {
+  const feltX = Math.floor((w - feltW) / 2)
 
   const signRoom = w - 2 * PAD - Math.ceil(CORNER_BUTTONS_CSS / scale)
   const oneLine = measureText(`${needs.title}   ${needs.subtitle}`) * TEXT_ZOOM + 2 * HEADER_FRAME + 6 <= signRoom
@@ -375,11 +409,10 @@ function sceneAt(scale: number, view: Viewport, needs: SceneNeeds, sideW = 0, zo
       6,
   )
 
-  const dockW = side ? dockColW : feltW
   // Whole device pixels per art pixel, as everywhere else.
   const dpr = Math.max(1, view.dpr || 1)
   const dockZoom = Math.round(scale * dpr * zoom) / Math.round(scale * dpr)
-  const dockInnerW = dockW / dockZoom - 2 * DOCK.inset
+  const dockInnerW = feltW / dockZoom - 2 * DOCK.inset
   // The home game reserves as much menu as a casino does, so Marcus's table is
   // scaled the same way as everywhere else instead of trading the menu for a
   // bigger table.
@@ -389,34 +422,31 @@ function sceneAt(scale: number, view: Viewport, needs: SceneNeeds, sideW = 0, zo
       dockHeight(dockInnerW, scale * dockZoom, view.coarse, { ...needs, kind: 'cash' }),
     ) * dockZoom
   const feltMin = feltMinHeight(feltW, needs.opponents)
-  const fixed = side ? PAD + headerH + 6 + PAD : PAD + headerH + 6 + 4 + dockH + PAD
+  const fixed = PAD + headerH + 6 + 4 + dockH + PAD
   const available = h - fixed
-  const fits = available >= feltMin && (!side || dockH <= available - Math.max(0, Math.ceil(CORNER_CLEAR_CSS / scale) - (PAD + headerH + 6))) && feltW >= MIN_FELT_W
+  const fits = available >= feltMin && feltW >= minFeltWidth(needs.opponents)
 
   // Spare height goes first to the table, a little, and the rest to the room
   // above it: the wall behind the table is where each venue looks like itself.
   const comfortable = Math.max(feltMin, Math.min(feltMin + 8, Math.round(feltW * 0.72)))
-  // Beside the table there is no menu to make room for: it takes the height.
-  const feltH = side ? Math.max(feltMin, available) : Math.max(feltMin, Math.min(available, comfortable))
+  const feltH = Math.max(feltMin, Math.min(available, comfortable))
   const spare = Math.max(0, available - feltH)
   const feltY = PAD + headerH + 6 + spare
-  // Beside the table the menu starts under the menu and sound buttons in the corner.
-  const dockY = side ? Math.max(feltY, Math.ceil(CORNER_CLEAR_CSS / scale)) : feltY + feltH + 4
-  const dockX = side ? feltX + feltW + SIDE_GAP : feltX
+  const dockY = feltY + feltH + 4
 
   const layout: SceneLayout = {
     scale,
     w,
-    h: Math.max(h, side ? feltY + feltH + PAD : dockY + dockH + PAD),
+    h: Math.max(h, dockY + dockH + PAD),
     header: { x: PAD, y: PAD, w: headerW, h: headerH },
     headerLines,
     felt: { x: feltX, y: feltY, w: feltW, h: feltH },
-    dock: { x: dockX, y: dockY, w: dockW, h: side ? feltY + feltH - dockY : dockH },
+    dock: { x: feltX, y: dockY, w: feltW, h: dockH },
     table: layoutFelt(feltW, feltH, needs.opponents),
     dockPlan: planDock(dockInnerW, needs),
     dockZoom,
     coarse: view.coarse,
-    side,
+    side: false,
   }
   return { layout, fits }
 }
@@ -428,7 +458,6 @@ function sceneAt(scale: number, view: Viewport, needs: SceneNeeds, sideW = 0, zo
 export function layoutScene(view: Viewport, needs: SceneNeeds): SceneLayout {
   const dpr = Math.max(1, view.dpr || 1)
   const kMax = Math.max(Math.round(dpr), Math.floor(MAX_SCALE * dpr))
-  const wide = view.w >= view.h * 1.3
   // Readable text first, but not at any price: a menu drawn bigger is worth a
   // smaller table, up to a point (see `score`), and a window that only fits
   // the table at one pixel to the art pixel is better served by a plain menu.
@@ -438,9 +467,9 @@ export function layoutScene(view: Viewport, needs: SceneNeeds): SceneLayout {
   const kMin = Math.max(1, Math.round(dpr * 0.75))
   for (let k = kMax; k >= kMin; k--) {
     for (const zoom of [2, DOCK_ZOOM, 1.25, 1]) {
-      // Beside the table when the window is wide: height is what a wide window
-      // is short of, and a menu under the table spends it.
-      const tries = wide ? [...SIDE_DOCK_WIDTHS.map((w) => sceneAt(k / dpr, view, needs, w, zoom)), sceneAt(k / dpr, view, needs, 0, zoom)] : [sceneAt(k / dpr, view, needs, 0, zoom)]
+      // Always under the table: the menu is one row, so it costs little height and
+      // the table gets the whole width.
+      const tries = [sceneAt(k / dpr, view, needs, zoom)]
       const found = tries.find((t) => t.fits)
       if (!found) continue
       const score = k * found.layout.dockZoom + 0.25 * k
