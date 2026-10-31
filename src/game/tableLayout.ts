@@ -55,13 +55,16 @@ export const HERO_H = SEAT.betH + SEAT.gap + HERO.plateH
  * every seat; here it is one place, in the menu's larger type, and it costs the
  * table no height.
  */
+/** The casino table's bar: three big buttons across the foot of the screen. */
+export const BAR = { buttonH: 30, textZoom: 2 } as const
+
 export const CAPTION = { face: 18, lines: 2 } as const
 export const CAPTION_H = Math.max(CAPTION.face, CAPTION.lines * LINE_HEIGHT)
 
 export const BOARD = { cardW: 44, cardH: 60, gap: 3 } as const
 export const BOARD_W = 5 * BOARD.cardW + 4 * BOARD.gap
 /** The line over the board: the pot, or whatever is being announced. */
-export const BAND = { w: 132, h: 26 } as const
+export const BAND = { w: 176, h: 26 } as const
 
 /** How far seats sit in from the edge of the table. */
 const INSET = 4
@@ -306,7 +309,7 @@ export function dockHeight(innerW: number, scale: number, coarse: boolean, needs
   // the menu's height. Marcus's kitchen table keeps its full menu.
   let betting: number
   if (needs.kind === 'cash') {
-    betting = infoH + one + CAPTION_H + DOCK.gap
+    betting = infoH + Math.max(one, BAR.buttonH) + CAPTION_H + DOCK.gap
   } else {
     const plan = planDock(innerW, needs)
     const two = buttonHeight(1, scale, coarse)
@@ -366,7 +369,7 @@ export interface SceneLayout {
 }
 
 const PAD = 4
-const FELT_MAX_W = 440
+const FELT_MAX_W = 520
 const MAX_SCALE = 4
 /** The menu and sound buttons sit in the top right corner, in CSS pixels. */
 const CORNER_BUTTONS_CSS = 112

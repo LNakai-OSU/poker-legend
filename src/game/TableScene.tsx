@@ -17,7 +17,7 @@ import { tableAccess, tellClarity } from './progression'
 import { playSound } from '../audio/audio'
 import { useAmbientMusic } from '../audio/SoundToggle'
 import { TableStage } from './TableStage'
-import { DOCK, buttonHeight, planDock, type SceneLayout, type SceneNeeds } from './tableLayout'
+import { BAR, DOCK, buttonHeight, planDock, type SceneLayout, type SceneNeeds } from './tableLayout'
 import { themeFor, type TableTheme } from './tableThemes'
 import { Panel, PxButton, PxLine } from './pixel/ui'
 import { useTouchFirst } from './device'
@@ -644,6 +644,9 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
 
     let body: ReactNode
     let sheet: ReactNode = null
+    // The betting row and its waiting line sit straight on the dark bar; the
+    // other states (a result, a rebuy) are read in a pale panel inside it.
+    let bare = false
     if (ending) {
       body = (
         <EndPanel P={P} theme={theme} ending={ending}>
@@ -757,14 +760,13 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
         </>
       )
       if (!canAct) {
+        bare = true
         body = (
           <>
-            <div data-testid="action-log">
-              {log.map((line, i) => (
-                <PxLine key={`${i}-${line}`} scale={P} text={line} ink={i === log.length - 1 ? INK.dark : LOG_INK} />
-              ))}
+            <div data-testid="action-log" style={{ display: 'none' }}>
+              {log.join(' ')}
             </div>
-            <PxLine scale={P} align="center" text={actingName ? `${actingName} to act…` : 'Dealing…'} ink={INFO_INK} />
+            <PxLine scale={P * 1.25} align="center" text={actingName ? `${actingName} to act…` : 'Dealing…'} ink={INFO_INK} />
             {info}
           </>
         )
@@ -776,25 +778,27 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
         // Pointing at a raise size with the keys opens the sheet too: the sizes
         // are what the keys are walking along.
         const sheetShown = raiseOpen && (raiseSheet || betCursor === 'raise')
+        bare = true
         body = (
           <div style={{ display: 'flex', flexDirection: 'column', gap: DOCK.gap * P }}>
             {info}
-            <div style={row}>
+            <div style={{ ...row, flexWrap: 'nowrap', gap: 3 * P }}>
               {legalActions.some((a) => a.type === 'fold') && (
-                <PxButton lines={['Fold']} scale={P} role="fold" height={one} selected={betCursor === 'fold'} onClick={() => act('fold')} flex />
+                <PxButton lines={['Fold']} scale={P} role="barFold" height={BAR.buttonH} textZoom={BAR.textZoom} selected={betCursor === 'fold'} onClick={() => act('fold')} flex />
               )}
               {legalActions.some((a) => a.type === 'check') && (
-                <PxButton lines={['Check']} scale={P} role="primary" height={one} selected={betCursor === 'check'} onClick={() => act('check')} flex />
+                <PxButton lines={['Check']} scale={P} role="barCall" height={BAR.buttonH} textZoom={BAR.textZoom} selected={betCursor === 'check'} onClick={() => act('check')} flex />
               )}
               {legalActions.some((a) => a.type === 'call') && (
-                <PxButton lines={[`Call ${toCall}`]} scale={P} role="primary" height={one} selected={betCursor === 'call'} onClick={() => act('call')} flex />
+                <PxButton lines={[`Call ${toCall}`]} scale={P} role="barCall" height={BAR.buttonH} textZoom={BAR.textZoom} selected={betCursor === 'call'} onClick={() => act('call')} flex />
               )}
               {raiseOpen && (
                 <PxButton
                   lines={[canSize ? (sheetShown ? 'Raise -' : 'Raise +') : `All in ${allInTo.toLocaleString()}`]}
                   scale={P}
-                  role="raise"
-                  height={one}
+                  role="barRaise"
+                  height={BAR.buttonH}
+                  textZoom={BAR.textZoom}
                   testId="raise-toggle"
                   // The sizes in the sheet carry the pointer once it is on a raise.
                   selected={false}
@@ -922,42 +926,66 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
     }
 
     return (
-      <Panel
-        theme={theme}
-        scale={P}
-        testId="dock"
+      <div
+        data-testid="dock"
         style={{
-          minHeight: layout.dock.h * layout.scale,
-          padding: 3 * P,
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          gap: DOCK.gap * P,
           position: 'relative',
+          // The bar runs the width of the window; the table above it keeps its own.
+          marginLeft: -layout.dock.x * layout.scale,
+          width: '100vw',
+          boxSizing: 'border-box',
+          minHeight: layout.dock.h * layout.scale,
+          marginBottom: -4 * layout.scale,
+          display: 'flex',
+          justifyContent: 'center',
+          background: 'linear-gradient(rgba(11,15,24,0.93), rgba(6,8,14,0.97))',
+          borderTop: `${Math.max(1, Math.round(P))}px solid ${theme.ui.band}`,
+          padding: `${2 * P}px 0 ${6 * layout.scale}px`,
         }}
       >
-        {!ending && (
-          <TableCaption
-            P={P}
-            theme={theme}
-            speech={speech}
-            personas={personas}
-            tells={publicState.players
-              .filter((p) => p.id !== 'you' && p.tell && !p.folded)
-              .map((p) => ({ playerId: p.id, name: p.name, cue: tellCue(p.tell!), alpha: tellAlphaOf(p.tell!, insights) }))}
-            made={
-              handOver && lastResult
-                ? publicState.players
-                    .filter((p) => p.id !== 'you' && lastResult.revealed.some((r) => r.playerId === p.id))
-                    .map((p) => ({ name: p.name, hand: madeHand(lastResult, p.id) ?? '', won: potWinnerIds(lastResult).has(p.id) }))
-                : []
-            }
-            onDismiss={() => setSpeech(null)}
-          />
-        )}
-        {body}
-        {sheet}
-      </Panel>
+        <div
+          style={{
+            position: 'relative',
+            width: layout.dock.w * layout.scale,
+            maxWidth: '100%',
+            boxSizing: 'border-box',
+            padding: `0 ${3 * P}px`,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            gap: DOCK.gap * P,
+          }}
+        >
+          {!ending && (
+            <TableCaption
+              P={P}
+              theme={theme}
+              speech={speech}
+              personas={personas}
+              tells={publicState.players
+                .filter((p) => p.id !== 'you' && p.tell && !p.folded)
+                .map((p) => ({ playerId: p.id, name: p.name, cue: tellCue(p.tell!), alpha: tellAlphaOf(p.tell!, insights) }))}
+              made={
+                handOver && lastResult
+                  ? publicState.players
+                      .filter((p) => p.id !== 'you' && lastResult.revealed.some((r) => r.playerId === p.id))
+                      .map((p) => ({ name: p.name, hand: madeHand(lastResult, p.id) ?? '', won: potWinnerIds(lastResult).has(p.id) }))
+                  : []
+              }
+              fallback={handOver ? undefined : log[log.length - 1]}
+              onDismiss={() => setSpeech(null)}
+            />
+          )}
+          {bare ? (
+            body
+          ) : (
+            <Panel theme={theme} scale={P} style={{ padding: 3 * P, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: DOCK.gap * P }}>
+              {body}
+            </Panel>
+          )}
+          {sheet}
+        </div>
+      </div>
     )
   }
 
@@ -986,9 +1014,9 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
 }
 
 /** Information over the betting buttons: odds and reads the lessons paid for. */
-const INFO_INK = { color: '#2a5a9a', shadow: '#c8d8f0' }
+const INFO_INK = INK.blue
 /** Older lines of narration, faded back. */
-const LOG_INK = { color: '#8a8a98', shadow: '#dcdce4' }
+const LOG_INK = INK.dim
 /** Money that is about to change hands. */
 const STAKE_INK = { color: '#8a5a10', shadow: '#ecd8b0' }
 

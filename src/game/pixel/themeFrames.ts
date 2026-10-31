@@ -29,7 +29,7 @@ export function panelFrames(theme: TableTheme): Record<'panel' | 'acting' | 'tag
   }
 }
 
-export type ButtonRole = 'fold' | 'primary' | 'raise' | 'allin' | 'plain'
+export type ButtonRole = 'fold' | 'primary' | 'raise' | 'allin' | 'plain' | 'barFold' | 'barCall' | 'barRaise'
 
 /**
  * Folding, calling, raising and shoving are different kinds of act, and look it:
@@ -41,6 +41,10 @@ const BUTTON_COLOURS: Record<ButtonRole, string> = {
   raise: '#2e9450',
   allin: '#c83838',
   plain: '#5a6478',
+  // The casino bar's three big buttons: red, green, gold.
+  barFold: '#a84444',
+  barCall: '#2f8a58',
+  barRaise: '#b8861e',
 }
 
 export function buttonFrame(role: ButtonRole): FrameSpec {

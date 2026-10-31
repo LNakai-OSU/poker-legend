@@ -519,7 +519,7 @@ export function PokerTableView({
             alignItems: 'center',
             gap: 2 * P,
             padding: `0 ${2 * P}px`,
-            height: (LINE_HEIGHT + 6) * P,
+            height: (LINE_HEIGHT * 1.5 + 6) * P,
           }}
         >
           <img
@@ -528,8 +528,8 @@ export function PokerTableView({
             draggable={false}
             style={{ width: 11 * P, height: chipStackUrl([DENOMINATIONS[4], DENOMINATIONS[5]]).h * P, imageRendering: 'pixelated' }}
           />
-          <PixelText text={`Pot ${state.pot.toLocaleString()}`} scale={P} ink={INK.dark} />
-          {blinds && <PixelText text={`· Blinds ${blinds.small}/${blinds.big}`} scale={P} ink={INK.blue} />}
+          <PixelText text={`Pot ${state.pot.toLocaleString()}`} scale={P * 1.5} ink={INK.dark} />
+          {blinds && <PixelText text={`· Blinds ${blinds.small}/${blinds.big}`} scale={P * 1.5} ink={INK.blue} />}
         </span>
       </div>
       <HandAnnouncer announcement={announcement ?? null} scale={P} theme={theme} band={t.band} onDismiss={onDismissAnnouncement} />

@@ -38,6 +38,8 @@ interface PxButtonProps {
   selected?: boolean
   /** Shares the row's width with its neighbours instead of being as wide as its label. */
   flex?: boolean
+  /** The label drawn this many times bigger than the frame's pixels. */
+  textZoom?: number
 }
 
 /**
@@ -45,8 +47,8 @@ interface PxButtonProps {
  * letters are drawn over the same words kept in the document — so a test or a
  * screen reader finds "Call 20" exactly where a player sees it.
  */
-export function PxButton({ lines, scale, role = 'plain', width, height, onClick, testId, style, disabled, subInk, buttonRef, selected, flex }: PxButtonProps) {
-  const w = width ?? buttonWidth(lines)
+export function PxButton({ lines, scale, role = 'plain', width, height, onClick, testId, style, disabled, subInk, buttonRef, selected, flex, textZoom = 1 }: PxButtonProps) {
+  const w = width ?? buttonWidth(lines) * textZoom
   return (
     <button
       type="button"
@@ -92,7 +94,7 @@ export function PxButton({ lines, scale, role = 'plain', width, height, onClick,
         <PixelText
           key={i}
           text={line}
-          scale={scale}
+          scale={scale * textZoom}
           ink={i === 0 ? INK.light : (subInk ?? { color: '#e0e0e8', shadow: '#2a2a36' })}
         />
       ))}

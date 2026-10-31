@@ -28,6 +28,7 @@ export function TableCaption({
   personas,
   tells,
   made,
+  fallback,
   onDismiss,
 }: {
   /** CSS pixels per art pixel, in the menu's own (zoomed) pixels. */
@@ -38,6 +39,8 @@ export function TableCaption({
   tells: CaptionTell[]
   /** What each player who showed down made, for a line when nothing else is on. */
   made: Array<{ name: string; hand: string; won: boolean }>
+  /** A quiet line for when nothing is said or noticed: what was just done, whose turn it is. */
+  fallback?: string
   onDismiss: () => void
 }) {
   const box = { height: CAPTION_H * P, display: 'flex', alignItems: 'center', gap: 3 * P, overflow: 'hidden' } as const
@@ -65,7 +68,7 @@ export function TableCaption({
           />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <PixelText text={speech.text} scale={P} wrap ink={INK.dark} maxLines={CAPTION.lines} />
+          <PixelText text={speech.text} scale={P} wrap ink={INK.light} maxLines={CAPTION.lines} />
         </div>
       </div>
     )
@@ -80,7 +83,7 @@ export function TableCaption({
               <PixelText
                 text={`${t.name}: ${t.cue}`}
                 scale={P}
-                ink={{ color: `rgba(138, 90, 16, ${t.alpha})`, shadow: `rgba(236, 216, 176, ${t.alpha})` }}
+                ink={{ color: `rgba(248, 208, 72, ${t.alpha})`, shadow: `rgba(11, 15, 24, ${t.alpha})` }}
               />
             </div>
           ))}
@@ -98,12 +101,16 @@ export function TableCaption({
             scale={P}
             wrap
             maxLines={CAPTION.lines}
-            ink={made.some((m) => m.won) ? INK.gold : INK.dark}
+            ink={made.some((m) => m.won) ? INK.gold : INK.light}
           />
         </div>
       </div>
     )
   }
 
-  return <div style={{ height: CAPTION_H * P }} aria-hidden="true" />
+  return (
+    <div style={box}>
+      {fallback ? <PixelText text={fallback} scale={P} wrap maxLines={CAPTION.lines} ink={{ color: '#9aa4b8', shadow: '#0b0f18' }} /> : null}
+    </div>
+  )
 }
