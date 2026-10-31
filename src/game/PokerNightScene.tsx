@@ -108,7 +108,9 @@ export function PokerNightScene({ onWin, onLeave }: PokerNightSceneProps) {
   const announce = (a: Announcement, ms = ANNOUNCE_MS) => {
     setAnnouncement(a)
     if (announceTimer.current) window.clearTimeout(announceTimer.current)
-    announceTimer.current = window.setTimeout(() => setAnnouncement(null), ms)
+    // A line that says the blinds went up waits for a tap: it is the thing the
+    // player most needs to have seen, and it used to be gone in a few seconds.
+    if (!a.sticky) announceTimer.current = window.setTimeout(() => setAnnouncement(null), ms)
   }
   useEffect(
     () => () => {
@@ -116,6 +118,12 @@ export function PokerNightScene({ onWin, onLeave }: PokerNightSceneProps) {
     },
     [],
   )
+
+  // A line that waits for a tap is cleared by the next street, so it cannot
+  // still be up when the hand it was about is over.
+  useEffect(() => {
+    setAnnouncement((a) => (a?.sticky ? null : a))
+  }, [state.street])
 
   /** Raises the blinds for the hand about to be dealt, and says so. */
   const dealNextHand = () => {
@@ -133,6 +141,7 @@ export function PokerNightScene({ onWin, onLeave }: PokerNightSceneProps) {
         text: next === 1 ? `Blinds ${level.small}/${level.big}` : `Blinds up: ${level.small}/${level.big}`,
         detail: level.index === BLIND_LEVELS.length - 1 ? 'last level' : 'every bet costs more now',
         tone: level.index >= 3 ? 'tense' : 'neutral',
+        sticky: next !== 1,
       }, BLINDS_MS)
     }
     rerender()
@@ -467,6 +476,7 @@ export function PokerNightScene({ onWin, onLeave }: PokerNightSceneProps) {
           lastResult={lastResult}
           yourHole={yourHole}
           announcement={announcement}
+          onDismissAnnouncement={() => setAnnouncement(null)}
           layout={layout}
           theme={THEME}
         />

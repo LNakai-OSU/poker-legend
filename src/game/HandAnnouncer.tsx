@@ -12,6 +12,7 @@
  * card. Every street, all-in and result it announces carries the pot with it,
  * so nothing is lost while it sits over the pot's own line.
  */
+import { useEffect } from 'react'
 import { frameStyle } from './pixel/frame'
 import { PixelText } from './pixel/PixelText'
 import { INK } from './pixel/ink'
@@ -28,6 +29,8 @@ export interface Announcement {
   /** The hand, the stakes — anything secondary, set smaller underneath. */
   detail?: string
   tone: AnnouncementTone
+  /** Stays until the player taps it (or presses a key), instead of leaving on a timer. */
+  sticky?: boolean
 }
 
 const TONE_BAND: Record<Exclude<AnnouncementTone, 'neutral'>, string> = {
@@ -41,12 +44,24 @@ export function HandAnnouncer({
   scale,
   theme,
   band,
+  onDismiss,
 }: {
   announcement: Announcement | null
   scale: number
   theme: TableTheme
   band: Rect
+  onDismiss?: () => void
 }) {
+  const sticky = announcement?.sticky === true && onDismiss !== undefined
+  useEffect(() => {
+    if (!sticky || !onDismiss) return
+    const onKey = (e: KeyboardEvent) => {
+      // Only Escape: Space, Enter and E already mean "bet" while a hand is on.
+      if (e.key === 'Escape') onDismiss()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [sticky, onDismiss, announcement?.key])
   if (!announcement) return null
   const P = scale
   const accent = announcement.tone === 'neutral' ? theme.ui.band : TONE_BAND[announcement.tone]
@@ -61,6 +76,8 @@ export function HandAnnouncer({
       key={announcement.key}
       data-testid="announcement"
       data-tone={announcement.tone}
+      data-sticky={sticky ? 'true' : undefined}
+      onClick={sticky ? onDismiss : undefined}
       className="announcement"
       style={{
         ...frameStyle(frame, P),
@@ -69,8 +86,10 @@ export function HandAnnouncer({
         top: band.y * P,
         width: band.w * P,
         height: band.h * P,
-        // Never swallows a click: the table underneath stays live while it is up.
-        pointerEvents: 'none',
+        // A line that leaves on its own never swallows a click; one that waits for
+        // a tap is the tap.
+        pointerEvents: sticky ? 'auto' : 'none',
+        cursor: sticky ? 'pointer' : undefined,
         zIndex: 5,
         display: 'flex',
         flexDirection: 'column',
@@ -80,8 +99,8 @@ export function HandAnnouncer({
       }}
     >
       <PixelText text={announcement.text} scale={P} ink={INK.dark} />
-      {announcement.detail && (
-        <PixelText text={announcement.detail} scale={P} ink={{ color: shade(accent, 0.55), shadow: mix(accent, '#ffffff', 0.6) }} />
+      {(announcement.detail || sticky) && (
+        <PixelText text={sticky ? `${announcement.detail ?? ''}${announcement.detail ? ' · ' : ''}tap to go on` : (announcement.detail ?? '')} scale={P} ink={{ color: shade(accent, 0.55), shadow: mix(accent, '#ffffff', 0.6) }} />
       )}
     </div>
   )

@@ -2,7 +2,7 @@
  * Screenshots a poker table at several window sizes, by borrowing the browser
  * suite's helpers (everything in tests/ui.mjs before its first scenario).
  *
- *   OUT=DIR [RAISE=1] node scripts/table-shot.mjs
+ *   OUT=DIR [RAISE=1] [SPEECH=1] node scripts/table-shot.mjs
  *
  * One image per size, named table-<size>.png. Needs the dev server running.
  */
@@ -26,6 +26,7 @@ for (const [name, w, h] of SIZES) {
     if (await btn.isVisible().catch(() => false)) await btn.click()
     await page.waitForTimeout(300)
   }
+  ${process.env.SPEECH === '1' ? "for (let i = 0; i < 120 && !(await page.locator('[data-testid^=\"speech-\"]').first().isVisible().catch(() => false)); i++) { for (const label of ['Next hand', 'Check', /^Call/]) { const b = page.locator('button', { hasText: label }); if (await b.first().isVisible().catch(() => false)) { await b.first().click().catch(() => {}); break } } await page.waitForTimeout(250) }" : ''}
   ${raise ? "await page.locator('[data-testid=\"raise-toggle\"]').click().catch(() => {}); await page.waitForTimeout(300)" : ''}
   await page.screenshot({ path: ${JSON.stringify(out)} + '/table-' + name + '.png' })
   console.log('shot', name)

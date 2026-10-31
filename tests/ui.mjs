@@ -1829,7 +1829,7 @@ await test('a bet can be made with the arrows and Space' , async () => {
   await page.waitForSelector('[data-testid="bet-keys-hint"]', { timeout: 20000 })
   // Nothing is pointed at a raise to begin with, so a stray Space is only a call or a check.
   assert((await page.locator('[data-selected="true"]').count()) === 1, 'one button should be pointed at')
-  assert(/Raise to|Min raise|½|Pot|All in/.test((await page.locator('[data-testid="dock"]').innerText())), 'no raise on offer')
+  assert(/Raise|All in/.test((await page.locator('[data-testid="dock"]').innerText())), 'no raise on offer')
   await page.keyboard.press('ArrowUp')
   const raising = await page.locator('[data-selected="true"]').first().getAttribute('data-testid')
   assert(/raise/.test(raising ?? ''), `Up should point at a raise size, not ${raising}`)
@@ -1966,6 +1966,33 @@ async function selectedSize(page) {
   const ids = await page.locator('[data-selected="true"]').evaluateAll((els) => els.map((e) => e.getAttribute('data-testid') ?? ''))
   return ids.find((id) => /^raise-/.test(id) && id !== 'raise-slider-go') ?? ids.find((id) => id !== '') ?? 'quiet'
 }
+
+await test('Raise opens a sheet of sizes beside your cards, and picking one bets; the table is drawn big', async () => {
+  const page = await newPage(baseSave())
+  await page.setViewportSize({ width: 1280, height: 720 })
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(400)
+  await enterDoor(page, 'Casino')
+  await talkTo(page, 'Pit Boss')
+  await page.waitForSelector('[data-testid="raise-toggle"]', { timeout: 20000 })
+  const scale = Number(await page.locator('[data-testid="table-scene"]').getAttribute('data-scale'))
+  assert(scale >= 2, `the table is drawn at ${scale} pixels to the art pixel on a 1280x720 window; it should be 2 or more`)
+  assert(!(await page.locator('[data-testid="raise-sheet"]').isVisible().catch(() => false)), 'the sizes are on show before Raise is pressed')
+  await page.locator('[data-testid="raise-toggle"]').click()
+  await page.waitForSelector('[data-testid="raise-sheet"]')
+  const covers = await page.evaluate(() => {
+    const a = document.querySelector('[data-testid="raise-sheet"]').getBoundingClientRect()
+    const b = document.querySelector('[data-testid="hero-cards"]').getBoundingClientRect()
+    return a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom
+  })
+  assert(!covers, 'the raise sheet covers your cards')
+  await page.locator('[data-testid="raise-min"]').click()
+  await page.waitForSelector('[data-testid="bet-you"]', { timeout: 4000 })
+  assert(!(await page.locator('[data-testid="raise-sheet"]').isVisible().catch(() => false)), 'the sheet stayed open after a bet')
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+})
 
 await test('the side arrows walk through every bet size' , async () => {
   const page = await newPage(baseSave())

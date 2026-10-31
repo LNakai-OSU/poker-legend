@@ -796,7 +796,8 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
                   role="raise"
                   height={one}
                   testId="raise-toggle"
-                  selected={betCursor === 'raise'}
+                  // The sizes in the sheet carry the pointer once it is on a raise.
+                  selected={false}
                   flex
                   onClick={() => (canSize ? setRaiseSheet((open) => !open) : raiseTo(allInTo))}
                 />
@@ -815,7 +816,11 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
         )
         if (sheetShown && canSize) {
           // As wide as the sizes need, up to most of the dock, standing on the dock.
-          const sheetInner = Math.floor((layout.dock.w * 0.72) / layout.dockZoom) - 2 * DOCK.inset
+          // Beside your cards rather than over them: about a third of the dock, but
+          // always wide enough for two columns of sizes.
+          const dockArt = Math.floor(layout.dock.w / layout.dockZoom) - 2 * DOCK.inset
+          const cell = planDock(1000, needs).sizingCellW
+          const sheetInner = Math.min(dockArt, Math.max(Math.floor(dockArt * 0.36), 2 * cell + DOCK.gap))
           const sheetPlan = planDock(sheetInner, needs)
           const sheetW = (sheetInner + 2 * DOCK.inset) * P
           sheet = (
@@ -835,7 +840,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
                 zIndex: 8,
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: DOCK.gap * P }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: DOCK.gap * P }}>
                 <input
                   data-testid="raise-slider"
                   type="range"
@@ -847,8 +852,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
                   onChange={(e) => setSliderTo(Number(e.target.value))}
                   style={
                     {
-                      flex: 1,
-                      minWidth: DOCK.sliderMinW * P * 0.6,
+                      width: '100%',
                       height: one * P,
                       '--px': `${P}px`,
                       '--thumb': `url(${chipTopUrl()})`,
@@ -862,6 +866,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
                   height={one}
                   testId="raise-slider-go"
                   selected={betCursor === 'raise'}
+                  width={sheetInner}
                   onClick={() => raiseTo(sliderValue)}
                 />
               </div>

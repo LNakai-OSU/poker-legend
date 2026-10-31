@@ -41,6 +41,8 @@ interface PokerTableViewProps {
   personas?: Record<string, string>
   /** The current key moment, announced over the felt instead of in a panel. */
   announcement?: Announcement | null
+  /** Put away an announcement that waits for a tap. */
+  onDismissAnnouncement?: () => void
   /** The stakes, written beside the pot so a change of blinds is on the felt. */
   blinds?: { small: number; big: number }
   /** What each player did last this street, written over their portrait. */
@@ -295,6 +297,7 @@ export function PokerTableView({
   insights,
   personas,
   announcement,
+  onDismissAnnouncement,
   blinds,
   showHeld,
   actionTags,
@@ -529,7 +532,7 @@ export function PokerTableView({
           {blinds && <PixelText text={`· Blinds ${blinds.small}/${blinds.big}`} scale={P} ink={INK.blue} />}
         </span>
       </div>
-      <HandAnnouncer announcement={announcement ?? null} scale={P} theme={theme} band={t.band} />
+      <HandAnnouncer announcement={announcement ?? null} scale={P} theme={theme} band={t.band} onDismiss={onDismissAnnouncement} />
 
       <div data-testid="board" style={{ ...at(t.board, P), display: 'flex', gap: BOARD.gap * P }}>
         {state.board.map((c, i) => (
