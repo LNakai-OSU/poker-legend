@@ -7,6 +7,9 @@ import { chipBreakdown, chipStackUrl } from './pixel/chips'
 import { PixelText } from './pixel/PixelText'
 import { INK, type Ink } from './pixel/ink'
 
+/** How much bigger than the table's pixel a bet's chips and amount are drawn. */
+const BET_ZOOM = 2
+
 export function ChipStack({
   amount,
   scale,
@@ -29,6 +32,8 @@ export function ChipStack({
   prefix?: string
   ink?: Ink
 }) {
+  // Drawn twice the size of the table's other art: a bet is what you watch for.
+  const z = BET_ZOOM
   // The row is always there; only the chips in it come and go.
   if (amount <= 0) return <div style={{ height: height * scale }} />
   const stack = chipStackUrl(chipBreakdown(amount))
@@ -42,16 +47,16 @@ export function ChipStack({
         display: 'flex',
         alignItems: 'flex-end',
         justifyContent: 'center',
-        gap: 2 * scale,
+        gap: 2 * scale * z,
       }}
     >
       <img
         src={stack.url}
         alt=""
         draggable={false}
-        style={{ width: stack.w * scale, height: stack.h * scale, imageRendering: 'pixelated', flex: 'none' }}
+        style={{ width: stack.w * scale * z, height: stack.h * scale * z, flex: 'none' }}
       />
-      <PixelText text={`${prefix}${amount.toLocaleString()}`} scale={scale} ink={ink} />
+      <PixelText text={`${prefix}${amount.toLocaleString()}`} scale={scale * z} ink={ink} />
     </div>
   )
 }

@@ -28,13 +28,14 @@ export const SEAT = {
   portraitH: 34,
   panelH: 42,
   cardsH: 20,
-  betH: 15,
+  /** What they have bet: chips twice the size they were, and the amount beside them. */
+  betH: 30,
   gap: 2,
 } as const
 /** The width left for a name and a stack beside the face. */
 export const SEAT_TEXT_W = SEAT.w - 2 * SEAT.frame - SEAT.portraitW - 3
-/** The plate, then one row under it: their cards on the left and what they have bet on the right. */
-export const SEAT_H = SEAT.panelH + SEAT.gap + SEAT.cardsH
+/** The plate, their cards under it, then the row their bet goes in. */
+export const SEAT_H = SEAT.panelH + SEAT.gap + SEAT.cardsH + SEAT.gap + SEAT.betH
 
 /** Your seat: a plate with your stack, and the row your bet goes in above it. */
 /**

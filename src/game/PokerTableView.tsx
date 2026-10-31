@@ -283,7 +283,7 @@ function BlindChip({ kind, amount, P, style }: { kind: 'sb' | 'bb'; amount?: num
       alt={kind === 'sb' ? 'SB' : 'BB'}
       src={tableMarkerUrl(kind)}
       draggable={false}
-      style={{ width: MARKER * P, height: MARKER * P, imageRendering: 'pixelated', flex: 'none', ...style }}
+      style={{ width: MARKER * P, height: MARKER * P, flex: 'none', ...style }}
     />
   )
 }
@@ -297,7 +297,7 @@ function DealerButton({ P, style }: { P: number; style?: CSSProperties }) {
       alt="D"
       src={dealerButtonUrl()}
       draggable={false}
-      style={{ width: MARKER * P, height: MARKER * P, imageRendering: 'pixelated', flex: 'none', ...style }}
+      style={{ width: MARKER * P, height: MARKER * P, flex: 'none', ...style }}
     />
   )
 }
@@ -455,10 +455,9 @@ export function PokerTableView({
 
             <div
               style={{
-                ...at({ x: 0, y: SEAT.panelH + SEAT.gap, w: 44, h: SEAT.cardsH }, P),
+                ...at({ x: 0, y: SEAT.panelH + SEAT.gap, w: SEAT.w, h: SEAT.cardsH }, P),
                 display: 'flex',
-                justifyContent: 'flex-start',
-                paddingLeft: 3 * P,
+                justifyContent: 'center',
                 gap: 2 * P,
               }}
             >
@@ -478,7 +477,7 @@ export function PokerTableView({
 
             {/* What they have out in front of them this street — or, once the
                 hand is over, what they took from it. */}
-            <div style={at({ x: 46, y: SEAT.panelH + SEAT.gap + (SEAT.cardsH - SEAT.betH) / 2, w: SEAT.w - 46, h: SEAT.betH }, P)}>
+            <div style={at({ x: 0, y: SEAT_H - SEAT.betH, w: SEAT.w, h: SEAT.betH }, P)}>
               {won > 0 ? (
                 <ChipStack amount={won} scale={P} height={SEAT.betH} testId={`won-${p.id}`} prefix="+" ink={INK.green} />
               ) : (

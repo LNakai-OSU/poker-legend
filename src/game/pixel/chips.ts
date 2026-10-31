@@ -48,31 +48,36 @@ export function stackHeight(count: number): number {
   return CHIP_H + STEP * Math.max(0, count - 1)
 }
 
-// One chip: `o` outline, `f` face, `l` lit, `i` inlay ring, `e` edge, `s` an
-// edge spot. Stacked two pixels apart, the chips underneath show as a band of
-// edge spots each, which is what reads as a pile.
-const CHIP = [
-  '..ooooooo..',
-  '.offlllffo.',
-  'ofliiiiilfo',
-  'offfffffffo',
-  'oeeeeeeeeeo',
-  '.oessesseo.',
-  '..ooooooo..',
-]
-
-function drawChip(raster: Raster, chip: Denomination, x: number, y: number) {
-  raster.sprite(CHIP, x, y, {
-    o: OUTLINE,
-    f: chip.face,
-    l: shade(chip.face, 1.3),
-    i: chip.spot,
-    e: shade(chip.face, 0.6),
-    s: chip.spot,
-  })
-}
-
 const cache = new Map<string, { url: string; w: number; h: number }>()
+
+/** Vector art is drawn on a grid ten times the art pixel, so it stays sharp at any scale. */
+const U = 10
+
+const svgUrl = (body: string, w: number, h: number): string =>
+  `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${body}</svg>`)}`
+
+/**
+ * One chip, bottom at `bottom`, in grid units: the edge band with its printed
+ * spots, then the lit top face with an inlay ring. Drawn as shapes, not pixels.
+ */
+function chipSvg(chip: Denomination, bottom: number): string {
+  const w = CHIP_W * U
+  const rx = w / 2 - 2
+  const ry = 21
+  const cx = w / 2
+  const top = bottom - CHIP_H * U + ry + 2 // centre of the top face
+  const edge = shade(chip.face, 0.6)
+  const spots = (r: number, dash: string, width: number, colour: string) =>
+    `<ellipse cx="${cx}" cy="${top + 22}" rx="${r}" ry="${ry}" fill="none" stroke="${colour}" stroke-width="${width}" stroke-dasharray="${dash}"/>`
+  return (
+    // The edge: a band under the top face, closed by the rim's lower curve.
+    `<path d="M${cx - rx} ${top} v22 a${rx} ${ry} 0 0 0 ${2 * rx} 0 v-22 z" fill="${edge}" stroke="${OUTLINE}" stroke-width="3" stroke-linejoin="round"/>` +
+    spots(rx - 1, '7 9', 7, chip.spot).replace(`cy="${top + 22}"`, `cy="${top + 16}"`) +
+    `<ellipse cx="${cx}" cy="${top}" rx="${rx}" ry="${ry}" fill="${chip.face}" stroke="${OUTLINE}" stroke-width="3"/>` +
+    `<ellipse cx="${cx}" cy="${top}" rx="${rx - 9}" ry="${ry - 7}" fill="none" stroke="${chip.spot}" stroke-width="3.5" stroke-dasharray="9 7"/>` +
+    `<ellipse cx="${cx - 12}" cy="${top - 6}" rx="${rx * 0.45}" ry="${ry * 0.38}" fill="${shade(chip.face, 1.3)}" opacity="0.55"/>`
+  )
+}
 
 /** A stack of chips, bottom chip first in `chips`, as a data URL. */
 export function chipStackUrl(chips: Denomination[]): { url: string; w: number; h: number } {
@@ -80,12 +85,8 @@ export function chipStackUrl(chips: Denomination[]): { url: string; w: number; h
   const hit = cache.get(key)
   if (hit) return hit
   const h = stackHeight(chips.length)
-  const raster = new Raster(CHIP_W, h)
-  chips.forEach((chip, i) => {
-    // The first chip is at the bottom, and later ones are drawn over it.
-    drawChip(raster, chip, 0, h - CHIP_H - i * STEP)
-  })
-  const entry = { url: raster.toDataURL(), w: CHIP_W, h }
+  const body = chips.map((chip, i) => chipSvg(chip, (h - i * STEP) * U)).join('')
+  const entry = { url: svgUrl(body, CHIP_W * U, h * U), w: CHIP_W, h }
   cache.set(key, entry)
   return entry
 }
@@ -119,69 +120,58 @@ export function chipTopUrl(face = '#2e9450', spot = '#f2f2f6'): string {
   return url
 }
 
+const GLYPHS: Record<string, string[]> = {
+  S: ['.SS', 'S..', '.S.', '..S', 'SS.'],
+  B: ['SS.', 'S.S', 'SS.', 'S.S', 'SS.'],
+  D: ['SS.', 'S.S', 'S.S', 'S.S', 'SS.'],
+}
+
+/** A letter built from its 3 by 5 grid, centred on a 100 by 100 chip. */
+function letterSvg(letter: 'S' | 'B' | 'D', colour: string, shadow: string): string {
+  const cell = 11
+  const x0 = 50 - (3 * cell) / 2
+  const y0 = 50 - (5 * cell) / 2
+  const cells = (dx: number, dy: number, fill: string) =>
+    GLYPHS[letter]
+      .flatMap((row, gy) => row.split('').map((c, gx) => (c === 'S' ? `<rect x="${x0 + gx * cell + dx}" y="${y0 + gy * cell + dy}" width="${cell + 0.6}" height="${cell + 0.6}" fill="${fill}"/>` : '')))
+      .join('')
+  return cells(2.5, 3.5, shadow) + cells(0, 0, colour)
+}
+
+/**
+ * A round marker for a seat's job, drawn as vector shapes so it stays sharp at
+ * any size: a rim printed with edge spots, a lit face, an inlay ring, a letter.
+ */
+function markerSvg(face: string, rim: string, letter: 'S' | 'B' | 'D', ink: string, inkShadow: string, ringInk = ink): string {
+  return (
+    `<circle cx="50" cy="52" r="47" fill="${shade(rim, 0.6)}"/>` +
+    `<circle cx="50" cy="50" r="47" fill="${rim}" stroke="${OUTLINE}" stroke-width="4"/>` +
+    `<circle cx="50" cy="50" r="41" fill="none" stroke="${ringInk}" stroke-width="9" stroke-dasharray="14 12.5"/>` +
+    `<circle cx="50" cy="50" r="33" fill="${face}" stroke="${OUTLINE}" stroke-width="2.5"/>` +
+    `<circle cx="50" cy="50" r="28" fill="none" stroke="${ink}" stroke-width="2" opacity="0.8"/>` +
+    `<path d="M24 38 A30 30 0 0 1 52 20" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity="0.45"/>` +
+    letterSvg(letter, ink, inkShadow)
+  )
+}
+
 /** The dealer button: a white puck with a D on it. */
 export function dealerButtonUrl(): string {
   const key = 'dealer'
   const hit = cache.get(key)
   if (hit) return hit.url
-  const raster = new Raster(9, 9)
-  raster.sprite(
-    [
-      '..ooooo..',
-      '.owwwwwo.',
-      'owwDDwwwo',
-      'owwDwDwgo',
-      'owwDwDwgo',
-      'owwDDwwgo',
-      'owwwwwggo',
-      '.oggggggo',
-      '..ooooo..',
-    ],
-    0,
-    0,
-    { o: OUTLINE, w: '#f8f8f0', g: '#c0bcb0', D: '#24242e' },
-  )
-  const url = raster.toDataURL()
+  const url = svgUrl(markerSvg('#f8f8f0', '#b8b4a6', 'D', '#24242e', '#c0bcb0', '#ffffff'), 100, 100)
   cache.set(key, { url, w: 9, h: 9 })
   return url
 }
 
-const GLYPHS: Record<string, string[]> = {
-  S: ['.SS', 'S..', '.S.', '..S', 'SS.'],
-  B: ['SS.', 'S.S', 'SS.', 'S.S', 'SS.'],
-}
-
-/**
- * The little discs that mark a seat's job: the dealer button (D), and the small
- * and big blind (S, B) — the same round shape so they read as a set.
- */
+/** The discs that mark the small and big blind: the same round shape as the dealer button, so they read as a set. */
 export function tableMarkerUrl(kind: 'sb' | 'bb'): string {
   const key = `marker-${kind}`
   const hit = cache.get(key)
   if (hit) return hit.url
   const face = kind === 'sb' ? '#5d8fe0' : '#e0605d'
   const rim = kind === 'sb' ? '#2c4f94' : '#942c2c'
-  const ink = '#f8f8f0'
-  const rows = [
-    '..ooooo..',
-    '.offffro.',
-    'offffffro',
-    'offffffro',
-    'offffffro',
-    'offffffro',
-    'offffffro',
-    '.orrrrro.',
-    '..ooooo..',
-  ].map((r) => r.split(''))
-  const glyph = GLYPHS[kind === 'sb' ? 'S' : 'B']
-  glyph.forEach((g, gy) => {
-    g.split('').forEach((c, gx) => {
-      if (c !== '.') rows[2 + gy][3 + gx] = 'S'
-    })
-  })
-  const raster = new Raster(9, 9)
-  raster.sprite(rows.map((r) => r.join('')), 0, 0, { o: OUTLINE, f: face, r: rim, S: ink })
-  const url = raster.toDataURL()
+  const url = svgUrl(markerSvg(face, rim, kind === 'sb' ? 'S' : 'B', '#f8f8f0', shade(rim, 0.7)), 100, 100)
   cache.set(key, { url, w: 9, h: 9 })
   return url
 }
