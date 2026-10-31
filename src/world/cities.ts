@@ -1066,7 +1066,9 @@ const apartmentCity: CityDef = {
       '#141018',
       // Dana sits in on the first night as herself (her schedule), not as a
       // fixture: a fixture was still at his table while she was up the ladder.
-      [],
+      // The card table itself is always there: once the first night is won, a
+      // `home-game` beat deals you in whenever you like.
+      [thing('home-game-table', 'Card table', 7, 6, ['The felt is out and the chairs are pulled up. Nobody has to win tonight.'])],
       [{ col: 7, row: 10, toAreaId: 'eastgate', toCol: 11, toRow: 4, label: 'Outside' }],
     ),
     laundromat: area(

@@ -825,6 +825,20 @@ export function GameApp({ playtest = false }: { playtest?: boolean }) {
             setPlaytestOpen(false)
             setView({ kind: 'city' })
           }}
+          onPlayBoss={(cityId) => {
+            const goal = CASINO_GOALS[cityId]
+            const table = goal && TABLES[goal.tableId]
+            if (!table) return
+            // Opening the room is what the win target would have done; the
+            // bankroll is topped up to the buy-in so the commit screen can take it.
+            setState((s) => ({
+              ...s,
+              cash: Math.max(s.cash, table.buyIn),
+              casino: { ...s.casino, roomOpen: [...new Set([...s.casino.roomOpen, cityId])] },
+            }))
+            setPlaytestOpen(false)
+            setView({ kind: 'finaleCommit', tableId: table.id })
+          }}
           onPlayEvent={(event) => {
             setPlaytestOpen(false)
             setView({ kind: 'city' })

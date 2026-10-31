@@ -27,6 +27,8 @@ let browser
  * holds this list to the events in the game.
  */
 const STORY_SEEN = [
+  // Marcus's card table, open any time once the first night is won.
+  'home-game',
   // The televised opening, before the flat.
   'prologue',
   // The final table: the lights come back on and you take the seat.

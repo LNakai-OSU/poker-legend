@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { EVENTS, type GameEvent } from '../world/events'
 import { CITIES } from '../world/cities'
+import { CASINO_GOALS } from '../world/goals'
+import { CHARACTERS } from '../world/characters'
+import { TABLES } from '../world/content'
 import { TIME_PERIODS } from './time'
 import { TOWN_ORDER, type CityId, type GameState } from './state'
 import { cleanCash } from './playtest'
@@ -33,6 +36,7 @@ export function PlaytestPanel({
   state,
   setState,
   onCheckpoint,
+  onPlayBoss,
   onPlayEvent,
   onWorldMap,
   onClose,
@@ -40,6 +44,7 @@ export function PlaytestPanel({
   state: GameState
   setState: (update: (s: GameState) => GameState) => void
   onCheckpoint: (cityId: CityId) => void
+  onPlayBoss: (cityId: CityId) => void
   onPlayEvent: (event: GameEvent) => void
   onWorldMap: () => void
   onClose: () => void
@@ -166,6 +171,19 @@ export function PlaytestPanel({
           <button type="button" data-testid="playtest-world-map" style={button} onClick={onWorldMap}>
             World map: click any place to go there
           </button>
+        </div>
+
+        {section('Bosses: open the private room and sit down against them now')}
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {TOWN_ORDER.filter((id) => CASINO_GOALS[id]).map((id) => {
+            const goal = CASINO_GOALS[id]
+            const beaten = state.casino.bossBeaten.includes(id)
+            return (
+              <button key={id} type="button" data-testid={`boss-${id}`} style={button} onClick={() => onPlayBoss(id)}>
+                {CHARACTERS[goal.bossId]?.name ?? goal.bossId} ({CITIES[id].name}, ${TABLES[goal.tableId].buyIn.toLocaleString()}){beaten ? ' ✓' : ''}
+              </button>
+            )
+          })}
         </div>
 
         {section(`Scenes (${events.length} of ${EVENTS.length}): play one now`)}

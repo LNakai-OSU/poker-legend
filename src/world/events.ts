@@ -2461,6 +2461,23 @@ export const EVENTS: GameEvent[] = [
   // Going broke. Below the cheapest seat on the ladder there is always the
   // kitchen table: Marcus deals you back in wherever he is, and the bus home
   // costs nothing.
+  // The kitchen table, any time: once the first night is won it stays out. The
+  // stake is Marcus's, so a win is money for nothing and a loss costs nothing.
+  {
+    id: 'home-game',
+    about: "Marcus's card table, open whenever you are at his place: the first night's game again, free to sit down at.",
+    trigger: { kind: 'interact', poiId: 'home-game-table' },
+    conditions: [{ kind: 'flag', flag: 'wonPokerNight' }],
+    repeatable: true,
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'marcus',
+        lines: ['Marcus: Pull up a chair. My chips, your luck.', 'Marcus: Winner takes the lot. Same rule as ever.'],
+      },
+      { kind: 'startPokerNight' },
+    ],
+  },
   {
     id: 'poker-night-again',
     about: 'Walked out of the first poker night a loser: Marcus deals you back in whenever you come back.',
