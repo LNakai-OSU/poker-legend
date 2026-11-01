@@ -214,6 +214,8 @@ export function CityScene({
   const owed = totalOwed(state)
   const due = daysUntilDue(state)
   const goal = goalStatus(state, city.id)
+  // Net winnings at this town's poker tables; losses count against it, so it can be below zero.
+  const runningTotal = state.casino.net[city.id] ?? 0
 
   return (
     <OverworldScene
@@ -317,7 +319,24 @@ export function CityScene({
             {city.name} &middot; Day {state.day} &middot; {PERIOD_LABEL[state.period]}
           </div>
           <div>Cash: ${state.cash.toLocaleString()}</div>
-          {goal && goal.phase !== 'done' && (
+          {goal && goal.phase === 'win' && (
+            <div data-testid="goal-total" style={{ width: 200 }}>
+              <div style={{ color: '#9ad0ff', fontSize: 12 }}>{goal.goal.casino}: net winnings</div>
+              <div style={{ color: runningTotal >= 0 ? '#8ae0a0' : '#e08a8a' }}>
+                {runningTotal < 0 ? '-' : ''}${Math.abs(runningTotal).toLocaleString()} / ${goal.goal.winTarget.toLocaleString()}
+              </div>
+              <div style={{ height: 6, background: '#2a2a3a', borderRadius: 3, overflow: 'hidden', marginTop: 2 }}>
+                <div
+                  style={{
+                    height: '100%',
+                    width: `${Math.max(0, Math.min(100, (runningTotal / goal.goal.winTarget) * 100))}%`,
+                    background: '#4ac878',
+                  }}
+                />
+              </div>
+            </div>
+          )}
+          {goal && goal.phase === 'boss' && (
             <div data-testid="goal-hud" style={{ color: '#9ad0ff', fontSize: 12, maxWidth: 220 }}>
               Goal: {goal.line}
             </div>

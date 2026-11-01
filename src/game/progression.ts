@@ -117,11 +117,11 @@ export function goalStatus(state: GameState, cityId: CityId): GoalStatus | null 
   if (state.casino.roomOpen.includes(cityId)) {
     return { goal, phase: 'boss', line: `Beat ${boss} one on one in the private room at the ${goal.casino}.` }
   }
-  const won = Math.max(0, state.casino.net[cityId] ?? 0)
+  const won = state.casino.net[cityId] ?? 0
   return {
     goal,
     phase: 'win',
-    line: `Win $${goal.winTarget.toLocaleString()} at the ${goal.casino} ($${won.toLocaleString()} so far) to earn a game with ${boss}.`,
+    line: `Win $${goal.winTarget.toLocaleString()} at the ${goal.casino} (${won < 0 ? '-' : ''}$${Math.abs(won).toLocaleString()} so far) to earn a game with ${boss}.`,
   }
 }
 
