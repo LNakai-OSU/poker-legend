@@ -110,6 +110,8 @@ export interface ShopItemDef {
   price: number
   blurb: string
   effect?: ItemEffect
+  /** Clothing: what the hero looks like wearing it, once they choose to. */
+  wear?: { style: 'suit' | 'tux' | 'jacket' | 'hoodie'; color: string }
 }
 
 export interface ShopDef {

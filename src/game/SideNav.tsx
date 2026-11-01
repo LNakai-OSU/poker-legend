@@ -70,6 +70,7 @@ export function SideNav({
   onSave,
   onWorldMap,
   onPlaytest,
+  onWear,
 }: {
   state: GameState
   onClose: () => void
@@ -77,6 +78,7 @@ export function SideNav({
   /** Null when saving is not allowed right now (at a table, mid-scene). */
   onSave: (() => Promise<SaveOutcome>) | null
   onWorldMap: () => void
+  onWear: (itemId: string | null) => void
   /** Only the playtest account is given this. */
   onPlaytest?: () => void
 }) {
@@ -169,8 +171,13 @@ export function SideNav({
         {items.length === 0 ? line('Nothing yet. Shops sell suits, shoes and a car.', INK.dim) : null}
         {items.map((i) => (
           <div key={i.id} style={{ display: 'grid', gap: scale }}>
-            {line(i.name)}
+            {line(state.wornItemId === i.id ? `${i.name} (wearing)` : i.name)}
             {line(i.blurb, INK.dim)}
+            {i.wear
+              ? item(`wear-${i.id}`, state.wornItemId === i.id ? 'Take off' : 'Wear', () =>
+                  onWear(state.wornItemId === i.id ? null : i.id),
+                )
+              : null}
           </div>
         ))}
         {rule}

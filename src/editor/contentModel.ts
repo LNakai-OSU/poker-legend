@@ -95,6 +95,7 @@ export const CONDITION_KINDS = keysOf<EventCondition['kind']>({
   challenge: true,
   count: true,
   canPay: true,
+  casino: true,
 })
 export const ACTION_KINDS = keysOf<EventAction['kind']>({
   dialogue: true,
@@ -184,6 +185,8 @@ export function blankCondition(
       return { kind, of: 'busted' }
     case 'canPay':
       return { kind, sponsorId: ids.sponsor ?? 'cass' }
+    case 'casino':
+      return { kind, cityId: 'silverCreek', status: 'roomOpen' }
   }
 }
 
@@ -682,6 +685,12 @@ function conditionShape(value: unknown, path: string, problems: Problems) {
       if (value.sponsorId !== undefined) string(value.sponsorId, `${path}.sponsorId`, problems, true)
       if (value.set !== undefined && typeof value.set !== 'boolean') problems.push(`${path}.set should be true or false`)
       return
+    case 'casino':
+      keys(value, path, ['kind', 'cityId', 'status'], ['set'], problems)
+      oneOf(value.cityId, TOWN_ORDER, `${path}.cityId`, problems)
+      oneOf(value.status, ['roomOpen', 'bossBeaten'], `${path}.status`, problems)
+      if (value.set !== undefined && typeof value.set !== 'boolean') problems.push(`${path}.set should be true or false`)
+      return
     case 'canPay':
       keys(value, path, ['kind', 'sponsorId'], [], problems)
       string(value.sponsorId, `${path}.sponsorId`, problems, true)
@@ -1020,6 +1029,12 @@ export function describeCondition(condition: EventCondition, names: Names): stri
     case 'count': {
       const whose = condition.sponsorId ? ` with ${names.sponsor?.(condition.sponsorId) ?? condition.sponsorId}` : ''
       return `you have ${COUNT_WORDS[condition.of]}${whose} ${timesWords(condition.atLeast, condition.atMost)}`
+    }
+    case 'casino': {
+      const town = names.city(condition.cityId)
+      const open = condition.status === 'roomOpen'
+      if (condition.set ?? true) return open ? `you have won your way into the private room in ${town}` : `you have beaten the boss of ${town}`
+      return open ? `the private room in ${town} is still shut to you` : `you have not beaten the boss of ${town}`
     }
     case 'canPay':
       return `you can pay ${names.sponsor?.(condition.sponsorId) ?? condition.sponsorId} back in full`

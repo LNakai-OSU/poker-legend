@@ -62,6 +62,10 @@ function reconcile(parsed: unknown): GameState | null {
     areaId: typeof saved.areaId === 'string' ? saved.areaId : base.areaId,
     unlockedCityIds: Array.isArray(saved.unlockedCityIds) ? saved.unlockedCityIds : base.unlockedCityIds,
     ownedItemIds: Array.isArray(saved.ownedItemIds) ? saved.ownedItemIds : base.ownedItemIds,
+    wornItemId:
+      typeof saved.wornItemId === 'string' && Array.isArray(saved.ownedItemIds) && saved.ownedItemIds.includes(saved.wornItemId)
+        ? saved.wornItemId
+        : undefined,
     completedMissionIds: Array.isArray(saved.completedMissionIds) ? saved.completedMissionIds : base.completedMissionIds,
     acceptedMissionIds: Array.isArray(saved.acceptedMissionIds) ? saved.acceptedMissionIds : base.acceptedMissionIds,
     lessonIds: Array.isArray(saved.lessonIds) ? saved.lessonIds : base.lessonIds,

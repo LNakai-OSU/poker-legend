@@ -1,7 +1,7 @@
 import { Sprite } from 'pixi.js'
 import { TILE_SIZE, isWalkable, type TileGrid } from './tileRenderer'
 import { personFrames, type Facing, type Figure, type PersonFrames } from './characterArt'
-import { HERO_FIGURE } from './casting'
+import { HERO_FIGURE, onHeroDressed } from './casting'
 
 export type Direction = Facing
 
@@ -35,6 +35,7 @@ export class GridPlayer {
   /** Pixels a second. A beat walking you beside somebody sets it to their pace. */
   speedPxPerSec: number
   private frames: PersonFrames
+  private stopListening?: () => void
   /** Steps taken, so each one leads with the other foot. */
   private strides = 0
   private untilBlink = between(1500, 4000)
@@ -48,10 +49,22 @@ export class GridPlayer {
     this.pixelX = startCol * TILE_SIZE
     this.pixelY = startRow * TILE_SIZE
     this.speedPxPerSec = options.speedPxPerSec ?? 220
-    this.frames = personFrames(options.figure ?? HERO_FIGURE)
+    const figure = options.figure ?? HERO_FIGURE
+    this.frames = personFrames(figure)
+    if (figure === HERO_FIGURE) {
+      this.stopListening = onHeroDressed(() => {
+        this.frames = personFrames(HERO_FIGURE)
+        this.refreshFrame()
+      })
+    }
     this.sprite = new Sprite(this.frames.walk.down[0])
     this.sprite.anchor.set(0, 1)
     this.drawAtPosition()
+  }
+
+  /** Stop listening for wardrobe changes; the scene is going away. */
+  dispose() {
+    this.stopListening?.()
   }
 
   private drawAtPosition() {

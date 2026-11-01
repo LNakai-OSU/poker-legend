@@ -181,3 +181,21 @@ describe('what you do with a thing', () => {
     expect(verbForPoi(thing('Gull', { kind: 'flavor' }))).toBe('look at')
   })
 })
+
+describe('the hero in bought clothes', () => {
+  it('looks different in every piece of clothing than in the starter outfit, and than in any other', async () => {
+    const { SHOPS } = await import('../world/content')
+    const { dressHero, HERO_FIGURE } = await import('./casting')
+    const { visualKey } = await import('./characterArt')
+    const worn = Object.values(SHOPS).flatMap((s) => s.items).filter((i) => i.wear)
+    expect(worn.length).toBeGreaterThanOrEqual(6)
+    dressHero(undefined)
+    const looks = new Set([visualKey(HERO_FIGURE)])
+    for (const item of worn) {
+      dressHero(item.wear)
+      looks.add(visualKey(HERO_FIGURE))
+    }
+    dressHero(undefined)
+    expect(looks.size).toBe(worn.length + 1)
+  })
+})

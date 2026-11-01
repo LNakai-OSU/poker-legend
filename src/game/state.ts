@@ -127,6 +127,8 @@ export interface GameState {
    */
   unlockedCityIds: CityId[]
   ownedItemIds: string[]
+  /** The clothing item the hero has on, if any. Always one of `ownedItemIds`. */
+  wornItemId?: string
   completedMissionIds: string[]
   acceptedMissionIds: string[]
   lessonIds: string[]

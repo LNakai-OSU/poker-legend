@@ -95,6 +95,12 @@ export type EventCondition =
    * condition on a choice's "pay her back" answer.
    */
   | { kind: 'canPay'; sponsorId: string }
+  /**
+   * Where you stand on a town's casino goal: `roomOpen` (you have won enough on
+   * the floor for the private room) or `bossBeaten`. Holds when it is so, or,
+   * with `set: false`, when it is not.
+   */
+  | { kind: 'casino'; cityId: CityId; status: 'roomOpen' | 'bossBeaten'; set?: boolean }
 
 /** A tile on the map the beat is playing in. */
 export interface Tile {
@@ -363,6 +369,10 @@ export function conditionHolds(condition: EventCondition, state: GameState): boo
       const owed = owedTo(state, condition.sponsorId)
       return owed > 0 && state.cash >= owed
     }
+    case 'casino': {
+      const list = condition.status === 'roomOpen' ? state.casino.roomOpen : state.casino.bossBeaten
+      return list.includes(condition.cityId) === (condition.set ?? true)
+    }
   }
 }
 
@@ -410,6 +420,15 @@ export function canBothFire(a: GameEvent, b: GameEvent): boolean {
   const flagsB = flags(cb)
   for (const [flag, want] of flags(ca)) {
     if (flagsB.has(flag) && flagsB.get(flag) !== want) return false
+  }
+
+  const casino = (cs: EventCondition[]) =>
+    new Map(
+      cs.flatMap((c) => (c.kind === 'casino' ? [[`${c.cityId}:${c.status}`, c.set ?? true] as const] : [])),
+    )
+  const casinoB = casino(cb)
+  for (const [key, want] of casino(ca)) {
+    if (casinoB.has(key) && casinoB.get(key) !== want) return false
   }
 
   const done = (cs: EventCondition[]) =>
@@ -658,6 +677,10 @@ export function arrivalsDuring(event: GameEvent): Array<{ areaId: string; condit
   return arrivals
 }
 
+function waitsOnCasinoGoal(event: GameEvent): boolean {
+  return (event.conditions ?? []).some((c) => c.kind === 'casino' && (c.set ?? true))
+}
+
 /**
  * Pairs that would fight over walking into somewhere: a beat that carries you
  * into an area, and a beat for walking into it that could be ready at the same
@@ -671,6 +694,9 @@ export function arrivalClashes(events: GameEvent[]): Array<[GameEvent, GameEvent
     for (const arrival of arrivalsDuring(carrier)) {
       const underWay: GameEvent = { ...carrier, conditions: arrival.conditions, repeatable: true }
       for (const other of eventsSharing(events, { kind: 'enterArea', areaId: arrival.areaId })) {
+        // A casino goal is only ever met at a table, and a beat that carries you
+        // is not at one: whatever it carries you to, the goal is not newly met.
+        if (waitsOnCasinoGoal(other)) continue
         if (other.id !== carrier.id && canBothFire(underWay, other)) clashes.push([carrier, other])
       }
     }
@@ -2463,6 +2489,307 @@ export const EVENTS: GameEvent[] = [
   // costs nothing.
   // The kitchen table, any time: once the first night is won it stays out. The
   // stake is Marcus's, so a win is money for nothing and a loss costs nothing.
+  {
+    id: 'silvercreek-boss-door',
+    about:
+      'The private room opens: Lou comes out on the floor, finds you and walks you to the door himself. ' +
+      'Casino goals lead you to the table; the table is the rest.',
+    trigger: { kind: 'enterArea', areaId: 'sc-floor', onLoad: true },
+    conditions: [
+      { kind: 'chapter', cityId: 'silverCreek' },
+      { kind: 'casino', cityId: 'silverCreek', status: 'roomOpen' },
+      { kind: 'casino', cityId: 'silverCreek', status: 'bossBeaten', set: false },
+    ],
+    actions: [
+      { kind: 'wait', ms: 300 },
+      { kind: 'moveNpc', characterId: 'lou', from: { col: 14, row: 10 }, to: 'player' },
+      { kind: 'dialogue', speaker: 'lou', lines: [
+          'Lou: Four hundred off my floor. Nobody does that and sits down after.',
+          'Lou: Come on. I do not hold the door for just anyone, and I am not holding it twice.',
+          'Lou: Mind the humidor. My nephew is not allowed near it either.',
+        ] },
+      { kind: 'moveNpc', characterId: 'lou', to: { col: 14, row: 10 }, youFollow: true },
+      { kind: 'fade', to: 'out' },
+      { kind: 'teleport', areaId: 'sc-private', col: 7, row: 8, with: ['lou'] },
+      { kind: 'fade', to: 'in' },
+      { kind: 'dialogue', speaker: 'lou', lines: [
+          'Lou: Sit. The dealer knows the rules, and so do I, which is worse for you.',
+          'Lou: Five hundred each. Last one with chips walks out.',
+        ] },
+      { kind: 'dialogue', lines: ['The dealer is at the table. Talk to the dealer when you are ready to sit.'] },
+    ],
+  },
+  {
+    id: 'silvercreek-boss-sendoff',
+    about:
+      'The boss is down: Lou walks you out to the bus stop and sees you onto the way to Riverbend. ' +
+      'A walked send-off, with no ride: the bus is still yours to board.',
+    trigger: { kind: 'enterArea', areaId: 'sc-private', onLoad: true },
+    conditions: [
+      { kind: 'chapter', cityId: 'silverCreek' },
+      { kind: 'casino', cityId: 'silverCreek', status: 'bossBeaten' },
+      { kind: 'eventDone', eventId: 'arrive-silvercreek' },
+    ],
+    actions: [
+      { kind: 'wait', ms: 300 },
+      { kind: 'moveNpc', characterId: 'lou', from: { col: 6, row: 6 }, to: 'player' },
+      { kind: 'dialogue', speaker: 'lou', lines: [
+          'Lou: I said I would be waiting on the bus. I am not above that.',
+          'Lou: There is a riverboat upriver. Odette Marsh runs it and she folds to nothing but trouble. Be trouble.',
+        ] },
+      { kind: 'fade', to: 'out' },
+      { kind: 'teleport', areaId: 'sc-street', col: 26, row: 12, with: ['lou'] },
+      { kind: 'fade', to: 'in' },
+      { kind: 'dialogue', lines: ['A driver at the Silver Creek stop is holding the Riverbend bus. He has been told by somebody who owns the town.'] },
+      { kind: 'dialogue', speaker: 'lou', lines: [
+          'Lou: The Riverbend bus. I rang ahead, so the driver will not leave you at the depot.',
+          'Lou: Go on. Before I ask for a rematch.',
+        ] },
+      { kind: 'playSound', sound: 'win' },
+      { kind: 'moveNpc', characterId: 'lou', to: { col: 27, row: 12 }, leaves: true },
+      { kind: 'dialogue', lines: ['Riverbend is open to you. Take the bus when you are ready.'] },
+    ],
+  },
+  {
+    id: 'riverbend-boss-door',
+    about:
+      'The private room opens: Odette comes out on the floor, finds you and walks you to the door himself. ' +
+      'Casino goals lead you to the table; the table is the rest.',
+    trigger: { kind: 'enterArea', areaId: 'rb-boat', onLoad: true },
+    conditions: [
+      { kind: 'chapter', cityId: 'riverbend' },
+      { kind: 'casino', cityId: 'riverbend', status: 'roomOpen' },
+      { kind: 'casino', cityId: 'riverbend', status: 'bossBeaten', set: false },
+    ],
+    actions: [
+      { kind: 'wait', ms: 300 },
+      { kind: 'moveNpc', characterId: 'odette', from: { col: 7, row: 9 }, to: 'player' },
+      { kind: 'dialogue', speaker: 'odette', lines: [
+          'Odette: Hm. Twelve hundred taken off my tables. The deckhand sent a note up.',
+          'Odette: Walk with me. The cabin is aft, and I do not shout down corridors.',
+        ] },
+      { kind: 'moveNpc', characterId: 'odette', to: { col: 7, row: 9 }, youFollow: true },
+      { kind: 'fade', to: 'out' },
+      { kind: 'teleport', areaId: 'rb-private', col: 7, row: 8, with: ['odette'] },
+      { kind: 'fade', to: 'in' },
+      { kind: 'dialogue', speaker: 'odette', lines: [
+          'Odette: Shut the door. Boat rules: one table, one winner, no rebuy.',
+          'Odette: Cut your chips like you mean it.',
+        ] },
+      { kind: 'dialogue', lines: ['The dealer is at the table. Talk to the dealer when you are ready to sit.'] },
+    ],
+  },
+  {
+    id: 'riverbend-boss-sendoff',
+    about:
+      'The boss is down: Odette walks you out to the dock and sees you onto the way to Crescent Harbor. ' +
+      'A walked send-off, with no ride: the bus is still yours to board.',
+    trigger: { kind: 'enterArea', areaId: 'rb-private', onLoad: true },
+    conditions: [
+      { kind: 'chapter', cityId: 'riverbend' },
+      { kind: 'casino', cityId: 'riverbend', status: 'bossBeaten' },
+      { kind: 'eventDone', eventId: 'arrive-riverbend' },
+    ],
+    actions: [
+      { kind: 'wait', ms: 300 },
+      { kind: 'moveNpc', characterId: 'odette', from: { col: 6, row: 6 }, to: 'player' },
+      { kind: 'dialogue', speaker: 'odette', lines: [
+          'Odette: A hundred men over the side, and you are the first I would send a postcard to.',
+          'Odette: Crescent Harbor next. They wear their money on their cuffs there.',
+        ] },
+      { kind: 'fade', to: 'out' },
+      { kind: 'teleport', areaId: 'rb-street', col: 26, row: 12, with: ['odette'] },
+      { kind: 'fade', to: 'in' },
+      { kind: 'dialogue', lines: ['A deckhand on the Riverbend dock rings the boat\u2019s bell twice. Somebody has wired the harbor transit that you are coming.'] },
+      { kind: 'dialogue', speaker: 'odette', lines: [
+          'Odette: The harbor ferry rides the same tide as the bus. I have signalled ahead.',
+          'Odette: Do not look back at the boat. It makes the sailors nervous.',
+        ] },
+      { kind: 'playSound', sound: 'win' },
+      { kind: 'moveNpc', characterId: 'odette', to: { col: 27, row: 12 }, leaves: true },
+      { kind: 'dialogue', lines: ['Crescent Harbor is open to you. Take the bus when you are ready.'] },
+    ],
+  },
+  {
+    id: 'crescent-boss-door',
+    about:
+      'The private room opens: Bellamy comes out on the floor, finds you and walks you to the door himself. ' +
+      'Casino goals lead you to the table; the table is the rest.',
+    trigger: { kind: 'enterArea', areaId: 'ch-cardroom', onLoad: true },
+    conditions: [
+      { kind: 'chapter', cityId: 'crescentHarbor' },
+      { kind: 'casino', cityId: 'crescentHarbor', status: 'roomOpen' },
+      { kind: 'casino', cityId: 'crescentHarbor', status: 'bossBeaten', set: false },
+    ],
+    actions: [
+      { kind: 'wait', ms: 300 },
+      { kind: 'moveNpc', characterId: 'bellamy', from: { col: 17, row: 11 }, to: 'player' },
+      { kind: 'dialogue', speaker: 'bellamy', lines: [
+          'Bellamy: Four thousand off the card room, quietly. I admire quiet.',
+          'Bellamy: Come along. I will not insult you by sending somebody else.',
+        ] },
+      { kind: 'moveNpc', characterId: 'bellamy', to: { col: 17, row: 11 }, youFollow: true },
+      { kind: 'fade', to: 'out' },
+      { kind: 'teleport', areaId: 'ch-private', col: 7, row: 8, with: ['bellamy'] },
+      { kind: 'fade', to: 'in' },
+      { kind: 'dialogue', speaker: 'bellamy', lines: [
+          'Bellamy: Please. The chair on the left is the better one.',
+          'Bellamy: One match, one winner, and a very good reason not to talk about it.',
+        ] },
+      { kind: 'dialogue', lines: ['The dealer is at the table. Talk to the dealer when you are ready to sit.'] },
+    ],
+  },
+  {
+    id: 'crescent-boss-sendoff',
+    about:
+      'The boss is down: Bellamy walks you out to the transit hub and sees you onto the way to Palm Cay. ' +
+      'A walked send-off, with no ride: the bus is still yours to board.',
+    trigger: { kind: 'enterArea', areaId: 'ch-private', onLoad: true },
+    conditions: [
+      { kind: 'chapter', cityId: 'crescentHarbor' },
+      { kind: 'casino', cityId: 'crescentHarbor', status: 'bossBeaten' },
+      { kind: 'eventDone', eventId: 'arrive-crescent' },
+    ],
+    actions: [
+      { kind: 'wait', ms: 300 },
+      { kind: 'moveNpc', characterId: 'bellamy', from: { col: 6, row: 6 }, to: 'player' },
+      { kind: 'dialogue', speaker: 'bellamy', lines: [
+          'Bellamy: Well played. I will pretend I let you, when anybody asks.',
+          'Bellamy: Palm Cay is warm and the people there are paid to be charming. Count your chips afterward.',
+        ] },
+      { kind: 'fade', to: 'out' },
+      { kind: 'teleport', areaId: 'ch-street', col: 26, row: 12, with: ['bellamy'] },
+      { kind: 'fade', to: 'in' },
+      { kind: 'dialogue', lines: ['A black car idles outside the Harbor transit hub. Its driver has already bought your ticket to Palm Cay.'] },
+      { kind: 'dialogue', speaker: 'bellamy', lines: [
+          'Bellamy: My car is out front, and I have asked it to take you to the transit hub.',
+          'Bellamy: It is the least I can do for the man who beat me.',
+        ] },
+      { kind: 'playSound', sound: 'win' },
+      { kind: 'moveNpc', characterId: 'bellamy', to: { col: 27, row: 12 }, leaves: true },
+      { kind: 'dialogue', lines: ['Palm Cay is open to you. Take the bus when you are ready.'] },
+    ],
+  },
+  {
+    id: 'palmcay-boss-door',
+    about:
+      'The private room opens: Ines comes out on the floor, finds you and walks you to the door himself. ' +
+      'Casino goals lead you to the table; the table is the rest.',
+    trigger: { kind: 'enterArea', areaId: 'pc-casino', onLoad: true },
+    conditions: [
+      { kind: 'chapter', cityId: 'palmCay' },
+      { kind: 'casino', cityId: 'palmCay', status: 'roomOpen' },
+      { kind: 'casino', cityId: 'palmCay', status: 'bossBeaten', set: false },
+    ],
+    actions: [
+      { kind: 'wait', ms: 300 },
+      { kind: 'moveNpc', characterId: 'ines', from: { col: 6, row: 11 }, to: 'player' },
+      { kind: 'dialogue', speaker: 'ines', lines: [
+          'Ines: Twelve thousand, on my carpet, between lunches. I like you already.',
+          'Ines: Come. I keep the good table at the back, where the sea breeze cannot read your cards.',
+        ] },
+      { kind: 'moveNpc', characterId: 'ines', to: { col: 6, row: 11 }, youFollow: true },
+      { kind: 'fade', to: 'out' },
+      { kind: 'teleport', areaId: 'pc-private', col: 7, row: 8, with: ['ines'] },
+      { kind: 'fade', to: 'in' },
+      { kind: 'dialogue', speaker: 'ines', lines: [
+          'Ines: Sit, sit. Sparkling water is on me. The match is not.',
+          'Ines: Heads up, to the last chip. It is the only honest way.',
+        ] },
+      { kind: 'dialogue', lines: ['The dealer is at the table. Talk to the dealer when you are ready to sit.'] },
+    ],
+  },
+  {
+    id: 'palmcay-boss-sendoff',
+    about:
+      'The boss is down: Ines walks you out to the ferry dock and sees you onto the way to Neon Mesa. ' +
+      'A walked send-off, with no ride: the bus is still yours to board.',
+    trigger: { kind: 'enterArea', areaId: 'pc-private', onLoad: true },
+    conditions: [
+      { kind: 'chapter', cityId: 'palmCay' },
+      { kind: 'casino', cityId: 'palmCay', status: 'bossBeaten' },
+      { kind: 'eventDone', eventId: 'arrive-palmcay' },
+    ],
+    actions: [
+      { kind: 'wait', ms: 300 },
+      { kind: 'moveNpc', characterId: 'ines', from: { col: 6, row: 6 }, to: 'player' },
+      { kind: 'dialogue', speaker: 'ines', lines: [
+          'Ines: Oh, that was lovely. Lost to somebody I can admire.',
+          'Ines: Neon Mesa is not charming, I am sorry to say. It is loud, and it is honest about wanting your money.',
+        ] },
+      { kind: 'fade', to: 'out' },
+      { kind: 'teleport', areaId: 'pc-street', col: 26, row: 12, with: ['ines'] },
+      { kind: 'fade', to: 'in' },
+      { kind: 'dialogue', lines: ['The Palm Cay ferry is idling at the dock with its gangway still down. The crew are looking up at the casino\u2019s windows.'] },
+      { kind: 'dialogue', speaker: 'ines', lines: [
+          'Ines: The ferry leaves in a few minutes. I asked them to hold it, and they are very bad at saying no to me.',
+          'Ines: Go. Leave me with my sea.',
+        ] },
+      { kind: 'playSound', sound: 'win' },
+      { kind: 'moveNpc', characterId: 'ines', to: { col: 27, row: 12 }, leaves: true },
+      { kind: 'dialogue', lines: ['Neon Mesa is open to you. Take the bus when you are ready.'] },
+    ],
+  },
+  {
+    id: 'mesa-boss-door',
+    about:
+      'The private room opens: Vale comes out on the floor, finds you and walks you to the door himself. ' +
+      'Casino goals lead you to the table; the table is the rest.',
+    trigger: { kind: 'enterArea', areaId: 'nm-casino', onLoad: true },
+    conditions: [
+      { kind: 'chapter', cityId: 'neonMesa' },
+      { kind: 'casino', cityId: 'neonMesa', status: 'roomOpen' },
+      { kind: 'casino', cityId: 'neonMesa', status: 'bossBeaten', set: false },
+    ],
+    actions: [
+      { kind: 'wait', ms: 300 },
+      { kind: 'moveNpc', characterId: 'vale', from: { col: 4, row: 12 }, to: 'player' },
+      { kind: 'dialogue', speaker: 'vale', lines: [
+          'Vale: Forty thousand on the Mesa floor. People do not do that without wanting something.',
+          'Vale: Come up. The suite is private, and I record everything in it.',
+        ] },
+      { kind: 'moveNpc', characterId: 'vale', to: { col: 4, row: 12 }, youFollow: true },
+      { kind: 'fade', to: 'out' },
+      { kind: 'teleport', areaId: 'nm-private', col: 7, row: 8, with: ['vale'] },
+      { kind: 'fade', to: 'in' },
+      { kind: 'dialogue', speaker: 'vale', lines: [
+          'Vale: This is not a game for the cameras. They are off, I promise.',
+          'Vale: Everything on the table. Nobody else has ever stayed to the end.',
+        ] },
+      { kind: 'dialogue', lines: ['The dealer is at the table. Talk to the dealer when you are ready to sit.'] },
+    ],
+  },
+  {
+    id: 'mesa-boss-sendoff',
+    about:
+      'The boss is down: Vale walks you out to the airport shuttle and sees you onto the way to Porto Lumina. ' +
+      'A walked send-off, with no ride: the bus is still yours to board.',
+    trigger: { kind: 'enterArea', areaId: 'nm-private', onLoad: true },
+    conditions: [
+      { kind: 'chapter', cityId: 'neonMesa' },
+      { kind: 'casino', cityId: 'neonMesa', status: 'bossBeaten' },
+      { kind: 'eventDone', eventId: 'arrive-mesa' },
+    ],
+    actions: [
+      { kind: 'wait', ms: 300 },
+      { kind: 'moveNpc', characterId: 'vale', from: { col: 6, row: 6 }, to: 'player' },
+      { kind: 'dialogue', speaker: 'vale', lines: [
+          'Vale: You are the first to take it from me. I would like to know how, but I know better than to ask.',
+          'Vale: Porto Lumina is the last of it. There is only one table left, and one woman who owns it.',
+        ] },
+      { kind: 'fade', to: 'out' },
+      { kind: 'teleport', areaId: 'nm-street', col: 26, row: 15, with: ['vale'] },
+      { kind: 'fade', to: 'in' },
+      { kind: 'dialogue', lines: ['A black shuttle waits on the Mesa tarmac with its engine running. Nobody on board asks for a ticket.'] },
+      { kind: 'dialogue', speaker: 'vale', lines: [
+          'Vale: The shuttle is on the tarmac. It goes where I have never gone, and I own half the airport.',
+          'Vale: Go and be the one who finally sits down across from her.',
+        ] },
+      { kind: 'playSound', sound: 'win' },
+      { kind: 'moveNpc', characterId: 'vale', to: { col: 27, row: 15 }, leaves: true },
+      { kind: 'dialogue', lines: ['Porto Lumina is open to you. Take the bus when you are ready.'] },
+    ],
+  },
   {
     id: 'home-game',
     about: "Marcus's card table, open whenever you are at his place: the first night's game again, free to sit down at.",

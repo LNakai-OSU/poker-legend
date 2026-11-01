@@ -93,6 +93,7 @@ const CONDITION_LABEL: Record<EventCondition['kind'], string> = {
   challenge: 'where the match stands',
   count: 'how often something has happened',
   canPay: 'you can pay a sponsor back',
+  casino: 'a casino goal',
 }
 
 const ACTION_LABEL: Record<EventAction['kind'], string> = {
@@ -884,6 +885,19 @@ function ConditionFields({
           <NumberBox label="At least" optional width={56} value={condition.atLeast} onChange={(atLeast) => onChange(withBound(condition, 'atLeast', atLeast))} />
           <span className="ed-muted ed-small">at most</span>
           <NumberBox label="At most" optional width={56} value={condition.atMost} onChange={(atMost) => onChange(withBound(condition, 'atMost', atMost))} />
+        </>
+      )
+    case 'casino':
+      return (
+        <>
+          <Pick label="Town" testid={`${id}-town`} value={condition.cityId} options={TOWN_ORDER.map((t) => [t, t])} onChange={(cityId) => onChange({ ...condition, cityId: cityId as CityId })} />
+          <Pick label="Goal" testid={`${id}-goal`} value={condition.status} options={[['roomOpen', 'private room open'], ['bossBeaten', 'boss beaten']]} onChange={(status) => onChange({ ...condition, status: status as 'roomOpen' | 'bossBeaten' })} />
+          <Pick label="Is it so" value={(condition.set ?? true) ? 'yes' : 'no'} options={[['yes', 'yes'], ['no', 'not yet']]} onChange={(v) => {
+            const next = { ...condition }
+            if (v === 'yes') delete next.set
+            else next.set = false
+            onChange(next)
+          }} />
         </>
       )
     case 'canPay':

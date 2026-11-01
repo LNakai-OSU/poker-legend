@@ -88,6 +88,8 @@ export interface PersonLook extends Omit<AvatarLook, 'hairStyle'> {
   garment?: Garment
   /** The garment's colour: the jacket, the waistcoat, the overalls, the stripes. */
   garmentColor?: string
+  /** The hero's bought clothes, which replace the starter outfit. Only the hero reads it. */
+  wear?: { style: 'suit' | 'tux' | 'jacket' | 'hoodie'; color: string }
 }
 
 /**
@@ -1515,6 +1517,23 @@ const GARMENT_OUTFITS: Record<Garment, (look: PersonLook, cloth: string) => Outf
   }),
 }
 
+/** The hero in something they bought: their own face and hair, no starter cap or pack. */
+function heroWearing(look: PersonLook, wear: NonNullable<PersonLook['wear']>): Outfit {
+  const base = { legs: '#3a5c9e', shoe: '#2a2220' }
+  if (wear.style === 'suit' || wear.style === 'tux') {
+    const tux = wear.style === 'tux'
+    return {
+      colors: {
+        top: wear.color, sleeve: wear.color, legs: wear.color, under: WHITE_SHIRT,
+        trim: tux ? '#0c0c12' : '#cc2a3e', shoe: tux ? '#0c0c12' : '#1e1a1a',
+      },
+      over: SUIT_OVER,
+    }
+  }
+  const garment = GARMENT_OUTFITS[wear.style](look, wear.color)
+  return { ...garment, colors: { ...base, ...garment.colors } }
+}
+
 const OUTFITS: Record<NpcRole, (look: PersonLook) => Outfit> = {
   local: (look) =>
     look.garment
@@ -1754,7 +1773,7 @@ const OUTFITS: Record<NpcRole, (look: PersonLook) => Outfit> = {
     over: { down: [NECKLINES[0][0]] },
   }),
 
-  player: () => ({
+  player: (look) => look.wear ? heroWearing(look, look.wear) : ({
     colors: {
       top: '#e9a630', sleeve: '#e9a630', under: '#f4f4f6', legs: '#3a5c9e',
       shoe: '#d23c3c', hat: '#d23c3c', pack: '#2e6c8e',
@@ -2059,7 +2078,7 @@ export function figureKey(figure: Figure): string {
   const l = figure.look
   return [
     figure.role, l.skin, l.hair, l.hairStyle, l.shirt, l.accessory, l.trousers, l.shoes, l.lower, l.sleeves,
-    l.hat, l.hatColor, l.garment, l.garmentColor,
+    l.hat, l.hatColor, l.garment, l.garmentColor, l.wear?.style, l.wear?.color,
   ].join('|')
 }
 

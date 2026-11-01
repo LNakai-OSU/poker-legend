@@ -67,11 +67,14 @@ export function ShopScene({
   shopId,
   state,
   onBuy,
+  onWear,
   onBack,
 }: {
   shopId: string
   state: GameState
   onBuy: (item: ShopItemDef) => void
+  /** Put a bought piece of clothing on, or take it off with `null`. */
+  onWear: (itemId: string | null) => void
   onBack: () => void
 }) {
   const shop = SHOPS[shopId]
@@ -94,13 +97,19 @@ export function ShopScene({
                 <div style={{ color: '#8ad4ff', fontSize: 12 }}>Dress code level {item.effect.level}</div>
               )}
             </div>
-            <button
-              style={owned || !affordable ? disabledButtonStyle : buttonStyle}
-              disabled={owned || !affordable}
-              onClick={() => onBuy(item)}
-            >
-              {owned ? 'Owned' : affordable ? 'Buy' : 'Too expensive'}
-            </button>
+            {owned && item.wear ? (
+              <button style={buttonStyle} onClick={() => onWear(state.wornItemId === item.id ? null : item.id)}>
+                {state.wornItemId === item.id ? 'Take off' : 'Wear'}
+              </button>
+            ) : (
+              <button
+                style={owned || !affordable ? disabledButtonStyle : buttonStyle}
+                disabled={owned || !affordable}
+                onClick={() => onBuy(item)}
+              >
+                {owned ? 'Owned' : affordable ? 'Buy' : 'Too expensive'}
+              </button>
+            )}
           </Row>
         )
       })}

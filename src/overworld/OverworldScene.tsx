@@ -297,6 +297,7 @@ export function OverworldScene({
 
     let app: Application | null = null
     let lightMapToFree: LightMap | null = null
+    let heroToDispose: GridPlayer | null = null
     let cancelled = false
     const keysDown = new Set<string>()
     // Held keys are *sampled* once per frame, so a tap that goes down and back up
@@ -376,6 +377,7 @@ export function OverworldScene({
       // through the scene: a rebuild is not a move.
       const first = lastStanding && lastStanding.owner === owner.current ? lastStanding.at : resumeAt.current!
       const player = new GridPlayer(first.col, first.row, { figure: HERO_FIGURE })
+      heroToDispose = player
       actors.addChild(player.sprite)
       // Everybody standing on the map. Not fixed: a beat can bring somebody on
       // and walk them off again (see `syncPeople`).
@@ -924,6 +926,7 @@ export function OverworldScene({
       playCuesRef.current = () => {}
       window.removeEventListener('keydown', keydown)
       window.removeEventListener('keyup', keyup)
+      heroToDispose?.dispose()
       lightMapToFree?.destroy()
       app?.destroy(true)
     }

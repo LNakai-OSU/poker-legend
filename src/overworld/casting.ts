@@ -21,6 +21,21 @@ export const HERO_FIGURE: Figure = {
   look: { skin: '#eab88c', hair: '#4a2a18', hairStyle: 'short', shirt: '#e9a630', accessory: 'none' },
 }
 
+const heroListeners = new Set<() => void>()
+
+/** Hear when the hero changes clothes, so a walking sprite can be redrawn. */
+export function onHeroDressed(listener: () => void): () => void {
+  heroListeners.add(listener)
+  return () => heroListeners.delete(listener)
+}
+
+/** Put the hero in something they bought, or back in the starter outfit with `undefined`. */
+export function dressHero(wear: PersonLook['wear'] | undefined) {
+  if (HERO_FIGURE.look.wear?.style === wear?.style && HERO_FIGURE.look.wear?.color === wear?.color) return
+  HERO_FIGURE.look = { ...HERO_FIGURE.look, wear }
+  heroListeners.forEach((l) => l())
+}
+
 /** The man the sponsors send when a debt runs out. */
 export const COLLECTOR_FIGURE: Figure = {
   role: 'collector',

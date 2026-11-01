@@ -13,7 +13,8 @@ import { OpenWorldMap, WorldMap } from './WorldMap'
 import { PlaytestPanel } from './PlaytestPanel'
 import { checkpointAt } from './playtest'
 import { anyKeyLayer } from './keys'
-import { CITIES, LESSONS, MISSIONS, SPONSORS, TABLES, findArea } from '../world/content'
+import { CITIES, LESSONS, MISSIONS, SPONSORS, TABLES, findArea, findItem } from '../world/content'
+import { dressHero } from '../overworld/casting'
 import { hasFastTravel, missionStatus, tableAccess, travelCostTo } from './progression'
 import { CASINO_GOALS } from '../world/goals'
 import { clearSave, loadGame, saveGame, saveHere } from './save'
@@ -136,6 +137,13 @@ export function GameApp({ playtest = false }: { playtest?: boolean }) {
   const backToCity = () => setView({ kind: 'city' })
 
   /** Playtest account: stand in any place on the map. */
+  // What the hero has on is what the street, the bus and the table all draw.
+  dressHero(state.wornItemId ? findItem(state.wornItemId)?.wear : undefined)
+  const wearItem = (itemId: string | null) => {
+    if (itemId !== null && !state.ownedItemIds.includes(itemId)) return
+    setState((s) => ({ ...s, wornItemId: itemId ?? undefined }))
+  }
+
   const goTo = (areaId: string) => {
     const found = findArea(areaId)
     if (!found) return
@@ -525,6 +533,7 @@ export function GameApp({ playtest = false }: { playtest?: boolean }) {
     case 'shop':
       return (
         <ShopScene
+          onWear={wearItem}
           shopId={view.shopId}
           state={state}
           onBuy={(item) => {
@@ -798,6 +807,7 @@ export function GameApp({ playtest = false }: { playtest?: boolean }) {
             setMenuOpen(false)
             setView({ kind: 'city' })
           }}
+          onWear={wearItem}
           onClose={() => {
             setMenuOpen(false)
             // The keys go back to the game, not to a button: the ☰ holding the
