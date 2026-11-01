@@ -173,6 +173,27 @@ export function PlaytestPanel({
           </button>
         </div>
 
+        {section('Casino winnings: set a town’s running total to one short of its target')}
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {TOWN_ORDER.filter((id) => CASINO_GOALS[id]).map((id) => {
+            const goal = CASINO_GOALS[id]
+            const net = state.casino.net[id] ?? 0
+            return (
+              <button
+                key={id}
+                type="button"
+                data-testid={`net-${id}`}
+                style={button}
+                onClick={() =>
+                  setState((s) => ({ ...s, casino: { ...s.casino, net: { ...s.casino.net, [id]: goal.winTarget - 1 } } }))
+                }
+              >
+                {CITIES[id].name}: ${net.toLocaleString()} / ${goal.winTarget.toLocaleString()} → ${(goal.winTarget - 1).toLocaleString()}
+              </button>
+            )
+          })}
+        </div>
+
         {section('Bosses: open the private room and sit down against them now')}
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {TOWN_ORDER.filter((id) => CASINO_GOALS[id]).map((id) => {
