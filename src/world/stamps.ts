@@ -260,7 +260,14 @@ export const STAMPS: StampDef[] = [
     tiles: ['?????', '?FFF?', '?FFF?', '?????'].join('\n'),
     wiring: { kind: 'poi', at: { col: 2, row: 0 }, name: 'Craps Table', action: 'craps' },
   },
-  fixture('roulette', 'Roulette', 'The wheel at one end, the layout at the other.', ['????', '?FF?', '????'], 'casino'),
+  {
+    id: 'roulette',
+    name: 'Roulette',
+    category: 'casino',
+    about: 'The wheel at one end, the layout at the other.',
+    tiles: ['????', '?FF?', '????'].join('\n'),
+    wiring: { kind: 'poi', at: { col: 1, row: 1 }, name: 'Roulette Table', action: 'roulette' },
+  },
   {
     id: 'cashier-cage',
     name: 'Cashier cage',

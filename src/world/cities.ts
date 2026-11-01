@@ -331,7 +331,7 @@ const RIVERBOAT_FLOOR = parseMap(`
 ^RRRRFRRRFFFRRRFRRRRR^
 ^RRRRFRRRFFFRRRFRRRRR^
 ^FFFFRRRRRRRRRRRRFFFF^
-^FFFFRRRRRRRRRRRRFFFF^
+^FFFFRRRRFFRRRRRRFFFF^
 ^RRRRRRRRRRRRRRRRRRRR^
 ^^^^^^^D^^^D^^^^^^^^^^
 `)
@@ -346,7 +346,7 @@ const CARDROOM_FLOOR = parseMap(`
 ^;;FFF;;F;;F;;FFF;;^
 ^;;FFF;;F;;F;;FFF;;^
 ^;;;;;;;;;;;;;;;;;;^
-^;;;;;;;;;;;;;;;;;;^
+^;;;;;;;;FF;;;;;;;;^
 ^;;FFF;;;;;;;;;FF;;^
 ^;;FFF;FF;;;FF;;;;;^
 ^;;;;;;;;;;;;;;;;;;^
@@ -363,7 +363,7 @@ const CAY_FLOOR = parseMap(`
 ^''FFF''FFFF''FFF''^
 ^''FFF''FFFF''FFF''^
 ^''''''''''''''''''^
-^''''''''''''''''''^
+^'''''FF'''''''''''^
 ^'FFFF''''''''FFFF'^
 ^'FFFF''''''''FFFF'^
 ^F''''''''''''''''F^
@@ -1393,6 +1393,16 @@ const riverbend: CityDef = {
           'Bartender: Do not tell him I said that. Do not tell him anything, honestly.',
         ]),
         {
+          id: 'rb-roulette',
+          name: 'Roulette Table',
+          col: 9,
+          row: 8,
+          color: COLORS.flavor,
+          art: 'none',
+          lines: ['A brass wheel bolted to the deck. The croupier says the river has never once affected the ball.'],
+          action: { kind: 'roulette' },
+        },
+        {
           id: 'rb-slots',
           name: 'Slot Machines',
           col: 2,
@@ -1568,6 +1578,16 @@ const crescentHarbor: CityDef = {
       { col: 10, row: 11 },
       '#121020',
       [
+        {
+          id: 'ch-roulette',
+          name: 'Roulette Table',
+          col: 9,
+          row: 8,
+          color: COLORS.flavor,
+          art: 'none',
+          lines: ['A wheel in mahogany. Bellamy\u2019s house allows it, which is the most that can be said for it.'],
+          action: { kind: 'roulette' },
+        },
         {
           id: 'harbor-dealer',
           name: 'Dealer',
@@ -1824,6 +1844,16 @@ const palmCay: CityDef = {
             'Dealer: He has been celebrating for two days.',
           ],
           action: { kind: 'table', tableId: 'palmcay-tourist' },
+        },
+        {
+          id: 'pc-roulette',
+          name: 'Roulette Table',
+          col: 6,
+          row: 8,
+          color: COLORS.flavor,
+          art: 'none',
+          lines: ['A wheel under a ceiling fan. The ball lands slowly here, and the croupier prefers it that way.'],
+          action: { kind: 'roulette' },
         },
         {
           id: 'pc-slots',
@@ -2104,6 +2134,16 @@ const neonMesa: CityDef = {
           action: { kind: 'slots' },
         },
         {
+          id: 'nm-roulette',
+          name: 'Roulette Table',
+          col: 12,
+          row: 6,
+          color: COLORS.flavor,
+          art: 'none',
+          lines: ['Thirty-seven pockets and a croupier who has not blinked since the neon came on.'],
+          action: { kind: 'roulette' },
+        },
+        {
           id: 'nm-craps',
           name: 'Craps Table',
           col: 17,
@@ -2279,6 +2319,16 @@ const portoLumina: CityDef = {
       { col: 10, row: 10 },
       '#141020',
       [
+        {
+          id: 'pl-roulette',
+          name: 'Roulette Table',
+          col: 4,
+          row: 9,
+          color: COLORS.flavor,
+          art: 'none',
+          lines: ['A wheel gilded to the rim. The croupier spins it as though it were a sacrament.'],
+          action: { kind: 'roulette' },
+        },
         {
           id: 'lumina-dealer',
           name: 'Dealer',
@@ -2467,6 +2517,7 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'porthole', col: 14, row: 1 },
     { stampId: 'life-ring', col: 20, row: 1 },
     { stampId: 'poker-table-brass', col: 8, row: 4 },
+    { stampId: 'roulette', col: 8, row: 7 },
     { stampId: 'pillar-brass', col: 5, row: 5 },
     { stampId: 'pillar-brass', col: 15, row: 5 },
     { stampId: 'slot-bank-brass', col: 1, row: 7 },
@@ -2485,6 +2536,7 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'pillar-green', col: 11, row: 5 },
     { stampId: 'poker-table-baize', col: 2, row: 8 },
     { stampId: 'poker-table-baize-4', col: 14, row: 8 },
+    { stampId: 'roulette', col: 8, row: 7 },
     { stampId: 'light-pool', col: 3, row: 5 },
     { stampId: 'light-pool', col: 14, row: 5 },
     { stampId: 'light-pool', col: 3, row: 9 },
@@ -2503,6 +2555,7 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'poker-table-teal', col: 2, row: 4 },
     { stampId: 'poker-table-teal', col: 13, row: 4 },
     { stampId: 'slot-bank-reef', col: 8, row: 5 },
+    { stampId: 'roulette', col: 5, row: 7 },
     { stampId: 'slot-bank-reef', col: 2, row: 9 },
     { stampId: 'slot-bank-reef', col: 14, row: 9 },
     { stampId: 'fern', col: 1, row: 11 },

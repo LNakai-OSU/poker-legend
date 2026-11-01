@@ -167,6 +167,7 @@ export type PoiAction =
   | { kind: 'table'; tableId: string }
   | { kind: 'slots' }
   | { kind: 'craps' }
+  | { kind: 'roulette' }
   | { kind: 'venue'; venueId: string }
   | { kind: 'penthouse' }
   | { kind: 'shop'; shopId: string }

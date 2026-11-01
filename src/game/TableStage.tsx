@@ -8,7 +8,7 @@ import { INK } from './pixel/ink'
 import { useViewport } from './useViewport'
 
 /** A canvas showing a picture painted at art size and scaled up whole pixels at a time. */
-function ArtCanvas({
+export function ArtCanvas({
   width,
   height,
   scale,

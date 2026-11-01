@@ -6,7 +6,7 @@ import { rideRoad } from './busRide'
 import { TableScene, type SessionResult } from './TableScene'
 import { buttonStyle as menuButtonStyle, MentorScene, MenuScreen, ShopScene, SponsorScene, TravelScene } from './MenuScenes'
 import { CaughtScene, EndingScene, FinaleLostScene } from './EndScenes'
-import { CrapsScene, SlotsScene } from './CasinoGameScenes'
+import { CrapsScene, RouletteScene, SlotsScene } from './CasinoGameScenes'
 import { PenthouseScene, VenueScene } from './VenueScenes'
 import { SideNav } from './SideNav'
 import { OpenWorldMap, WorldMap } from './WorldMap'
@@ -79,6 +79,7 @@ type View =
   | { kind: 'travel' }
   | { kind: 'slots' }
   | { kind: 'craps' }
+  | { kind: 'roulette' }
   | { kind: 'venue'; venueId: string }
   | { kind: 'penthouse' }
   | { kind: 'caught' }
@@ -227,6 +228,9 @@ export function GameApp({ playtest = false }: { playtest?: boolean }) {
         break
       case 'craps':
         setView({ kind: 'craps' })
+        break
+      case 'roulette':
+        setView({ kind: 'roulette' })
         break
       case 'venue':
         setView({ kind: 'venue', venueId: action.venueId })
@@ -617,6 +621,9 @@ export function GameApp({ playtest = false }: { playtest?: boolean }) {
           onBack={backToCity}
         />
       )
+
+    case 'roulette':
+      return <RouletteScene state={state} onResult={settleGamble} onBack={backToCity} />
 
     case 'craps':
       return (

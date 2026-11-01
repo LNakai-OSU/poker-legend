@@ -2745,7 +2745,7 @@ await test('slots take a stake and settle on a result', async () => {
   await talkTo(page, 'Slot Row')
   assert(await page.locator('[data-testid="slot-reels"]').isVisible(), 'slots did not open')
   await page.locator('button', { hasText: /^Spin/ }).click()
-  await page.waitForTimeout(1200)
+  await page.waitForTimeout(2000)
   const text = await page.locator('[data-testid="slot-result"]').innerText()
   assert(!text.includes('Spinning'), 'reels never settled')
   assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
@@ -2761,9 +2761,9 @@ await test('craps resolves a pass line bet', async () => {
   await talkTo(page, 'Craps Table')
   assert(await page.locator('[data-testid="craps-dice"]').isVisible(), 'craps did not open')
   await page.locator('button', { hasText: /Bet .* and roll/ }).click()
-  await page.waitForTimeout(500)
+  await page.waitForTimeout(1800)
   const msg = await page.locator('[data-testid="craps-message"]').innerText()
-  assert(msg.length > 0, 'no roll outcome reported')
+  assert(msg.length > 0 && !/in the air/.test(msg), 'the dice never landed')
   assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
   await page.close()
 })
@@ -3054,28 +3054,51 @@ await test('the pot-odds coach never divides by an empty pot', async () => {
   await page.close()
 })
 
-// Menu scenes used only the top ~45% of the screen, which reads as a page that
-// failed to load.
-await test('menu scenes are centred vertically', async () => {
-  const page = await newPage(baseSave())
+// The casino games are rooms, not menus: each fills the window, and everything
+// you press to play is on screen without scrolling.
+for (const [name, scene, door, press] of [
+  ['slots', 'slots-scene', 'Slot Row', 'slot-spin'],
+  ['craps', 'craps-scene', 'Craps Table', 'craps-roll'],
+]) {
+  await test(`the ${name} room fills the window and keeps its controls on screen`, async () => {
+    const page = await newPage(baseSave())
+    await page.goto(BASE)
+    await page.waitForSelector('canvas')
+    await page.waitForTimeout(400)
+    await enterDoor(page, 'Casino')
+    await talkTo(page, door)
+    await page.waitForSelector(`[data-testid="${scene}"]`)
+    const box = await page.evaluate(
+      ([sceneId, pressId]) => {
+        const room = document.querySelector(`[data-testid="${sceneId}"]`).getBoundingClientRect()
+        const button = document.querySelector(`[data-testid="${pressId}"]`).getBoundingClientRect()
+        return { room: { w: room.width, h: room.height }, button, w: window.innerWidth, h: window.innerHeight, scrollX: document.documentElement.scrollWidth }
+      },
+      [scene, press],
+    )
+    assert(box.room.w >= box.w - 1 && box.room.h >= box.h - 1, `the room does not fill the window: ${JSON.stringify(box.room)}`)
+    assert(box.button.bottom <= box.h && box.button.right <= box.w, 'the main button is off the screen')
+    assert(box.scrollX <= box.w, 'the room scrolls sideways')
+    await page.close()
+  })
+}
+
+await test('roulette takes chips on the cloth, spins and settles', async () => {
+  const page = await newPage(baseSave({ cityId: 'neonMesa', areaId: 'nm-casino', cash: 5000 }))
   await page.goto(BASE)
   await page.waitForSelector('canvas')
   await page.waitForTimeout(400)
-  await enterDoor(page, 'Casino')
-  await talkTo(page, 'Slot Row')
-  assert(await page.locator('[data-testid="slot-reels"]').isVisible(), 'slots did not open')
-  const gaps = await page.evaluate(() => {
-    const heading = [...document.querySelectorAll('h2')].at(-1)
-    const panel = heading?.parentElement
-    if (!panel) return null
-    const box = panel.getBoundingClientRect()
-    return { top: box.top, bottom: window.innerHeight - box.bottom, height: box.height }
-  })
-  assert(gaps, 'could not find the menu panel')
-  assert(
-    Math.abs(gaps.top - gaps.bottom) < Math.max(40, gaps.height * 0.25),
-    `menu panel is not centred: ${Math.round(gaps.top)}px above, ${Math.round(gaps.bottom)}px below`,
-  )
+  await talkTo(page, 'Roulette Table')
+  await page.waitForSelector('[data-testid="roulette-scene"]')
+  await page.locator('[data-testid="roulette-cell-red"]').click()
+  await page.locator('[data-testid="roulette-cell-n17"]').click()
+  assert((await page.locator('[data-testid="roulette-spin"]').innerText()).includes('$20'), 'the chips did not add up to $20')
+  await page.locator('[data-testid="roulette-spin"]').click()
+  await page.waitForTimeout(6500)
+  const text = await page.locator('[data-testid="roulette-result"]').innerText()
+  assert(/\d+ (RED|BLACK|GREEN)/.test(text), `no number was called: ${text}`)
+  assert((await page.locator('[data-testid="roulette-called"]').count()) === 1, 'the number is not in the history')
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
   await page.close()
 })
 

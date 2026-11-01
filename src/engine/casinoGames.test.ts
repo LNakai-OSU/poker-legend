@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { SLOT_SYMBOLS, spin, theoreticalReturn } from './slots'
-import { newCrapsState, playPassLine, resolveRoll, type DiceRoll } from './craps'
+import { newCrapsState, oddsWinnings, playLine, playPassLine, resolveRoll, resolveSide, type DiceRoll } from './craps'
+import { WHEEL_ORDER, colorOf, covers, payoutOdds, settle, spinWheel, type RouletteBet } from './roulette'
 import { mulberry32 } from './rng'
 
 function roll(a: number, b: number): DiceRoll {
@@ -84,5 +85,96 @@ describe('craps pass line', () => {
     }
     const rate = wins / trials
     expect(Math.abs(rate - 244 / 495)).toBeLessThan(0.006)
+  })
+})
+
+describe('craps, both sides', () => {
+  it('don’t pass wins on 2 and 3, pushes on 12 and loses to 7 and 11 on the come-out', () => {
+    const come = newCrapsState()
+    expect(resolveSide('dontPass', come, roll(1, 1)).outcome).toBe('win')
+    expect(resolveSide('dontPass', come, roll(1, 2)).outcome).toBe('win')
+    expect(resolveSide('dontPass', come, roll(6, 6)).outcome).toBe('push')
+    expect(resolveSide('dontPass', come, roll(3, 4)).outcome).toBe('lose')
+    expect(resolveSide('dontPass', come, roll(5, 6)).outcome).toBe('lose')
+  })
+
+  it('don’t pass wins on the seven out and loses when the point is made', () => {
+    const point = resolveRoll(newCrapsState(), roll(2, 2)).state
+    expect(resolveSide('dontPass', point, roll(3, 4)).outcome).toBe('win')
+    expect(resolveSide('dontPass', point, roll(1, 3)).outcome).toBe('lose')
+    expect(resolveSide('dontPass', point, roll(5, 5)).outcome).toBe('continue')
+  })
+
+  it('has a house edge near 1.36% on don’t pass', () => {
+    const rng = mulberry32(5)
+    let net = 0
+    const trials = 300_000
+    for (let i = 0; i < trials; i++) {
+      const r = playLine('dontPass', rng)
+      net += r === 'win' ? 1 : r === 'lose' ? -1 : 0
+    }
+    expect(Math.abs(net / trials + 0.0136)).toBeLessThan(0.008)
+  })
+
+  it('pays odds at the true price, so the odds bet is fair', () => {
+    for (const point of [4, 5, 6, 8, 9, 10]) {
+      const ways = (n: number) => 6 - Math.abs(7 - n)
+      const pWin = ways(point) / (ways(point) + 6)
+      const stake = 60
+      const passEv = pWin * oddsWinnings('pass', point, stake) - (1 - pWin) * stake
+      const dontEv = (1 - pWin) * oddsWinnings('dontPass', point, stake) - pWin * stake
+      expect(Math.abs(passEv)).toBeLessThan(1e-9)
+      expect(Math.abs(dontEv)).toBeLessThan(1e-9)
+    }
+  })
+})
+
+describe('roulette', () => {
+  it('has thirty-seven pockets, each on the wheel once', () => {
+    expect(WHEEL_ORDER).toHaveLength(37)
+    expect(new Set(WHEEL_ORDER).size).toBe(37)
+  })
+
+  it('colours the zero green and splits the rest eighteen and eighteen', () => {
+    expect(colorOf(0)).toBe('green')
+    const all = Array.from({ length: 36 }, (_, i) => i + 1)
+    expect(all.filter((n) => colorOf(n) === 'red')).toHaveLength(18)
+    expect(all.filter((n) => colorOf(n) === 'black')).toHaveLength(18)
+  })
+
+  it('pays 35 to 1 straight up, even money outside and 2 to 1 on dozens and columns', () => {
+    expect(payoutOdds({ kind: 'straight', number: 17 })).toBe(35)
+    expect(payoutOdds({ kind: 'color', color: 'red' })).toBe(1)
+    expect(payoutOdds({ kind: 'dozen', dozen: 2 })).toBe(2)
+    expect(payoutOdds({ kind: 'column', column: 3 })).toBe(2)
+  })
+
+  it('loses every outside bet to the zero', () => {
+    const bets: RouletteBet[] = [
+      { kind: 'color', color: 'red' }, { kind: 'parity', parity: 'even' }, { kind: 'half', half: 'low' },
+      { kind: 'dozen', dozen: 1 }, { kind: 'column', column: 1 },
+    ]
+    for (const bet of bets) expect(covers(bet)).not.toContain(0)
+    expect(settle(bets.map((bet) => ({ bet, stake: 10 })), 0).net).toBe(-50)
+  })
+
+  it('returns stake and winnings on a win', () => {
+    const r = settle([{ bet: { kind: 'straight', number: 17 }, stake: 10 }, { bet: { kind: 'color', color: 'red' }, stake: 20 }], 17)
+    // 17 is black: only the straight-up bet wins.
+    expect(r.returned).toBe(360)
+    expect(r.net).toBe(330)
+  })
+
+  it('takes a 2.70% edge from every kind of bet over the long run', () => {
+    const rng = mulberry32(9)
+    const bets: RouletteBet[] = [
+      { kind: 'straight', number: 7 }, { kind: 'color', color: 'black' }, { kind: 'dozen', dozen: 3 }, { kind: 'half', half: 'high' },
+    ]
+    for (const bet of bets) {
+      let net = 0
+      const trials = 200_000
+      for (let i = 0; i < trials; i++) net += settle([{ bet, stake: 1 }], spinWheel(rng)).net
+      expect(Math.abs(net / trials + 1 / 37)).toBeLessThan(payoutOdds(bet) > 5 ? 0.06 : 0.012)
+    }
   })
 })
