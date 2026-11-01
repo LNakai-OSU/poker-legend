@@ -321,7 +321,7 @@ export function CityScene({
           <div>Cash: ${state.cash.toLocaleString()}</div>
           {goal && goal.phase === 'win' && (
             <div data-testid="goal-total" style={{ width: 200 }}>
-              <div style={{ color: '#9ad0ff', fontSize: 12 }}>{goal.goal.casino}: net winnings</div>
+              <div style={{ color: '#9ad0ff', fontSize: 12 }}>Poker winnings here</div>
               <div style={{ color: runningTotal >= 0 ? '#8ae0a0' : '#e08a8a' }}>
                 {runningTotal < 0 ? '-' : ''}${Math.abs(runningTotal).toLocaleString()} / ${goal.goal.winTarget.toLocaleString()}
               </div>
