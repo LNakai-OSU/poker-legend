@@ -173,14 +173,14 @@ export function PlaytestPanel({
           </button>
         </div>
 
-        {section('Casino winnings: set a town’s running total to one short of its target')}
+        {section('Casino winnings: set a town’s running total to one short of its target, or reset it')}
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {TOWN_ORDER.filter((id) => CASINO_GOALS[id]).map((id) => {
             const goal = CASINO_GOALS[id]
             const net = state.casino.net[id] ?? 0
             return (
+              <span key={id} style={{ display: 'inline-flex', gap: 4 }}>
               <button
-                key={id}
                 type="button"
                 data-testid={`net-${id}`}
                 style={button}
@@ -190,6 +190,26 @@ export function PlaytestPanel({
               >
                 {CITIES[id].name}: ${net.toLocaleString()} / ${goal.winTarget.toLocaleString()} → ${(goal.winTarget - 1).toLocaleString()}
               </button>
+              <button
+                type="button"
+                data-testid={`reset-${id}`}
+                style={button}
+                onClick={() =>
+                  setState((s) => ({
+                    ...s,
+                    casino: {
+                      net: { ...s.casino.net, [id]: 0 },
+                      roomOpen: s.casino.roomOpen.filter((c) => c !== id),
+                      bossBeaten: s.casino.bossBeaten.filter((c) => c !== id),
+                    },
+                    // So the boss comes out to meet you, and walks you out, all over again.
+                    completedEventIds: s.completedEventIds.filter((e) => e !== `${goal.tableId}-door` && e !== `${goal.tableId}-sendoff`),
+                  }))
+                }
+              >
+                Reset {CITIES[id].name}: room shut, $0
+              </button>
+              </span>
             )
           })}
         </div>

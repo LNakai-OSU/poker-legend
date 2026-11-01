@@ -675,3 +675,25 @@ describe('losing is part of the story', () => {
     expect(eventFor(EVENTS, { kind: 'interact', poiId: 'apartment-window' }, at({ day: 10 }))?.id).toBe('rent-day')
   })
 })
+
+describe('people a beat brings on screen', () => {
+  it('always have something to say when talked to', async () => {
+    const { CHARACTERS } = await import('./characters')
+    const brought = new Set<string>()
+    const walk = (actions: typeof EVENTS[number]['actions']) => {
+      for (const a of actions) {
+        if (a.kind === 'moveNpc') brought.add(a.characterId)
+        if (a.kind === 'teleport' || a.kind === 'ride') (a.with ?? []).forEach((id) => brought.add(id))
+        if (a.kind === 'choice') a.options.forEach((o) => walk(o.then))
+        if (a.kind === 'if') { walk(a.then); walk(a.else ?? []) }
+        if (a.kind === 'ride') walk(a.during ?? [])
+      }
+    }
+    EVENTS.forEach((e) => walk(e.actions))
+    for (const id of brought) {
+      // An empty box on a person you can talk to is a screen with nothing to press.
+      const speaks = (CHARACTERS[id]?.overworld?.lines.length ?? 0) > 0 || (CHARACTERS[id]?.lines.greeting?.length ?? 0) > 0
+      expect(speaks, `${id} has nothing to say once a beat puts them on the street`).toBe(true)
+    }
+  })
+})

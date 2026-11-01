@@ -324,19 +324,13 @@ export function GameApp({ playtest = false }: { playtest?: boolean }) {
       setState(() => after)
       getUpFromTable()
       playSound(won ? 'cash' : 'lose')
-      notice(won ? goal.beaten : [boss.lines?.win?.[0] ?? `${boss.name}: Better luck next time.`])
+      // Beating them is followed by the boss walking you out (`<town>-boss-sendoff`), which says it all.
+      if (!won) notice([boss.lines?.win?.[0] ?? `${boss.name}: Better luck next time.`])
       return
     }
     // Everything else at a poker table counts toward the town's private room.
     const net = result.chipsCashedOut - sessionSpend.current
     sessionSpend.current = 0
-    const goal = table.isFinale ? undefined : CASINO_GOALS[state.cityId]
-    let unlocked: string[] | null = null
-    if (goal && !state.casino.roomOpen.includes(goal.cityId)) {
-      if ((state.casino.net[goal.cityId] ?? 0) + net >= goal.winTarget) {
-        unlocked = [`That is $${goal.winTarget.toLocaleString()} won at the ${goal.casino}. A door at the back of the floor has just been unlocked for you, and somebody is waiting behind it.`]
-      }
-    }
     setState((s) => {
       const counted = table.isFinale ? s : recordCasinoSession(s, s.cityId, net, CASINO_GOALS[s.cityId]?.winTarget)
       const next = advanceDay({
@@ -361,8 +355,8 @@ export function GameApp({ playtest = false }: { playtest?: boolean }) {
     })
     if (table.isFinale) setView({ kind: result.finaleWon ? 'ending' : 'finaleLost' })
     else {
+      // The boss comes out to meet you when the room opens (`<town>-boss-door`), so nothing else is said first.
       getUpFromTable()
-      if (unlocked) notice(unlocked)
     }
   }
 

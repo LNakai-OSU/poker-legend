@@ -81,7 +81,7 @@ export function CityScene({
   const visiting = castHere
     .map(([id]) => id)
     .filter((id) => !usual.some((entry) => entry.id === id) && CHARACTERS[id])
-    .map((id) => ({ id, character: CHARACTERS[id], at: { col: -1, row: -1 }, lines: CHARACTERS[id].overworld?.lines ?? [] }))
+    .map((id) => ({ id, character: CHARACTERS[id], at: { col: -1, row: -1 }, lines: visitorLines(CHARACTERS[id]) }))
   // Somebody who came with you stands beside where you land, on a tile nobody
   // else is standing on.
   const taken = new Set<string>([
@@ -359,6 +359,18 @@ export function CityScene({
  * character you know — as opposed to the white of somebody who lives here.
  */
 const SCHEDULED_CHARACTER_COLOR = 0x8ec4ff
+
+/**
+ * What somebody a beat has brought on says when you talk to them and no beat has
+ * anything more to say: what they say in the street, or failing that how they
+ * greet you at a table (a boss never has hours in the street, only the room a
+ * beat leads you to). Never nothing: an empty box is a screen with nothing to press.
+ */
+function visitorLines(character: (typeof CHARACTERS)[string]): string[] {
+  const own = character.overworld?.lines
+  if (own && own.length > 0) return own
+  return character.lines.greeting?.length ? character.lines.greeting : [`${character.name} nods.`]
+}
 
 /** A POI whose story flag has not been set yet: visible, talkable, but inert. */
 function isLocked(state: GameState, poi: PoiDef): boolean {
