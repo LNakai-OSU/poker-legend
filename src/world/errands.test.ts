@@ -108,4 +108,23 @@ describe('errands', () => {
       expect(paid.actions.some((a) => a.kind === 'giveCash' && a.amount === e.reward)).toBe(true)
     }
   })
+
+  it('keep every line short enough for a text box', () => {
+    for (const event of ERRAND_EVENTS) {
+      for (const action of everyAction(event.actions)) {
+        if (action.kind !== 'dialogue') continue
+        for (const line of action.lines) expect(line.length, `${event.id}: ${line.slice(0, 40)}…`).toBeLessThanOrEqual(190)
+      }
+    }
+  })
+
+  it('only wait in daylight, so an hour passes and a day never does', () => {
+    for (const event of ERRAND_EVENTS) {
+      if (!everyAction(event.actions).some((a) => a.kind === 'advancePeriod')) continue
+      const period = event.conditions?.find((c) => c.kind === 'period')
+      expect(period, `${event.id} waits at any hour`).toBeDefined()
+      const allowed = period && period.kind === 'period' ? [period.period].flat() : []
+      expect(allowed).not.toContain('night')
+    }
+  })
 })

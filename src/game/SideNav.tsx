@@ -203,6 +203,7 @@ export function SideNav({
           <div key={errand.id} style={{ display: 'grid', gap: scale }}>
             {line(errand.title, stage === 'done' ? INK.dim : INK.light)}
             {line(stage === 'done' ? 'Done.' : todo ?? '', INK.dim)}
+            {stage === 'done' ? null : line(`Client: ${errand.clientName}, at ${errand.where}.`, INK.dim)}
           </div>
         ))}
         {taken.map((m) => {
