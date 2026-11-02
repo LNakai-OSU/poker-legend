@@ -438,7 +438,7 @@ export const ERRANDS: Errand[] = [
       'Fenn: Mr. Emeka was kind enough to stake me. Abel has been seen on the quay. He doesn’t run, Abel. He walks. Slowly. It’s worse.',
       'Fenn: Stand watch at the end of the pier while I count what I’ve got. If a tall man in a long grey coat comes along the quay, whistle. Four-fifty for your evening.',
     ],
-    hint: ['Fenn: The end of the pier. Grey coat. Whistle. You’ve done it before, I can tell.'],
+    hint: ['Fenn: The end of the pier, by day. Grey coat. Whistle if you’re any good. Do what you must if you’re not.'],
     legs: [
       {
         poi: 'ch-lookout',
@@ -447,14 +447,33 @@ export const ERRANDS: Errand[] = [
         lines: [
           'You take the post at the end of the pier. A gull lands on a bollard and looks at you like a supervisor.',
           'The tide turns. The light comes on over your head, slow and grand, and a little embarrassed about it.',
-          'At dusk a tall man in a long grey coat comes along the quay. Unhurried. Hat in his hands.',
-          'You whistle. Abel stops. He looks at you for a long time, then at the light, then turns round and walks slowly back the way he came.',
+          'At dusk a tall man in a long grey coat comes along the quay. Unhurried. Hat in his hands. He is looking for Fenn, and he is looking at you.',
         ],
-        then: WAIT,
+        then: [
+          {
+            kind: 'choice',
+            speaker: 'Abel',
+            prompt: 'Abel asks: “Is the Captain in?”',
+            options: [
+              {
+                label: 'Whistle',
+                then: [{ kind: 'dialogue', lines: ['You whistle. Abel stops, looks at you for a long time, then at the light, and walks slowly back the way he came.'] }],
+              },
+              {
+                label: 'Point him to the light',
+                then: [
+                  { kind: 'dialogue', speaker: 'Abel', lines: ['Abel: Thank you. That is the kind of help a man remembers. For you, fifty. For the Captain, a conversation.'] },
+                  { kind: 'giveCash', amount: 150 },
+                ],
+              },
+            ],
+          },
+          ...WAIT,
+        ],
       },
     ],
     finish: [
-      'Fenn: You whistled? Beautiful. Abel hates a whistle. It’s the only thing he can’t collect on.',
+      'Fenn: Abel’s been and gone, one way or another. I heard the whistle, or I heard a man thinking about one.',
       'Fenn: I’ve counted it twice. Four-fifty, and some of it was in my boot. It’s yours. I’ll pay Mr. Emeka the old-fashioned way: late.',
     ],
     reward: 450,
@@ -683,7 +702,18 @@ export const ERRANDS: Errand[] = [
           'Zeke, arriving with a bag of chips: Chat, we are LIVE. A real wedding. Say congratulations. Mum — Mum, eat something.',
           'You witness. Elvira cries a little. She cries a little at all of them, and means every one.',
         ],
-        then: WAIT,
+        then: [
+          {
+            kind: 'choice',
+            speaker: 'Elvira',
+            prompt: 'Elvira nods at you. Your line.',
+            options: [
+              { label: 'I witness', then: [{ kind: 'dialogue', speaker: 'Elvira', lines: ['Elvira: Beautiful. Cry a little. Everyone does.'] }] },
+              { label: 'Does anyone else?', then: [{ kind: 'dialogue', speaker: 'Elvira', lines: ['Elvira: Nobody objects at three in the afternoon. Sit down, sweetheart.'] }] },
+            ],
+          },
+          ...WAIT,
+        ],
       },
     ],
     finish: [
@@ -735,6 +765,24 @@ export const ERRANDS: Errand[] = [
         lines: [
           'Salesman: The transformer. In the Eldorado. For Dee. That car has sat in my showroom since 1991. Nobody has ever asked me for anything off it.',
           'Salesman: Take it. Take the car, if you like. I mean the transformer. I mean… could you take the car?',
+        ],
+        then: [
+          {
+            kind: 'choice',
+            speaker: 'Salesman',
+            prompt: 'He is holding out the Eldorado’s keys.',
+            options: [
+              { label: 'Just the transformer', then: [{ kind: 'dialogue', speaker: 'Salesman', lines: ['Salesman: Of course. Of course. Nobody ever takes the car.'] }] },
+              {
+                label: 'Take the Eldorado too',
+                then: [
+                  { kind: 'dialogue', speaker: 'Salesman', lines: ['Salesman: Bless you. A disposal fee, from the dealership. Leave it anywhere. Preferably the desert.'] },
+                  { kind: 'giveCash', amount: 250 },
+                  { kind: 'dialogue', lines: ['You park the Eldorado behind a dead sign in the Boneyard. It looks like it has always lived there.'] },
+                ],
+              },
+            ],
+          },
         ],
       },
     ],
