@@ -339,7 +339,7 @@ describe('editing an event', () => {
     delete after.conditions
     const { source } = saveEvent(EVENT_SOURCE, { id: after.id, before, after })
     expect(source).toContain("    trigger: { kind: 'standOn', areaId: 'laundromat', col: 4, row: 4 },\n")
-    const saved = readEvents(source).find((e) => e.id === after.id)
+    const saved = (readEvents(source) as GameEvent[]).find((e) => e.id === after.id)
     expect(saved?.trigger).toEqual(after.trigger)
     expect(saved?.conditions).toBeUndefined()
   })
