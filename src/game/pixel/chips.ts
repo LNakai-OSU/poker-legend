@@ -121,21 +121,23 @@ export function chipTopUrl(face = '#2e9450', spot = '#f2f2f6'): string {
 }
 
 const GLYPHS: Record<string, string[]> = {
-  S: ['.SS', 'S..', '.S.', '..S', 'SS.'],
-  B: ['SS.', 'S.S', 'SS.', 'S.S', 'SS.'],
-  D: ['SS.', 'S.S', 'S.S', 'S.S', 'SS.'],
+  S: ['.SSS', 'S...', 'SSS.', '...S', 'SSS.'],
+  B: ['SSS.', 'S..S', 'SSS.', 'S..S', 'SSS.'],
+  D: ['SSS.', 'S..S', 'S..S', 'S..S', 'SSS.'],
 }
 
-/** A letter built from its 3 by 5 grid, centred on a 100 by 100 chip. */
+/** A letter built from its 4 by 5 grid, centred on a 100 by 100 chip, with a dark edge so it reads against the face. */
 function letterSvg(letter: 'S' | 'B' | 'D', colour: string, shadow: string): string {
-  const cell = 11
-  const x0 = 50 - (3 * cell) / 2
+  const cell = 9.5
+  const x0 = 50 - (4 * cell) / 2
   const y0 = 50 - (5 * cell) / 2
-  const cells = (dx: number, dy: number, fill: string) =>
+  const cells = (grow: number, fill: string) =>
     GLYPHS[letter]
-      .flatMap((row, gy) => row.split('').map((c, gx) => (c === 'S' ? `<rect x="${x0 + gx * cell + dx}" y="${y0 + gy * cell + dy}" width="${cell + 0.6}" height="${cell + 0.6}" fill="${fill}"/>` : '')))
+      .flatMap((row, gy) =>
+        row.split('').map((c, gx) => (c === 'S' ? `<rect x="${x0 + gx * cell - grow}" y="${y0 + gy * cell - grow}" width="${cell + 0.5 + grow * 2}" height="${cell + 0.5 + grow * 2}" fill="${fill}"/>` : '')),
+      )
       .join('')
-  return cells(2.5, 3.5, shadow) + cells(0, 0, colour)
+  return cells(3.5, shadow) + cells(0, colour)
 }
 
 /**
@@ -148,7 +150,6 @@ function markerSvg(face: string, rim: string, letter: 'S' | 'B' | 'D', ink: stri
     `<circle cx="50" cy="50" r="47" fill="${rim}" stroke="${OUTLINE}" stroke-width="4"/>` +
     `<circle cx="50" cy="50" r="41" fill="none" stroke="${ringInk}" stroke-width="9" stroke-dasharray="14 12.5"/>` +
     `<circle cx="50" cy="50" r="33" fill="${face}" stroke="${OUTLINE}" stroke-width="2.5"/>` +
-    `<circle cx="50" cy="50" r="28" fill="none" stroke="${ink}" stroke-width="2" opacity="0.8"/>` +
     `<path d="M24 38 A30 30 0 0 1 52 20" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity="0.45"/>` +
     letterSvg(letter, ink, inkShadow)
   )
@@ -171,7 +172,7 @@ export function tableMarkerUrl(kind: 'sb' | 'bb'): string {
   if (hit) return hit.url
   const face = kind === 'sb' ? '#5d8fe0' : '#e0605d'
   const rim = kind === 'sb' ? '#2c4f94' : '#942c2c'
-  const url = svgUrl(markerSvg(face, rim, kind === 'sb' ? 'S' : 'B', '#f8f8f0', shade(rim, 0.7)), 100, 100)
+  const url = svgUrl(markerSvg(face, rim, kind === 'sb' ? 'S' : 'B', '#ffffff', shade(rim, 0.35)), 100, 100)
   cache.set(key, { url, w: 9, h: 9 })
   return url
 }
