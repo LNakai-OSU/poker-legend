@@ -12,6 +12,8 @@ import type { Announcement } from './HandAnnouncer'
 import { personalityFor, seatsOf } from '../world/characters'
 import { talkOf } from '../world/talk'
 import { chooseSpeaker, speaksAboutOwnAction, type Moment } from './tableTalk'
+import { TABLE_HINTS } from '../world/tableHints'
+import { conditionHolds } from '../world/events'
 import type { GameState } from './state'
 import { tableAccess, tellClarity } from './progression'
 import { playSound } from '../audio/audio'
@@ -205,7 +207,26 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
   )
 
   /** Somebody remarks on the hand, in their own voice, if they are the type. */
+  const hintsSaid = useRef(new Set<string>())
   const remark = (moment: Moment) => {
+    // What you did for the town comes up at the table, once a sitting, at the first card.
+    if (moment === 'flop' || moment === 'turn' || moment === 'river') {
+      const hint = TABLE_HINTS.find(
+        (h) =>
+          h.tableId === table.id &&
+          !hintsSaid.current.has(h.id) &&
+          players.some((p) => p.id === h.speaker) &&
+          h.when.every((c) => conditionHolds(c, state)),
+      )
+      if (hint) {
+        hintsSaid.current.add(hint.id)
+        if (speechTimer.current) window.clearTimeout(speechTimer.current)
+        const name = personalityFor(hint.speaker, personas[hint.speaker]).name
+        setSpeech({ playerId: hint.speaker, text: `${name}: ${hint.lines[Math.floor(Math.random() * hint.lines.length)]}` })
+        speechTimer.current = window.setTimeout(() => setSpeech(null), SPEECH_MS * 2)
+        return
+      }
+    }
     const inHand = publicState.players.filter((p) => p.id !== 'you' && !p.folded).map((p) => p.id)
     const chosen = chooseSpeaker(inHand, moment, Math.random)
     if (!chosen) return

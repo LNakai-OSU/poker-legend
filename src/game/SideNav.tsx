@@ -191,7 +191,7 @@ export function SideNav({
     )
   } else if (page === 'jobs') {
     const taken = state.acceptedMissionIds.map((id) => MISSIONS[id]).filter((m) => m !== undefined)
-    const openErrands = ERRANDS.map((errand) => ({ errand, ...errandStage(errand, state.completedEventIds) })).filter(
+    const openErrands = ERRANDS.map((errand) => ({ errand, ...errandStage(errand, state.completedEventIds, state.flags) })).filter(
       (e) => e.stage !== 'new',
     )
     body = (
@@ -199,10 +199,11 @@ export function SideNav({
         {item('nav-back', '< Back', () => setPage('main'))}
         {heading('Jobs')}
         {taken.length === 0 && openErrands.length === 0 ? line('Nobody has asked you for anything yet.', INK.dim) : null}
-        {openErrands.map(({ errand, todo, stage }) => (
+        {openErrands.map(({ errand, todo, stage, pays }) => (
           <div key={errand.id} style={{ display: 'grid', gap: scale }}>
             {line(errand.title, stage === 'done' ? INK.dim : INK.light)}
             {line(stage === 'done' ? 'Done.' : todo ?? '', INK.dim)}
+            {stage === 'done' || !pays ? null : line(pays, INK.dim)}
             {stage === 'done' ? null : line(`Client: ${errand.clientName}, at ${errand.where}.`, INK.dim)}
           </div>
         ))}

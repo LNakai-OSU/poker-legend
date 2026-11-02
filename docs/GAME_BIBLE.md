@@ -399,6 +399,25 @@ to do next.
   Cass in Dutch's cake, Captain Marsh in Cornelius, Bellamy at the Bellweather,
   Inés Calloway's comped honeymoon, Solomon Vale and the Starlite and the
   chapel, Madame Wen and Nadia's first chip.
+- **The best ending is the reward.** Down any branch, choice cash plus the client's
+  pay never exceeds `reward`, and the other answer pays less or costs something
+  (Fenn, Pruitt, the chapel, Dee, Fong, Teodoro), with a longer afterword. The Jobs
+  page shows the range ("Pays $20-$60") and, once you have answered, the exact pay
+  and a branch-specific next step (`variants[].todo`).
+- **Gated and night jobs.** `requires` (conditions) gates the ask: Bernard's Friday
+  needs `errandBlamedBernard`. `periods` limits the ask and legs to certain hours:
+  Randy's rose (the Boneyard) and the Lamplighter (the Belvedere) are night jobs.
+  They never advance the period (rule 4 stays: waits only in daylight). A leg may
+  revisit an earlier job's fixture (the chapel arch, Fong's hedge).
+- **Odd jobs.** `ODD_JOBS` gives the nearly broke (under $150) a repeatable daylight
+  chore (Muddy Bend's fish rack, $25, an hour). Recovery, not a bankroll.
+- **The tables remember.** `world/tableHints.ts` lists lines a seated character says
+  once per sitting at the first card, when conditions hold (an errand flag or paid
+  errand): Nadia on Teodoro's chip, Vance's cuff, Mack and Deb on Cass, Bernard on
+  Thursday, Xue on the greyhound, Lorna on the objection. Flavour and a tell only;
+  odds and AI never change. A test checks each speaker is really seated there.
+- **Money.** Totals are 230, 620, 1,300, 1,800, 5,500 and 20,000, the late two held
+  to about half the cheapest seat so errands are not a faster bankroll than play.
 - **Broke?** After a bust, a person on each town's street (`bust-nudge-…`) points
   you at ☰ → Jobs. They only speak up while your cash is under $300.
 - **Money.** Each town's errands together are worth about one seat at that
