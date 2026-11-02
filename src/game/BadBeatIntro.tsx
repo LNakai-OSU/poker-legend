@@ -144,6 +144,17 @@ const FRAMES: Frame[] = [
 ]
 
 /** Everything the table needs to draw one frame of the hand. */
+/** The establishing shot: everyone in, nothing bet, every stack on show. */
+const TABLE_FRAME: Frame = {
+  ...FRAMES[0],
+  street: 'preflop',
+  boardCount: 0,
+  pot: 0,
+  bets: {},
+  stacks: START,
+  folded: [],
+}
+
 function stateOf(f: Frame, handNumber: number): { state: PublicState; result: HandResult | null } {
   const dealer: Who = 'zeke'
   const players: PublicPlayerView[] = (['you', ...ORDER] as Who[]).map((id) => ({
@@ -190,14 +201,14 @@ const LIGHTS = [
   { who: 'Dr. Anand', text: 'A technical difficulty. Play is suspended. Please stand by.' },
 ]
 
-type Phase = 'hand' | 'dark' | 'lights' | 'excuse' | 'walk'
+type Phase = 'table' | 'hand' | 'dark' | 'lights' | 'excuse' | 'walk'
 
 /** The room dies in stutters: lamps drop and catch, drop and catch, and are gone. */
 const BLACKOUT_STEPS = [0, 0.35, 0.05, 0.55, 0.15, 0.8, 0.35, 0.96]
 const BLACKOUT_MS = 2600
 
 export function BadBeatIntro({ onDone }: { onDone: () => void }) {
-  const [phase, setPhase] = useState<Phase>('hand')
+  const [phase, setPhase] = useState<Phase>('table')
   const [index, setIndex] = useState(0)
   const [dark, setDark] = useState(0)
   const [lightsAt, setLightsAt] = useState(0)
@@ -278,7 +289,25 @@ export function BadBeatIntro({ onDone }: { onDone: () => void }) {
     }
   }, [frame])
   const onAir = phase === 'hand' || phase === 'dark'
-  const { state, result } = useMemo(() => stateOf(frame, 1), [frame])
+  const showTable = !onAir
+  const { state, result } = useMemo(() => stateOf(phase === 'table' ? TABLE_FRAME : frame, 1), [frame, phase])
+  const [ring, setRing] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
+  useEffect(() => {
+    if (phase !== 'table') return
+    const place = () => {
+      const el = document.querySelector('[data-testid="bad-beat-intro"] [data-testid="seat-you"]')
+      if (!el) return
+      const r = el.getBoundingClientRect()
+      setRing({ x: r.left, y: r.top, w: r.width, h: r.height })
+    }
+    place()
+    const t = window.setInterval(place, 250)
+    window.addEventListener('resize', place)
+    return () => {
+      window.clearInterval(t)
+      window.removeEventListener('resize', place)
+    }
+  }, [phase])
 
   return (
     <div
@@ -289,7 +318,7 @@ export function BadBeatIntro({ onDone }: { onDone: () => void }) {
       onClick={() => phase === 'hand' && nextFrame()}
     >
       {onAir && <BroadcastShot shot={shot} />}
-      {!onAir && <TableStage
+      {showTable && <TableStage
         theme={THEME}
         needs={NEEDS}
         felt={(layout) => (
@@ -297,7 +326,7 @@ export function BadBeatIntro({ onDone }: { onDone: () => void }) {
             <PokerTableView
               state={state}
               lastResult={result}
-              yourHole={phase === 'walk' ? [] : YOUR_HAND}
+              yourHole={phase === 'walk' ? [] : phase === 'table' ? [] : YOUR_HAND}
               announcement={null}
               blinds={{ small: 1000, big: 2000 }}
               layout={layout}
@@ -308,6 +337,37 @@ export function BadBeatIntro({ onDone }: { onDone: () => void }) {
         )}
         dock={() => null}
       />}
+      {phase === 'table' && (
+        <>
+          {ring && (
+            <div
+              aria-hidden="true"
+              data-testid="short-stack-ring"
+              style={{
+                position: 'absolute',
+                left: ring.x - 10,
+                top: ring.y - 10,
+                width: ring.w + 20,
+                height: ring.h + 20,
+                border: '3px solid #ffd24a',
+                borderRadius: 14,
+                boxShadow: '0 0 24px #ffd24a99',
+                animation: 'hunt-pulse 1.4s ease-in-out infinite',
+                pointerEvents: 'none',
+              }}
+            />
+          )}
+          <DialogueBox
+            key="table"
+            speaker="Chip"
+            lines={[
+              'Six players left at the final table of the Legends Invitational!',
+              'And look at the stacks — our player in the orange jacket has the fewest chips in the room. Ninety thousand to Bernard’s three hundred!',
+            ]}
+            onFinish={() => setPhase('hand')}
+          />
+        </>
+      )}
       {/* The rig failing: a black sheet that flickers up, with a red emergency strip along the floor. */}
       <div
         aria-hidden="true"

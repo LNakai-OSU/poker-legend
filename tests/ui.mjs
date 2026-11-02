@@ -1886,7 +1886,7 @@ await test('a new game opens on the televised final and cuts back to the flat' ,
       sawBoard = Math.max(sawBoard, seen.board)
       sawDark = Math.max(sawDark, seen.dark)
       if (seen.phase === 'hand') await page.keyboard.press(' ')
-      else if (seen.phase === 'lights' || seen.phase === 'excuse') await page.keyboard.press(' ')
+      else if (seen.phase === 'table' || seen.phase === 'lights' || seen.phase === 'excuse') await page.keyboard.press(' ')
     } else if (seen?.kind === 'reel') {
       scenes.add(seen.scene)
       await page.keyboard.press(' ')
@@ -1900,7 +1900,7 @@ await test('a new game opens on the televised final and cuts back to the flat' ,
   // The real table, a hand dealt out street by street, the room going dark, the walk out.
   assert(frames.size >= 4, `the hand did not play out (frames ${[...frames]})`)
   assert(sawBoard === 5, 'the board was never dealt')
-  for (const phase of ['hand', 'dark', 'lights', 'excuse', 'walk']) assert(phases.has(phase), `the intro never reached ${phase} (saw ${[...phases]})`)
+  for (const phase of ['table', 'hand', 'dark', 'lights', 'excuse', 'walk']) assert(phases.has(phase), `the intro never reached ${phase} (saw ${[...phases]})`)
   assert(sawDark > 0.5, 'the room did not go dark')
   for (const scene of ['corridor', 'bathroom', 'mirror', 'mail']) assert(scenes.has(scene), `the opening never showed the ${scene}`)
   await page.waitForSelector('canvas')
