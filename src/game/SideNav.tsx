@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { audio } from '../audio/audio'
 import { LESSONS, MISSIONS, findItem } from '../world/content'
 import { PERIOD_LABEL } from './time'
-import { goalStatus, missionStatus, standing } from './progression'
+import { challengeLines, goalStatus, missionStatus, standing } from './progression'
 import { GOAL_ORDER } from '../world/goals'
 import { totalOwed, type GameState } from './state'
 import { PxButton } from './pixel/ui'
@@ -198,6 +198,9 @@ export function SideNav({
       <>
         {item('nav-back', '< Back', () => setPage('main'))}
         {heading('Jobs')}
+        {challengeLines(state).map((l, i) => (
+          <div key={`challenge-${i}`}>{line(i === 0 ? `Challenge: ${l}` : l, INK.gold)}</div>
+        ))}
         {taken.length === 0 && openErrands.length === 0 ? line('Nobody has asked you for anything yet.', INK.dim) : null}
         {openErrands.map(({ errand, todo, stage, pays }) => (
           <div key={errand.id} style={{ display: 'grid', gap: scale }}>

@@ -160,6 +160,18 @@ export const STORY_FLAGS = {
     set: 'you took Nadia’s first chip to Teodoro',
     clear: 'you left Nadia’s first chip on the felt',
   },
+  errandQuizRight: {
+    set: 'you answered Wick’s pot-odds question right',
+    clear: 'you got Wick’s pot-odds question wrong',
+  },
+  errandCoachRead: {
+    set: 'you read that Hollis plays looser after a rebuy',
+    clear: 'you misread Hollis’s rebuys',
+  },
+  errandSpotTell: {
+    set: 'you spotted Bernard’s collar tell from the roulette wheel',
+    clear: 'you misread Bernard’s tell',
+  },
 } as const satisfies Record<string, { set: string; clear: string }>
 
 export type StoryFlag = keyof typeof STORY_FLAGS

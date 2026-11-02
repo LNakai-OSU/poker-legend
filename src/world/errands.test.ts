@@ -3,6 +3,7 @@ import { ERRANDS, ERRAND_EVENTS, errandPois, errandStage, payRange } from './err
 import { EVENTS, eventFor, everyAction } from './events'
 import { AREAS, TABLES } from './content'
 import { initialState, type CityId, type GameState } from '../game/state'
+import { challengeLines } from '../game/progression'
 import { OUTSKIRTS_GAPS } from './outskirts'
 import { isWalkable } from '../overworld/tiles'
 
@@ -21,11 +22,11 @@ const TOWNS: CityId[] = ['silverCreek', 'riverbend', 'crescentHarbor', 'palmCay'
 const allPois = () => Object.values(AREAS).flatMap(({ area, cityId }) => area.pois.map((poi) => ({ poi, area, cityId })))
 
 describe('errands', () => {
-  it('give every town two or three jobs', () => {
+  it('give every town two to four jobs (four where one is a poker lesson that pays little)', () => {
     for (const town of TOWNS) {
       const n = ERRANDS.filter((e) => e.cityId === town).length
       expect(n, town).toBeGreaterThanOrEqual(2)
-      expect(n, town).toBeLessThanOrEqual(3)
+      expect(n, town).toBeLessThanOrEqual(4)
     }
   })
 
@@ -225,6 +226,28 @@ describe('errand pay and wording', () => {
         expect(action.speaker ?? '', `${event.id}: “${action.lines[0].slice(0, 40)}”`).toBe(who)
       }
     }
+  })
+
+  it('wait for dark without ever rolling a day', () => {
+    for (const poi of ['nm-darkbench', 'pl-darkbench']) {
+      const event = EVENTS.find((e) => e.id === `wait-for-dark-${poi}`)!
+      for (const period of ['morning', 'afternoon', 'evening'] as const) {
+        expect(eventFor(EVENTS, { kind: 'interact', poiId: poi }, { ...initialState(), period })?.id).toBe(event.id)
+        // However much it advances, it lands on night on the same day.
+        const steps = period === 'morning' ? 3 : period === 'afternoon' ? 2 : 1
+        const index = ['morning', 'afternoon', 'evening', 'night'].indexOf(period)
+        expect(index + steps).toBe(3)
+      }
+      expect(eventFor(EVENTS, { kind: 'interact', poiId: poi }, { ...initialState(), period: 'night' })?.id).not.toBe(event.id)
+    }
+  })
+
+  it('show the challenge and the gap on the Jobs page', () => {
+    const state = { ...initialState(), cityId: 'silverCreek' as const, cash: 100 }
+    const lines = challengeLines(state)
+    expect(lines[0]).toMatch(/Win \$/)
+    expect(lines[1]).toMatch(/short/)
+    expect(challengeLines({ ...state, cityId: 'apartment' as never })).toEqual([])
   })
 
   it('open the odd job only to the nearly broke, by day', () => {

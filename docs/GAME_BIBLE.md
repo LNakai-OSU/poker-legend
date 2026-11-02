@@ -416,8 +416,28 @@ to do next.
   errand): Nadia on Teodoro's chip, Vance's cuff, Mack and Deb on Cass, Bernard on
   Thursday, Xue on the greyhound, Lorna on the objection. Flavour and a tell only;
   odds and AI never change. A test checks each speaker is really seated there.
-- **Money.** Totals are 230, 620, 1,300, 1,800, 5,500 and 20,000, the late two held
+- **Money.** Totals are 230, 680, 1,450, 2,000, 5,500 and 20,000, the late two held
   to about half the cheapest seat so errands are not a faster bankroll than play.
+- **Waiting for dark.** Night jobs (Randy, the Lamplighter) are reached by a bench
+  in the Boneyard and on the Belvedere: "Wait until dark" fades out and advances
+  the clock to night and no further (3, 2 or 1 steps by the hour), so it cannot
+  roll a day. The clients' hints and the Jobs todo say where the bench is.
+- **Recovery lanes.** `ODD_JOBS` has a chore per recovery town: Muddy Bend's fish
+  rack ($25, under $150), Lagoon Beach's crab traps ($100, under $600) and the
+  Boneyard's scrap heap ($300, under $1,000). Daylight only, an hour each.
+- **Poker jobs.** Wick's pot-odds quiz (Riverbend), Ilse's coach's notes (Crescent)
+  and Mo's collar stakeout (Palm Cay) are quizzes and reads that pay a little and
+  point you at a table. A town may therefore have a fourth job (the test allows
+  four); their pay stays small, so totals still hold.
+- **A real, tiny perk.** `TABLE_PERKS` in `world/tableHints.ts`: reading the cuff
+  (Odalys) or the collar (Mo) makes tells show clearer at that town's tables, the
+  same `tellClarity` an owned item or a night's rest gives (0.15-0.2). It changes
+  what you can see, never odds or how anyone plays. Hints also fire when a hand
+  ends, so a fold before the flop does not skip one; one line a moment, once each.
+- **Challenge line.** The Jobs page opens with the town's goal and the boss match's
+  buy-in against your cash (`challengeLines` in `game/progression.ts`).
+- **Seeing the maps.** `node scripts/shoot.mjs --areas sc-outskirts,rb-outskirts,
+  ch-outskirts,pc-outskirts,nm-outskirts,pl-outskirts --periods morning,night`.
 - **Broke?** After a bust, a person on each town's street (`bust-nudge-…`) points
   you at ☰ → Jobs. They only speak up while your cash is under $300.
 - **Money.** Each town's errands together are worth about one seat at that

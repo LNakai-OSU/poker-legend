@@ -1,4 +1,4 @@
-import { CITIES, MISSIONS, findItem } from '../world/content'
+import { CITIES, MISSIONS, TABLES, findItem } from '../world/content'
 import { CHARACTERS } from '../world/characters'
 import { CASINO_GOALS, goalOf } from '../world/goals'
 import type { MissionGoal, TableDef } from '../world/types'
@@ -123,6 +123,28 @@ export function goalStatus(state: GameState, cityId: CityId): GoalStatus | null 
     phase: 'win',
     line: `Win $${goal.winTarget.toLocaleString()} at the ${goal.casino} (${won < 0 ? '-' : ''}$${Math.abs(won).toLocaleString()} so far) to earn a game with ${boss}.`,
   }
+}
+
+/**
+ * The challenge in front of you in this town and what it asks of your roll, for
+ * the Jobs page: what to do, and the buy-in of the boss match against your cash.
+ */
+export function challengeLines(state: GameState): string[] {
+  const status = goalStatus(state, state.cityId)
+  if (!status) return []
+  const lines = [status.line]
+  if (status.phase !== 'done') {
+    const buyIn = TABLES[status.goal.tableId]?.buyIn
+    if (buyIn !== undefined) {
+      const gap = buyIn - state.cash
+      lines.push(
+        gap > 0
+          ? `The boss match costs $${buyIn.toLocaleString()}. You have $${state.cash.toLocaleString()}: $${gap.toLocaleString()} short.`
+          : `The boss match costs $${buyIn.toLocaleString()}. You have $${state.cash.toLocaleString()}.`,
+      )
+    }
+  }
+  return lines
 }
 
 export interface TravelOption {

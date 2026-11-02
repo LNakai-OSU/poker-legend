@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { TABLE_HINTS } from './tableHints'
+import { TABLE_HINTS, TABLE_PERKS, perkClarity } from './tableHints'
 import { TABLES } from './content'
 import { EVENTS } from './events'
 import { STORY_FLAG_IDS } from './flags'
@@ -17,5 +17,16 @@ describe('table hints', () => {
       }
       expect(hint.lines.length).toBeGreaterThan(0)
     }
+  })
+
+  it('keep the perk small, and only for the tables and flags it names', () => {
+    for (const perk of TABLE_PERKS) {
+      expect(perk.tellClarity).toBeLessThanOrEqual(0.25)
+      for (const id of perk.tableIds) expect(TABLES[id], perk.id).toBeDefined()
+    }
+    const on = (c: { kind: string; flag?: string }) => c.kind === 'flag' && c.flag === 'errandSawTheTell'
+    expect(perkClarity('crescent-main', on as never)).toBeCloseTo(0.2)
+    expect(perkClarity('crescent-main', () => false)).toBe(0)
+    expect(perkClarity('riverbend-mid', () => true)).toBe(0)
   })
 })

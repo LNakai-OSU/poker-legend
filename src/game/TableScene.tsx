@@ -12,7 +12,7 @@ import type { Announcement } from './HandAnnouncer'
 import { personalityFor, seatsOf } from '../world/characters'
 import { talkOf } from '../world/talk'
 import { chooseSpeaker, speaksAboutOwnAction, type Moment } from './tableTalk'
-import { TABLE_HINTS } from '../world/tableHints'
+import { TABLE_HINTS, perkClarity } from '../world/tableHints'
 import { conditionHolds } from '../world/events'
 import type { GameState } from './state'
 import { tableAccess, tellClarity } from './progression'
@@ -206,27 +206,28 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
     [],
   )
 
-  /** Somebody remarks on the hand, in their own voice, if they are the type. */
   const hintsSaid = useRef(new Set<string>())
+  /** What you did for the town comes up at the table, one line a moment, once a sitting each. */
+  const sayHint = (): boolean => {
+    const hint = TABLE_HINTS.find(
+      (h) =>
+        h.tableId === table.id &&
+        !hintsSaid.current.has(h.id) &&
+        players.some((p) => p.id === h.speaker) &&
+        h.when.every((c) => conditionHolds(c, state)),
+    )
+    if (!hint) return false
+    hintsSaid.current.add(hint.id)
+    if (speechTimer.current) window.clearTimeout(speechTimer.current)
+    const name = personalityFor(hint.speaker, personas[hint.speaker]).name
+    setSpeech({ playerId: hint.speaker, text: `${name}: ${hint.lines[Math.floor(Math.random() * hint.lines.length)]}` })
+    speechTimer.current = window.setTimeout(() => setSpeech(null), SPEECH_MS * 2)
+    return true
+  }
+
+  /** Somebody remarks on the hand, in their own voice, if they are the type. */
   const remark = (moment: Moment) => {
-    // What you did for the town comes up at the table, once a sitting, at the first card.
-    if (moment === 'flop' || moment === 'turn' || moment === 'river') {
-      const hint = TABLE_HINTS.find(
-        (h) =>
-          h.tableId === table.id &&
-          !hintsSaid.current.has(h.id) &&
-          players.some((p) => p.id === h.speaker) &&
-          h.when.every((c) => conditionHolds(c, state)),
-      )
-      if (hint) {
-        hintsSaid.current.add(hint.id)
-        if (speechTimer.current) window.clearTimeout(speechTimer.current)
-        const name = personalityFor(hint.speaker, personas[hint.speaker]).name
-        setSpeech({ playerId: hint.speaker, text: `${name}: ${hint.lines[Math.floor(Math.random() * hint.lines.length)]}` })
-        speechTimer.current = window.setTimeout(() => setSpeech(null), SPEECH_MS * 2)
-        return
-      }
-    }
+    if ((moment === 'flop' || moment === 'turn' || moment === 'river') && sayHint()) return
     const inHand = publicState.players.filter((p) => p.id !== 'you' && !p.folded).map((p) => p.id)
     const chosen = chooseSpeaker(inHand, moment, Math.random)
     if (!chosen) return
@@ -398,6 +399,13 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
    * the player off mid-hand.
    */
   const [resultSettled, setResultSettled] = useState(false)
+  // A hand that ends before a card comes down (everyone folds) still lets a hint through.
+  useEffect(() => {
+    if (!handOver) return
+    const timer = window.setTimeout(() => sayHint(), 700)
+    return () => window.clearTimeout(timer)
+  }, [handOver, lastResult?.handNumber])
+
   useEffect(() => {
     if (!handOver) {
       setResultSettled(false)
@@ -468,7 +476,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
   const insights = {
     showPositions: state.lessonIds.includes('position'),
     sharpEyes: state.lessonIds.includes('tells'),
-    tellClarity: tellClarity(state),
+    tellClarity: tellClarity(state) + perkClarity(table.id, (c) => conditionHolds(c, state)),
   }
 
   // Equity is a Monte Carlo run, so only compute it when the read is actually
