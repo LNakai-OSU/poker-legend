@@ -350,6 +350,47 @@ Rules:
 - `startTable` and `startPokerNight` end the event — what follows is the table,
   and there is nobody left in the street to say the next line to.
 
+### Errands — `src/world/errands.ts`
+
+Small jobs a town gives you, for cash. Somebody needs something done and cannot
+do it themselves — usually because they are hiding from somebody they owe — so
+you walk it round town and they pay you. Each errand is a few lines of data:
+
+```ts
+{
+  id: 'errand-wendell', title: 'Wendell, Room 6', cityId: 'silverCreek',
+  client: 'sc-wendell', clientName: 'Wendell',
+  ask: ['Wendell: Psst. Keep walking…'],          // the first time you talk to them
+  hint: ['Wendell: Gift shop. Hat, shades…'],      // while the job is open
+  legs: [{ poi: 'giftshop', todo: '…', lines: ['Clerk: …'] }],  // places to visit, in order
+  finish: ['Wendell: The Groucho. Perfect…'],      // back to the client, who pays
+  reward: 60,
+  people: [{ id: 'sc-wendell', areaId: 'sc-outskirts', col: 5, row: 6, … }],
+}
+```
+
+An errand is expanded into ordinary events (`-ask`, `-hint`, `-leg1`…, `-done`) on
+`interact` triggers. There are **no flags**: which stage you are at is which of
+its own events have played, so `eventDone` carries it. A leg may pass an hour
+(`then: [fade, advancePeriod, fade]`); none hands out a day (rule 4). The Jobs
+page in the side menu lists an open errand and says what to do next.
+
+- **Money.** Each town's errands together are worth about one seat at that
+  town's cheapest table (0.5× to 2.5×, and rising town to town) — enough to climb
+  back from a bad beat, never a way to skip the tables. `errands.test.ts` holds it.
+- **Two or three a town**, each paid once.
+- **The outskirts.** Every town has an open map off the south side of its own
+  road (`src/world/outskirts.ts`): Dry Wash Frontage, Muddy Bend, the Fish Pier,
+  Lagoon Beach, the Boneyard, the Belvedere. Each is a base terrain with painted
+  rectangles and stamps on top. Walk off the road's trees where the path leaves it.
+- **Where they sit in the world.** The errands use the town's own people and
+  places (the gift shop, the diner, the marina) as legs, and the lunatics, the
+  collectors and the mentor as cast: Dutch's mother's cake, Ms. Fong's
+  greyhound, Odalys the fishmonger who was Hal's first student, Teodoro who was
+  Nadia's first dealer.
+- The editor does not show errands: they are generated from the list above, and
+  `events.ts` is the only file it edits.
+
 ### Time — `src/game/time.ts`
 
 A day has four periods: `morning`, `afternoon`, `evening`, `night`.

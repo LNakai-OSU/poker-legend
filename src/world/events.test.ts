@@ -14,6 +14,7 @@ import {
 } from './events'
 import { actionProblems, type StoryWorld } from './eventChecks'
 import { LESSONS, allShopItems } from './content'
+import { isErrandEvent } from './errands'
 import { STORY_FLAG_IDS, type StoryFlag } from './flags'
 import { readFileSync } from 'node:fs'
 import { CHARACTERS, allSchedules, scheduleFor } from './characters'
@@ -525,6 +526,8 @@ describe('the run is carried by people', () => {
     const suite = readFileSync(new URL('../../tests/ui.mjs', import.meta.url), 'utf8')
     for (const event of EVENTS) {
       if (event.trigger.kind !== 'enterArea' && event.trigger.kind !== 'interact') continue
+      // Errands are jobs you walk up to, never a beat that interrupts a seeded save.
+      if (isErrandEvent(event.id)) continue
       expect(suite.includes(`'${event.id}'`), `tests/ui.mjs STORY_SEEN does not list ${event.id}`).toBe(true)
     }
   })

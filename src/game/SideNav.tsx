@@ -1,3 +1,4 @@
+import { ERRANDS, errandStage } from '../world/errands'
 import type { StoryFlag } from '../world/flags'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { audio } from '../audio/audio'
@@ -190,11 +191,20 @@ export function SideNav({
     )
   } else if (page === 'jobs') {
     const taken = state.acceptedMissionIds.map((id) => MISSIONS[id]).filter((m) => m !== undefined)
+    const openErrands = ERRANDS.map((errand) => ({ errand, ...errandStage(errand, state.completedEventIds) })).filter(
+      (e) => e.stage !== 'new',
+    )
     body = (
       <>
         {item('nav-back', '< Back', () => setPage('main'))}
         {heading('Jobs')}
-        {taken.length === 0 ? line('Nobody has asked you for anything yet.', INK.dim) : null}
+        {taken.length === 0 && openErrands.length === 0 ? line('Nobody has asked you for anything yet.', INK.dim) : null}
+        {openErrands.map(({ errand, todo, stage }) => (
+          <div key={errand.id} style={{ display: 'grid', gap: scale }}>
+            {line(errand.title, stage === 'done' ? INK.dim : INK.light)}
+            {line(stage === 'done' ? 'Done.' : todo ?? '', INK.dim)}
+          </div>
+        ))}
         {taken.map((m) => {
           const status = missionStatus(state, m.id)
           return (

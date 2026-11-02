@@ -3,6 +3,8 @@ import { MISSIONS, SPONSORS } from './npcs'
 import type { AreaDef, CityDef, PoiDef } from './types'
 import { STAMPS, type PlacedStamp } from './stamps'
 import type { CityId } from '../game/state'
+import { errandPois } from './errands'
+import { OUTSKIRTS, OUTSKIRTS_GAPS } from './outskirts'
 
 /**
  * Towns are made of several areas joined by doors: a street you walk down, and
@@ -675,6 +677,22 @@ const MARCUS_HOUSE = parseMap(`
 ^^^^^^^D^^^^^^^^
 `)
 
+/**
+ * Opens a gap in the trees along the south of a road, where the path down to the
+ * town's outskirts leaves it. Each takes the ground of the row above it, so the
+ * gap reads as the road's own verge carrying on.
+ */
+function openSouth(map: ReturnType<typeof parseMap>, [from, to]: [number, number]) {
+  const last = map.length - 1
+  for (let col = from; col <= to; col++) map[last][col] = map[last - 1][col]
+}
+openSouth(ROAD_SILVER_CREEK, OUTSKIRTS_GAPS['sc-outskirts'])
+openSouth(ROAD_RIVERBEND, OUTSKIRTS_GAPS['rb-outskirts'])
+openSouth(ROAD_CRESCENT, OUTSKIRTS_GAPS['ch-outskirts'])
+openSouth(ROAD_PALM_CAY, OUTSKIRTS_GAPS['pc-outskirts'])
+openSouth(ROAD_MESA, OUTSKIRTS_GAPS['nm-outskirts'])
+openSouth(ROAD_LUMINA, OUTSKIRTS_GAPS['pl-outskirts'])
+
 function area(
   id: string,
   name: string,
@@ -1161,7 +1179,17 @@ const silverCreek: CityDef = {
         ]),
       ],
       [],
-      { west: { toAreaId: 'depot', offset: 0, blocked: HIGHWAY }, east: { toAreaId: 'sc-street', offset: 3 } },
+      { west: { toAreaId: 'depot', offset: 0, blocked: HIGHWAY }, east: { toAreaId: 'sc-street', offset: 3 }, south: { toAreaId: 'sc-outskirts', offset: 0 } },
+    ),
+    'sc-outskirts': area(
+      'sc-outskirts',
+      'Dry Wash Frontage',
+      OUTSKIRTS['sc-outskirts'].map,
+      { col: 14, row: 1 },
+      '#161018',
+      errandPois('sc-outskirts'),
+      [],
+      { north: { toAreaId: 'road-silvercreek', offset: 0 } },
     ),
     'sc-street': area(
       'sc-street',
@@ -1328,7 +1356,17 @@ const riverbend: CityDef = {
         ]),
       ],
       [],
-      { west: { toAreaId: 'sc-street', offset: 3, blocked: HIGHWAY }, east: { toAreaId: 'rb-street', offset: 3 } },
+      { west: { toAreaId: 'sc-street', offset: 3, blocked: HIGHWAY }, east: { toAreaId: 'rb-street', offset: 3 }, south: { toAreaId: 'rb-outskirts', offset: 0 } },
+    ),
+    'rb-outskirts': area(
+      'rb-outskirts',
+      'Muddy Bend',
+      OUTSKIRTS['rb-outskirts'].map,
+      { col: 15, row: 1 },
+      '#0f1620',
+      errandPois('rb-outskirts'),
+      [],
+      { north: { toAreaId: 'road-riverbend', offset: 0 } },
     ),
     'rb-street': area(
       'rb-street',
@@ -1512,7 +1550,17 @@ const crescentHarbor: CityDef = {
         ]),
       ],
       [],
-      { west: { toAreaId: 'rb-street', offset: 3, blocked: HIGHWAY }, east: { toAreaId: 'ch-street', offset: 3 } },
+      { west: { toAreaId: 'rb-street', offset: 3, blocked: HIGHWAY }, east: { toAreaId: 'ch-street', offset: 3 }, south: { toAreaId: 'ch-outskirts', offset: 0 } },
+    ),
+    'ch-outskirts': area(
+      'ch-outskirts',
+      'The Fish Pier',
+      OUTSKIRTS['ch-outskirts'].map,
+      { col: 10, row: 1 },
+      '#121020',
+      errandPois('ch-outskirts'),
+      [],
+      { north: { toAreaId: 'road-crescent', offset: 0 } },
     ),
     'ch-street': area(
       'ch-street',
@@ -1769,7 +1817,17 @@ const palmCay: CityDef = {
         ]),
       ],
       [],
-      { west: { toAreaId: 'ch-street', offset: 3, blocked: HIGHWAY }, east: { toAreaId: 'pc-street', offset: 3 } },
+      { west: { toAreaId: 'ch-street', offset: 3, blocked: HIGHWAY }, east: { toAreaId: 'pc-street', offset: 3 }, south: { toAreaId: 'pc-outskirts', offset: 0 } },
+    ),
+    'pc-outskirts': area(
+      'pc-outskirts',
+      'Lagoon Beach',
+      OUTSKIRTS['pc-outskirts'].map,
+      { col: 23, row: 1 },
+      '#102028',
+      errandPois('pc-outskirts'),
+      [],
+      { north: { toAreaId: 'road-palmcay', offset: 0 } },
     ),
     'pc-street': area(
       'pc-street',
@@ -1981,7 +2039,17 @@ const neonMesa: CityDef = {
         ]),
       ],
       [],
-      { west: { toAreaId: 'pc-street', offset: 3, blocked: HIGHWAY }, east: { toAreaId: 'nm-street', offset: 5 } },
+      { west: { toAreaId: 'pc-street', offset: 3, blocked: HIGHWAY }, east: { toAreaId: 'nm-street', offset: 5 }, south: { toAreaId: 'nm-outskirts', offset: 0 } },
+    ),
+    'nm-outskirts': area(
+      'nm-outskirts',
+      'The Boneyard',
+      OUTSKIRTS['nm-outskirts'].map,
+      { col: 15, row: 1 },
+      '#1a1020',
+      errandPois('nm-outskirts'),
+      [],
+      { north: { toAreaId: 'road-mesa', offset: 0 } },
     ),
     'nm-street': area(
       'nm-street',
@@ -2272,7 +2340,17 @@ const portoLumina: CityDef = {
         ]),
       ],
       [],
-      { west: { toAreaId: 'nm-street', offset: 5, blocked: HIGHWAY }, east: { toAreaId: 'pl-street', offset: 4 } },
+      { west: { toAreaId: 'nm-street', offset: 5, blocked: HIGHWAY }, east: { toAreaId: 'pl-street', offset: 4 }, south: { toAreaId: 'pl-outskirts', offset: 0 } },
+    ),
+    'pl-outskirts': area(
+      'pl-outskirts',
+      'The Belvedere',
+      OUTSKIRTS['pl-outskirts'].map,
+      { col: 11, row: 1 },
+      '#12141c',
+      errandPois('pl-outskirts'),
+      [],
+      { north: { toAreaId: 'road-lumina', offset: 0 } },
     ),
     'pl-street': area(
       'pl-street',
@@ -3282,6 +3360,7 @@ export const AREAS: Record<string, { area: AreaDef; cityId: CityId }> = (() => {
       // Attached here rather than passed in, so there is one area object and
       // everything that already holds one sees its objects too.
       if (AREA_STAMPS[area.id]) area.stamps = AREA_STAMPS[area.id]
+      if (OUTSKIRTS[area.id]) area.stamps = OUTSKIRTS[area.id].stamps
       addSlotMachines(area)
       if (CROWD[area.id] !== undefined) area.crowd = CROWD[area.id]
       index[area.id] = { area, cityId: city.id }
