@@ -107,6 +107,9 @@ export interface GoalStatus {
  * Where the player stands on a town's casino goal: win enough on the floor, then
  * beat the boss in the private room, then the road to the next town is open.
  */
+/** "the Riverboat", not "the The Riverboat". */
+export const theCasino = (name: string) => (name.startsWith('The ') ? `the ${name.slice(4)}` : `the ${name}`)
+
 export function goalStatus(state: GameState, cityId: CityId): GoalStatus | null {
   const goal = goalOf(cityId)
   if (!goal) return null
@@ -115,13 +118,13 @@ export function goalStatus(state: GameState, cityId: CityId): GoalStatus | null 
     return { goal, phase: 'done', line: `Beat ${boss}. The way to the next town is open.` }
   }
   if (state.casino.roomOpen.includes(cityId)) {
-    return { goal, phase: 'boss', line: `Beat ${boss} one on one in the private room at the ${goal.casino}.` }
+    return { goal, phase: 'boss', line: `Beat ${boss} one on one in the private room at ${theCasino(goal.casino)}.` }
   }
   const won = state.casino.net[cityId] ?? 0
   return {
     goal,
     phase: 'win',
-    line: `Win $${goal.winTarget.toLocaleString()} at the ${goal.casino} (${won < 0 ? '-' : ''}$${Math.abs(won).toLocaleString()} so far) to earn a game with ${boss}.`,
+    line: `Win $${goal.winTarget.toLocaleString()} at ${theCasino(goal.casino)} (${won < 0 ? '-' : ''}$${Math.abs(won).toLocaleString()} so far) to earn a game with ${boss}.`,
   }
 }
 
@@ -146,15 +149,16 @@ function cheapestSeats(): Record<string, { tableId: string; buyIn: number }> {
  */
 export function challengeLines(state: GameState): string[] {
   const status = goalStatus(state, state.cityId)
-  if (!status) return []
-  const lines = [status.line]
+  // Porto Lumina has no boss: its challenge is the final table.
+  if (!status && state.cityId !== 'portoLumina') return []
+  const lines = [status ? status.line : 'Win the Legends Invitational at the penthouse table, and the city is yours.']
   const seat = cheapestSeats()[state.cityId]
   if (seat && state.cash < seat.buyIn) {
     const here = CITIES[state.cityId]?.name ?? 'this town'
     const back = TOWN_ORDER[TOWN_ORDER.indexOf(state.cityId) - 1]
     const elsewhere = back ? `go back to the cheaper table in ${CITIES[back]?.name ?? 'the last town'}` : 'ask Marcus for his kitchen table'
     lines.push(`You are $${(seat.buyIn - state.cash).toLocaleString()} short of the cheapest seat in ${here} ($${seat.buyIn.toLocaleString()}). Take a job below, or ${elsewhere}.`)
-  } else if (status.phase !== 'done') {
+  } else if (status && status.phase !== 'done') {
     const buyIn = TABLES[status.goal.tableId]?.buyIn
     if (buyIn !== undefined) {
       const gap = buyIn - state.cash

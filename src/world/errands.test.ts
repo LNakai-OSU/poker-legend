@@ -4,6 +4,7 @@ import { EVENTS, eventFor, everyAction } from './events'
 import { AREAS, TABLES } from './content'
 import { initialState, type CityId, type GameState } from '../game/state'
 import { challengeLines } from '../game/progression'
+import { CASINO_GOALS } from './goals'
 import { OUTSKIRTS_GAPS } from './outskirts'
 import { isWalkable } from '../overworld/tiles'
 
@@ -272,6 +273,41 @@ describe('errand pay and wording', () => {
     expect(at({ ...base, casino: { ...base.casino, bossBeaten: ['riverbend'] } })).toBe(`${e.id}-boss`)
   })
 
+  it('never say “the The”, and give every town a challenge line', () => {
+    for (const goal of Object.values(CASINO_GOALS)) {
+      const lines = challengeLines({ ...initialState(), cityId: goal.cityId, cash: 1 })
+      expect(lines.join(' ')).not.toMatch(/the The /i)
+      expect(lines.length, goal.cityId).toBeGreaterThan(0)
+    }
+    for (const town of TOWNS) expect(challengeLines({ ...initialState(), cityId: town, cash: 1 }).length, town).toBeGreaterThan(0)
+    expect(challengeLines({ ...initialState(), cityId: 'portoLumina', cash: 1 }).join(' ')).toMatch(/cheapest seat in Porto Lumina/)
+  })
+
+  it('turn the odd job away at night, and by day when you are not broke', () => {
+    for (const poi of ['rb-fishrack', 'pc-crabtraps', 'nm-scrapheap', 'sc-woodpile', 'ch-nets', 'pl-planters']) {
+      const at = (cash: number, period: 'morning' | 'night') => eventFor(EVENTS, { kind: 'interact', poiId: poi }, { ...initialState(), cash, period })?.id
+      expect(at(0, 'night'), poi).toBe(`odd-job-${poi}-night`)
+      expect(at(0, 'morning'), poi).toBe(`odd-job-${poi}-morning`)
+      expect(at(1_000_000, 'night'), poi).toBe(`odd-job-${poi}-over`)
+      expect(at(1_000_000, 'morning'), poi).toBe(`odd-job-${poi}-over`)
+    }
+  })
+
+  it('add to the board once two jobs in the town are paid', () => {
+    const base = initialState()
+    const plain = eventFor(EVENTS, { kind: 'interact', poiId: 'pc-board' }, base)!
+    expect(plain.id).toBe('board-echo-pc-board')
+    const dialogue = (state: GameState) => {
+      const actions = eventFor(EVENTS, { kind: 'interact', poiId: 'pc-board' }, state)!.actions
+      return JSON.stringify(actions)
+    }
+    // The first question the board asks is whether a pair of the town's jobs is paid.
+    const text = dialogue(base)
+    expect(text).toContain('errand-chad-done')
+    expect(text).toContain('errand-pruitt-done')
+    expect(text).toContain('RING FOUND')
+  })
+
   it('open the odd job only to the nearly broke, by day', () => {
     const job = EVENTS.find((e) => e.id === 'odd-job-rb-fishrack-morning')!
     const rich = { ...initialState(), cash: 5000 }
@@ -281,7 +317,7 @@ describe('errand pay and wording', () => {
     // The wording changes with the hour.
     const afternoon = eventFor(EVENTS, { kind: 'interact', poiId: 'rb-fishrack' }, { ...broke, period: 'afternoon' })
     expect(afternoon?.id).toBe('odd-job-rb-fishrack-afternoon')
-    expect(eventFor(EVENTS, { kind: 'interact', poiId: 'rb-fishrack' }, { ...broke, period: 'night' })).toBeUndefined()
+    expect(eventFor(EVENTS, { kind: 'interact', poiId: 'rb-fishrack' }, { ...broke, period: 'night' })?.id).toBe('odd-job-rb-fishrack-night')
   })
 
   it('keep the outskirts joined to their roads, walkable at the gap', () => {

@@ -1398,6 +1398,7 @@ export const EVENTS: GameEvent[] = [
           'Ray: Thirty years I have played that table. Thirty years I have been due.',
           'Ray: One of these days I walk out of there ahead, and I keep walking.',
           'Ray: You have got the look. Do not get the tab.',
+          'Ray: And if you are ever short, my sister Loretta at the Sand Dollar has work. Menu, then Jobs, keeps the list.',
         ],
       },
       {

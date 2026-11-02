@@ -164,6 +164,14 @@ export const STORY_FLAGS = {
     set: 'you answered Wick’s pot-odds question right',
     clear: 'you got Wick’s pot-odds question wrong',
   },
+  errandQuizOdds: {
+    set: 'you worked out Wick’s pot odds (3 to 1)',
+    clear: 'you got Wick’s pot odds wrong',
+  },
+  errandCoachTilt: {
+    set: 'you called Hollis’s rebuys tilt',
+    clear: 'you did not call Hollis’s rebuys tilt',
+  },
   errandCoachRead: {
     set: 'you read that Hollis plays looser after a rebuy',
     clear: 'you misread Hollis’s rebuys',

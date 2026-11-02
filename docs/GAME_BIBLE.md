@@ -416,7 +416,7 @@ to do next.
   errand): Nadia on Teodoro's chip, Vance's cuff, Mack and Deb on Cass, Bernard on
   Thursday, Xue on the greyhound, Lorna on the objection. Flavour and a tell only;
   odds and AI never change. A test checks each speaker is really seated there.
-- **Money.** Totals are 230, 680, 1,450, 2,000, 5,500 and 20,000, the late two held
+- **Money.** Totals are 230, 680, 1,450, 2,400, 5,500 and 20,000, the late two held
   to about half the cheapest seat so errands are not a faster bankroll than play.
 - **Waiting for dark.** Night jobs (Randy, the Lamplighter) are reached by a bench
   in the Boneyard and on the Belvedere: "Wait until dark" fades out and advances
@@ -446,6 +446,15 @@ to do next.
   answer out (a second case; four hands to compare). Pot odds are stated as the
   price (call into pot-after-bet): 3 to 1 needs more than one win in four; a flush
   draw with one card to come is a little under one in five.
+- **More lanes and a reason to walk back.** Odd jobs now exist in all six outskirts
+  (Silver Creek $20 under $100, Muddy Bend $25 under $150, the Fish Pier $250 under
+  $1,000, Lagoon Beach $100 under $600, the Boneyard $300 under $1,000, the Belvedere
+  $1,500 under $5,000), each turning you away at night and when you are not broke.
+  Once two of a town's jobs are paid, its notice board has been written on
+  (`BOARD_ECHOES`). Each map also has a pay phone and a dog with a line or two.
+- **First timers.** Ray (Silver Creek's first scene) mentions Loretta and Menu → Jobs.
+- **Two-flag jobs.** Wick (price, then play) and Ilse (name, then symptom) set two flags,
+  so a half-right answer has its own ending and pay.
 - **Seeing the maps.** `node scripts/shoot.mjs --areas sc-outskirts,rb-outskirts,
   ch-outskirts,pc-outskirts,nm-outskirts,pl-outskirts --periods morning,night`.
 - **Broke?** After a bust, a person on each town's street (`bust-nudge-…`) points

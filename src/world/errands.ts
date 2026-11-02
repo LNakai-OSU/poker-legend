@@ -654,7 +654,7 @@ export const ERRANDS: Errand[] = [
           prompt: 'The pot is $100, he bets $50. Your pot odds?',
           options: [
             { label: '2 to 1', lines: ['Bartender: Close, and wrong. His fifty goes in the pot first: a hundred and fifty, for your fifty.'] },
-            { label: '3 to 1', lines: ['Bartender: Three to one. Fifty to win a hundred and fifty. That means you need to win more than one time in four.'] },
+            { label: '3 to 1', flag: 'errandQuizOdds', lines: ['Bartender: Three to one. Fifty to win a hundred and fifty. That means you need to win more than one time in four.'] },
             { label: '1 to 3', lines: ['Bartender: That’s the same ratio the wrong way up. You call fifty to win a hundred and fifty: three to one.'] },
           ],
         },
@@ -683,7 +683,7 @@ export const ERRANDS: Errand[] = [
       },
     ],
     finish: [
-      'Wick: Call, was it? Close, close. The draw is a gift when the price is right, and the price was not.',
+      'Wick: Not the fold. Well. A draw is a gift when the price is right, and the price was not.',
       'Wick: Forty for the lesson. I owe the river forty more.',
     ],
     variants: [
@@ -705,9 +705,23 @@ export const ERRANDS: Errand[] = [
         ],
         todo: 'Go back to Wick. You folded the draw, and he will want to say so.',
       },
+      {
+        flag: 'errandQuizOdds',
+        reward: 50,
+        finish: [
+          'Wick: Three to one, first time. You had the price. Then you let the draw talk you out of it.',
+          'Wick: Fifty. Half the lesson is knowing the price. The other half is doing what it says.',
+        ],
+        after: [
+          'Wick: You knew the price and not what to do with it. It is where most people live.',
+          'Wick: One in four is what three to one needs. Count your outs and then count them again before you call.',
+        ],
+        bossAfter: ['Wick: Captain Marsh is beaten, and you only half learned the price. Imagine if you had learned the rest.'],
+        todo: 'Go back to Wick. You had the price, but not the play.',
+      },
     ],
     defaultReward: 40,
-    after: ['Wick: A call that loses a little each time is how a roll leaks. It is the slowest way to go broke. Come back, and I will ask another.'],
+    after: ['Wick: A play that loses a little each time is how a roll leaks. It is the slowest way to go broke. Come back, and I will ask another.'],
     bossAfter: ['Wick: Captain Marsh is beaten, I hear. However you did it, you did it. Keep the price in your head.'],
     reward: 60,
     people: [
@@ -965,14 +979,23 @@ export const ERRANDS: Errand[] = [
         speaker: 'Cashier',
         todo: 'Ask the cardroom cashier how many times Hollis rebuys.',
         lines: ['Cashier: Hollis. Three buy-ins, every night, regular as the tide. Sometimes four. I stopped counting; it’s bad for the soul.'],
+        choice: {
+          speaker: 'Cashier',
+          prompt: 'Three buy-ins in a night is…',
+          options: [
+            { label: 'Bad luck', lines: ['Cashier: Three nights running? Luck doesn’t keep a diary.'] },
+            { label: 'Tilt', flag: 'errandCoachTilt', lines: ['Cashier: Tilt. He pays to chase what he lost. The word is old, and so is the habit.'] },
+            { label: 'A plan', lines: ['Cashier: A plan, with a man like Hollis? I wish. He buys in to feel something.'] },
+          ],
+        },
       },
       {
         poi: 'ch-club-barman',
         speaker: 'Barman',
         todo: 'Ask the club’s barman how Hollis plays after a rebuy.',
         lines: [
-          'Barman: Hollis? Before the rebuy he plays like a banker. Folds, folds, one fat raise.',
-          'Barman: After the second one he’s at every pot. Hands he looks at twice, hands he never looks at. He’s at them all, loud.',
+          'Barman: Hollis? I keep a tally, out of boredom. Before his rebuy, three hands in twenty.',
+          'Barman: After the second, eleven in twenty. After the third I stopped counting and started pouring.',
         ],
         choice: {
           speaker: 'Barman',
@@ -1008,6 +1031,20 @@ export const ERRANDS: Errand[] = [
         ],
         todo: 'Go back to Ilse. You read Hollis right, and she will want to say so.',
       },
+      {
+        flag: 'errandCoachTilt',
+        reward: 125,
+        finish: [
+          'Ilse: Tilt. Yes. But you thought he played tighter afterwards; the barman’s tally says otherwise.',
+          'Ilse: A hundred and twenty-five. You named the disease and misread the symptom. Half a coach.',
+        ],
+        after: [
+          'Ilse: Tilt is the name. Looser is what it does. Know both and you will see it coming across a table.',
+          'Ilse: You had one half. It is the more useful half to be missing, oddly; the other half is just counting.',
+        ],
+        bossAfter: ['Ilse: Mr. Bellamy is beaten. You knew the name of the thing. Next time, learn how it looks.'],
+        todo: 'Go back to Ilse. You named the tilt, but misread what it does.',
+      },
     ],
     defaultReward: 100,
     after: ['Ilse: You were wrong about him, and I am right, and the money is still the money. Watch his third buy-in at the table yourself.'],
@@ -1041,7 +1078,7 @@ export const ERRANDS: Errand[] = [
       'Chad: Don’t touch me. I’m burned. It isn’t the sun, it’s the shame.',
       'Chad: Brenda and I came for our second honeymoon. I played the Tourist Table once. Once. I thought tipping with her ring was a matter of style.',
       'Chad: Bernard was across the felt. Two days he’s been sitting there, and he thinks it’s Thursday. He took the ring, he bought lobster at the grill, and he tipped it. The waiter has it. Probably.',
-      'Chad: Brenda’s in the hut. Not speaking to me through a very thin wall. Bring it to her yourself. I can’t. Five hundred when she’s speaking again.',
+      'Chad: Brenda’s in the hut. Not speaking to me through a very thin wall. Bring it to her yourself. I can’t. Six hundred when she’s speaking again.',
     ],
     hint: ['Chad: The grill. The waiter. Then Brenda, by the hut. Please be kind to me. Bernard said it was Thursday.'],
     legs: [
@@ -1081,23 +1118,23 @@ export const ERRANDS: Errand[] = [
     finish: [
       'Chad: She spoke to me. One word. My name. It was the best afternoon of the trip.',
       'Through the hut’s thin wall: “Is it crunchy?” Chad: It’s crunchy, Bren!',
-      'Chad: She says she’ll marry me a third time. Five hundred, as promised. It was the honeymoon budget anyway.',
+      'Chad: She says she’ll marry me a third time. Six hundred, as promised. It was the honeymoon budget anyway.',
     ],
     variants: [
       {
         flag: 'errandBlamedBernard',
         todo: 'Go back to Chad. Brenda has gone to find Bernard.',
-        reward: 400,
+        reward: 480,
         finish: [
           'Chad: She’s gone to the Tourist Table. With a rolling pin. She is sitting across from Bernard right now. It is, he tells her, Thursday.',
-          'Chad: She’s marrying me a third time, though. In the spirit of it. And suing Bernard for the honeymoon budget. Four hundred is what she’s left me.',
+          'Chad: She’s marrying me a third time, though. In the spirit of it. And suing Bernard for the honeymoon budget. Four-eighty is what she’s left me.',
           'Chad: I don’t know whether to thank you. I’m going to. Thank you.',
         ],
         after: ['Chad: Bernard has agreed it’s Friday. Brenda says that’s a start. We’re renewing our vows on it.'],
       },
     ],
     after: ['Chad: We’re renewing our vows on Thursday. Bernard says it’s Thursday. I’m choosing to believe him.'],
-    reward: 500,
+    reward: 600,
     people: [
       {
         id: 'pc-chad',
@@ -1131,7 +1168,7 @@ export const ERRANDS: Errand[] = [
       'Pruitt: Commodore Pruitt, retired. Of nothing. The title is honorary: I won it in a card game from a real commodore.',
       'Pruitt: I owe a woman named Mrs. Tran eleven thousand dollars. Mrs. Tran does not shout. She sends a fruit basket, and the fruit is somehow worse.',
       'Pruitt: I mean to put to sea. A week, perhaps two, until the heat goes. I need provisions from the marina: a crate of the Commodore’s Reserve, three tins of sardines and a flag.',
-      'Pruitt: The flag says surrender in a language nobody speaks. I’ll make it worth your while. One thousand. I have it. It’s in the sardines.',
+      'Pruitt: The flag says surrender in a language nobody speaks. I’ll make it worth your while. Twelve hundred. I have it. It’s in the sardines.',
     ],
     hint: ['Pruitt: The marina. Rum, sardines, the flag. Then past Mrs. Tran on the beach. Quietly.'],
     legs: [
@@ -1175,17 +1212,17 @@ export const ERRANDS: Errand[] = [
       'Pruitt looks at the six feet of lagoon between the dock and the shore.',
       'Pruitt: We’ll sail tomorrow. Tide’s wrong.',
       'Down the beach, a small woman in white waves, holding a fruit basket.',
-      'Pruitt: Oh no. She’s brought pears. Take the thousand and go. I’m going down with my ship. It’s a dinghy.',
+      'Pruitt: Oh no. She’s brought pears. Take the twelve hundred and go. I’m going down with my ship. It’s a dinghy.',
     ],
     variants: [
       {
         flag: 'errandPruittSold',
         todo: 'Mrs. Tran is on her way to the dock. Go back to the Commodore.',
-        reward: 600,
+        reward: 720,
         finish: [
           'Pruitt is sitting in the dinghy with his flag up. Mrs. Tran is sitting on the dock with her basket, six feet away. They are both very polite.',
           'Pruitt: You told her. I see. Well. The sardines were never going to get me out of the lagoon.',
-          'Pruitt: Six hundred. She took the rest as a deposit. We’re discussing terms. There’s a pear. It is surprisingly all right.',
+          'Pruitt: Seven-twenty. She took the rest as a deposit. We’re discussing terms. There’s a pear. It is surprisingly all right.',
         ],
         after: [
           'Pruitt: Mrs. Tran has agreed to a payment plan. Eleven thousand in small, fruit-shaped instalments. The campaign continues.',
@@ -1198,7 +1235,7 @@ export const ERRANDS: Errand[] = [
     echoes: [
       { poi: 'marina', speaker: 'Dealer', lines: ['Dealer: The Commodore’s dinghy has not moved. He has stopped calling it a campaign. It’s a “position” now.'] },
     ],
-    reward: 1000,
+    reward: 1200,
     people: [
       {
         id: 'pc-pruitt',
@@ -1279,7 +1316,7 @@ export const ERRANDS: Errand[] = [
         after: [
           'Mo: The collar when he bluffs, the ceiling when he is strong. You’ve got it. I would not say it to Bernard.',
           'Mo: A tell is only worth the number of times you see it. You have seen it a dozen. It is yours now.',
-          'Mo: Use it. Fold to the ceiling. Be kind to the man; he thinks it is Friday.',
+          'Mo: Use it. Fold to the ceiling. Be kind to the man; he has had a long week.',
         ],
         bossAfter: [
           'Mo: Inés Calloway is beaten. She has no collar and no ceiling; I checked for years.',
@@ -1318,7 +1355,7 @@ export const ERRANDS: Errand[] = [
     ask: [
       'Bernard: You. You’re the one who told the woman with the rolling pin about me. I forgive you. It was, I am now told, Friday.',
       'Bernard: Three days of Thursday. The staff were very kind. I should like proof, in writing, in a shop, that it is Friday, so that I can stop being polite about it.',
-      'Bernard: The boutique sells calendars with the days printed on them. Then the barman at the casino must say the word, out loud, in front of me. Three hundred. It’s all I have; I thought it was Thursday.',
+      'Bernard: The boutique sells calendars with the days printed on them. Then the barman at the casino must say the word, out loud, in front of me. Four hundred. It’s all I have; I thought it was Thursday.',
     ],
     hint: ['Bernard: A calendar from the boutique. Then the barman, saying the word. Friday. I would like to hear it.'],
     legs: [
@@ -1343,10 +1380,10 @@ export const ERRANDS: Errand[] = [
     ],
     finish: [
       'Bernard: Friday. In print. And aloud. Do you know, I feel a weight come off, like the end of a very long hand.',
-      'Bernard: Three hundred, as promised. And a word for Chad: I am sorry about the ring. It was a lovely chip.',
+      'Bernard: Four hundred, as promised. And a word for Chad: I am sorry about the ring. It was a lovely chip.',
     ],
     after: ['Bernard: Friday, Friday, Friday. I say it to the palms. They agree. Chad says the ring is nearly out of the salt.'],
-    reward: 300,
+    reward: 400,
     people: [
       {
         id: 'pc-bernard',
@@ -1875,7 +1912,7 @@ const SCENERY: ErrandPerson[] = [
   { id: 'rb-board', name: 'Bait Board', areaId: 'rb-outskirts', col: 10, row: 9, thing: true, lines: ['BAIT 4 SALE. WANTED: patience, for Cornelius. ALSO: a man to witness a coin flip. Sal is by the ferry. He is not fishing.'] },
   { id: 'ch-board', name: 'Pier Board', areaId: 'ch-outskirts', col: 8, row: 10, thing: true, lines: ['MACKEREL 40. REWARD for one accordion (Gull & Anchor, ticket 4471). The light needs a lookout. Odalys: ask about the Bellweather.'] },
   { id: 'rb-fishrack', name: 'Fish Rack', areaId: 'rb-outskirts', col: 12, row: 9, thing: true, lines: ['A drying rack of perch and a man who could use a hand. (An hour’s work, by day, for a few dollars. Only if you are nearly broke.)'] },
-  { id: 'pc-board', name: 'Beach Board', areaId: 'pc-outskirts', col: 14, row: 2, thing: true, lines: ['LAGOON BEACH. HUTS BY THE WEEK. NO DOGS, NO DEBT, NO THURSDAYS. A man in a dinghy needs sardines. A woman needs her ring.'] },
+  { id: 'pc-board', name: 'Beach Board', areaId: 'pc-outskirts', col: 14, row: 2, thing: true, lines: ['LAGOON BEACH. HUTS BY THE WEEK. NO DOGS, NO DEBT, NO SPEECHES. A man in a dinghy needs sardines. A woman needs her ring.'] },
   { id: 'nm-board', name: 'Chapel Board', areaId: 'nm-outskirts', col: 12, row: 5, thing: true, lines: ['OPEN 24 HRS. WITNESSES WANTED, any hour. Dee’s sign wants a transformer. Ask at the Mesa Motors showroom. Do not ask about the Eldorado.'] },
   { id: 'pl-board', name: 'Terrace Notice', areaId: 'pl-outskirts', col: 16, row: 3, thing: true, lines: ['Madame Wen asks guests not to feed the dogs. There are no dogs. A jacket waits at the atelier for a man on the bench.'] },
   { id: 'pc-crabtraps', name: 'Crab Traps', areaId: 'pc-outskirts', col: 16, row: 6, thing: true, lines: ['Wire crab traps stacked on the sand. (An hour’s work, by day, for a little money. Only if you are nearly broke.)'] },
@@ -1892,7 +1929,22 @@ const SCENERY: ErrandPerson[] = [
   { id: 'nm-hand2', name: 'Streamer', areaId: 'nm-outskirts', col: 23, row: 5, lines: ['Streamer: Somebody objected at a wedding here. Live. I have the clip on loop. I’m not even sure it was real.'] },
   { id: 'pl-hand1', name: 'Gardener', areaId: 'pl-outskirts', col: 25, row: 3, lines: ['Gardener: A very thin dog sleeps in the hedge now. Nobody trims that corner. Nobody has been asked to.'] },
   { id: 'pl-hand2', name: 'Waiter', areaId: 'pl-outskirts', col: 10, row: 9, lines: ['Waiter: An old man in a grey jacket sits on the bench in the afternoons. He tips like a man who has saved up.'] },
-  { id: 'pc-beachcomber', name: 'Beachcomber', areaId: 'pc-outskirts', col: 21, row: 8, lines: ['Beachcomber: Bernard says it’s Thursday. Everyone’s decided it’s Thursday. I found a ring in a salt shaker once. Don’t tell the hut.'] },
+  { id: 'sc-woodpile', name: 'Woodpile', areaId: 'sc-outskirts', col: 14, row: 10, thing: true, lines: ['A woodpile and an axe. (An hour’s work, by day, for a little money. Only if you are nearly broke.)'] },
+  { id: 'ch-nets', name: 'Torn Nets', areaId: 'ch-outskirts', col: 6, row: 9, thing: true, lines: ['A heap of torn nets and a woman with a needle. (An hour’s work, by day, for a little money. Only if you are nearly broke.)'] },
+  { id: 'pl-planters', name: 'Marble Planters', areaId: 'pl-outskirts', col: 14, row: 9, thing: true, lines: ['Marble planters waiting to be moved. (An hour’s work, by day, for good money. Only if you are nearly broke.)'] },
+  { id: 'sc-phone', name: 'Pay Phone', areaId: 'sc-outskirts', col: 3, row: 9, thing: true, lines: ['A pay phone with its cord cut. Somebody has written on the box: “NICO CALLED. SAID BRAD’S NOT HOME.”'] },
+  { id: 'rb-phone', name: 'Pay Phone', areaId: 'rb-outskirts', col: 20, row: 2, thing: true, lines: ['A pay phone nailed to a post. A note: “MUM HAS CALLED TWICE. LOGISTICS IS NOT A JOB.”'] },
+  { id: 'ch-phone', name: 'Pay Phone', areaId: 'ch-outskirts', col: 13, row: 3, thing: true, lines: ['A salt-rusted pay phone. Scrawled: “THE ACCORDION IS BACK. SO IS ABEL.”'] },
+  { id: 'pc-phone', name: 'Pay Phone', areaId: 'pc-outskirts', col: 22, row: 2, thing: true, lines: ['A pay phone in a bamboo hut. A card: “MRS. TRAN: PEARS DELIVERED. COMMODORE: STILL AFLOAT.”'] },
+  { id: 'nm-phone', name: 'Pay Phone', areaId: 'nm-outskirts', col: 3, row: 12, thing: true, lines: ['A pay phone, lit pink by the sign. A sticker: “ELVIRA: 24 HRS. DEE: DO NOT CALL AFTER VACANCY.”'] },
+  { id: 'pl-phone', name: 'Pay Phone', areaId: 'pl-outskirts', col: 2, row: 3, thing: true, lines: ['A brass pay phone nobody uses. A card: “MADAME WEN HAS NO DOGS. THE GUARD SAYS SO.”'] },
+  { id: 'sc-dog', name: 'Stray Dog', areaId: 'sc-outskirts', col: 19, row: 10, lines: ['Stray Dog: (wags, and follows the smell of the casserole you do not have)'] },
+  { id: 'rb-dog', name: 'Stray Dog', areaId: 'rb-outskirts', col: 8, row: 10, lines: ['Stray Dog: (sits by the bank and watches the water like a very small, very patient angler)'] },
+  { id: 'ch-dog', name: 'Harbour Dog', areaId: 'ch-outskirts', col: 12, row: 11, lines: ['Harbour Dog: (has a mackerel and the look of somebody who will not be sharing)'] },
+  { id: 'pc-dog', name: 'Beach Dog', areaId: 'pc-outskirts', col: 22, row: 7, lines: ['Beach Dog: (rolls in something that was once a crab)'] },
+  { id: 'nm-dog', name: 'Desert Dog', areaId: 'nm-outskirts', col: 24, row: 10, lines: ['Desert Dog: (howls at the sign, which flickers back)'] },
+  { id: 'pl-dog', name: 'Terrace Dog', areaId: 'pl-outskirts', col: 12, row: 10, lines: ['Terrace Dog: (looks at you with great dignity and leans on your leg)'] },
+  { id: 'pc-beachcomber', name: 'Beachcomber', areaId: 'pc-outskirts', col: 21, row: 8, lines: ['Beachcomber: I found a ring in a salt shaker once. Gave it back. Nobody believed the salt.'] },
 ]
 
 /** A signpost at each gap in the trees, so the way down to the outskirts is something you can see. */
@@ -2103,7 +2155,8 @@ const NUDGES: { poi: string; speaker: string; lines: string[] }[] = [
 
 /**
  * Something small for the nearly broke: a chore for a few dollars, by day, while
- * you hold under a set amount (Muddy Bend $150, Lagoon Beach $600, the Boneyard $1,000). It takes an hour and cannot hand out a day, so it is a way
+ * you hold under a set amount (Silver Creek $100, Muddy Bend $150, the Fish Pier
+ * $1,000, Lagoon Beach $600, the Boneyard $1,000, the Belvedere $5,000). It takes an hour and cannot hand out a day, so it is a way
  * back from a bust and never a bankroll.
  */
 const ODD_JOBS: { poi: string; pay: number; below: number; by: Record<'morning' | 'afternoon' | 'evening', string[]>; over: string[] }[] = [
@@ -2139,6 +2192,39 @@ const ODD_JOBS: { poi: string; pay: number; below: number; by: Record<'morning' 
       evening: ['The first of the signs flickers as you load the last of the tubing. The dealer swears at it.', 'Three hundred dollars. “For the light,” he says, and does not elaborate.'],
     },
     over: ['The dealer squints at your roll and waves you away. “I pay people who need it. You don’t. Go and gamble.”'],
+  },
+  {
+    poi: 'sc-woodpile',
+    pay: 20,
+    below: 100,
+    by: {
+      morning: ['The Sand Dollar’s woodpile has been waiting since spring. You stack it, a log at a time, for an hour.', 'Twenty dollars from the till, and a glass of something that is mostly water.'],
+      afternoon: ['The afternoon sun makes every log a hot one. You carry them to the shade for an hour.', 'Twenty dollars, folded small. Loretta’s doing, by the handwriting.'],
+      evening: ['The motel’s sign flickers on as you split kindling. Somebody has been burning the furniture.', 'Twenty dollars and a stiff back. It is a living, of a sort.'],
+    },
+    over: ['A woman on the step looks at your wallet. “You’re not that desperate. Go on, the wood will keep.”'],
+  },
+  {
+    poi: 'ch-nets',
+    pay: 250,
+    below: 1000,
+    by: {
+      morning: ['A net-mender on the quay needs a hand holding the far end of a torn seine. You hold it, and then mend it, for an hour.', 'Two hundred and fifty dollars from a wet purse. She says you have fisherman’s hands, as an insult.'],
+      afternoon: ['The nets are drying in the glare and stink of the whole harbour. You untangle three by hand.', 'Two hundred and fifty dollars. “That’s a day rate. Don’t tell the union; there isn’t one.”'],
+      evening: ['The boats are coming in. You sort the day’s tangle on the quay while the light turns the water copper.', 'Two hundred and fifty dollars, a nod, and a mackerel you did not ask for.'],
+    },
+    over: ['The net-mender glances at your roll. “Not yours, this. I only hire the ones with empty pockets.”'],
+  },
+  {
+    poi: 'pl-planters',
+    pay: 1500,
+    below: 5000,
+    by: {
+      morning: ['A terrace steward needs somebody to carry the marble planters back into the shade before the guests come. You carry six, very carefully.', 'Fifteen hundred dollars, in an envelope with the Belvedere’s crest. A steward does not tip; he settles.'],
+      afternoon: ['The terrace is being re-laid, and the planters must come up for the afternoon. You help the stewards lift each one.', 'Fifteen hundred dollars, counted into your hand by a man who will never mention it again.'],
+      evening: ['A function is on the terrace and the planters must be moved before the lamps are lit. You are an extra pair of hands in a borrowed jacket.', 'Fifteen hundred dollars. “For discretion,” says the steward. You are, at least, discreet.'],
+    },
+    over: ['The steward looks at your wallet and then at the marble. “Sir has no need of this. Sir should play.”'],
   },
 ]
 
@@ -2188,6 +2274,36 @@ export const DARK_BENCH_EVENTS: GameEvent[] = DARK_BENCHES.map((b) => ({
   ],
 }))
 
+/**
+ * The second hour: once a town has two paid jobs, its notice board has been added to,
+ * so the walk back to the outskirts has something new on it. Until then the board
+ * says what it always said.
+ */
+const BOARD_ECHOES: { board: string; town: string[]; line: string }[] = [
+  { board: 'sc-board', town: ['errand-wendell', 'errand-loretta', 'errand-dennis'], line: 'Added in marker, over the flyers: “THANK YOU, BRAD. THE CASSEROLE WAS HOT. THE URN WAS HEARD.”' },
+  { board: 'rb-board', town: ['errand-dutch', 'errand-sal', 'errand-cornelius', 'errand-quiz'], line: 'A new card: “SPONGE BAKED. BUTTON RULED HEADS. BETTY IS ASLEEP WITH A RING’S WORTH OF PRIDE.”' },
+  { board: 'ch-board', town: ['errand-busker', 'errand-fenn', 'errand-odalys', 'errand-coach'], line: 'Scrawled under the mackerel prices: “ACCORDION HOME. LIGHT WATCHED. NAPKIN READ.” Somebody has underlined the napkin.' },
+  { board: 'pc-board', town: ['errand-chad', 'errand-pruitt', 'errand-bernard', 'errand-stakeout'], line: 'A damp strip of paper: “RING FOUND. DINGHY STILL AFLOAT. THE DAY IS WHATEVER THE BARMAN SAYS.”' },
+  { board: 'nm-board', town: ['errand-chapel', 'errand-dee', 'errand-randy'], line: 'Added in pink marker: “VACANCY — ONE NIGHT ONLY. WITNESSES WANTED NO LONGER. THE SIGN HAS BEEN LIT.”' },
+  { board: 'pl-board', town: ['errand-fong', 'errand-teodoro', 'errand-lamps'], line: 'A small brass plate has been screwed on: “THE LAMPS ARE LIT. THE JACKET FITS. THE HEDGE IS OCCUPIED.”' },
+]
+
+export const BOARD_ECHO_EVENTS: GameEvent[] = BOARD_ECHOES.map((b) => {
+  const plain = SCENERY.find((p) => p.id === b.board)!.lines
+  const pairs: [string, string][] = b.town.flatMap((a, i) => b.town.slice(i + 1).map((c): [string, string] => [a, c]))
+  const actions = pairs.reduceRight<EventAction[]>(
+    (rest, [x, y]) => [{ kind: 'if', when: [done(`${x}-done`), done(`${y}-done`)], then: say([b.line]), else: rest }],
+    say(plain),
+  )
+  return {
+    id: `board-echo-${b.board}`,
+    about: 'The notice board, once two of the town’s jobs are paid: something new has been written on it.',
+    trigger: { kind: 'interact', poiId: b.board },
+    repeatable: true,
+    actions,
+  }
+})
+
 export const ODD_JOB_EVENTS: GameEvent[] = ODD_JOBS.flatMap((j) => [
   ...(['morning', 'afternoon', 'evening'] as const).map((period): GameEvent => ({
     id: `odd-job-${j.poi}-${period}`,
@@ -2197,6 +2313,14 @@ export const ODD_JOB_EVENTS: GameEvent[] = ODD_JOBS.flatMap((j) => [
     repeatable: true,
     actions: [...say(j.by[period]), ...WAIT, { kind: 'giveCash', amount: j.pay }],
   })),
+  {
+    id: `odd-job-${j.poi}-night`,
+    about: 'Odd job, turned down at night: it is daylight work only.',
+    trigger: { kind: 'interact', poiId: j.poi },
+    conditions: [{ kind: 'cashBelow', amount: j.below }, { kind: 'period', period: 'night' }],
+    repeatable: true,
+    actions: [{ kind: 'dialogue', lines: ['There is no work to be had in the dark. Come back by day.'] }],
+  },
   {
     id: `odd-job-${j.poi}-over`,
     about: 'Odd job, turned down: you are not broke enough for it.',
@@ -2216,7 +2340,7 @@ export const BUST_NUDGE_EVENTS: GameEvent[] = NUDGES.map((n) => ({
   actions: say(n.lines, n.speaker),
 }))
 
-export const ERRAND_EVENTS: GameEvent[] = [...ERRANDS.flatMap(eventsOf), ...BUST_NUDGE_EVENTS, ...ODD_JOB_EVENTS, ...DARK_BENCH_EVENTS]
+export const ERRAND_EVENTS: GameEvent[] = [...ERRANDS.flatMap(eventsOf), ...BUST_NUDGE_EVENTS, ...ODD_JOB_EVENTS, ...DARK_BENCH_EVENTS, ...BOARD_ECHO_EVENTS]
 
 /**
  * Errands live here, not in `events.ts`'s own list: the editor reads and writes

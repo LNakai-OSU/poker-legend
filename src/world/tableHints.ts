@@ -141,7 +141,7 @@ export const TABLE_HINTS: TableHint[] = [
     tableId: 'palmcay-tourist',
     speaker: 'rosa',
     when: [paid('errand-chad')],
-    lines: ['A sunburned man and his wife are renewing their vows on Thursday. Bernard says it is Thursday. For once he may be right.'],
+    lines: ['A sunburned man and his wife are renewing their vows. The waiters have a pool on the date, and the date keeps moving.'],
   },
   {
     id: 'teo-vacancy',
