@@ -339,7 +339,9 @@ describe('editing an event', () => {
     delete after.conditions
     const { source } = saveEvent(EVENT_SOURCE, { id: after.id, before, after })
     expect(source).toContain("    trigger: { kind: 'standOn', areaId: 'laundromat', col: 4, row: 4 },\n")
-    expect(source).not.toContain("conditions: [{ kind: 'flag', flag: 'wonPokerNight' }],")
+    const saved = readEvents(source).find((e) => e.id === after.id)
+    expect(saved?.trigger).toEqual(after.trigger)
+    expect(saved?.conditions).toBeUndefined()
   })
 
   it('creates a new event at the end of the list', () => {
