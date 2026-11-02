@@ -145,6 +145,7 @@ const SPECS: OutskirtsSpec[] = [
       { stampId: 'rocks-red-2', col: 24, row: 3 },
       { stampId: 'crates', col: 22, row: 12 },
       { stampId: 'saguaro', col: 11, row: 6 },
+      { stampId: 'noticeboard', col: 22, row: 8 },
     ],
   },
   // The Belvedere: marble terraces over the water, cypresses, a bench nobody walks to.
@@ -164,6 +165,7 @@ const SPECS: OutskirtsSpec[] = [
       { stampId: 'planter-marble-2', col: 14, row: 11 },
       { stampId: 'planter-marble-2', col: 2, row: 10 },
       { stampId: 'bench-stone', col: 18, row: 2 },
+      { stampId: 'lamp-gilded', col: 7, row: 5 },
     ],
   },
 ]

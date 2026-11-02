@@ -1,4 +1,4 @@
-import { CITIES, MISSIONS, TABLES, findItem } from '../world/content'
+import { AREAS, CITIES, MISSIONS, TABLES, findItem } from '../world/content'
 import { CHARACTERS } from '../world/characters'
 import { CASINO_GOALS, goalOf } from '../world/goals'
 import type { MissionGoal, TableDef } from '../world/types'
@@ -125,15 +125,36 @@ export function goalStatus(state: GameState, cityId: CityId): GoalStatus | null 
   }
 }
 
+/** The cheapest seat in each town: the lowest buy-in of its open tables (not the boss's, not a freeroll). */
+function cheapestSeats(): Record<string, { tableId: string; buyIn: number }> {
+  const best: Record<string, { tableId: string; buyIn: number }> = {}
+  for (const { area, cityId } of Object.values(AREAS)) {
+    for (const poi of area.pois) {
+      if (poi.action.kind !== 'table') continue
+      const table = TABLES[poi.action.tableId]
+      if (!table || table.freeroll || table.bossOf || table.isFinale) continue
+      if (!best[cityId] || table.buyIn < best[cityId].buyIn) best[cityId] = { tableId: table.id, buyIn: table.buyIn }
+    }
+  }
+  return best
+}
+
 /**
  * The challenge in front of you in this town and what it asks of your roll, for
- * the Jobs page: what to do, and the buy-in of the boss match against your cash.
+ * the Jobs page: what to do, the buy-in of the boss match against your cash, and,
+ * when you cannot afford even the cheapest seat here, where to go.
  */
 export function challengeLines(state: GameState): string[] {
   const status = goalStatus(state, state.cityId)
   if (!status) return []
   const lines = [status.line]
-  if (status.phase !== 'done') {
+  const seat = cheapestSeats()[state.cityId]
+  if (seat && state.cash < seat.buyIn) {
+    const here = CITIES[state.cityId]?.name ?? 'this town'
+    const back = TOWN_ORDER[TOWN_ORDER.indexOf(state.cityId) - 1]
+    const elsewhere = back ? `go back to the cheaper table in ${CITIES[back]?.name ?? 'the last town'}` : 'ask Marcus for his kitchen table'
+    lines.push(`You are $${(seat.buyIn - state.cash).toLocaleString()} short of the cheapest seat in ${here} ($${seat.buyIn.toLocaleString()}). Take a job below, or ${elsewhere}.`)
+  } else if (status.phase !== 'done') {
     const buyIn = TABLES[status.goal.tableId]?.buyIn
     if (buyIn !== undefined) {
       const gap = buyIn - state.cash

@@ -190,7 +190,7 @@ export const TABLE_HINTS: TableHint[] = [
     tableId: 'riverbend-mid',
     speaker: 'pearl',
     when: [{ kind: 'flag', flag: 'errandQuizRight' }],
-    lines: ['A hundred in the pot and fifty to call is three to one. Wick told you. I heard it from the river.'],
+    lines: ['A hundred in the pot, he bets fifty, you call fifty to win a hundred and fifty: three to one, so you need one in four. Wick told you. I heard it from the river.'],
   },
 ]
 
@@ -210,6 +210,8 @@ export interface TablePerk {
 export const TABLE_PERKS: TablePerk[] = [
   { id: 'vance-cuff', tableIds: ['crescent-main', 'crescent-headsup'], when: [{ kind: 'flag', flag: 'errandSawTheTell' }], tellClarity: 0.2 },
   { id: 'bernard-collar', tableIds: ['palmcay-tourist'], when: [{ kind: 'flag', flag: 'errandSpotTell' }], tellClarity: 0.15 },
+  { id: 'wick-price', tableIds: ['riverbend-mid'], when: [{ kind: 'flag', flag: 'errandQuizRight' }], tellClarity: 0.1 },
+  { id: 'ilse-rebuy', tableIds: ['crescent-main'], when: [{ kind: 'flag', flag: 'errandCoachRead' }], tellClarity: 0.1 },
 ]
 
 /** How much clearer tells show at this table because of what you did for the town. */

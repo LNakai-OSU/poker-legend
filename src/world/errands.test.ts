@@ -250,12 +250,37 @@ describe('errand pay and wording', () => {
     expect(challengeLines({ ...state, cityId: 'apartment' as never })).toEqual([])
   })
 
+  it('say where to go when you cannot afford the cheapest seat', () => {
+    const broke = { ...initialState(), cityId: 'riverbend' as const, cash: 10 }
+    expect(challengeLines(broke).join(' ')).toMatch(/cheapest seat in Riverbend.*cheaper table in Silver Creek/)
+  })
+
+  it('keep the poker quizzes honest: three answers, the right one not always first', () => {
+    const where = ['errand-quiz', 'errand-coach', 'errand-stakeout'].map((id) => {
+      const choice = ERRANDS.find((e) => e.id === id)!.legs.flatMap((l) => (l.choice ? [l.choice] : [])).find((c) => c.options.some((o) => o.flag))!
+      expect(choice.options.length, id).toBeGreaterThanOrEqual(3)
+      return choice.options.findIndex((o) => o.flag)
+    })
+    expect(new Set(where).size).toBeGreaterThan(1)
+  })
+
+  it('give the poker jobs a word once the boss is beaten, and the plain one before', () => {
+    const e = ERRANDS.find((x) => x.id === 'errand-quiz')!
+    const base = { ...initialState(), cityId: 'riverbend' as const, completedEventIds: [`${e.id}-ask`, ...e.legs.map((_, i) => `${e.id}-leg${i + 1}`), `${e.id}-done`] }
+    const at = (state: GameState) => eventFor(EVENTS, { kind: 'interact', poiId: e.client }, state)?.id
+    expect(at(base)).toBe(`${e.id}-after`)
+    expect(at({ ...base, casino: { ...base.casino, bossBeaten: ['riverbend'] } })).toBe(`${e.id}-boss`)
+  })
+
   it('open the odd job only to the nearly broke, by day', () => {
-    const job = EVENTS.find((e) => e.id === 'odd-job-rb-fishrack')!
+    const job = EVENTS.find((e) => e.id === 'odd-job-rb-fishrack-morning')!
     const rich = { ...initialState(), cash: 5000 }
-    expect(eventFor(EVENTS, { kind: 'interact', poiId: 'rb-fishrack' }, rich)).toBeUndefined()
+    expect(eventFor(EVENTS, { kind: 'interact', poiId: 'rb-fishrack' }, rich)?.id).toBe('odd-job-rb-fishrack-over')
     const broke = { ...initialState(), cash: 10, period: 'morning' as const }
     expect(eventFor(EVENTS, { kind: 'interact', poiId: 'rb-fishrack' }, broke)?.id).toBe(job.id)
+    // The wording changes with the hour.
+    const afternoon = eventFor(EVENTS, { kind: 'interact', poiId: 'rb-fishrack' }, { ...broke, period: 'afternoon' })
+    expect(afternoon?.id).toBe('odd-job-rb-fishrack-afternoon')
     expect(eventFor(EVENTS, { kind: 'interact', poiId: 'rb-fishrack' }, { ...broke, period: 'night' })).toBeUndefined()
   })
 

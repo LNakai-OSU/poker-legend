@@ -435,7 +435,17 @@ to do next.
   what you can see, never odds or how anyone plays. Hints also fire when a hand
   ends, so a fold before the flop does not skip one; one line a moment, once each.
 - **Challenge line.** The Jobs page opens with the town's goal and the boss match's
-  buy-in against your cash (`challengeLines` in `game/progression.ts`).
+  buy-in against your cash (`challengeLines` in `game/progression.ts`); if you cannot
+  afford even the cheapest seat in town it says how short you are and sends you to
+  a job or back to the cheaper table in the last town.
+- **After the boss.** An errand may have `bossAfter` (and a variant's own): once the
+  town's boss is beaten (`casino bossBeaten`), the client says that in place of
+  their `after`. The poker jobs (Wick, Ilse, Mo) use it to answer the Challenge win.
+- **Poker accuracy.** The three poker jobs have three plausible answers and the right
+  one in a different place each; the quiz and the stakeout make the player work the
+  answer out (a second case; four hands to compare). Pot odds are stated as the
+  price (call into pot-after-bet): 3 to 1 needs more than one win in four; a flush
+  draw with one card to come is a little under one in five.
 - **Seeing the maps.** `node scripts/shoot.mjs --areas sc-outskirts,rb-outskirts,
   ch-outskirts,pc-outskirts,nm-outskirts,pl-outskirts --periods morning,night`.
 - **Broke?** After a bust, a person on each town's street (`bust-nudge-…`) points

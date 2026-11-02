@@ -22,11 +22,12 @@ describe('table hints', () => {
   it('keep the perk small, and only for the tables and flags it names', () => {
     for (const perk of TABLE_PERKS) {
       expect(perk.tellClarity).toBeLessThanOrEqual(0.25)
+      if (perk.id === 'wick-price' || perk.id === 'ilse-rebuy') expect(perk.tellClarity).toBeLessThanOrEqual(0.1)
       for (const id of perk.tableIds) expect(TABLES[id], perk.id).toBeDefined()
     }
     const on = (c: { kind: string; flag?: string }) => c.kind === 'flag' && c.flag === 'errandSawTheTell'
     expect(perkClarity('crescent-main', on as never)).toBeCloseTo(0.2)
     expect(perkClarity('crescent-main', () => false)).toBe(0)
-    expect(perkClarity('riverbend-mid', () => true)).toBe(0)
+    expect(perkClarity('silvercreek-low', () => true)).toBe(0)
   })
 })
