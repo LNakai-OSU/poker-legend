@@ -10,7 +10,8 @@ import {
 } from './patchContent'
 import { sameValue } from './literal'
 import { CHARACTERS, type CharacterDef } from '../world/characters'
-import { EVENTS, type GameEvent } from '../world/events'
+import { EVENTS as ALL_EVENTS, type GameEvent } from '../world/events'
+import { isErrandEvent } from '../world/errands'
 
 /**
  * Tested against the real `characters.ts` and `events.ts`, not fixtures.
@@ -46,6 +47,9 @@ function changedLines(before: string, after: string): [string[], string[]] {
   }
   return [a.slice(start, endA), b.slice(start, endB)]
 }
+
+// Errands are generated from data in errands.ts, not written in events.ts, so the editor's file never holds them.
+const EVENTS = ALL_EVENTS.filter((e) => !isErrandEvent(e.id))
 
 const character = (id: string) => plain(CHARACTERS[id]) as CharacterDef
 const event = (id: string) => plain(EVENTS.find((e) => e.id === id)!) as GameEvent

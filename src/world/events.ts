@@ -1,5 +1,6 @@
 import type { TimePeriod } from '../game/time'
 import type { StoryFlag } from './flags'
+import { ERRAND_EVENTS } from './errands'
 import {
   challengeStatus,
   chapterOf,
@@ -4744,3 +4745,6 @@ export const EVENTS: GameEvent[] = [
     ],
   },
 ]
+
+// The errands are written as data in `errands.ts` and expanded into ordinary events.
+EVENTS.push(...ERRAND_EVENTS)
