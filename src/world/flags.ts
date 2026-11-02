@@ -109,6 +109,57 @@ export const STORY_FLAGS = {
     set: 'you staked Kit',
     clear: 'you have not staked Kit',
   },
+
+  // The errands (`errands.ts`): small jobs round each town. Each is a choice the
+  // client and the afterword remember.
+  errandWendellSold: {
+    set: 'you told Fat Nico which room Wendell was hiding in',
+    clear: 'you kept Wendell’s secret from Fat Nico',
+  },
+  errandLorettaLied: {
+    set: 'you told Loretta that Ray said he would be along',
+    clear: 'you told Loretta what Ray really said',
+  },
+  errandDutchTold: {
+    set: 'you told Cass’s runner the lemon sponge was for Dutch’s mum',
+    clear: 'you kept Dutch’s sponge a secret',
+  },
+  errandSalBluffed: {
+    set: 'you got Sal’s money by dropping Cass’s name at the dealer',
+    clear: 'you collected Sal’s money by counting it out aloud',
+  },
+  errandFennPointed: {
+    set: 'you pointed Abel to the light, with Captain Fenn inside',
+    clear: 'you whistled Abel off',
+  },
+  errandSawTheTell: {
+    set: 'you read the maître d’s tell and brought Odalys the real napkin',
+    clear: 'you were handed a copy of Odalys’s napkin',
+  },
+  errandBlamedBernard: {
+    set: 'you told Brenda it was Bernard’s fault',
+    clear: 'you told Brenda Chad was sorry',
+  },
+  errandPruittSold: {
+    set: 'you told Mrs. Tran where the Commodore is',
+    clear: 'you lied to Mrs. Tran about the Commodore',
+  },
+  errandObjected: {
+    set: 'you objected at Randy and Sheila’s wedding',
+    clear: 'you witnessed Randy and Sheila’s wedding',
+  },
+  errandDeeTookCar: {
+    set: 'you took the Eldorado off the showroom floor',
+    clear: 'you took only the transformer',
+  },
+  errandFongAdmitted: {
+    set: 'you told the guard the greyhound was Ms. Fong’s',
+    clear: 'you told the guard the greyhound was yours',
+  },
+  errandTeodoroChip: {
+    set: 'you took Nadia’s first chip to Teodoro',
+    clear: 'you left Nadia’s first chip on the felt',
+  },
 } as const satisfies Record<string, { set: string; clear: string }>
 
 export type StoryFlag = keyof typeof STORY_FLAGS

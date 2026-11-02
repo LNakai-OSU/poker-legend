@@ -117,6 +117,11 @@ const SPECS: OutskirtsSpec[] = [
       { stampId: 'crates', col: 12, row: 6 },
       { stampId: 'crates', col: 14, row: 7 },
       { stampId: 'speedboat', col: 3, row: 10 },
+      { stampId: 'bench-stone', col: 9, row: 6 },
+      { stampId: 'palm-tall', col: 18, row: 10 },
+      { stampId: 'bush-flowering', col: 25, row: 5 },
+      { stampId: 'crates', col: 22, row: 12 },
+      { stampId: 'bollard-mooring', col: 8, row: 7 },
     ],
   },
   // The Boneyard: where the Strip's dead signs come to lie down, and a chapel that never closes.

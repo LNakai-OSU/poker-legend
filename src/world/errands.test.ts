@@ -95,6 +95,9 @@ describe('errands', () => {
         for (let later = i + 1; later < e.legs.length; later++) {
           expect(at(e.legs[later].poi)?.id, `${e.id}: leg ${later + 1} fires out of order`).not.toBe(`${e.id}-leg${later + 1}`)
         }
+        // A leg that waits for an hour is walked at an hour it allows.
+        const hours = e.legs[i].periods
+        state = { ...state, period: hours ? hours[0] : 'morning' }
         expect(at(e.legs[i].poi)?.id).toBe(`${e.id}-leg${i + 1}`)
         play(`${e.id}-leg${i + 1}`)
       }
@@ -102,10 +105,12 @@ describe('errands', () => {
       expect(at(e.client)?.id).toBe(`${e.id}-done`)
       play(`${e.id}-done`)
       expect(errandStage(e, state.completedEventIds).stage).toBe('done')
-      // Once it is paid, it is over: no second payout.
-      expect(at(e.client)?.id).toBeUndefined()
+      // Once it is paid, it is over: no second payout, only the client's afterword.
+      expect(at(e.client)?.id).toBe(`${e.id}-after`)
       const paid = EVENTS.find((x) => x.id === `${e.id}-done`)!
-      expect(paid.actions.some((a) => a.kind === 'giveCash' && a.amount === e.reward)).toBe(true)
+      const pays = everyAction(paid.actions).filter((a) => a.kind === 'giveCash').map((a) => (a.kind === 'giveCash' ? a.amount : 0))
+      expect(Math.max(...pays), `${e.id}: the best ending pays the reward`).toBe(e.reward)
+      expect(Math.min(...pays)).toBeGreaterThan(0)
     }
   })
 
@@ -125,6 +130,38 @@ describe('errands', () => {
       expect(period, `${event.id} waits at any hour`).toBeDefined()
       const allowed = period && period.kind === 'period' ? [period.period].flat() : []
       expect(allowed).not.toContain('night')
+    }
+  })
+})
+
+describe('errand choices', () => {
+  const flagsSet = (e: (typeof ERRANDS)[number]) =>
+    e.legs.flatMap((l) => l.choice?.options.flatMap((o) => (o.flag ? [o.flag] : [])) ?? [])
+
+  it('make the client answer differently, for every flag a choice sets', () => {
+    for (const e of ERRANDS) {
+      for (const flag of flagsSet(e)) {
+        const variant = e.variants?.find((v) => v.flag === flag)
+        expect(variant, `${e.id}: ${flag} changes nothing at the finish`).toBeDefined()
+        expect(variant!.finish).not.toEqual(e.finish)
+        expect(variant!.after).not.toEqual(e.after)
+      }
+    }
+  })
+
+  it('pay on the spot at no more than the reward, and keep each town in its range', () => {
+    for (const e of ERRANDS) {
+      const spot = e.legs.flatMap((l) => l.choice?.options.map((o) => o.cash ?? 0) ?? [])
+      for (const cash of spot) expect(cash, e.id).toBeLessThan(e.reward)
+    }
+  })
+
+  it('send the broke to the Jobs page', () => {
+    const broke = { ...initialState(), record: { ...initialState().record, busted: 1 }, cash: 0 }
+    const fresh = initialState()
+    for (const poi of ['sc-regular', 'rb-diner-pilot', 'ch-suit', 'pc-lifeguard', 'nm-tout', 'pl-photographer']) {
+      expect(eventFor(EVENTS, { kind: 'interact', poiId: poi }, broke)?.id, poi).toBe(`bust-nudge-${poi}`)
+      expect(eventFor(EVENTS, { kind: 'interact', poiId: poi }, fresh)?.id, poi).not.toBe(`bust-nudge-${poi}`)
     }
   })
 })

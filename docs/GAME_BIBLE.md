@@ -369,16 +369,43 @@ you walk it round town and they pay you. Each errand is a few lines of data:
 }
 ```
 
-An errand is expanded into ordinary events (`-ask`, `-hint`, `-leg1`…, `-done`) on
-`interact` triggers. There are **no flags**: which stage you are at is which of
-its own events have played, so `eventDone` carries it. A leg may pass an hour
-(`then: [fade, advancePeriod, fade]`); none hands out a day (rule 4). The Jobs
-page in the side menu lists an open errand and says what to do next.
+An errand is expanded into ordinary events (`-ask`, `-hint`, `-leg1`…, `-done`,
+`-after`, `-echoN`) on `interact` triggers. Which stage you are at is which of its
+own events have played, so `eventDone` carries it. A leg may pass an hour
+(`then: [fade, advancePeriod, fade]`) and may name `periods` it only plays in; none
+hands out a day (rule 4). The same fixture may be two legs (an atelier that needs
+the afternoon). The Jobs page in the side menu lists an open errand and says what
+to do next.
 
+- **Choices are remembered.** A leg may carry a `choice`: each answer has lines,
+  optional `cash` paid on the spot and an optional `flag` (the `errand…` flags in
+  `world/flags.ts`). The errand's `variants` read the flag: a different finish, a
+  different pay (never above `reward`; `defaultReward` is what the plain ending
+  pays when the variant is the better one), and a different `after`. A test
+  fails if a flag a choice sets changes nothing at the finish.
+- **After it is over** the client says their `after` line instead of their stock
+  line, and `echoes` have other people (the gift-shop clerk, the maître d', the
+  tailor) remark on it, optionally by flag.
+- **Shapes.** No two jobs are the same walk: a lie to tell (Wendell), a timed
+  wait and a message to carry (Loretta), a chip delivery (Dennis), a stand-off
+  past a runner (Dutch), a debt owed *to* the client, collected by counting or by
+  bluffing (Sal), a long afternoon (Cornelius), a trade at a pawn counter
+  (Busker), a vigil and a stranger (Fenn), a tell to read (Odalys), a two-person
+  shuttle (Chad), a stand-off on the beach (Pruitt), a ceremony with an
+  objection (Elvira), a part and whether to take the car (Dee), patience and a
+  gate guard (Fong), three fetches over a day and a chip (Teodoro). Not every
+  client is hiding from a bookie: some want love, pride, or what they are owed.
+- **Lore.** Each town ties one job to its own: Lou Brannigan in Dennis's chip,
+  Cass in Dutch's cake, Captain Marsh in Cornelius, Bellamy at the Bellweather,
+  Inés Calloway's comped honeymoon, Solomon Vale and the Starlite and the
+  chapel, Madame Wen and Nadia's first chip.
+- **Broke?** After a bust, a person on each town's street (`bust-nudge-…`) points
+  you at ☰ → Jobs. They only speak up while your cash is under $300.
 - **Money.** Each town's errands together are worth about one seat at that
   town's cheapest table (0.5× to 2.5×, and rising town to town) — enough to climb
   back from a bad beat, never a way to skip the tables. `errands.test.ts` holds it.
-- **Two or three a town**, each paid once.
+- **Two or three a town**, each paid once. Choices may pay on the spot, so the total
+  is a little over what the test counts; each option nets about the same.
 - **The outskirts.** Every town has an open map off the south side of its own
   road (`src/world/outskirts.ts`): Dry Wash Frontage, Muddy Bend, the Fish Pier,
   Lagoon Beach, the Boneyard, the Belvedere. Each is a base terrain with painted
