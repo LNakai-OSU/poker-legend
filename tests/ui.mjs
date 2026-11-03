@@ -963,13 +963,17 @@ await test('the opening: Dana runs to you and walks you to the 14 and rides it w
   await answer(page, 3)
   await readUntil(page, /Walk with me/)
   await page.locator('[data-testid="dialogue-advance"]').click()
+  // The bus now, or Mr Patel's dollar first: the bus.
+  await readUntil(page, /Patel his dollar/)
+  await page.locator('[data-testid="dialogue-advance"]').click()
+  await answer(page, 1)
 
   // She leads, you follow — and the keys do nothing.
   for (let i = 0; i < 12; i++) {
     await page.keyboard.press('ArrowLeft')
     await page.waitForTimeout(120)
   }
-  await untilSaid(page, /Get on/)
+  await untilSaid(page, /Back row/)
   assert((await areaNameOf(page)).includes('Depot'), `not at the depot (${await areaNameOf(page)})`)
   const beside = await drawnAt(page, 'character-dana')
   const atStop = await posOf(page)
@@ -1029,7 +1033,11 @@ await test('a reload in the middle of the opening starts it again rather than sk
   await readUntil(page, /What you|raised the river/)
   await page.locator('[data-testid="dialogue-advance"]').click()
   await answer(page, 1)
-  await readUntil(page, /Get on/)
+  // The bus now, or Mr Patel's dollar first: the bus.
+  await readUntil(page, /Patel his dollar/)
+  await page.locator('[data-testid="dialogue-advance"]').click()
+  await answer(page, 1)
+  await readUntil(page, /Back row/)
   await page.locator('[data-testid="dialogue-advance"]').click()
   await page.locator('[data-testid="bus-ride"]').waitFor({ state: 'visible' })
   // Half-way across town, the page goes.
