@@ -406,6 +406,39 @@ describe('a reel', () => {
     expect(h.stage.reel).toBeUndefined()
     expect(h.stage.dialogue?.lines[0]).toBe('Marcus: After.')
   })
+
+  it('plays the next part of the film when one ends by itself, and skips all of it in one press', () => {
+    const film: GameEvent['actions'] = [
+      { kind: 'reel', panels: [{ scene: 'bathroom', lines: [] }] },
+      { kind: 'cinematic', id: 'bad-beat' },
+      { kind: 'wait', ms: 500 },
+      { kind: 'reel', panels: [{ scene: 'night', lines: [] }] },
+      { kind: 'dialogue', lines: ['After.'] },
+    ]
+    const watched = harness()
+    watched.machine.run(beat(film))
+    watched.machine.reelDone()
+    expect(watched.stage.cinematic?.scene).toBe('bad-beat')
+
+    const skipped = harness()
+    skipped.machine.run(beat(film))
+    skipped.machine.reelDone(true)
+    expect(skipped.stage.reel).toBeUndefined()
+    expect(skipped.stage.cinematic).toBeUndefined()
+    expect(skipped.stage.dialogue?.lines[0]).toBe('After.')
+  })
+
+  it('lets the opening be skipped in one press, lands you at home, and says how to play', () => {
+    const h = harness({ areaId: 'home' })
+    h.machine.run(EVENTS.find((e) => e.id === 'prologue')!)
+    for (let guard = 0; !h.stage.reel && guard < 20; guard++) h.tick(1000)
+    h.machine.reelDone(true)
+    for (let guard = 0; !h.stage.dialogue && guard < 20; guard++) h.tick(1000)
+    expect(h.stage.reel).toBeUndefined()
+    expect(h.stage.cinematic).toBeUndefined()
+    expect(h.state.areaId).toBe('home')
+    expect(h.stage.dialogue?.lines.join(' ')).toMatch(/walk.*Space to talk.*menu.*Jobs/)
+  })
 })
 
 describe('the final table', () => {

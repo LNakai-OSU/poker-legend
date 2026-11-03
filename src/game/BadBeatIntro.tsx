@@ -207,7 +207,7 @@ type Phase = 'table' | 'hand' | 'dark' | 'lights' | 'excuse' | 'walk'
 const BLACKOUT_STEPS = [0, 0.35, 0.05, 0.55, 0.15, 0.8, 0.35, 0.96]
 const BLACKOUT_MS = 2600
 
-export function BadBeatIntro({ onDone }: { onDone: () => void }) {
+export function BadBeatIntro({ onDone }: { onDone: (skipped?: boolean) => void }) {
   const [phase, setPhase] = useState<Phase>('table')
   const [index, setIndex] = useState(0)
   const [dark, setDark] = useState(0)
@@ -215,10 +215,10 @@ export function BadBeatIntro({ onDone }: { onDone: () => void }) {
   const finished = useRef(false)
   const frame = FRAMES[index]
 
-  const done = () => {
+  const done = (skipped = false) => {
     if (finished.current) return
     finished.current = true
-    onDone()
+    onDone(skipped)
   }
 
   // The hand moves on by itself; Space is for the impatient.
@@ -253,7 +253,7 @@ export function BadBeatIntro({ onDone }: { onDone: () => void }) {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
       e.preventDefault()
-      done()
+      done(true)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -413,12 +413,12 @@ export function BadBeatIntro({ onDone }: { onDone: () => void }) {
           onFinish={() => setPhase('walk')}
         />
       )}
-      {phase === 'walk' && <WalkTimer onDone={done} />}
+      {phase === 'walk' && <WalkTimer onDone={() => done()} />}
       <button
         data-testid="reel-skip"
         onClick={(e) => {
           e.stopPropagation()
-          done()
+          done(true)
         }}
         style={skipStyle}
       >

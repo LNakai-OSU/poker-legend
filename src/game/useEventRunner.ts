@@ -70,8 +70,8 @@ export function useEventRunner(
 
   const run = useCallback((event: GameEvent, then?: () => void) => m.run(event, then), [m])
   const advance = useCallback(() => m.advance(), [m])
-  const cinematicDone = useCallback(() => m.cinematicDone(), [m])
-  const reelDone = useCallback(() => m.reelDone(), [m])
+  const cinematicDone = useCallback((skipped?: boolean) => m.cinematicDone(skipped), [m])
+  const reelDone = useCallback((skipped?: boolean) => m.reelDone(skipped), [m])
   const choose = useCallback((index: number) => m.choose(index), [m])
   const cueDone = useCallback((id: number, at?: { col: number; row: number }) => m.cueDone(id, at), [m])
   const clearCast = useCallback(() => m.clearCast(), [m])
