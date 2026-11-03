@@ -122,12 +122,42 @@ export const TABLE_HINTS: TableHint[] = [
     when: [paid('errand-wendell')],
     lines: ['A man called Brad has taken the buffet. He wears a Groucho moustache. Nobody has the heart to ask.'],
   },
+  // Ray knows which message reached his sister, and says so.
   {
     id: 'ray-casserole',
     tableId: 'silvercreek-low',
     speaker: 'ray',
-    when: [paid('errand-loretta')],
-    lines: ['Somebody brought me a casserole. Tuna. I ate it with one hand. I folded with the other. I am due, you know.'],
+    when: [paid('errand-loretta'), { kind: 'flag', flag: 'errandLorettaLied', set: false }],
+    lines: ['Somebody brought me a casserole. Tuna. Loretta says I said the dish was good. I did. Do not tell her I meant it.'],
+  },
+  {
+    id: 'ray-room-two',
+    tableId: 'silvercreek-low',
+    speaker: 'ray',
+    when: [{ kind: 'flag', flag: 'errandLorettaLied' }],
+    lines: ['My sister made up Room 2 twice this week. Somebody told her I would be along. I will. After this hand. I am due.'],
+  },
+  // The first boss knows what you did on his road: Dennis's chip, Wendell's secret, or Nico's thirty dollars.
+  {
+    id: 'lou-dennis',
+    tableId: 'silvercreek-boss',
+    speaker: 'lou',
+    when: [paid('errand-dennis')],
+    lines: ['That black chip in your stack, with the kiss on it. Dennis. I took everything he had in ’96 and he shook my hand. Let us see how you lose.'],
+  },
+  {
+    id: 'lou-stack',
+    tableId: 'silvercreek-boss',
+    speaker: 'lou',
+    when: [paid('errand-wendell'), { kind: 'flag', flag: 'errandWendellSold', set: false }],
+    lines: ['(He squares his chips into a tower, then knocks it crooked. Watch the stack, not the man, Wendell said.) Your blind.'],
+  },
+  {
+    id: 'lou-nico',
+    tableId: 'silvercreek-boss',
+    speaker: 'lou',
+    when: [{ kind: 'flag', flag: 'errandWendellSold' }],
+    lines: ['Nico says somebody sold a man on the motel path for thirty dollars. Smart. I will remember it when you bluff.'],
   },
   {
     id: 'adaeze-dinghy',
@@ -212,6 +242,8 @@ export const TABLE_PERKS: TablePerk[] = [
   { id: 'bernard-collar', tableIds: ['palmcay-tourist'], when: [{ kind: 'flag', flag: 'errandSpotTell' }], tellClarity: 0.15 },
   { id: 'wick-price', tableIds: ['riverbend-mid'], when: [{ kind: 'flag', flag: 'errandQuizRight' }], tellClarity: 0.1 },
   { id: 'ilse-rebuy', tableIds: ['crescent-main'], when: [{ kind: 'flag', flag: 'errandCoachRead' }], tellClarity: 0.1 },
+  // Wendell dealt Lou's back table for six years; keep his secret and he tells you how Lou gives himself away.
+  { id: 'lou-stack', tableIds: ['silvercreek-boss'], when: [paid('errand-wendell'), { kind: 'flag', flag: 'errandWendellSold', set: false }], tellClarity: 0.1 },
 ]
 
 /** How much clearer tells show at this table because of what you did for the town. */
