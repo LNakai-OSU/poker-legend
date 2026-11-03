@@ -4,6 +4,7 @@ import { CITIES, LESSONS, SHOPS, SPONSORS } from '../world/content'
 import { travelOptions } from './progression'
 import { totalOwed, type CityId, type Debt, type GameState } from './state'
 import type { LocalStop, ShopItemDef } from '../world/types'
+import { TYPE, UI_FONT } from './pixel/webFont'
 
 // --- shared shell -----------------------------------------------------------
 
@@ -30,11 +31,11 @@ export function MenuScreen({
     // and scrolls normally once its content is taller than the viewport.
     <div ref={panel} data-testid="menu-screen" onClickCapture={swallowDoubleClick} style={{
       width: '100vw', minHeight: '100vh', background: '#0f0f17', color: '#e8e8f0',
-      fontFamily: 'monospace', padding: 'clamp(14px, 4vw, 32px)', boxSizing: 'border-box', overflowX: 'hidden',
+      fontFamily: UI_FONT, fontSize: TYPE.body, padding: 'clamp(14px, 4vw, 32px)', boxSizing: 'border-box', overflowX: 'hidden',
       display: 'flex', flexDirection: 'column', justifyContent: 'center',
     }}>
       <div style={{ width: '100%', maxWidth: 720, margin: '0 auto' }}>
-        <h2 style={{ marginTop: 0 }}>{title}</h2>
+        <h2 style={{ marginTop: 0, fontSize: TYPE.large, fontWeight: 'normal', color: '#f2c14e' }}>{title}</h2>
         {subtitle && <div style={{ color: '#9a9ab0', marginBottom: 20 }}>{subtitle}</div>}
         {children}
         <button style={{ ...buttonStyle, marginTop: 28 }} onClick={onBack}>{backLabel}</button>
@@ -56,7 +57,7 @@ function Row({ children }: { children: ReactNode }) {
 
 export const buttonStyle = {
   background: '#3a9d5c', color: '#fff', border: 'none', borderRadius: 4,
-  padding: '8px 16px', fontFamily: 'monospace', cursor: 'pointer', fontSize: 14,
+  padding: '8px 16px', fontFamily: UI_FONT, cursor: 'pointer', fontSize: TYPE.body,
 } as const
 
 const disabledButtonStyle = { ...buttonStyle, background: '#2e2e40', color: '#7a7a90', cursor: 'not-allowed' } as const
@@ -87,14 +88,14 @@ export function ShopScene({
           <Row key={item.id}>
             <div>
               <div>{item.name} &mdash; ${item.price.toLocaleString()}</div>
-              <div style={{ color: '#9a9ab0', fontSize: 13 }}>{item.blurb}</div>
+              <div style={{ color: '#9a9ab0', fontSize: TYPE.body }}>{item.blurb}</div>
               {item.effect?.kind === 'travelDiscount' && (
-                <div style={{ color: '#8ad4ff', fontSize: 12 }}>
+                <div style={{ color: '#8ad4ff', fontSize: TYPE.small }}>
                   Cuts travel costs by {Math.round(item.effect.value * 100)}%
                 </div>
               )}
               {item.effect?.kind === 'dressCode' && (
-                <div style={{ color: '#8ad4ff', fontSize: 12 }}>Dress code level {item.effect.level}</div>
+                <div style={{ color: '#8ad4ff', fontSize: TYPE.small }}>Dress code level {item.effect.level}</div>
               )}
             </div>
             {owned && item.wear ? (
@@ -156,7 +157,7 @@ export function MentorScene({
           <Row key={item.id}>
             <div>
               <div>{item.name} &mdash; ${item.price.toLocaleString()}</div>
-              <div style={{ color: '#9a9ab0', fontSize: 13 }}>{item.unlocks}</div>
+              <div style={{ color: '#9a9ab0', fontSize: TYPE.body }}>{item.unlocks}</div>
             </div>
             {learned ? (
               <button style={buttonStyle} onClick={() => setReading(item.id)}>Review</button>
@@ -213,7 +214,7 @@ export function SponsorScene({
             <Row key={debt.id}>
               <div>
                 <div>You owe ${debt.owed.toLocaleString()}</div>
-                <div style={{ color: overdue ? '#e05a5a' : '#9a9ab0', fontSize: 13 }}>
+                <div style={{ color: overdue ? '#e05a5a' : '#9a9ab0', fontSize: TYPE.body }}>
                   {overdue ? 'Past due. They are already looking for you.' : `Due on day ${debt.dueOnDay}`}
                 </div>
               </div>
@@ -234,7 +235,7 @@ export function SponsorScene({
               Stake: ${sponsor.principal.toLocaleString()} &rarr; owe $
               {Math.round(sponsor.principal * (1 + sponsor.interestRate)).toLocaleString()}
             </div>
-            <div style={{ color: '#9a9ab0', fontSize: 13 }}>
+            <div style={{ color: '#9a9ab0', fontSize: TYPE.body }}>
               Due in {sponsor.dueInDays} days. Days pass when you play a session or travel.
             </div>
           </div>
@@ -275,13 +276,13 @@ export function TravelScene({
       backLabel="Stay here"
     >
       {stops.length > 0 && (
-        <div style={{ color: '#8ad4ff', fontSize: 12, letterSpacing: 1 }}>LOCAL SERVICE</div>
+        <div style={{ color: '#8ad4ff', fontSize: TYPE.small, letterSpacing: 1 }}>LOCAL SERVICE</div>
       )}
       {stops.map((stop) => (
         <Row key={stop.areaId}>
           <div>
             <div>{stop.name}</div>
-            <div style={{ color: '#9a9ab0', fontSize: 13 }}>{stop.blurb}</div>
+            <div style={{ color: '#9a9ab0', fontSize: TYPE.body }}>{stop.blurb}</div>
           </div>
           <button style={buttonStyle} onClick={() => onLocalTrip(stop)}>
             Ride
@@ -289,7 +290,7 @@ export function TravelScene({
         </Row>
       ))}
       {stops.length > 0 && options.length > 0 && (
-        <div style={{ color: '#8ad4ff', fontSize: 12, letterSpacing: 1, marginTop: 8 }}>
+        <div style={{ color: '#8ad4ff', fontSize: TYPE.small, letterSpacing: 1, marginTop: 8 }}>
           OUT OF TOWN
         </div>
       )}
@@ -297,8 +298,8 @@ export function TravelScene({
         <Row key={option.cityId}>
           <div>
             <div>{option.name} &mdash; ${option.cost.toLocaleString()}</div>
-            <div style={{ color: '#9a9ab0', fontSize: 13 }}>{option.blurb}</div>
-            {option.locked && <div style={{ color: '#e05a5a', fontSize: 12 }}>{option.lockReason}</div>}
+            <div style={{ color: '#9a9ab0', fontSize: TYPE.body }}>{option.blurb}</div>
+            {option.locked && <div style={{ color: '#e05a5a', fontSize: TYPE.small }}>{option.lockReason}</div>}
           </div>
           <button
             style={option.locked ? disabledButtonStyle : buttonStyle}

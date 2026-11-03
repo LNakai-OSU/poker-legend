@@ -4,6 +4,9 @@ import { swallowDoubleClick, useMenuKeys } from './keys'
 import { buttonStyle } from './MenuScenes'
 import { SPONSORS, TABLES } from '../world/content'
 import { CHARACTERS } from '../world/characters'
+import { TYPE, UI_FONT } from './pixel/webFont'
+
+const HEADING = { fontSize: TYPE.large, fontWeight: 'normal', color: '#f2c14e' } as const
 
 function FullScreen({ children, background = '#0a0a12' }: { children: React.ReactNode; background?: string }) {
   // Its one button answers Space, E and Enter like every other menu.
@@ -11,7 +14,7 @@ function FullScreen({ children, background = '#0a0a12' }: { children: React.Reac
   useMenuKeys(panel)
   return (
     <div ref={panel} onClickCapture={swallowDoubleClick} style={{
-      width: '100vw', minHeight: '100vh', background, color: '#e8e8f0', fontFamily: 'monospace',
+      width: '100vw', minHeight: '100vh', background, color: '#e8e8f0', fontFamily: UI_FONT, fontSize: TYPE.body,
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       gap: 14, textAlign: 'center', padding: 32, boxSizing: 'border-box',
     }}>
@@ -26,7 +29,7 @@ export function CaughtScene({ sponsorId, onRestart }: { sponsorId?: string | nul
   const collector = sponsor ? CHARACTERS[sponsor.collector]?.name : undefined
   return (
     <FullScreen background="#160a0a">
-      <h2 data-testid="caught-by">{collector ? `${collector} caught up with you.` : 'They caught up with you.'}</h2>
+      <h2 data-testid="caught-by" style={HEADING}>{collector ? `${collector} caught up with you.` : 'They caught up with you.'}</h2>
       <p>
         {sponsor
           ? `${sponsor.name}'s people, either side, walking you out through the service corridor. `
@@ -53,7 +56,7 @@ export function FinaleLostScene({ state, onContinue }: { state: GameState; onCon
   const wait = daysUntilRematch(state)
   return (
     <FullScreen background="#160d12">
-      <h2>She played you off the table.</h2>
+      <h2 style={HEADING}>She played you off the table.</h2>
       <p>
         The dealer breaks down your stack into hers without being asked, and somebody is already
         wiping the rail down. Nadia is talking to someone else by the time you stand up.
@@ -76,7 +79,7 @@ export function FinaleLostScene({ state, onContinue }: { state: GameState; onCon
 export function EndingScene({ state, onContinue }: { state: GameState; onContinue: () => void }) {
   return (
     <FullScreen background="#0d1420">
-      <h2>Porto Lumina, forty-one floors up.</h2>
+      <h2 style={HEADING}>Porto Lumina, forty-one floors up.</h2>
       <p>
         The lift attendant does not ask who you are. The room is corner glass, harbour on two sides,
         and the felt table by the window was left exactly where Nadia kept it.

@@ -10,6 +10,7 @@ import { snap } from './useCrispScale'
 import { useViewport } from './useViewport'
 import type { CityId } from './state'
 import type { TableThemeId } from '../world/types'
+import { UI_FONT } from './pixel/webFont'
 
 /**
  * The room a casino game is played in: the poker table's way of laying a scene
@@ -117,7 +118,7 @@ export function CasinoStage({
         overflow: 'hidden',
         background: '#100c14',
         color: '#e8e8f0',
-        fontFamily: 'monospace',
+        fontFamily: UI_FONT,
         imageRendering: 'pixelated',
       }}
     >

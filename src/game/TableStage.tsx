@@ -6,6 +6,7 @@ import { Panel } from './pixel/ui'
 import { PixelText } from './pixel/PixelText'
 import { INK } from './pixel/ink'
 import { useViewport } from './useViewport'
+import { UI_FONT } from './pixel/webFont'
 
 /** A canvas showing a picture painted at art size and scaled up whole pixels at a time. */
 export function ArtCanvas({
@@ -88,7 +89,7 @@ export function TableStage({ theme, needs, felt, dock }: TableStageProps) {
         overflow: 'hidden',
         background: '#100c14',
         color: '#e8e8f0',
-        fontFamily: 'monospace',
+        fontFamily: UI_FONT,
         // The art grid starts at the top left of the window.
         paddingTop: layout.dock.y * P,
         paddingBottom: 4 * P,

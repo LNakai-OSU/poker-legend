@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { playSound } from '../audio/audio'
 import { isActionKey, swallowDoubleClick, useKeyLayer } from './keys'
 import { useTouchFirst } from './device'
+import { TYPE, UI_FONT, readingSize } from './pixel/webFont'
+import { useViewport } from './useViewport'
 
 interface DialogueBoxProps {
   speaker: string
@@ -14,6 +16,7 @@ export function DialogueBox({ speaker, lines, onFinish }: DialogueBoxProps) {
   const isLast = index === lines.length - 1
   const isTop = useKeyLayer()
   const touch = useTouchFirst()
+  const view = useViewport()
   // The last page is turned once. A double click, or a click and a key in the
   // same frame, used to finish the box twice — and the second finish turned the
   // first page of the *next* box, so a line of the story went unread.
@@ -56,11 +59,14 @@ export function DialogueBox({ speaker, lines, onFinish }: DialogueBoxProps) {
         borderRadius: 8,
         padding: '16px 20px',
         color: '#e8e8f0',
-        fontFamily: 'monospace',
+        fontFamily: UI_FONT,
+        fontSize: readingSize(view),
+        lineHeight: 1.2,
       }}
     >
-      <div style={{ color: '#f2c14e', fontWeight: 'bold', marginBottom: 6 }}>{speaker}</div>
-      <div style={{ minHeight: 40 }}>{lines[index]}</div>
+      <div style={{ color: '#f2c14e', marginBottom: 6 }}>{speaker}</div>
+      {/* Two lines tall at least, so a short line doesn't make the box jump. */}
+      <div style={{ minHeight: '2.4em' }}>{lines[index]}</div>
       <button
         data-testid="dialogue-advance"
         onClickCapture={swallowDoubleClick}
@@ -72,7 +78,8 @@ export function DialogueBox({ speaker, lines, onFinish }: DialogueBoxProps) {
           border: 'none',
           borderRadius: 4,
           padding: '6px 14px',
-          fontFamily: 'monospace',
+          fontFamily: UI_FONT,
+          fontSize: TYPE.body,
           cursor: 'pointer',
         }}
       >

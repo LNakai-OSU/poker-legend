@@ -48,6 +48,7 @@ import {
   type GameState,
 } from './state'
 import type { PoiAction } from '../world/types'
+import { TYPE, UI_FONT } from './pixel/webFont'
 
 /** A speaker id becomes the name that character is known by; anything else stands. */
 function speakerName(speaker: string): string {
@@ -764,8 +765,8 @@ export function GameApp({ playtest = false }: { playtest?: boolean }) {
             border: '1px solid #4a4a66',
             background: 'rgba(10,10,16,0.8)',
             color: '#e8e8f0',
-            fontFamily: 'monospace',
-            fontSize: 16,
+            fontFamily: UI_FONT,
+            fontSize: TYPE.large,
             cursor: 'pointer',
           }}
         >

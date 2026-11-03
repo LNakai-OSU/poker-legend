@@ -19,7 +19,13 @@ body {
 }
 
 body {
-  font-family: system-ui, sans-serif;
+  /* The game's own pixel font, compiled from the table's glyphs at start-up
+     (src/game/pixel/webFont.ts). There is no bold or italic cut, and a smeared
+     fake one is worse than none: emphasis is colour. */
+  font-family: 'Legend Pixel', monospace;
+  font-synthesis: none;
+  /* A pixel and a half to the font pixel; see TYPE in webFont.ts. */
+  font-size: 15px;
   /* Game feel on touch: no double-tap zoom delay, no accidental text selection
      while tapping the d-pad, no rubber-band overscroll. */
   touch-action: manipulation;
@@ -32,6 +38,17 @@ body {
 button {
   /* Large enough to hit reliably on a phone. */
   min-height: 40px;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+button {
+  font-size: 15px;
 }
 
 /* ---------------------------------------------------------------------------

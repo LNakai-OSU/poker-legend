@@ -54,26 +54,22 @@ const RANKS: Record<string, string[]> = {
 
 /** Suit pips. `#` is the suit colour, `+` a highlight, `-` a shade. */
 // prettier-ignore
-const PIPS: Record<Card['suit'], Record<'big' | 'small' | 'tiny', string[]>> = {
+const PIPS: Record<Card['suit'], Record<'big' | 'small', string[]>> = {
   hearts: {
     big: G('.##+...###. #+###.##### ########### ########### #########-# .#######-#. ..######-.. ...####-... ....##-.... .....#.....'),
     small: G('.##.##. #+##### ####### .#####. ..###.. ...#...'),
-    tiny: G('##.## ##### .###. ..#..'),
   },
   diamonds: {
     big: G('....#.... ...###... ...#+#... ..##+##.. .#######. ######### .######-. ..####-.. ...##-... ...##-... ....#....'),
     small: G('...#... ..###.. .##+##. ####### .#####. ..###.. ...#...'),
-    tiny: G('..#.. .###. ##### .###. ..#..'),
   },
   spades: {
     big: G('.....#..... ....###.... ...##+##... ..##+####.. .#########. ########### ########### ####-#-#### .##.###.##. ....###.... ..#######..'),
-    small: G('...#... ..###.. .##+##. ####### ####### ...#... ..###..'),
-    tiny: G('..#.. .###. ##### ..#.. .###.'),
+    small: G('...#... ..###.. .##+##. ####### ####### .#.#.#. ..###..'),
   },
   clubs: {
     big: G('....###.... ...##+##... ...#####... ....###.... .###.#.###. ##+#####+## ########### .###.#.###. .....#..... ....###.... ..#######..'),
     small: G('..###.. ..###.. ##.#.## ####### ##.#.## ...#... ..###..'),
-    tiny: G('.###. .###. ##### ..#.. .###.'),
   },
 }
 
@@ -101,7 +97,7 @@ function cardShape(w: number, h: number, inside: (x: number, y: number) => strin
   return raster
 }
 
-function drawPip(raster: Raster, suit: Card['suit'], size: 'big' | 'small' | 'tiny', x: number, y: number) {
+function drawPip(raster: Raster, suit: Card['suit'], size: 'big' | 'small', x: number, y: number) {
   const ink = suitInk(suit)
   raster.sprite(PIPS[suit][size], x, y, {
     '#': ink,
@@ -123,7 +119,9 @@ export function cardFaceUrl(card: Card, size: CardSize): string {
   const label = rankLabel(card.rank)
   raster.sprite(RANKS[label], 2, 2, { '#': ink })
   if (size === 'big') {
-    drawPip(raster, card.suit, 'tiny', 2, 12)
+    // The index suit under the rank is the small pip, not a five-pixel one: at
+    // five pixels wide a club and a spade were the same blob.
+    drawPip(raster, card.suit, 'small', 2, 12)
     drawPip(raster, card.suit, 'big', w - 2 - 11 - (card.suit === 'diamonds' ? -1 : 0), h - 3 - 11)
   } else {
     drawPip(raster, card.suit, 'small', w - 2 - 7 - 1, h - 3 - 7)

@@ -11,6 +11,7 @@ import type { Announcement } from './HandAnnouncer'
 import type { SceneLayout, SceneNeeds } from './tableLayout'
 import { DialogueBox } from './DialogueBox'
 import { BroadcastShot, type Shot } from './BroadcastShot'
+import { TYPE, UI_FONT } from './pixel/webFont'
 
 /**
  * The opening of the game: the final of the Legends Invitational, on the real
@@ -438,7 +439,8 @@ const skipStyle: CSSProperties = {
   border: '1px solid #4a4a66',
   borderRadius: 4,
   padding: '4px 10px',
-  fontFamily: 'monospace',
+  fontFamily: UI_FONT,
+  fontSize: TYPE.body,
   cursor: 'pointer',
 }
 

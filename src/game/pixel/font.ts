@@ -17,9 +17,9 @@ import type { Raster } from './raster'
 /** Height of a line of text, glyph rows plus the shadow, in art pixels. */
 export const LINE_HEIGHT = 10
 /** Gap between two glyphs. */
-const TRACKING = 1
+export const TRACKING = 1
 /** The width of a space. With tracking either side, four pixels between words. */
-const SPACE = 2
+export const SPACE = 2
 /**
  * The gap the wrapping renderer puts between word boxes. Each box already
  * carries one shadow column, so this plus one matches a space in a single run.
@@ -28,7 +28,7 @@ export const WORD_GAP = 3
 
 const G = (spec: string): string[] => spec.split(' ')
 // prettier-ignore
-const GLYPHS: Record<string, string[]> = {
+export const GLYPHS: Readonly<Record<string, string[]>> = {
   A: G('.###. #...# #...# ##### #...# #...# #...#'),
   B: G('####. #...# #...# ####. #...# #...# ####.'),
   C: G('.###. #...# #.... #.... #.... #...# .###.'),
@@ -127,21 +127,60 @@ const GLYPHS: Record<string, string[]> = {
   '¾': G('##...#. .#..#.. ##.#... ..#..#. .#..##. #..#### .....#.'),
   '▶': G('#... ##.. ###. #### ###. ##.. #...'),
   '▼': G('....... ....... ####### .#####. ..###.. ...#...'),
-  '♥': G('..... .#.#. ##### ##### .###. ..#..'),
-  '♦': G('..... ..#.. .###. ##### .###. ..#..'),
-  '♠': G('..#.. .###. ##### ##### ..#.. .###.'),
-  '♣': G('.###. .###. ##### ##### ..#.. .###.'),
+  // The suits are seven pixels wide, a pixel wider than a capital: at five, a
+  // club was a mushroom and a spade a fir tree. These are the card's own pips.
+  '♥': G('....... .##.##. ####### ####### .#####. ..###.. ...#...'),
+  '♦': G('...#... ..###.. .#####. ####### .#####. ..###.. ...#...'),
+  '♠': G('...#... ..###.. .#####. ####### ####### .#.#.#. ..###..'),
+  '♣': G('..###.. ..###.. ##.#.## ####### ##.#.## ...#... ..###..'),
+
+  // Accented letters: the mark sits in the two rows above the x-height.
+  'é': G('..#. .#.. .##. #..# #### #... .###'),
+  'è': G('.#.. ..#. .##. #..# #### #... .###'),
+  'ê': G('.##. #..# .##. #..# #### #... .###'),
+  'ë': G('#..# .... .##. #..# #### #... .###'),
+  'á': G('..#. .#.. .##. ...# .### #..# .###'),
+  'à': G('.#.. ..#. .##. ...# .### #..# .###'),
+  'â': G('.##. #..# .##. ...# .### #..# .###'),
+  'í': G('.# #. #. #. #. #. #.'),
+  'î': G('.#. #.# .#. .#. .#. .#. .#.'),
+  'ï': G('#.# ... .#. .#. .#. .#. .#.'),
+  'ó': G('..#. .#.. .##. #..# #..# #..# .##.'),
+  'ô': G('.##. #..# .##. #..# #..# #..# .##.'),
+  'ö': G('#..# .... .##. #..# #..# #..# .##.'),
+  'ú': G('..#. .#.. #..# #..# #..# #..# .###'),
+  'ü': G('#..# .... #..# #..# #..# #..# .###'),
+  'ñ': G('.#.# #.#. ###. #..# #..# #..# #..#'),
+  'ç': G('.... .... .### #... #... #... .### ..#. .##.'),
+
+  // Arrows, marks and the odd box-drawing stroke the menus use.
+  '…': G('..... ..... ..... ..... ..... ..... #.#.#'),
+  '−': G('..... ..... ..... #####'),
+  '→': G('..... ..#.. ...#. ##### ...#. ..#..'),
+  '←': G('..... ..#.. .#... ##### .#... ..#..'),
+  '↑': G('..#.. .###. #.#.# ..#.. ..#.. ..#.. ..#..'),
+  '↓': G('..#.. ..#.. ..#.. ..#.. #.#.# .###. ..#..'),
+  '▸': G('... #.. ##. ### ##. #..'),
+  '◀': G('...# ..## .### #### .### ..## ...#'),
+  '▲': G('....... ....... ...#... ..###.. .#####. #######'),
+  '▬': G('...... ...... ...... ###### ######'),
+  '●': G('..... .###. ##### ##### ##### .###.'),
+  '✓': G('..... ....# ...## #.##. ###.. .#...'),
+  '✕': G('..... #...# .#.#. ..#.. .#.#. #...#'),
+  '☰': G('..... ##### ..... ##### ..... #####'),
+  '─': G('...... ...... ...... ######'),
+  '│': G('.#. .#. .#. .#. .#. .#. .#. .#. .#.'),
 }
 
 /** Characters with no glyph of their own, written with ones that exist. */
-const SUBSTITUTES: Record<string, string> = {
+export const SUBSTITUTES: Readonly<Record<string, string>> = {
   '’': "'",
   '‘': "'",
   '“': '"',
   '”': '"',
-  '…': '...',
-  ' ': ' ',
+  '\u00a0': ' ',
   '❤': '♥',
+  '✗': '✕',
 }
 
 function normalise(text: string): string {

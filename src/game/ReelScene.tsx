@@ -8,6 +8,7 @@ import { MailTable } from './MailTable'
 import { useCrispScale } from './useCrispScale'
 import { CorridorWalk } from './CorridorWalk'
 import { REEL_H, REEL_W, drawReel } from './reelArt'
+import { TYPE, UI_FONT } from './pixel/webFont'
 
 /**
  * A short film in front of the street: a set drawn at runtime, a ticker if it
@@ -101,9 +102,9 @@ export function ReelScene({
             boxSizing: 'border-box',
             background: '#a8281f',
             color: '#f8f4e0',
-            fontFamily: 'monospace',
+            fontFamily: UI_FONT,
             fontWeight: 'bold',
-            fontSize: 14,
+            fontSize: TYPE.body,
             padding: '6px 12px',
             display: 'flex',
             justifyContent: 'space-between',
@@ -117,7 +118,7 @@ export function ReelScene({
       {!custom && panel.caption && (
         <div
           data-testid="reel-caption"
-          style={{ color: '#9a9ab0', fontFamily: 'monospace', fontStyle: 'italic', padding: '10px 16px', textAlign: 'center', maxWidth: 640 }}
+          style={{ color: '#9a9ab0', fontFamily: UI_FONT, fontStyle: 'italic', padding: '10px 16px', textAlign: 'center', maxWidth: 640 }}
         >
           {panel.caption}
         </div>
@@ -134,7 +135,7 @@ export function ReelScene({
           border: '1px solid #4a4a66',
           borderRadius: 4,
           padding: '4px 10px',
-          fontFamily: 'monospace',
+          fontFamily: UI_FONT,
           cursor: 'pointer',
         }}
       >

@@ -3,6 +3,7 @@ import { CITIES } from '../world/cities'
 import { TOWN_ORDER, type GameState } from './state'
 import { useKeyLayer } from './keys'
 import type { AreaDef, CityDef } from '../world/types'
+import { TYPE, UI_FONT } from './pixel/webFont'
 
 /** Opens the map of the whole game; provided by the game, used by the street's corner map. */
 export const OpenWorldMap = createContext<(() => void) | null>(null)
@@ -112,7 +113,7 @@ export function WorldMap({
           background: colours[0],
           border: `1px solid ${you ? '#fff' : colours[1]}`,
           color: tone === 'casino' ? GOLD : INK,
-          fontSize: 12,
+          fontSize: TYPE.small,
           boxShadow: you ? '0 0 0 2px #f2c14e' : undefined,
         }}
       >
@@ -133,21 +134,21 @@ export function WorldMap({
         zIndex: 250,
         background: 'rgba(5,6,12,0.94)',
         color: INK,
-        fontFamily: 'monospace',
+        fontFamily: UI_FONT,
         overflow: 'auto',
         padding: 'max(16px, env(safe-area-inset-top)) 16px 24px',
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <h2 style={{ margin: 0, color: GOLD, fontSize: 18 }}>
+        <h2 style={{ margin: 0, color: GOLD, fontSize: TYPE.large, fontWeight: 'normal' }}>
           The road to the penthouse
-          {onGoTo && <span style={{ color: '#c084fc', fontSize: 12 }}> · playtest: click any place to go there</span>}
+          {onGoTo && <span style={{ color: '#c084fc', fontSize: TYPE.small }}> · playtest: click any place to go there</span>}
         </h2>
         <button
           type="button"
           data-testid="world-map-close"
           onClick={onClose}
-          style={{ minHeight: 40, minWidth: 40, border: '1px solid #4a4a66', background: '#10101a', color: INK, fontFamily: 'monospace', fontSize: 16, cursor: 'pointer' }}
+          style={{ minHeight: 40, minWidth: 40, border: '1px solid #4a4a66', background: '#10101a', color: INK, fontFamily: UI_FONT, fontSize: TYPE.body, cursor: 'pointer' }}
           aria-label="Close map"
         >
           ✕
@@ -159,7 +160,7 @@ export function WorldMap({
           return (
             <div key={t.city.id} style={{ display: 'flex', alignItems: 'center' }}>
               {i > 0 && (
-                <div style={{ color: DIM, fontSize: 11, textAlign: 'center', width: 54 }}>
+                <div style={{ color: DIM, fontSize: TYPE.small, textAlign: 'center', width: 54 }}>
                   ── bus ──▶
                 </div>
               )}
@@ -179,31 +180,31 @@ export function WorldMap({
                   gap: 6,
                 }}
               >
-                <h3 style={{ margin: 0, fontSize: 15, color: visited ? GOLD : DIM }}>
+                <h3 style={{ margin: 0, fontSize: TYPE.body, fontWeight: 'normal', color: visited ? GOLD : DIM }}>
                   {i + 1}. {t.city.name}
                 </h3>
-                <div style={{ fontSize: 11, color: DIM }}>
+                <div style={{ fontSize: TYPE.small, color: DIM }}>
                   {[visited ? 'Reached' : 'Not reached yet', t.city.unlockCash > 0 ? `$${t.city.unlockCash.toLocaleString()} to get in` : 'free to enter'].join(' · ')}
                 </div>
-                <div style={{ fontSize: 11, color: DIM, marginTop: 4 }}>STREETS</div>
+                <div style={{ fontSize: TYPE.small, color: DIM, marginTop: 4 }}>STREETS</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                   {t.streets.map((s, j) => (
                     <div key={s.id} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                      {j > 0 && <div style={{ color: DIM, textAlign: 'center', fontSize: 10, lineHeight: '8px' }}>│</div>}
+                      {j > 0 && <div style={{ color: DIM, textAlign: 'center', fontSize: TYPE.small, lineHeight: '8px' }}>│</div>}
                       {chip(s, 'street')}
                     </div>
                   ))}
                 </div>
                 {t.casino && (
                   <>
-                    <div style={{ fontSize: 11, color: DIM, marginTop: 4 }}>CASINO</div>
+                    <div style={{ fontSize: TYPE.small, color: DIM, marginTop: 4 }}>CASINO</div>
                     {chip(t.casino.area, 'casino')}
                     {t.casino.rooms.map((r) => chip(r, 'room'))}
                   </>
                 )}
                 {t.others.length > 0 && (
                   <>
-                    <div style={{ fontSize: 11, color: DIM, marginTop: 4 }}>{t.casino ? 'ALSO HERE' : 'PLACES'}</div>
+                    <div style={{ fontSize: TYPE.small, color: DIM, marginTop: 4 }}>{t.casino ? 'ALSO HERE' : 'PLACES'}</div>
                     {t.others.map((a) => chip(a, 'shop'))}
                   </>
                 )}

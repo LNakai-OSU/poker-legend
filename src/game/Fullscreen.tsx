@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTouchFirst } from './device'
+import { TYPE, UI_FONT } from './pixel/webFont'
 
 type FsDoc = Document & { webkitFullscreenElement?: Element | null; webkitExitFullscreen?: () => void }
 type FsEl = HTMLElement & { webkitRequestFullscreen?: () => void }
@@ -69,8 +70,8 @@ const pill: React.CSSProperties = {
   border: '1px solid #c8a24a',
   background: '#1c1a10',
   color: '#f0d27a',
-  fontFamily: 'monospace',
-  fontSize: 16,
+  fontFamily: UI_FONT,
+  fontSize: TYPE.body,
   cursor: 'pointer',
 }
 
@@ -107,8 +108,8 @@ export function FullscreenControls() {
             border: '1px solid #4a4a66',
             background: 'rgba(10,10,16,0.8)',
             color: '#e8e8f0',
-            fontFamily: 'monospace',
-            fontSize: 16,
+            fontFamily: UI_FONT,
+            fontSize: TYPE.body,
             cursor: 'pointer',
           }}
         >
@@ -124,7 +125,7 @@ export function FullscreenControls() {
             zIndex: 400,
             background: '#07070c',
             color: '#e8e8f0',
-            fontFamily: 'monospace',
+            fontFamily: UI_FONT,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -135,8 +136,8 @@ export function FullscreenControls() {
           }}
         >
           <div style={{ fontSize: 56, transform: 'rotate(90deg)' }}>📱</div>
-          <div style={{ fontSize: 20, color: '#f0d27a' }}>Turn your phone sideways</div>
-          <div style={{ fontSize: 14, color: '#a8a8c0', maxWidth: 300 }}>
+          <div style={{ fontSize: TYPE.large, color: '#f0d27a' }}>Turn your phone sideways</div>
+          <div style={{ fontSize: TYPE.body, color: '#a8a8c0', maxWidth: 300 }}>
             Poker Legend is made for a wide screen.
             {!can && !full && ' For full screen on iPhone: Share → Add to Home Screen, then open it from there.'}
           </div>
