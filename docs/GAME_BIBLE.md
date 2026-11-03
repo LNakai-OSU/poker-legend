@@ -452,6 +452,21 @@ to do next.
   $1,500 under $5,000), each turning you away at night and when you are not broke.
   Once two of a town's jobs are paid, its notice board has been written on
   (`BOARD_ECHOES`). Each map also has a pay phone and a dog with a line or two.
+- **The board remembers you.** Under what it always says, every notice board has
+  a second card about one of the town's jobs (`BOARD_MEMORY`): one line until
+  that job is paid, then one of two, by the flag its choice set (Wendell, Sal,
+  Fenn, Pruitt, the chapel, Fong).
+- **The wrong hour is never a bare refusal.** A leg with `periods` may carry
+  `closed`: what somebody there says at the other hours, naming when to come
+  back (Loretta's bartender, Cornelius, Fenn, Elvira, Fong). Each odd job's night
+  refusal is a person saying its hours. Not on shops: a beat takes the talk, so a
+  closed line would shut the shop for those hours (the atelier has none). A gated
+  job's legs keep the ask's `eventDone` gates, so Randy at the arch at night and
+  the chapel's arch closed at night are told apart.
+- **Small jobs, a story pull.** Silver Creek's $60-$100 jobs pay forward to the
+  boss: keep Wendell's secret and he tells you how Lou gives himself away (a 0.1
+  tell perk at Lou's table and a line from Lou); sell him and Lou says so instead.
+  Lou names Dennis's chip, and Ray says which message reached his sister.
 - **First timers.** Ray (Silver Creek's first scene) mentions Loretta and Menu → Jobs.
 - **Two-flag jobs.** Wick (price, then play) and Ilse (name, then symptom) set two flags,
   so a half-right answer has its own ending and pay.

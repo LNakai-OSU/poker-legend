@@ -53,6 +53,23 @@ describe('what is not a person', () => {
     expect(artForPoi(poi({ name: 'Woman with Shopping' }))).toBe('person')
     expect(artForPoi(poi({ name: 'Note on the Table', art: 'person' }))).toBe('person')
   })
+
+  it('draws the real note, signs, gull, stall and viewpoint as objects, not people', () => {
+    const everyone = Object.values(CITIES).flatMap((city) => allAreas(city).flatMap((a) => a.pois))
+    const expected: Record<string, string> = {
+      'apartment-note': 'note',
+      'basin-laundry-sign': 'sign',
+      'road-sc-sign': 'sign',
+      'road-ch-gull': 'gull',
+      'road-pc-stall': 'stall',
+      'road-pl-view': 'viewer',
+    }
+    for (const [id, art] of Object.entries(expected)) {
+      const found = everyone.find((p) => p.id === id)
+      expect(found, id).toBeDefined()
+      expect(artForPoi(found!), id).toBe(art)
+    }
+  })
 })
 
 describe('looks', () => {
@@ -92,6 +109,11 @@ describe('looks', () => {
     }
     expect([...drawn.keys()].sort()).toEqual(['hal', 'hal-mesa'])
     expect(drawn.get('hal')).toEqual(drawn.get('hal-mesa'))
+    // ...and the Hal who walks the Lumina street in his own chapter is the same man again.
+    expect(drawn.get('hal')).toEqual([visualKey(figureForCharacter('hal', CHARACTERS.hal))])
+    // A look written on a stool would be a second face that nothing draws.
+    const stools = Object.values(CITIES).flatMap((city) => allAreas(city).flatMap((a) => a.pois)).filter((p) => p.name === 'Hal')
+    for (const stool of stools) expect(stool.look, stool.id).toBeUndefined()
   })
 
   it('dresses the shopkeeper and the boat dealer for the job', () => {

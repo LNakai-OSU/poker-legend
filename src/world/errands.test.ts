@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { ERRANDS, ERRAND_EVENTS, errandPois, errandStage, payRange } from './errands'
-import { EVENTS, eventFor, everyAction } from './events'
+import { BOARD_MEMORY, ERRANDS, ERRAND_EVENTS, errandPois, errandStage, payRange } from './errands'
+import { EVENTS, allHold, eventFor, everyAction, type EventAction } from './events'
 import { AREAS, TABLES } from './content'
 import { initialState, type CityId, type GameState } from '../game/state'
 import { challengeLines } from '../game/progression'
@@ -112,6 +112,12 @@ describe('errands', () => {
         }
         // A leg that waits for an hour is walked at an hour it allows.
         const hours = e.legs[i].periods ?? e.periods
+        // At the wrong hour, somebody there says when to come back, rather than a bare stock line.
+        if (e.legs[i].closed && hours) {
+          for (const wrong of (['morning', 'afternoon', 'evening', 'night'] as const).filter((p) => !hours.includes(p))) {
+            expect(eventFor(EVENTS, { kind: 'interact', poiId: e.legs[i].poi }, { ...state, period: wrong })?.id, `${e.id} leg ${i + 1} at ${wrong}`).toBe(`${e.id}-leg${i + 1}-closed`)
+          }
+        }
         state = { ...state, period: hours ? hours[0] : 'morning' }
         expect(at(e.legs[i].poi)?.id).toBe(`${e.id}-leg${i + 1}`)
         play(`${e.id}-leg${i + 1}`)
@@ -306,6 +312,50 @@ describe('errand pay and wording', () => {
     expect(text).toContain('errand-chad-done')
     expect(text).toContain('errand-pruitt-done')
     expect(text).toContain('RING FOUND')
+  })
+
+  it('remember on every board how one of the town’s jobs went', () => {
+    /** What the board says in this state, down the branches that hold. */
+    const said = (actions: EventAction[], state: GameState): string[] =>
+      actions.flatMap((a) => (a.kind === 'dialogue' ? a.lines : a.kind === 'if' ? said(allHold(a.when, state) ? a.then : (a.else ?? []), state) : []))
+    const boards = ['sc-board', 'rb-board', 'ch-board', 'pc-board', 'nm-board', 'pl-board']
+    expect(BOARD_MEMORY.map((m) => m.board).sort()).toEqual([...boards].sort())
+    for (const m of BOARD_MEMORY) {
+      const errand = ERRANDS.find((e) => e.id === m.errand)!
+      expect(errand, m.board).toBeDefined()
+      // The card reads the flag the job's own choice sets, in the board's own town.
+      expect(errand.legs.some((l) => l.choice?.options.some((o) => o.flag === m.flag)), `${m.board}: ${m.flag}`).toBe(true)
+      const board = allPois().find((p) => p.poi.id === m.board)!
+      expect(board.cityId, m.board).toBe(errand.cityId)
+      const read = (state: GameState) => said(eventFor(EVENTS, { kind: 'interact', poiId: m.board }, state)!.actions, state)
+      const before = initialState()
+      const paid = { ...before, completedEventIds: [`${m.errand}-done`] }
+      const sold = { ...paid, flags: { ...paid.flags, [m.flag]: true } }
+      // Two boxes: what it always says, then the card. The first box is unchanged by one job.
+      expect(read(before)).toHaveLength(2)
+      expect(read(before)[1]).toBe(m.open)
+      expect(read(paid)[1]).toBe(m.clear)
+      expect(read(sold)[1]).toBe(m.set)
+      expect(read(paid)[0]).toBe(read(before)[0])
+      expect(new Set([m.open, m.set, m.clear]).size).toBe(3)
+    }
+  })
+
+  it('say when a job is open, in somebody’s voice, at the wrong hour in every town', () => {
+    for (const town of TOWNS) {
+      const closed = ERRAND_EVENTS.filter(
+        (e) => (e.id.endsWith('-closed') || e.id.endsWith('-night')) && e.trigger.kind === 'interact' && allPois().find((p) => p.poi.id === (e.trigger as { poiId: string }).poiId)?.cityId === town,
+      )
+      expect(closed.length, town).toBeGreaterThan(0)
+      for (const e of closed) {
+        for (const action of everyAction(e.actions)) {
+          if (action.kind !== 'dialogue') continue
+          // Spoken by a person, never narration, and it names the hours.
+          expect(action.speaker, e.id).toBeTruthy()
+          expect(action.lines.join(' '), e.id).toMatch(/morning|afternoon|by day|daylight|before night|before dark/i)
+        }
+      }
+    }
   })
 
   it('open the odd job only to the nearly broke, by day', () => {

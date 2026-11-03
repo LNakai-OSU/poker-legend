@@ -104,6 +104,13 @@ export interface ErrandLeg {
    * is the next day, which no errand may hand out (rule 4).
    */
   periods?: TimePeriod[]
+  /**
+   * What somebody there says at the other hours, while this leg is next: when to
+   * come back. Without it, turning up at the wrong hour is a bare stock line.
+   * Only for a fixture or a person with nothing else to do: a beat takes the
+   * talk, so a line here would shut a shop for those hours.
+   */
+  closed?: string[]
 }
 
 export interface Errand {
@@ -140,6 +147,7 @@ export interface Errand {
 
 const WAIT: EventAction[] = [{ kind: 'fade', to: 'out' }, { kind: 'advancePeriod' }, { kind: 'fade', to: 'in' }]
 const DAYLIGHT: TimePeriod[] = ['morning', 'afternoon', 'evening']
+const ALL_PERIODS: TimePeriod[] = ['morning', 'afternoon', 'evening', 'night']
 
 export const ERRANDS: Errand[] = [
   // --- Silver Creek --------------------------------------------------------
@@ -158,6 +166,7 @@ export const ERRANDS: Errand[] = [
       'Wendell: He knows my face. He does not know my face in a hat. Nobody does. I have never worn a hat.',
       'Wendell: The valet by the casino sees everything. Ask if Nico’s about, then the gift shop: hat, sunglasses, novelty moustache. Say they’re for Wendell.',
       'Wendell: And if Nico finds you, you’ve never heard of me. Sixty dollars. I’ve been hiding it from myself since March.',
+      'Wendell: And keep my secret, and I’ll tell you one. I dealt Lou Brannigan’s back table for six years.',
     ],
     hint: ['Wendell: Check the coast with the valet, then the gift shop. Hat, shades, moustache. Whisper it. Everybody is Fat Nico.'],
     legs: [
@@ -209,6 +218,7 @@ export const ERRANDS: Errand[] = [
     finish: [
       'Wendell: The Groucho. Perfect. Hat, shades. Do I look like a man who has never owed anybody anything?',
       'Wendell: Nico walked right past. Looked at me twice. Said, “Nice moustache.” Here — sixty. I’m changing my name to Brad.',
+      'Wendell: And Lou, like I promised. He never tells with his face. He tells with his chips: watch the stack, not the man. Six years I watched it.',
     ],
     variants: [
       {
@@ -219,6 +229,7 @@ export const ERRANDS: Errand[] = [
           'The door of Room 6 is open. Wendell is wearing the hat, the shades and an apron that says NICO’S DEBT RECOVERY & CATERING.',
           'Wendell: He found me. He was very nice about it. I’m on the buffet until the debt’s paid. Twenty dollars — it’s what he left in the till for the guy who sold me out.',
           'Wendell: I’m not angry. I’m catering.',
+          'Wendell: I was going to tell you how to read Lou Brannigan. Nico has that now too. He says it goes with the apron.',
         ],
         after: [
           'Wendell: Table for one? The prawn ring is excellent. I arranged it myself.',
@@ -274,6 +285,7 @@ export const ERRANDS: Errand[] = [
         poi: 'sc-bartender',
         speaker: 'Bartender',
         periods: ['morning', 'afternoon'],
+        closed: ['Bartender: Ray eats between hands at lunch. Bring Loretta’s dish in the morning or the afternoon. After that he won’t look up from the felt.'],
         todo: 'Get Loretta’s casserole to Ray, through the bartender.',
         lines: [
           'Bartender: A casserole? That’s Loretta’s dish. Say no more.',
@@ -286,6 +298,7 @@ export const ERRANDS: Errand[] = [
         poi: 'sc-bartender',
         speaker: 'Bartender',
         periods: ['afternoon', 'evening', 'night'],
+        closed: ['Bartender: Ray hasn’t said a word yet. He says things in the afternoon, if at all. Come back then and ask me.'],
         todo: 'Go back to the bartender once Ray has had his hour (afternoon or later) and ask what he said.',
         lines: [
           'Bartender: Clean dish. Even the crunchy top. I have never seen that man fold so fast.',
@@ -588,6 +601,7 @@ export const ERRANDS: Errand[] = [
       {
         poi: 'rb-reeds',
         periods: DAYLIGHT,
+        closed: ['Cornelius: (calling from up the bank) Not in the dark! Betty only bites by daylight. Any hour before night, and bring the patience.'],
         todo: 'Cast the line off the bank by the reeds, and wait.',
         lines: [
           'You cast the line. The river is a long afternoon.',
@@ -814,6 +828,7 @@ export const ERRANDS: Errand[] = [
       {
         poi: 'ch-lookout',
         periods: DAYLIGHT,
+        closed: ['Fenn: (from the lamp room) Come off the pier, you’ll see nothing out there. Abel walks the quay by day. Stand watch any hour before night.'],
         todo: 'Stand watch at the end of the pier.',
         lines: [
           'You take the post at the end of the pier. A gull lands on a bollard and looks at you like a supervisor.',
@@ -1425,6 +1440,7 @@ export const ERRANDS: Errand[] = [
       {
         poi: 'nm-arch',
         periods: DAYLIGHT,
+        closed: ['Elvira: (from the chapel door) Not at night, honey. Nobody objects at night, and nobody witnesses either. By day, any hour before dark.'],
         todo: 'Stand at the arch and witness Randy and Sheila.',
         lines: [
           'You take your place at the arch. Randy is in a borrowed tuxedo. Sheila is in a borrowed tuxedo. Neither of them is surprised.',
@@ -1662,6 +1678,7 @@ export const ERRANDS: Errand[] = [
       {
         poi: 'pl-hedge',
         periods: DAYLIGHT,
+        closed: ['Fong: (at the gate, without turning) She will not come out for a stranger in the dark. Daylight, please. Any hour before night.'],
         todo: 'Coax Pocket Rockets out of the cypress hedge, without saying “walk.” It takes a while.',
         lines: [
           'You sit down by the hedge and say nothing. For a long time. You are good at this; you play poker.',
@@ -1918,7 +1935,7 @@ export const ERRANDS: Errand[] = [
 /** Notice boards and benches the errands put in the outskirts: a hint of the next job, and somewhere to stand. */
 const SCENERY: ErrandPerson[] = [
   { id: 'sc-board', name: 'Notice Board', areaId: 'sc-outskirts', col: 11, row: 9, thing: true, art: 'none', lines: ['Pinned flyers: LOST — one casserole dish, answers to Room 2. WANTED — a lie for a man with a hat. See Wendell. (He is not in Room 6.)'] },
-  { id: 'rb-board', name: 'Bait Board', areaId: 'rb-outskirts', col: 10, row: 9, thing: true, art: 'none', lines: ['BAIT 4 SALE. WANTED: patience, for Cornelius. ALSO: a man to witness a coin flip. Sal is by the ferry. He is not fishing.'] },
+  { id: 'rb-board', name: 'Bait Board', areaId: 'rb-outskirts', col: 10, row: 9, thing: true, art: 'none', lines: ['BAIT 4 SALE. WANTED: patience, for Cornelius, down by the reeds. Patience not sold here. Mabel has looked.'] },
   { id: 'ch-board', name: 'Pier Board', areaId: 'ch-outskirts', col: 8, row: 10, thing: true, art: 'none', lines: ['MACKEREL 40. REWARD for one accordion (Gull & Anchor, ticket 4471). The light needs a lookout. Odalys: ask about the Bellweather.'] },
   { id: 'rb-fishrack', name: 'Fish Rack', areaId: 'rb-outskirts', col: 12, row: 9, thing: true, art: 'none', lines: ['A drying rack of perch and a man who could use a hand. (An hour’s work, by day, for a few dollars. Only if you are nearly broke.)'] },
   { id: 'pc-board', name: 'Beach Board', areaId: 'pc-outskirts', col: 14, row: 2, thing: true, art: 'none', lines: ['LAGOON BEACH. HUTS BY THE WEEK. NO DOGS, NO DEBT, NO SPEECHES. A man in a dinghy needs sardines. A woman needs her ring.'] },
@@ -2076,6 +2093,10 @@ export function eventsOf(e: Errand): GameEvent[] {
   const finish = `${e.id}-done`
   const events: GameEvent[] = []
   const allLegs = e.legs.map((_, i) => done(legId(i)))
+  // What gated the ask still holds on every leg: a beat once played stays played, so
+  // saying it again changes nothing, and tells this job's legs apart from the job it
+  // waited for (Randy at the arch at night, the chapel's arch closed at night).
+  const gate = (e.requires ?? []).filter((c) => c.kind === 'eventDone')
 
   events.push({
     id: ask,
@@ -2097,13 +2118,24 @@ export function eventsOf(e: Errand): GameEvent[] {
       id: legId(i),
       about: `${e.title}: leg ${i + 1} of ${e.legs.length}.`,
       trigger: { kind: 'interact', poiId: leg.poi },
-      conditions: [done(i === 0 ? ask : legId(i - 1)), ...((leg.periods ?? e.periods) ? [{ kind: 'period' as const, period: (leg.periods ?? e.periods)! }] : [])],
+      conditions: [done(i === 0 ? ask : legId(i - 1)), ...gate, ...((leg.periods ?? e.periods) ? [{ kind: 'period' as const, period: (leg.periods ?? e.periods)! }] : [])],
       actions: [
         ...say(leg.lines, leg.speaker ?? speakerOf(leg.lines, '')),
         ...(leg.choice ? [choiceAction(leg.choice)] : []),
         ...(leg.then ?? []),
       ],
     })
+    const open = leg.periods ?? e.periods
+    if (leg.closed && open) {
+      events.push({
+        id: `${legId(i)}-closed`,
+        about: `${e.title}: leg ${i + 1} at the wrong hour, and when to come back.`,
+        trigger: { kind: 'interact', poiId: leg.poi },
+        conditions: [done(i === 0 ? ask : legId(i - 1)), done(legId(i), false), { kind: 'period', period: ALL_PERIODS.filter((p) => !open.includes(p)) }],
+        repeatable: true,
+        actions: say(leg.closed),
+      })
+    }
   })
   const pay = (amount: number): EventAction[] => [{ kind: 'giveCash', amount }, { kind: 'playSound', sound: 'win' }]
   events.push({
@@ -2168,9 +2200,10 @@ const NUDGES: { poi: string; speaker: string; lines: string[] }[] = [
  * $1,000, Lagoon Beach $600, the Boneyard $1,000, the Belvedere $5,000). It takes an hour and cannot hand out a day, so it is a way
  * back from a bust and never a bankroll.
  */
-const ODD_JOBS: { poi: string; pay: number; below: number; by: Record<'morning' | 'afternoon' | 'evening', string[]>; over: string[] }[] = [
+const ODD_JOBS: { poi: string; pay: number; below: number; by: Record<'morning' | 'afternoon' | 'evening', string[]>; over: string[]; night: string }[] = [
   {
     poi: 'rb-fishrack',
+    night: 'Angler: Rack’s shut in the dark. I gut from first light till the sun goes. Come back by day if you’re still short.',
     pay: 25,
     below: 150,
     by: {
@@ -2182,6 +2215,7 @@ const ODD_JOBS: { poi: string; pay: number; below: number; by: Record<'morning' 
   },
   {
     poi: 'pc-crabtraps',
+    night: 'Trapper: Traps don’t come up in the dark, and nor do I. Morning till the palms go black, if you still need it.',
     pay: 100,
     below: 600,
     by: {
@@ -2193,6 +2227,7 @@ const ODD_JOBS: { poi: string; pay: number; below: number; by: Record<'morning' 
   },
   {
     poi: 'nm-scrapheap',
+    night: 'Scrap dealer: Glass in the dark? No. I load by day, morning till the signs come on. Come back then.',
     pay: 300,
     below: 1000,
     by: {
@@ -2204,6 +2239,7 @@ const ODD_JOBS: { poi: string; pay: number; below: number; by: Record<'morning' 
   },
   {
     poi: 'sc-woodpile',
+    night: 'Loretta: (from the office window) Not in the dark, you’ll lose a toe. The woodpile’s a day job: morning till dusk.',
     pay: 20,
     below: 100,
     by: {
@@ -2215,6 +2251,7 @@ const ODD_JOBS: { poi: string; pay: number; below: number; by: Record<'morning' 
   },
   {
     poi: 'ch-nets',
+    night: 'Net-mender: Can’t see a knot in the dark. Morning to evening, if you’re still short.',
     pay: 250,
     below: 1000,
     by: {
@@ -2226,6 +2263,7 @@ const ODD_JOBS: { poi: string; pay: number; below: number; by: Record<'morning' 
   },
   {
     poi: 'pl-planters',
+    night: 'Steward: The terrace takes no work after dark. Any hour from morning until the lamps are lit.',
     pay: 1500,
     below: 5000,
     by: {
@@ -2297,19 +2335,87 @@ const BOARD_ECHOES: { board: string; town: string[]; line: string }[] = [
   { board: 'pl-board', town: ['errand-fong', 'errand-teodoro', 'errand-lamps'], line: 'A small brass plate has been screwed on: “THE LAMPS ARE LIT. THE JACKET FITS. THE HEDGE IS OCCUPIED.”' },
 ]
 
+/**
+ * The board remembers you. Under what it always says, a second card about one of
+ * the town's jobs: it reads one way until that job is paid, and then the way you
+ * did it (the flag the job's choice sets), so walking back past it says what you
+ * left behind.
+ */
+export const BOARD_MEMORY: { board: string; errand: string; flag: StoryFlag; open: string; set: string; clear: string }[] = [
+  {
+    board: 'sc-board',
+    errand: 'errand-wendell',
+    flag: 'errandWendellSold',
+    open: 'Lower down, a printed card: NICO’S DEBT RECOVERY & CATERING. WEDDINGS, WAKES, WENDELLS.',
+    set: 'Nico’s card has a new line in pen: NOW SERVING, PRAWN RING BY WENDELL. Somebody has drawn a small sad moustache beside it.',
+    clear: 'Nico’s card has a new line in pen: STILL LOOKING FOR WENDELL. Under it, another hand: “Ask Brad. Brad never met him.”',
+  },
+  {
+    board: 'rb-board',
+    errand: 'errand-sal',
+    flag: 'errandSalBluffed',
+    open: 'Under it, a card in a shaky hand: SAL, OLD FERRY DECK. OWED $300 ON A COIN FLIP. WANTS A WITNESS. WILL SPLIT.',
+    set: 'Sal’s card is crossed out. Pinned over it: GONE FISHING, ANOTHER COUNTY. IF CASS ASKS, THE STRANGER SAID IT.',
+    clear: 'Sal’s card has a new line: PAID IN FULL, COUNTED OUT LOUD. HEADS. A brass button is pinned beside it.',
+  },
+  {
+    board: 'ch-board',
+    errand: 'errand-fenn',
+    flag: 'errandFennPointed',
+    open: 'Tacked in the corner, a tide table in pencil: THE KEEPER TAKES BETS. Under it, in another hand: ABEL IS ON THE QUAY. HE WALKS.',
+    set: 'The tide table has two names on it now, Fenn’s and Abel’s, and THURSDAYS in a careful hand. No bets taken.',
+    clear: 'The tide table is back up, bets open. Under it, in Fenn’s hand: “A WHISTLE IS CHEAPER THAN A COAT. THANK YOU.”',
+  },
+  {
+    board: 'pc-board',
+    errand: 'errand-pruitt',
+    flag: 'errandPruittSold',
+    open: 'Pinned with a fishhook: THE FLEET REQUIRES SARDINES. APPLY END OF DOCK. NOT TODAY. — THE COMMODORE.',
+    set: 'The Commodore’s notice has a ledger page pinned to it, in a neat hand: INSTALMENT ONE, PEARS. Somebody has drawn a heart.',
+    clear: 'The Commodore’s notice has a new line: THE CAMPAIGN CONTINUES. MRS. TRAN IS ELSEWHERE, THANKS TO A FRIEND OF THE FLEET.',
+  },
+  {
+    board: 'nm-board',
+    errand: 'errand-chapel',
+    flag: 'errandObjected',
+    open: 'A card in a heart-shaped frame: SECOND WITNESS NEEDED. ASK FOR ELVIRA. SPEAK NOW OR FOREVER, ETC.',
+    set: 'The heart-shaped frame holds a still from a stream now: somebody at the arch with a hand up. OBJECTION! 40K VIEWS.',
+    clear: 'The heart-shaped frame holds a photo now: Randy, Sheila, Elvira, and a stranger who witnessed. THE REAL THING, FOR AN HOUR.',
+  },
+  {
+    board: 'pl-board',
+    errand: 'errand-fong',
+    flag: 'errandFongAdmitted',
+    open: 'Engraved below: THE GATE ADMITS GUESTS, CATS IN CARRIERS, AND ONE PARROT WITH A MEMBERSHIP. NOTHING ELSE PASSES.',
+    set: 'A brass slip has been added to the gate rules: AND ONE GREYHOUND, BY ARRANGEMENT WITH MS. FONG. The guard polishes it.',
+    clear: 'A line has been added to the gate rules in fine pen: AND ONE SCARF, WHICH SOMETIMES BARKS. The guard has not removed it.',
+  },
+]
+
 export const BOARD_ECHO_EVENTS: GameEvent[] = BOARD_ECHOES.map((b) => {
   const plain = SCENERY.find((p) => p.id === b.board)!.lines
   const pairs: [string, string][] = b.town.flatMap((a, i) => b.town.slice(i + 1).map((c): [string, string] => [a, c]))
-  const actions = pairs.reduceRight<EventAction[]>(
+  const first = pairs.reduceRight<EventAction[]>(
     (rest, [x, y]) => [{ kind: 'if', when: [done(`${x}-done`), done(`${y}-done`)], then: say([b.line]), else: rest }],
     say(plain),
   )
+  const memory = BOARD_MEMORY.find((m) => m.board === b.board)
+  const second: EventAction[] = memory
+    ? [
+        {
+          kind: 'if',
+          when: [done(`${memory.errand}-done`)],
+          then: [{ kind: 'if', when: [{ kind: 'flag', flag: memory.flag }], then: say([memory.set]), else: say([memory.clear]) }],
+          else: say([memory.open]),
+        },
+      ]
+    : []
   return {
     id: `board-echo-${b.board}`,
-    about: 'The notice board, once two of the town’s jobs are paid: something new has been written on it.',
+    about: 'The notice board: what it says, a card that remembers how one of the town’s jobs went, and what is written once two are paid.',
     trigger: { kind: 'interact', poiId: b.board },
     repeatable: true,
-    actions,
+    actions: [...first, ...second],
   }
 })
 
@@ -2324,11 +2430,11 @@ export const ODD_JOB_EVENTS: GameEvent[] = ODD_JOBS.flatMap((j) => [
   })),
   {
     id: `odd-job-${j.poi}-night`,
-    about: 'Odd job, turned down at night: it is daylight work only.',
+    about: 'Odd job, turned down at night by somebody who says when it is open (any hour before night).',
     trigger: { kind: 'interact', poiId: j.poi },
     conditions: [{ kind: 'cashBelow', amount: j.below }, { kind: 'period', period: 'night' }],
     repeatable: true,
-    actions: [{ kind: 'dialogue', lines: ['There is no work to be had in the dark. Come back by day.'] }],
+    actions: say([j.night]),
   },
   {
     id: `odd-job-${j.poi}-over`,
