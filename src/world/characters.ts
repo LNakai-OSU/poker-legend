@@ -801,8 +801,8 @@ export const CHARACTERS: Record<string, CharacterDef> = {
           when: [{ kind: 'chapter', cityId: 'palmCay' }],
           lines: ['Kit: Working. Bernard is working too. He just does not know it.'],
           schedule: [
-            { period: 'afternoon', areaId: 'pc-casino', col: 12, row: 4 },
-            { period: 'evening', areaId: 'pc-casino', col: 12, row: 4 },
+            { period: 'afternoon', areaId: 'pc-casino', col: 12, row: 5 },
+            { period: 'evening', areaId: 'pc-casino', col: 12, row: 5 },
           ],
         },
         {

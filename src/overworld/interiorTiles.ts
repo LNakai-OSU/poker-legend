@@ -374,7 +374,10 @@ const tileFloor = (variant: number): Draw => (px) => {
 
 /** Marble slabs, light and dark in a chequer, with veins: Porto Lumina. */
 const marble = (dark: boolean, flip = false): Draw => (px) => {
-  const [base, vein, hi] = dark ? ['#aaa49b', '#8f897f', '#bcb6ad'] : ['#efe9df', '#d2c8b8', '#fbf8f2']
+  // The dark slabs were half as bright as the light ones, so the floor was a
+  // chessboard under the tables. They are now a warm grey a step down, and the
+  // chequer is something you notice rather than the first thing you see.
+  const [base, vein, hi] = dark ? ['#d8d0c3', '#c2b8a8', '#e4ddd2'] : ['#efe9df', '#d6ccbc', '#fbf8f2']
   px(0, 0, 16, 16, base)
   // The vein runs one way across this slab and the other way across the next.
   const at = (x: number) => (flip ? 15 - x : x)
@@ -564,29 +567,41 @@ const carpetDust = motif((x, y) => {
   return fleck ? '#401614' : '#381412'
 })
 
-/** The card room: bottle green with a gold trellis. */
+/**
+ * The card room: bottle green with a trellis worked in a darker green, and a
+ * small brass stud where its lines cross.
+ *
+ * The trellis was gold, a bright line every half tile with a gold cross in
+ * every diamond, and from the door the floor was a net of gold the tables sat
+ * in. A card room's carpet is the quietest thing in it; the baize and the
+ * lamps over it are what should catch the eye.
+ */
 const carpetGreen = motif((x, y) => {
   const a = (x + y) % 16
   const b = (x - y + 32) % 16
-  if ((a === 0 || b === 0) && (x + y) % 2 === 0) return '#b8913e'
-  const cx = wrap(x - 8) % 16
-  const cy = wrap(y - 8) % 16
-  if ((cx === 0 && cy <= 1) || (cy === 0 && cx <= 1)) return '#d4ad55'
-  if (a === 1 || b === 1) return '#163f2b'
-  return '#1c4f36'
+  if (a === 0 && b === 0) return '#8a7a40'
+  if ((a === 0 || b === 0) && (x + y) % 2 === 0) return '#174530'
+  if (a === 1 || b === 1) return '#1a4a33'
+  return (x * 7 + y * 13) % 41 === 0 ? '#1a4b33' : '#1d5038'
 })
 
-/** The island: shallow-water teal with scalloped waves and the odd shell. */
+/**
+ * The island: deep lagoon teal with a soft scallop of wave every half tile and
+ * the odd sand-coloured shell.
+ *
+ * It was a bright crest and a shadow every eight pixels, so the whole floor
+ * read as stripes, louder than the felt and the machines on it. The waves are
+ * now one shade off the pile and twice as far apart.
+ */
 const carpetTeal = motif((x, y) => {
-  const row = Math.floor(y / 8)
-  const phase = (x + (row % 2) * 4) % 8
-  const yy = y % 8
-  const crest = [3, 2, 1, 1, 1, 1, 2, 3][phase]
-  if (yy === crest) return '#7ccbbe'
-  if (yy === crest + 1) return '#4faea3'
-  if ((x === 6 && y === 21) || (x === 22 && y === 5) || (x === 27 && y === 26)) return '#efe0b0'
-  if (yy === 7) return '#348a84'
-  return '#3f9e96'
+  const row = Math.floor(y / 16)
+  const phase = (x + (row % 2) * 8) % 16
+  const yy = y % 16
+  const crest = [4, 3, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 3, 4][phase]
+  if (yy === crest) return '#3f938b'
+  if (yy === crest + 1) return '#2c7770'
+  if ((x === 6 && y === 21) || (x === 27 && y === 6)) return '#a8c8b0'
+  return (x * 7 + y * 13) % 37 === 0 ? '#317f78' : '#34847d'
 })
 
 /**
@@ -618,13 +633,17 @@ const carpetRoyal = motif((x, y) => {
     const d = Math.max(wrap(x - cx), wrap(y - cy)) + Math.min(wrap(x - cx), wrap(y - cy)) / 2
     return d
   }
+  // The medallions were a gold ring and a gold boss in every tile, which on a
+  // floor the size of the salon was more gold than the rail of the table. Now
+  // the ring is a thin line of old brass and the boss a point; the burgundy is
+  // what you see.
   const big = ring(8, 8)
   const small = ring(24, 24)
-  if (big >= 4 && big < 5) return '#c9a050'
-  if (big < 1.5) return '#e0bc68'
-  if (small < 2) return '#c9a050'
-  if ((x + y) % 16 === 0 && (x - y + 32) % 16 === 0) return '#7a2034'
-  if (big >= 5 && big < 6) return '#460c1a'
+  if (big >= 4 && big < 4.5) return '#9a7840'
+  if (big < 1) return '#b8924e'
+  if (small < 1) return '#7a2a34'
+  if ((x + y) % 16 === 0 && (x - y + 32) % 16 === 0) return '#6a1a2c'
+  if (big >= 4.5 && big < 5.5) return '#4c0e1c'
   return '#5a1222'
 })
 
@@ -689,12 +708,14 @@ const shag = motif((x, y) => {
 
 /** The riverboat saloon: navy pile, a gold lattice, a fleuron in every diamond. */
 const carpetNavy = motif((x, y) => {
+  // A brass point where the lattice's diamonds centre, small and dull, so the
+  // deck reads as navy pile and not a field of gold stars.
   const d = wrap(x - 8) + wrap(y - 8)
   const e = wrap(x - 24) + wrap(y - 24)
-  if ((x + y) % 16 === 0 || (x - y + 32) % 16 === 0) return '#2e3c6a'
-  if (d < 2 || e < 2) return '#d8b058'
-  if (d === 2 || e === 2) return '#8a6a2e'
-  return (x * 7 + y * 3) % 23 === 0 ? '#22305a' : '#1c2850'
+  if ((x + y) % 16 === 0 || (x - y + 32) % 16 === 0) return '#222e58'
+  if (d === 0 || e === 0) return '#a8884a'
+  if (d === 1 || e === 1) return '#2a3050'
+  return (x * 7 + y * 3) % 23 === 0 ? '#1f2b54' : '#1c2850'
 })
 
 // ---------------------------------------------------------------------------
@@ -746,10 +767,10 @@ export const INTERIOR_TILES: Record<number, TileVariants> = {
 /** The band of a carpet's border: the outer line, the inner line, and the shade inside them. */
 export const CARPET_BORDERS: Record<number, [string, string, string]> = {
   [CARPET]: ['#240c0b', '#8a6634', '#3e1614'],
-  [CARPET_GREEN]: ['#0f2e20', '#c8a048', '#174230'],
-  [CARPET_TEAL]: ['#2e7a74', '#efe0b0', '#368c85'],
+  [CARPET_GREEN]: ['#0f2e20', '#8a7a40', '#174230'],
+  [CARPET_TEAL]: ['#225e59', '#a8c8b0', '#2c7770'],
   [CARPET_NEON]: ['#0e0a14', '#a03894', '#1c1426'],
-  [CARPET_ROYAL]: ['#2e0810', '#d8b060', '#4a0e1c'],
+  [CARPET_ROYAL]: ['#2e0810', '#9a7840', '#4a0e1c'],
   [CARPET_VIOLET]: ['#120820', '#b46cff', '#2e1450'],
-  [CARPET_NAVY]: ['#0e1428', '#c8a048', '#18223e'],
+  [CARPET_NAVY]: ['#0e1428', '#a8884a', '#18223e'],
 }

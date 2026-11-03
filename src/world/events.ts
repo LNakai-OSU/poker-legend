@@ -1873,7 +1873,7 @@ export const EVENTS: GameEvent[] = [
       // and through it, rather than being left at the stop to find it.
       { kind: 'movePlayer', to: { col: 13, row: 5 } },
       { kind: 'fade', to: 'out' },
-      { kind: 'teleport', areaId: 'pc-casino', col: 10, row: 11 },
+      { kind: 'teleport', areaId: 'pc-casino', col: 10, row: 12 },
       { kind: 'fade', to: 'in' },
     ],
   },
@@ -2684,12 +2684,12 @@ export const EVENTS: GameEvent[] = [
     ],
     actions: [
       { kind: 'wait', ms: 300 },
-      { kind: 'moveNpc', characterId: 'ines', from: { col: 6, row: 11 }, to: 'player' },
+      { kind: 'moveNpc', characterId: 'ines', from: { col: 6, row: 12 }, to: 'player' },
       { kind: 'dialogue', speaker: 'ines', lines: [
           'Ines: Twelve thousand, on my carpet, between lunches. I like you already.',
           'Ines: Come. I keep the good table at the back, where the sea breeze cannot read your cards.',
         ] },
-      { kind: 'moveNpc', characterId: 'ines', to: { col: 6, row: 11 }, youFollow: true },
+      { kind: 'moveNpc', characterId: 'ines', to: { col: 6, row: 12 }, youFollow: true },
       { kind: 'fade', to: 'out' },
       { kind: 'teleport', areaId: 'pc-private', col: 7, row: 8, with: ['ines'] },
       { kind: 'fade', to: 'in' },
