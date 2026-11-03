@@ -150,6 +150,88 @@ const DAYLIGHT: TimePeriod[] = ['morning', 'afternoon', 'evening']
 const ALL_PERIODS: TimePeriod[] = ['morning', 'afternoon', 'evening', 'night']
 
 export const ERRANDS: Errand[] = [
+  // --- Basin -----------------------------------------------------------------
+  // Shape: a first read, before the bus. Two doors and one question, a few minutes
+  // on the morning of the first game (Dana offers it: `dana-walks-you-to-the-bus`),
+  // and it teaches the walk, the talk, a choice and the Jobs page. Basin has no
+  // casino, so it is not counted against a seat; it pays a few dollars.
+  {
+    id: 'errand-patel',
+    where: 'Patel’s Corner Store, the first door on Seventh Street',
+    title: 'Mr Patel’s dollar',
+    cityId: 'apartment',
+    about: 'The busker has won Mr Patel’s dollar at liar’s poker eleven mornings running. Win it back.',
+    client: 'patel',
+    clientName: 'Mr Patel',
+    ask: [
+      'Mr Patel: You play cards. Marcus says you play cards. Marcus says many things, but this one I believe.',
+      'Mr Patel: Every morning the busker buys one coffee with one dollar, then wins my dollar back. Liar’s poker, on the serial numbers. Eleven mornings.',
+      'Mr Patel: Here. My dollar. He is outside with the guitar. Watch his foot: when he is lying, it taps.',
+      'He folds the dollar into your hand. It is on your Jobs page now: Esc, or the menu button, then Jobs.',
+    ],
+    hint: ['Mr Patel: The busker. Outside, on Seventh, with the guitar. Walk up and talk to him. Watch the foot.'],
+    legs: [
+      {
+        poi: 'seventh-busker',
+        todo: 'Play the busker on Seventh Street for Mr Patel’s dollar. Watch his foot.',
+        lines: [
+          'Busker: Patel’s dollar. I would know it anywhere; he folds it in four. Liar’s poker, then. Both serial numbers count.',
+          'Busker: I open. Three sevens: between your bill and mine, three sevens. Call me a liar, or go higher.',
+          'Your bill has two sevens in it. His right foot is going like a drummer’s.',
+        ],
+        choice: {
+          speaker: 'Busker',
+          prompt: 'Three sevens, he says. You hold two. His foot is tapping.',
+          options: [
+            {
+              label: 'Call: he is lying',
+              lines: [
+                'You turn the bills over. Yours: two sevens. His: not one, and a coffee ring.',
+                'Busker: The foot. Patel told you about the foot. Eleven mornings that foot has been loyal to me.',
+              ],
+            },
+            {
+              label: 'Raise: four sevens',
+              flag: 'errandPatelRaised',
+              lines: [
+                'Busker: Four? Liar. He turns his bill over: not a seven on it. Two sevens on the table, not four.',
+                'Busker: I was bluffing, and so were you, and you bid last. Tell Patel I said thank you.',
+              ],
+            },
+          ],
+        },
+      },
+    ],
+    finish: [
+      'Mr Patel: He had nothing? He always has nothing? Eleven mornings of nothing!',
+      'Mr Patel: Here. Forty, for my dignity. And for nothing: Marcus folds to anything loud. Twenty years I have sold him ice.',
+    ],
+    variants: [
+      {
+        flag: 'errandPatelRaised',
+        todo: 'The busker took the dollar. Go back to Mr Patel and own up.',
+        reward: 10,
+        finish: [
+          'Mr Patel: Four sevens. You knew he was lying, and you raised him, so he could call you with nothing.',
+          'Mr Patel: That is the lesson, and it cost me one dollar, which is a cheap lesson. Ten, for your time. When you know, you call.',
+        ],
+        after: [
+          'Mr Patel: Twelve mornings. Now he brings a second dollar so I have one to lose. It is a kindness. I hate it.',
+          'Mr Patel: When you know, you call. Write it on your hand.',
+        ],
+      },
+    ],
+    after: [
+      'Mr Patel: The busker paid for his coffee this morning. With money. I nearly cried.',
+      'Mr Patel: The good pretzels are still for a funeral, by the way. Not yours. Not yet.',
+    ],
+    echoes: [
+      { poi: 'seventh-busker', speaker: 'Busker', flag: 'errandPatelRaised', flagSet: false, lines: ['Busker: I play in boots now. You cannot read a boot.'] },
+      { poi: 'seventh-busker', speaker: 'Busker', flag: 'errandPatelRaised', lines: ['Busker: Four sevens! I tell everybody. You are famous on Seventh Street.'] },
+    ],
+    reward: 40,
+    people: [],
+  },
   // --- Silver Creek --------------------------------------------------------
   // Shape: a lie to tell. Two fetches, then Fat Nico himself, and what you say to him.
   {

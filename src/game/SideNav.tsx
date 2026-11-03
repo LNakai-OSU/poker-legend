@@ -1,4 +1,5 @@
 import { ERRANDS, errandStage } from '../world/errands'
+import { nextStep } from '../world/nextSteps'
 import type { StoryFlag } from '../world/flags'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { audio } from '../audio/audio'
@@ -194,14 +195,17 @@ export function SideNav({
     const openErrands = ERRANDS.map((errand) => ({ errand, ...errandStage(errand, state.completedEventIds, state.flags) })).filter(
       (e) => e.stage !== 'new',
     )
+    // Before the first town has a goal, the story says what is next (`world/nextSteps.ts`).
+    const next = nextStep(state)
     body = (
       <>
         {item('nav-back', '< Back', () => setPage('main'))}
         {heading('Jobs')}
+        {next ? <div data-testid="next-step">{line(next, INK.gold)}</div> : null}
         {challengeLines(state).map((l, i) => (
           <div key={`challenge-${i}`}>{line(i === 0 ? `Challenge: ${l}` : l, INK.gold)}</div>
         ))}
-        {taken.length === 0 && openErrands.length === 0 ? line('Nobody has asked you for anything yet.', INK.dim) : null}
+        {!next && taken.length === 0 && openErrands.length === 0 ? line('Nobody has asked you for anything yet.', INK.dim) : null}
         {openErrands.map(({ errand, todo, stage, pays }) => (
           <div key={errand.id} style={{ display: 'grid', gap: scale }}>
             {line(errand.title, stage === 'done' ? INK.dim : INK.light)}

@@ -49,6 +49,10 @@ export const STORY_FLAGS = {
     set: 'you told Dana to mind her own business',
     clear: 'you did not brush Dana off',
   },
+  danaAtTheStop: {
+    set: 'you told Dana you had a stop to make first, and she went on to wait at the bus stop',
+    clear: 'you walked to the 14 with Dana, or she has not found you yet',
+  },
 
   // The broadcast's scouting reports: each interlude names one town's lunatic,
   // and the final table's recap reads what you were told.
@@ -112,6 +116,10 @@ export const STORY_FLAGS = {
 
   // The errands (`errands.ts`): small jobs round each town. Each is a choice the
   // client and the afterword remember.
+  errandPatelRaised: {
+    set: 'you raised the busker to four sevens with Mr Patel’s dollar, and lost it',
+    clear: 'you called the busker’s bluff and won Mr Patel his dollar back',
+  },
   errandWendellSold: {
     set: 'you told Fat Nico which room Wendell was hiding in',
     clear: 'you kept Wendell’s secret from Fat Nico',
