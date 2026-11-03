@@ -160,17 +160,17 @@ T::###########################:T
 T::###########################:T
 T::#############D#############:T
 To:++++++++++++++++++++++++++:oT
-T::++oo++++++++++++++++oo++++::T
+T::++oo++++oo++++++++++oo++++o:T
 T::FFF++++++++++++++++++++FFF::T
 ----+++o+++++o+++++o+++++o++----
 ===============zzz==============
 ===============zzz==============
 ----++++o+++++++++++++o+++++----
 T::++++++++++++++++++++++++++o:T
-T::+oo+++++++++++++++++++oo++::T
+T:o+oo++oo++++++++++++o++oo++::T
 T::++++#####+######+#####++++::T
-T::::::#####:######:#####::::::T
-T:oo:::##D##:######:#####:o:o::T
+T::::::#####:######:#####F:::::T
+T:oo:::##D##:######F#####:o:o::T
 T::::o:::::::::::::::::::::::::T
 TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT`)
 
@@ -183,17 +183,17 @@ T~~~#######~~~~~~~~~~~~~~~~~~~~T
 T~~#########~~~~~~~~~~~~~~~~~~~T
 T~~#########~~~~~~~~~~~~~~~~~~~T
 TBBBBBBBBDBBBoBBBBBBoBBBBBoBBBBT
-T:oo::o::::::**o:**:::o::::::::T
+T:oo::o::::::**o:**:::o:o::::o:T
 T::++++++++++++++++++++++++++::T
-----++++++++++++++++++++++++----
+----++++++++o+++++++++++++++----
 ========zzz=========FFF=========
 ===FFF==zzz=====================
 ----+++++++o++++++++++++o+++----
 T:o++++++++++++++++++++++++++o:T
 T::######::::oo::oo::::######o:T
-T::######::::::::::::::######::T
-T::##D###::::::::::::::###D##::T
-T:::::::ooooo:::oooooo:::::::::T
+T::######::o::::::::::o######::T
+T::##D###F::::::::::o::###D##::T
+T:oo::::ooooo:::oooooo:::::::o:T
 T""""""""""""""""""""""""""""""T
 TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT`)
 
@@ -207,13 +207,13 @@ T##############################T
 T##D####D#####D#####D####D#####T
 T++++oo+++++++++o+o++++o+++oo++T
 To+++++++++++++++++++++++++++++T
-T++++++++++++++++++++++++++++++T
+Too+++++++o+o++++++++o+++++++ooT
 ----o++++++o++++++o++++++++o----
 =============zzz===FFF==========
 ===FFF=======zzz================
 ----++++o++++++++o+++++o++++----
-T++++++++++++++++++++++++++++++T
-T+++++++++oo++++++++oo+++++++++T
+T++++++++++++o+++++++++++++++++T
+T+oo++++++oo++++++o+oo+o++++++FT
 T+oooo+o+oooo++++oooo+o+ooooo++T
 T~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~T
 T~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~T
@@ -228,17 +228,17 @@ T:######:#########::########:::T
 T:######:#########::########:::T
 T:######:#########::########:::T
 T:###D##:####D####::########:::T
-ToooT:::::::::::::o:::::::::T::T
-T::::::::o:**::::::**:o::::::::T
-T::::::::::::::::::::::::::::::T
+ToooT:::::::::::::oF::::::::T::T
+T::::::::o:**::::::**:o::o:::ooT
+To:::::::::::::::::::::::::::::T
 ----:::o:::::::::::o:::::o::----
 ============zzz=====FFF=========
 ===FFF======zzz=================
 ----:::::o:::::::o::::::o:::----
 T::::::::::::::::::::::::::::::T
-T::::T:#####oo:oo:oo:#####T::::T
-T::::::#####:::::::::#####:::::T
-T:o::::##D##:::::::::##D##:::o:T
+T:oo:T:#####oo:oo:oo:#####T:::oT
+T:::::o#####:::::::::#####F::::T
+T:o::::##D##o:::::::o##D##:::o:T
 T:oooo:::::::::::::::::::oooo::T
 T~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~T
 TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT`)
@@ -255,17 +255,17 @@ T##############################T
 T##############################T
 T##############################T
 T#####D#######D#####D######D###T
-T++++++++++++++++++++++ooo+++++T
-T++oo+++++++~~~~~~++++++++oo+++T
+T+o++++++++++++++++++++ooo+++++T
+T++oo+++++++~~~~~~++++++++oo++oT
 T+++++++++o+~~~~~~+o+++++++++++T
-T++++++++++++++++++++++++++++++T
+To++++++++++o+++o++++++++++++++T
 --o-o---o+o++++++++++o++-----o--
 =====zzz=====FFF================
 =====zzz========================
 =====zzz================FFF=====
 --o-----++o++++++++++o++-----o--
 T++++++++++++++++++++++++++++++T
-T++oo+++++++o++++++o++++++oo+++T
+T++oo+++oo++o++oo++o+o+o++oo+++T
 T##############################T
 T##############################T
 T##############################T
@@ -280,19 +280,19 @@ T++######T###########T#######++T
 T++######T###########T#######++T
 T++######T###########T#######++T
 T++##D###T#####D#####T###D###++T
-T++++++++++++++++++++++++++++++T
+T++++++oo+++++++++++++oo+++++++T
 T++oo++++~~~~~~~~~~~~~~++++oo++T
-T++++++++~~~~~~~~~~~~~~++++++++T
+To+++++++~~~~~~~~~~~~~~+++++++oT
 --o-----o++++o+++o+++++o-----o--
 ==============zzz=======FFF=====
 ===FFF========zzz===============
 ------o-++++o+++++o+++++-o------
-T+++++++oo++++++++++++oo+++++++T
-To+oo++++++++++++++++++++++o++oT
+T+++++++oooo+++++++oo+oo+++++++T
+To+oo++++++++++o+++++++++++o++oT
 T++##########################++T
 T++##########################++T
 T++##########################++T
-T++++++++++++++++++++++++++++++T
+T++++oo+++++++++o++++++++oo++++T
 TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT`)
 
 
@@ -3248,6 +3248,16 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'barrel-cactus', col: 3, row: 16 },
     { stampId: 'barrel-cactus', col: 26, row: 16 },
     { stampId: 'noticeboard', col: 29, row: 12 },
+    // Tumbleweed on the boardwalk, a bench under the hotel, the gas station's tyres and the motel's boxes.
+    { stampId: 'tumbleweed', col: 10, row: 7 },
+    { stampId: 'tumbleweed', col: 22, row: 12 },
+    { stampId: 'bench-rustic', col: 11, row: 6 },
+    { stampId: 'woodpile', col: 22, row: 13 },
+    { stampId: 'tyre-stack', col: 19, row: 16 },
+    { stampId: 'crates', col: 25, row: 15 },
+    { stampId: 'flowerbed-adobe-2', col: 8, row: 13 },
+    { stampId: 'rocks-red', col: 29, row: 6 },
+    { stampId: 'barrel-cactus', col: 2, row: 13 },
   ],
   'rb-street': [
     { stampId: 'riverboat', col: 2, row: 1 },
@@ -3271,6 +3281,16 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'parked-car-white-w', col: 20, row: 9 },
     { stampId: 'bush', col: 2, row: 12 },
     { stampId: 'bush-flowering', col: 29, row: 13 },
+    // The yard between the diner and the outfitters, and the sand along the landing: what a river town leaves lying about.
+    { stampId: 'crates', col: 9, row: 15 },
+    { stampId: 'fish-rack', col: 11, row: 14 },
+    { stampId: 'woodpile', col: 20, row: 15 },
+    { stampId: 'bush-flowering', col: 22, row: 14 },
+    { stampId: 'net-heap', col: 24, row: 6 },
+    { stampId: 'crab-traps', col: 29, row: 6 },
+    { stampId: 'flowerbed-timber-2', col: 2, row: 16 },
+    { stampId: 'bush', col: 29, row: 16 },
+    { stampId: 'bin', col: 12, row: 8 },
   ],
   'ch-street': [
     { stampId: 'club-harbor', col: 1, row: 0 },
@@ -3301,6 +3321,18 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'bin', col: 23, row: 5 },
     { stampId: 'parked-car-black-w', col: 19, row: 9 },
     { stampId: 'parked-car-silver-e', col: 3, row: 10 },
+    // The promenade dressed: plane trees in grates, a hydrant, a bed under the phone; on the quay, the boats' leftovers.
+    { stampId: 'tree-street', col: 10, row: 6 },
+    { stampId: 'tree-street', col: 21, row: 6 },
+    { stampId: 'hydrant', col: 12, row: 7 },
+    { stampId: 'flowerbed-granite-2', col: 1, row: 7 },
+    { stampId: 'bench-teak', col: 29, row: 7 },
+    { stampId: 'crab-traps', col: 2, row: 13 },
+    { stampId: 'net-heap', col: 3, row: 13 },
+    { stampId: 'crates', col: 30, row: 13 },
+    { stampId: 'bin', col: 13, row: 12 },
+    { stampId: 'tree-street', col: 18, row: 12 },
+    { stampId: 'fish-rack', col: 23, row: 13 },
   ],
   'pc-street': [
     { stampId: 'marina-palmcay', col: 2, row: 1 },
@@ -3327,6 +3359,17 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'bush-flowering', col: 18, row: 5 },
     { stampId: 'parked-car-teal-e', col: 3, row: 10 },
     { stampId: 'parked-car-white-w', col: 20, row: 9 },
+    // Palms and beds over the sand, the hotel's trolley, a bench to watch the ferry from.
+    { stampId: 'palm-tall', col: 25, row: 5 },
+    { stampId: 'luggage-cart', col: 19, row: 5 },
+    { stampId: 'bench-teak', col: 29, row: 6 },
+    { stampId: 'palm-tall', col: 1, row: 6 },
+    { stampId: 'flowerbed-coral-2', col: 2, row: 13 },
+    { stampId: 'bush-flowering', col: 6, row: 14 },
+    { stampId: 'crates', col: 26, row: 14 },
+    { stampId: 'palm-tall', col: 12, row: 14 },
+    { stampId: 'palm-tall', col: 20, row: 14 },
+    { stampId: 'bin', col: 30, row: 13 },
   ],
   'nm-street': [
     { stampId: 'casino-mesa', col: 1, row: 0 },
@@ -3358,6 +3401,16 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'bollard', col: 8, row: 10 },
     { stampId: 'parked-car-black-w', col: 13, row: 11 },
     { stampId: 'parked-car-white-e', col: 24, row: 13 },
+    // Bollards round the fountain, palms and chrome along the frontages, papers by the casino door.
+    { stampId: 'bollard', col: 12, row: 9 },
+    { stampId: 'bollard', col: 16, row: 9 },
+    { stampId: 'news-boxes', col: 2, row: 6 },
+    { stampId: 'palm-planter', col: 1, row: 8 },
+    { stampId: 'planter-chrome-2', col: 8, row: 16 },
+    { stampId: 'bench-chrome', col: 15, row: 16 },
+    { stampId: 'bin', col: 21, row: 16 },
+    { stampId: 'hydrant', col: 30, row: 7 },
+    { stampId: 'palm-planter', col: 23, row: 15 },
   ],
   'pl-street': [
     { stampId: 'tower-lumina', col: 3, row: 0 },
@@ -3385,6 +3438,17 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'bollard', col: 17, row: 9 },
     { stampId: 'parked-car-black-e', col: 3, row: 11 },
     { stampId: 'parked-car-silver-w', col: 24, row: 10 },
+    // Cypresses at the ends of the pool, beds against the colonnades, planters down the middle, the hedge behind the hotel.
+    { stampId: 'cypress-pot', col: 1, row: 7 },
+    { stampId: 'cypress-pot', col: 30, row: 7 },
+    { stampId: 'planter-marble-2', col: 10, row: 13 },
+    { stampId: 'planter-marble-2', col: 19, row: 13 },
+    { stampId: 'flowerbed-granite-2', col: 7, row: 6 },
+    { stampId: 'flowerbed-granite-2', col: 22, row: 6 },
+    { stampId: 'cypress-pot', col: 15, row: 13 },
+    { stampId: 'hedge-2', col: 5, row: 18 },
+    { stampId: 'hedge-2', col: 25, row: 18 },
+    { stampId: 'bush-flowering', col: 16, row: 18 },
   ],
   'road-silvercreek': [
     { stampId: 'tree-street', col: 3, row: 1 },
