@@ -318,7 +318,7 @@ export function canonicalCharacter(character: CharacterDef): CharacterDef {
           )
         : undefined,
     },
-    ['name', 'style', 'look', 'seat', 'lines', 'personas', 'overworld'] satisfies Array<keyof CharacterDef>,
+    ['name', 'style', 'look', 'streetLook', 'seat', 'lines', 'personas', 'overworld'] satisfies Array<keyof CharacterDef>,
   )
 }
 
@@ -482,7 +482,7 @@ const HEX = /^#[0-9a-fA-F]{6}$/
 export function characterShapeProblems(value: unknown, path = 'character'): Problems {
   const problems: Problems = []
   if (!isObj(value)) return [`${path} is not a character`]
-  keys(value, path, ['name', 'style', 'look', 'lines'], ['seat', 'personas', 'overworld'], problems)
+  keys(value, path, ['name', 'style', 'look', 'lines'], ['streetLook', 'seat', 'personas', 'overworld'], problems)
   string(value.name, `${path}.name`, problems, true)
   string(value.style, `${path}.style`, problems)
 
@@ -497,6 +497,7 @@ export function characterShapeProblems(value: unknown, path = 'character'): Prob
   } else if (value.look !== undefined) {
     problems.push(`${path}.look should be a look`)
   }
+  if (value.streetLook !== undefined && !isObj(value.streetLook)) problems.push(`${path}.streetLook should be a look`)
 
   if (value.seat !== undefined) {
     if (!isObj(value.seat)) problems.push(`${path}.seat should be a seat`)

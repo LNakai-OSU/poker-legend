@@ -3,7 +3,9 @@ import type { CharacterDef } from '../world/characters'
 import type { PoiDef } from '../world/types'
 import type { Sitter } from '../world/seating'
 import type { NpcArt } from './Npc'
-import { visualKey, type Figure, type Garment, type NpcRole, type PersonHairStyle, type PersonLook, type StreetHat } from './characterArt'
+import {
+  visualKey, type Figure, type Garment, type NpcRole, type PersonBuild, type PersonHairStyle, type PersonLook, type StreetHat,
+} from './characterArt'
 
 /**
  * Who looks like what.
@@ -265,6 +267,12 @@ export function lookFromId(id: string, name = '', role: NpcRole = 'local'): Pers
   if (child && (garment === 'vest' || garment === 'cardigan')) garment = 'hoodie'
   // Big hair and a hat: the hat wins and the hair is wasted. Keep the hair.
   if (hairStyle === 'afro' || hairStyle === 'pigtails' || hairStyle === 'bun') hat = undefined
+  // Their body, drawn last for the same reason. Somebody on a cane has gone grey.
+  const build = buildFor(role, next())
+  if (build === 'elder') {
+    hair = next() < 0.5 ? '#8a8a90' : '#d8d4cc'
+    if (hairStyle === 'pigtails' || hairStyle === 'spiky') hairStyle = 'short'
+  }
   return {
     skin,
     hair,
@@ -277,7 +285,22 @@ export function lookFromId(id: string, name = '', role: NpcRole = 'local'): Pers
     sleeves,
     ...(hat ? { hat, hatColor } : {}),
     ...(garment ? { garment, garmentColor } : {}),
+    ...(build ? { build } : {}),
   }
+}
+
+/**
+ * What shape a stranger is: about half regular, the rest heavy, tall or old.
+ * Nobody waits tables or cooks on a cane, a chef's toque does not fit above a
+ * tall head, and a child's role draws a child whatever this says.
+ */
+function buildFor(role: NpcRole, roll: number): PersonBuild | undefined {
+  if (role === 'kid' || role === 'player' || role === 'collector') return undefined
+  const mayBeOld = role === 'local' || role === 'tourist' || role === 'suit'
+  if (mayBeOld && roll < 0.12) return 'elder'
+  if (roll >= 0.82) return 'heavy'
+  if (roll >= 0.64 && role !== 'waiter' && role !== 'chef') return 'tall'
+  return undefined
 }
 
 /** Legs, shoes and sleeves for a character whose table look stops at the collar. */
@@ -313,7 +336,7 @@ function castLook(poi: PoiDef, seed: string, role: NpcRole): PersonLook {
 
 /** A named character in the street: their own face, their own clothes. */
 export function figureForCharacter(id: string, character: CharacterDef): Figure {
-  const look = dressed(id, { ...character.look, ...character.overworld?.look })
+  const look = dressed(id, { ...character.look, ...character.streetLook, ...character.overworld?.look })
   return { role: character.overworld?.role ?? 'local', look }
 }
 

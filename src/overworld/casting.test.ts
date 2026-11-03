@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { artForPoi, figureForCharacter, figuresForPois, lookFromId, roleForPoi, verbForPoi } from './casting'
-import { visualKey } from './characterArt'
+import { STREET_HATS, visualKey } from './characterArt'
+import { TABLES } from '../world/content'
 import { CITIES, allAreas } from '../world/cities'
 import { CHARACTERS, charactersIn } from '../world/characters'
 import { TIME_PERIODS } from '../game/time'
@@ -174,6 +175,26 @@ describe('what people wear', () => {
     expect(hairs.size, 'haircuts').toBeGreaterThanOrEqual(9)
   })
 
+  it('makes strangers in more than one shape', () => {
+    // Every stranger was the same body in a different shirt: a palette swap
+    // however the hair was cut.
+    const strangers = everyone.filter((figure) => !Object.values(CHARACTERS).some((c) => c.look.skin === figure.look.skin && c.look.shirt === figure.look.shirt))
+    const count = (build: string) => strangers.filter(({ look }) => (look.build ?? 'regular') === build).length
+    for (const build of ['heavy', 'tall', 'elder']) {
+      expect(count(build), `${build} strangers`).toBeGreaterThanOrEqual(8)
+    }
+    expect(count('regular'), 'still mostly regular').toBeGreaterThan(strangers.length / 3)
+    // Nobody carries a tray, deals or patrols on a cane.
+    for (const { role } of strangers.filter(({ look }) => look.build === 'elder')) {
+      expect(['local', 'tourist', 'suit']).toContain(role)
+    }
+    // And somebody made up on one has gone grey.
+    for (let i = 0; i < 300; i++) {
+      const look = lookFromId(`passer-by-${i}`)
+      if (look.build === 'elder') expect(['#8a8a90', '#d8d4cc']).toContain(look.hair)
+    }
+  })
+
   it('keeps a uniform a uniform', () => {
     // A dealer in a hoodie is not a dealer. Garments and hats of one's own are
     // for people in their own clothes; the job's clothes cover them.
@@ -219,5 +240,43 @@ describe('the hero in bought clothes', () => {
     }
     dressHero(undefined)
     expect(looks.size).toBe(worn.length + 1)
+  })
+})
+
+describe('the cast', () => {
+  /** Who runs each town's casino, and who is waiting in the penthouse. */
+  const bosses = [...new Set(Object.values(TABLES).filter((t) => t.bossOf || t.theme === 'finale').map((t) => t.opponents[0]).map((seat) => (typeof seat === 'string' ? seat : seat.character)))]
+  /** Who you meet again: everybody with a day in the street. */
+  const recurring = Object.keys(CHARACTERS).filter((id) => CHARACTERS[id].overworld)
+  const cast = [...bosses, ...recurring]
+  /** Hats a stranger can be made up in: anything else on a head is somebody's own. */
+  const strangersHats = new Set(['cap', 'beanie', 'fedora', 'sunhat', 'cowboy', 'beret'])
+
+  it('finds a boss for every town and the penthouse', () => {
+    expect(bosses).toEqual(expect.arrayContaining(['lou', 'odette', 'bellamy', 'ines', 'vale', 'nadia']))
+  })
+
+  it('gives every boss and everybody you meet again a hat or a thing of their own', () => {
+    for (const id of cast) {
+      const { look } = figureForCharacter(id, CHARACTERS[id])
+      const signature = look.prop ?? (look.hat && !strangersHats.has(look.hat) ? look.hat : undefined)
+      expect(signature, `${id} has nothing a stranger could not have`).toBeDefined()
+      if (look.hat) expect(STREET_HATS).toContain(look.hat)
+    }
+  })
+
+  it('makes no two of them the same shape with the same thing', () => {
+    const marks = cast.map((id) => {
+      const { look } = figureForCharacter(id, CHARACTERS[id])
+      return `${look.build ?? 'regular'} ${look.hat ?? look.accessory} ${look.prop ?? '-'}`
+    })
+    expect(new Set(marks).size, marks.join('; ')).toBe(cast.length)
+    const drawn = cast.map((id) => visualKey(figureForCharacter(id, CHARACTERS[id])))
+    expect(new Set(drawn).size).toBe(cast.length)
+  })
+
+  it('puts the bosses in more than one body', () => {
+    const builds = new Set(bosses.map((id) => figureForCharacter(id, CHARACTERS[id]).look.build ?? 'regular'))
+    expect(builds.size).toBeGreaterThanOrEqual(3)
   })
 })

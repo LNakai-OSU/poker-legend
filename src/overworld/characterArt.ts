@@ -41,8 +41,38 @@ export type PersonHairStyle =
   | 'bob' | 'curly' | 'spiky' | 'bun' | 'buzz'
   | 'afro' | 'pigtails' | 'slick' | 'shaggy'
 
-/** Hats somebody can wear of their own accord, rather than because their job hands them one. */
-export type StreetHat = 'cap' | 'beanie' | 'fedora' | 'sunhat' | 'cowboy' | 'beret'
+/**
+ * Hats somebody can wear of their own accord, rather than because their job hands them one.
+ *
+ * The first six are what strangers are made up in. The rest are nobody's by
+ * chance: a hat that belongs to one person in the story — the Captain's cap,
+ * Vale's top hat, Zeke's headphones — so the cast is found in a crowd by
+ * silhouette, not by shirt colour.
+ */
+export type StreetHat =
+  | 'cap' | 'beanie' | 'fedora' | 'sunhat' | 'cowboy' | 'beret'
+  | 'bowler' | 'flatcap' | 'captain' | 'tophat' | 'headphones' | 'bandana' | 'hardhat'
+
+/**
+ * The shape of somebody under their clothes.
+ *
+ * Everybody used to be one body in different colours, which is a palette swap
+ * however the hair is cut. A build is its own drawing — torso, arms, legs and a
+ * walk — and moves the head with it, so a heavy man is wide and low, a tall
+ * one narrow and long-legged, an old one stooped over a cane, and a child small
+ * under the same-sized head. Clothes and props are drawn for the regular body
+ * and moved onto the others.
+ */
+export type PersonBuild = 'regular' | 'heavy' | 'tall' | 'elder' | 'kid'
+
+/**
+ * Something somebody carries or wears that is theirs: a cigar, a ledger, a
+ * scarf. Like the signature hats, these are for the cast — nobody is made up
+ * with one — so a recurring face has a thing you know them by.
+ */
+export type PersonProp =
+  | 'cigar' | 'pipe' | 'flower' | 'pearls' | 'scarf' | 'ledger' | 'chain'
+  | 'satchel' | 'rose' | 'newspaper' | 'coffee' | 'collar' | 'bowtie'
 
 /**
  * What goes over the shirt, for somebody in their own clothes. Without it a
@@ -62,7 +92,15 @@ export type Garment =
   /** A cardigan buttoned up the front. */
   | 'cardigan'
 
-export const STREET_HATS: StreetHat[] = ['cap', 'beanie', 'fedora', 'sunhat', 'cowboy', 'beret']
+export const STREET_HATS: StreetHat[] = [
+  'cap', 'beanie', 'fedora', 'sunhat', 'cowboy', 'beret',
+  'bowler', 'flatcap', 'captain', 'tophat', 'headphones', 'bandana', 'hardhat',
+]
+export const PERSON_BUILDS: PersonBuild[] = ['regular', 'heavy', 'tall', 'elder', 'kid']
+export const PERSON_PROPS: PersonProp[] = [
+  'cigar', 'pipe', 'flower', 'pearls', 'scarf', 'ledger', 'chain',
+  'satchel', 'rose', 'newspaper', 'coffee', 'collar', 'bowtie',
+]
 export const GARMENTS: Garment[] = ['jacket', 'vest', 'hoodie', 'overalls', 'stripes', 'cardigan']
 
 /**
@@ -88,6 +126,12 @@ export interface PersonLook extends Omit<AvatarLook, 'hairStyle'> {
   garment?: Garment
   /** The garment's colour: the jacket, the waistcoat, the overalls, the stripes. */
   garmentColor?: string
+  /** Their body. Regular unless said otherwise; a child's role gives a child's. */
+  build?: PersonBuild
+  /** Something of theirs they carry or wear, over whatever the role dresses them in. */
+  prop?: PersonProp
+  /** The prop's colour: the scarf, the ledger's cover, the flower. Each has its own otherwise. */
+  propColor?: string
   /** The hero's bought clothes, which replace the starter outfit. Only the hero reads it. */
   wear?: { style: 'suit' | 'tux' | 'jacket' | 'hoodie'; color: string }
 }
@@ -240,7 +284,7 @@ export function ramp(base: string, kind: 'cloth' | 'skin' | 'hair' = 'cloth'): R
  */
 const MATERIALS = [
   'skin', 'hair', 'top', 'sleeve', 'under', 'legs', 'shoe', 'hat',
-  'trim', 'apron', 'metal', 'pack', 'glass', 'eye', 'white', 'ink',
+  'trim', 'apron', 'metal', 'pack', 'glass', 'eye', 'white', 'ink', 'prop',
 ] as const
 type Material = (typeof MATERIALS)[number]
 type Tone = 0 | 1 | 2 | 3
@@ -252,6 +296,7 @@ type Tone = 0 | 1 | 2 | 3
  *   under V U u     legs   M L l     shoes  D F f     hat    K C c
  *   trim  Y X x     apron  J P p     metal  I N n     pack   r Z z
  *   glass q g       e eye  w white  # ink  o outline (hue of what it borders)
+ *   prop  E W k     (somebody's own thing: a cigar, a scarf, a ledger)
  *   _ erase  . nothing
  */
 const LEGEND: Record<string, [Material, Tone]> = {
@@ -269,6 +314,7 @@ const LEGEND: Record<string, [Material, Tone]> = {
   r: ['pack', 0], Z: ['pack', 1], z: ['pack', 2],
   q: ['glass', 0], g: ['glass', 1],
   e: ['eye', 1], w: ['white', 1], '#': ['ink', 1],
+  E: ['prop', 0], W: ['prop', 1], k: ['prop', 2],
 }
 
 const OUTLINE_CELL = -2
@@ -284,6 +330,12 @@ interface Layer {
   dy?: number
   /** Rows above this one are left out: the hair a hat covers. */
   fromY?: number
+  /**
+   * Only paint over the figure, in the rows it fills: clothes drawn for the
+   * regular body, worn by another. A tie stays on a narrow chest; a hood at
+   * the back of the neck, in a row with nothing else in it, is still a hood.
+   */
+  clip?: boolean
 }
 
 const at = (y: number, ...rows: string[]): Layer => ({ y, rows })
@@ -301,12 +353,15 @@ function stamp(cells: Cells, layer: Layer) {
     if (row.length !== PERSON_W) throw new Error(`a person drawing has a row ${row.length} wide: "${row}"`)
     const y = layer.y + r + dy
     if (y < 0 || y >= PERSON_H || y < (layer.fromY ?? 0)) return
+    let filled = false
+    if (layer.clip) for (let x = 0; x < PERSON_W; x++) filled ||= cells[y * PERSON_W + x] !== EMPTY
     for (let col = 0; col < row.length; col++) {
       const ch = row[col]
       if (ch === '.' || ch === ' ') continue
       const x = layer.mirror ? PERSON_W - 1 - col : col
       if (x < 0 || x >= PERSON_W) continue
       const i = y * PERSON_W + x
+      if (filled && cells[i] === EMPTY && ch !== '_') continue
       if (ch === '_') cells[i] = EMPTY
       else if (ch === 'o') cells[i] = OUTLINE_CELL
       else {
@@ -320,7 +375,7 @@ function stamp(cells: Cells, layer: Layer) {
 
 /** Materials whose outline wins when a pixel borders several: hair and hats frame a head. */
 const OUTLINE_PRIORITY: Material[] = [
-  'hair', 'hat', 'ink', 'eye', 'shoe', 'legs', 'top', 'sleeve', 'apron', 'under', 'pack', 'trim', 'metal', 'glass', 'skin', 'white',
+  'hair', 'hat', 'ink', 'eye', 'shoe', 'prop', 'legs', 'top', 'sleeve', 'apron', 'under', 'pack', 'trim', 'metal', 'glass', 'skin', 'white',
 ]
 
 /**
@@ -372,18 +427,18 @@ function recolor(cells: Cells, from: Material, to: Material, fromY = 0, toY = PE
 }
 
 /**
- * Removes whole rows and lets everything above drop down to close the gap — a
- * shorter body under the same head, which is how a child is drawn.
+ * Moves the whole figure up `rows` rows (down if negative): somebody whose
+ * hips are not on row 18, sat on a chair that expects them there.
  */
-function dropRows(cells: Cells, rows: number[]) {
+function shiftUp(cells: Cells, rows: number) {
+  if (rows === 0) return
   const source = cells.slice()
-  let write = PERSON_H - 1
-  for (let read = PERSON_H - 1; read >= 0; read--) {
-    if (rows.includes(read)) continue
-    for (let x = 0; x < PERSON_W; x++) cells[write * PERSON_W + x] = source[read * PERSON_W + x]
-    write--
+  cells.fill(EMPTY)
+  for (let y = 0; y < PERSON_H; y++) {
+    const from = y + rows
+    if (from < 0 || from >= PERSON_H) continue
+    for (let x = 0; x < PERSON_W; x++) cells[y * PERSON_W + x] = source[from * PERSON_W + x]
   }
-  for (; write >= 0; write--) for (let x = 0; x < PERSON_W; x++) cells[write * PERSON_W + x] = EMPTY
 }
 
 // ---------------------------------------------------------------------------
@@ -480,8 +535,6 @@ const BODY_DOWN: Record<Pose, Layer> = {
   ),
 }
 
-const BODY_UP: Record<Pose, Layer> = BODY_DOWN
-
 /**
  * Profile, facing left — which shows the left side, so the arm you see is the
  * left arm and the near leg the left leg. A stride swings them opposite ways.
@@ -526,6 +579,358 @@ const BODY_LEFT: Record<Pose | 'strideBack', Layer> = {
     '....ff....FFf...',
   ),
 }
+
+// ---------------------------------------------------------------------------
+// Builds
+// ---------------------------------------------------------------------------
+
+/**
+ * A body, drawn for each facing and step, and where on it things go.
+ *
+ * Rows are where a regular body has them, so clothes, hair and hats drawn for
+ * the regular body can be moved onto this one: `head` and `torso` are how many
+ * rows lower (or higher, negative) the head and the collar sit; `elbow`,
+ * `waist` and `knee` are the rows short sleeves, a shirt and shorts stop at.
+ */
+interface Build {
+  /** Facing you: standing, and a step on the left foot. */
+  down: {
+    stand: Layer
+    stride: Layer
+    /** A step on the right foot. Left out, it is the left step mirrored. */
+    strideOther?: Layer
+  }
+  /** From behind, the front drawn mirrored — the cane in the right hand is on the other side. */
+  backMirrored?: boolean
+  left: Record<Pose | 'strideBack', Layer>
+  head: number
+  torso: number
+  elbow: number
+  waist: number
+  knee: number
+}
+
+const REGULAR: Build = {
+  down: { stand: BODY_DOWN.stand, stride: BODY_DOWN.stride },
+  left: BODY_LEFT,
+  head: 0,
+  torso: 0,
+  elbow: 15,
+  waist: 18,
+  knee: 20,
+}
+
+/**
+ * Broad and low: the head a row down, a belly the arms hang outside, short
+ * legs set wide. In profile the belly leads.
+ */
+const HEAVY: Build = {
+  down: {
+    stand: at(14,
+      '...RTTTTTTTTt...',
+      '.BBRTTTTTTTTtaa.',
+      '.AoRTTTTTTTTtoa.',
+      '.AoRTTTTTTTTtoa.',
+      '.SottttttttttoS.',
+      '...MLLLLLLLLl...',
+      '...MLLl..MLLl...',
+      '...DFFf..DFFf...',
+      '...FFFf..FFFf...',
+    ),
+    stride: at(14,
+      '...RTTTTTTTTt...',
+      '.BBRTTTTTTTTtaa.',
+      '.AoRTTTTTTTTtoa.',
+      '.AoRTTTTTTTTtoS.',
+      '.Sotttttttttto..',
+      '...MLLLLLLLLl...',
+      '...DFFf..MLLl...',
+      '...FFFf..DFFf...',
+      '.........FFFf...',
+    ),
+  },
+  left: {
+    stand: at(14,
+      '.....RTTTTTt....',
+      '....RTTaAAAt....',
+      '...RTTTaAAAt....',
+      '...RTTTaAAat....',
+      '....tttsSStt....',
+      '.....MLLLLl.....',
+      '.....MLLLLl.....',
+      '....DFFFFf......',
+      '....FFFFFf......',
+    ),
+    stride: at(14,
+      '.....RTTTTTt....',
+      '....RTTTaAAAt...',
+      '...RTTTTaAAAt...',
+      '...RTTTTtaSSs...',
+      '....tttttttt....',
+      '.....MLLLLl.....',
+      '....MLlMLLl.....',
+      '...DFFf.Dff.....',
+      '...FFf...ff.....',
+    ),
+    strideBack: at(14,
+      '.....RTTTTTt....',
+      '...aAARTTTTt....',
+      '..aAARTTTTTt....',
+      '..sSaRTTTTTt....',
+      '....tttttttt....',
+      '.....MLLLLl.....',
+      '.....lllMLLl....',
+      '....Dff.DFFf....',
+      '....ff...FFf....',
+    ),
+  },
+  head: 1,
+  torso: 1,
+  elbow: 16,
+  waist: 19,
+  knee: 20,
+}
+
+/**
+ * Narrow and long: the head a row up, a slim chest, arms hanging to the
+ * thigh and a row more leg.
+ */
+const TALL: Build = {
+  down: {
+    stand: at(12,
+      '.....RTTTTt.....',
+      '....BRTTTTta....',
+      '....AoRTTtoa....',
+      '....AoRTTtoa....',
+      '....SottttoS....',
+      '.....MLLLLl.....',
+      '.....MLooLl.....',
+      '.....Ml..Ml.....',
+      '.....Ml..Ml.....',
+      '....DFf..DFf....',
+      '....FFf..FFf....',
+    ),
+    stride: at(12,
+      '.....RTTTTt.....',
+      '....BRTTTTta....',
+      '....AoRTTtoa....',
+      '....AoRTTtoS....',
+      '....Sotttto.....',
+      '.....MLLLLl.....',
+      '.....MLooLl.....',
+      '.....Ml..Ml.....',
+      '....DFf..Ml.....',
+      '....FFf..DFf....',
+      '.........FFf....',
+    ),
+  },
+  left: {
+    stand: at(12,
+      '......RTTTt.....',
+      '......RaAAt.....',
+      '......RaAAt.....',
+      '......RaAAt.....',
+      '......tsSSt.....',
+      '......MLLLl.....',
+      '.......MLl......',
+      '.......MLl......',
+      '.......MLl......',
+      '......DFFf......',
+      '......FFFf......',
+    ),
+    stride: at(12,
+      '......RTTTt.....',
+      '......RTaAAt....',
+      '......RTaAAt....',
+      '......RTtaSs....',
+      '......ttttt.....',
+      '......MLLLl.....',
+      '.....MLlMLl.....',
+      '.....MLl.ll.....',
+      '....MLl...ll....',
+      '...DFFf...Dff...',
+      '...FFf.....ff...',
+    ),
+    strideBack: at(12,
+      '......RTTTt.....',
+      '.....aAATTt.....',
+      '.....aAATTt.....',
+      '.....sSaTtt.....',
+      '......ttttt.....',
+      '......MLLLl.....',
+      '......llMLLl....',
+      '.....lll.MLl....',
+      '.....ll...MLl...',
+      '....Dff...DFFf..',
+      '....ff.....FFf..',
+    ),
+  },
+  head: -1,
+  torso: -1,
+  elbow: 14,
+  waist: 17,
+  knee: 19,
+}
+
+/**
+ * Stooped over a cane: the head a row down, round narrow shoulders, and a
+ * walking stick (`pack`, plain wood unless something says otherwise) in the
+ * right hand that is planted for one step and lifted for the other.
+ */
+const ELDER: Build = {
+  down: {
+    stand: at(14,
+      '.....RTTTTt.....',
+      '....BRTTTTta....',
+      '..rAoRTTTTtoa...',
+      '..ZSottttttoS...',
+      '..Z.MLLLLLLl....',
+      '..Z.MLLooLLl....',
+      '..Z.MLl..MLl....',
+      '..Z.DFf..DFf....',
+      '..z.FFf..FFf....',
+    ),
+    stride: at(14,
+      '.....RTTTTt.....',
+      '....BRTTTTta....',
+      '..rAoRTTTTtoa...',
+      '..ZSottttttoS...',
+      '..Z.MLLLLLLl....',
+      '..Z.MLLooLLl....',
+      '..Z.DFf..MLl....',
+      '..Z.FFf..DFf....',
+      '..z......FFf....',
+    ),
+    strideOther: at(14,
+      '.....RTTTTt.....',
+      '..r.BRTTTTta....',
+      '..ZAoRTTTTtoa...',
+      '..ZSottttttoS...',
+      '..Z.MLLLLLLl....',
+      '..Z.MLLooLLl....',
+      '..Z.MLl..DFf....',
+      '..z.DFf..FFf....',
+      '....FFf.........',
+    ),
+  },
+  backMirrored: true,
+  left: {
+    stand: at(14,
+      '.....RTTTTTt....',
+      '....RTTaAATt....',
+      '....RaAATTt.....',
+      '..rSSatttt......',
+      '..Z..MLLLLl.....',
+      '..Z...MLLl......',
+      '..Z...MLLl......',
+      '..Z..DFFFf......',
+      '..z..FFFFf......',
+    ),
+    stride: at(14,
+      '.....RTTTTTt....',
+      '....RTTaAATt....',
+      '....RaAATTt.....',
+      '..rSSatttt......',
+      '..Z..MLLLLl.....',
+      '..Z.MLlMLl......',
+      '..Z.MLl.ll......',
+      '..ZDFFf.Dff.....',
+      '..zFFf...ff.....',
+    ),
+    strideBack: at(14,
+      '.....RTTTTTt....',
+      '....RTTaAATt....',
+      '..r.RaAATTt.....',
+      '..ZSSatttt......',
+      '..Z..MLLLLl.....',
+      '..Z..lllMLl.....',
+      '..Z..ll..MLl....',
+      '..z.Dff..DFFf...',
+      '....ff....FFf...',
+    ),
+  },
+  head: 1,
+  torso: 1,
+  elbow: 16,
+  waist: 18,
+  knee: 20,
+}
+
+/**
+ * Small: a grown-up's head three rows down on a short, narrow body — the
+ * head is most of a child, which is how a LeafGreen youngster is drawn.
+ */
+const KID: Build = {
+  down: {
+    stand: at(16,
+      '....BRTTTTta....',
+      '....AoRTTtoa....',
+      '....SottttoS....',
+      '.....MLLLLl.....',
+      '.....Ml..Ml.....',
+      '....DFf..DFf....',
+      '....FFf..FFf....',
+    ),
+    stride: at(16,
+      '....BRTTTTta....',
+      '....AoRTTtoS....',
+      '....Sotttto.....',
+      '.....MLLLLl.....',
+      '....DFf..Ml.....',
+      '....FFf..DFf....',
+      '.........FFf....',
+    ),
+  },
+  left: {
+    stand: at(16,
+      '.....RTTTt......',
+      '.....RTaAt......',
+      '.....ttSSt......',
+      '.....MLLLl......',
+      '......MLl.......',
+      '.....DFFf.......',
+      '.....FFFf.......',
+    ),
+    stride: at(16,
+      '.....RTTTt......',
+      '.....RTTaAt.....',
+      '.....tttaSs.....',
+      '.....MLLLl......',
+      '....MLl.ll......',
+      '...DFFf.Dff.....',
+      '...FFf...ff.....',
+    ),
+    strideBack: at(16,
+      '.....RTTTt......',
+      '....aAATTt......',
+      '....sSattt......',
+      '.....MLLLl......',
+      '.....ll.MLl.....',
+      '....Dff..DFFf...',
+      '....ff....FFf...',
+    ),
+  },
+  head: 3,
+  torso: 3,
+  elbow: 17,
+  waist: 19,
+  knee: 20,
+}
+
+const BUILDS: Record<PersonBuild, Build> = {
+  regular: REGULAR,
+  heavy: HEAVY,
+  tall: TALL,
+  elder: ELDER,
+  kid: KID,
+}
+
+/** A layer moved down `dy` rows, on top of any move it already had. */
+const lowered = (layer: Layer, dy: number, extra: Partial<Layer> = {}): Layer => ({
+  ...layer,
+  ...extra,
+  dy: (layer.dy ?? 0) + dy,
+})
 
 // ---------------------------------------------------------------------------
 // Hair
@@ -1278,6 +1683,205 @@ const HATS: Record<HatKind, Hat> = {
       )],
     },
   },
+  /** A round crown and a short brim curled all the way round. */
+  bowler: {
+    hairFrom: 7,
+    views: {
+      down: [at(2,
+        '......KCCc......',
+        '....KCCCCCCc....',
+        '....KCCCCCCc....',
+        '....cccccccc....',
+        '...KCCCCCCCCc...',
+      )],
+      up: [at(2,
+        '......KCCc......',
+        '....KCCCCCCc....',
+        '....KCCCCCCc....',
+        '....cccccccc....',
+        '...KCCCCCCCCc...',
+      )],
+      left: [at(2,
+        '......KCCc......',
+        '....KCCCCCc.....',
+        '....KCCCCCc.....',
+        '....ccccccc.....',
+        '..KCCCCCCCCCc...',
+      )],
+    },
+  },
+  /** A newsboy cap: a soft crown wider than the head, pulled forward over a short peak. */
+  flatcap: {
+    hairFrom: 6,
+    views: {
+      down: [at(3,
+        '...KKCCCCCCcc...',
+        '..KCCCCcCCCCCc..',
+        '.KCCCCCCCCCCCcc.',
+        '..cccccccccccc..',
+      )],
+      up: [at(3,
+        '...KKCCCCCCcc...',
+        '..KCCCCcCCCCCc..',
+        '.KCCCCCCCCCCCcc.',
+        '..cCCCCCCCCCCc..',
+      )],
+      left: [at(3,
+        '...KKCCCCCc.....',
+        '..KCCCCcCCCCc...',
+        'KCCCCCCCCCCCcc..',
+        '.cc.cccccccc....',
+      )],
+    },
+  },
+  /** A ship's master: white crown, black band and peak, a gold badge. */
+  captain: {
+    hairFrom: 6,
+    views: {
+      down: [at(2,
+        '...KKCCCCCCCc...',
+        '..KCCCCCCCCCcc..',
+        '..cCCCCCCCCCcc..',
+        '...####IN####...',
+        '...##########...',
+      )],
+      up: [at(2,
+        '...KKCCCCCCCc...',
+        '..KCCCCCCCCCcc..',
+        '..cCCCCCCCCCcc..',
+        '...##########...',
+      )],
+      left: [at(2,
+        '...KKCCCCCCc....',
+        '..KCCCCCCCCcc...',
+        '..cCCCCCCCCcc...',
+        '...IN#######....',
+        '.####...........',
+      )],
+    },
+  },
+  /** Tall and straight-sided, with a band: the tallest thing in any room. */
+  tophat: {
+    hairFrom: 6,
+    views: {
+      down: [at(0,
+        '.....KCCCCc.....',
+        '.....KCCCCc.....',
+        '.....KCCCCc.....',
+        '.....xxxxxx.....',
+        '...KCCCCCCCCc...',
+        '....cccccccc....',
+      )],
+      up: [at(0,
+        '.....KCCCCc.....',
+        '.....KCCCCc.....',
+        '.....KCCCCc.....',
+        '.....xxxxxx.....',
+        '...KCCCCCCCCc...',
+        '....cccccccc....',
+      )],
+      left: [at(0,
+        '.....KCCCc......',
+        '.....KCCCc......',
+        '.....KCCCc......',
+        '.....xxxxx......',
+        '..KCCCCCCCCc....',
+        '...cccccccc.....',
+      )],
+    },
+  },
+  /** A band over the hair and a cup on each ear. Hair shows all round. */
+  headphones: {
+    hairFrom: 0,
+    views: {
+      down: [at(2,
+        '....KCCCCCCc....',
+        '...K........c...',
+        '..K..........c..',
+        '..K..........c..',
+        '..K..........c..',
+        '.KCC........Ccc.',
+        '.KCC........Ccc.',
+        '..c..........c..',
+      )],
+      up: [at(2,
+        '....KCCCCCCc....',
+        '...K........c...',
+        '..K..........c..',
+        '..K..........c..',
+        '..K..........c..',
+        '.KCC........Ccc.',
+        '.KCC........Ccc.',
+        '..c..........c..',
+      )],
+      left: [at(2,
+        '.......KCc......',
+        '........C.......',
+        '........C.......',
+        '........C.......',
+        '........C.......',
+        '.......KCCc.....',
+        '.......CCCc.....',
+        '.......cccc.....',
+      )],
+    },
+  },
+  /** A spotted kerchief knotted over the crown, its ends hanging at the back. */
+  bandana: {
+    hairFrom: 7,
+    views: {
+      down: [at(3,
+        '.....KCCCCc.....',
+        '...KCCwCCCCCc...',
+        '..KCCCCCCwCCcc..',
+        '..cccccccccccCc.',
+        '.............Cc.',
+      )],
+      up: [at(3,
+        '.....KCCCCc.....',
+        '...KCCwCCCCCc...',
+        '..KCCCCCCwCCcc..',
+        '..ccccccCccccc..',
+        '.......CC.......',
+        '......c..c......',
+      )],
+      left: [at(3,
+        '.....KCCCCc.....',
+        '...KCCwCCCCc....',
+        '..KCCCCCCwCcc...',
+        '..ccccccccccCc..',
+        '............Cc..',
+        '.............c..',
+      )],
+    },
+  },
+  /** A builder's helmet: a ridged dome and a brim all round. */
+  hardhat: {
+    hairFrom: 7,
+    views: {
+      down: [at(2,
+        '......KCCc......',
+        '....KCCwCCCc....',
+        '...KCCCwCCCCc...',
+        '...KCCCCCCCCc...',
+        '.KCCCCCCCCCCCcc.',
+      )],
+      up: [at(2,
+        '......KCCc......',
+        '....KCCwCCCc....',
+        '...KCCCwCCCCc...',
+        '...KCCCCCCCCc...',
+        '.KCCCCCCCCCCCcc.',
+      )],
+      left: [at(2,
+        '.....KCCc.......',
+        '...KCCwCCCc.....',
+        '..KCCCwCCCCc....',
+        '..KCCCCCCCCc....',
+        'KCCCCCCCCCCCc...',
+      )],
+    },
+  },
   hero: {
     hairFrom: 7,
     views: {
@@ -1339,6 +1943,267 @@ const FACE: Record<FaceKind, Partial<Record<View, Layer[]>>> = {
 }
 
 // ---------------------------------------------------------------------------
+// Props
+// ---------------------------------------------------------------------------
+
+/**
+ * Something of somebody's own, drawn for the regular body. `on` says whether it
+ * moves with the head (a cigar, a flower in the hair) or with the chest (a
+ * scarf, a ledger held to it). Mostly `prop` material, in `color` unless the
+ * look says otherwise; newsprint and a priest's collar are what they are.
+ */
+interface Prop {
+  on: 'head' | 'body'
+  color: string
+  views: ViewLayers
+}
+
+const PROPS: Record<PersonProp, Prop> = {
+  /** Clamped in the side of the mouth, the lit end past the cheek. */
+  cigar: {
+    on: 'head',
+    color: '#6a4426',
+    views: {
+      down: [at(10, '..........EWWI..')],
+      left: [at(10, 'IWW.............')],
+    },
+  },
+  /** A bent briar: the stem from the mouth, the bowl hanging below the chin. */
+  pipe: {
+    on: 'head',
+    color: '#4a2e1a',
+    views: {
+      down: [at(10,
+        '..........k.....',
+        '...........kEW..',
+        '............Wk..',
+      )],
+      left: [at(10,
+        '.k..............',
+        'EW..............',
+        'Wk..............',
+      )],
+    },
+  },
+  /** A big bloom behind the left ear. */
+  flower: {
+    on: 'head',
+    color: '#e0405a',
+    views: {
+      down: [at(5,
+        '...........EW...',
+        '..........WIWk..',
+        '...........Wk...',
+      )],
+      up: [at(5,
+        '...EW...........',
+        '..WIWk..........',
+        '...Wk...........',
+      )],
+      left: [at(5,
+        '........EW......',
+        '.......WIWk.....',
+        '........Wk......',
+      )],
+    },
+  },
+  /** A string of beads round the neck. */
+  pearls: {
+    on: 'body',
+    color: '#f2ecdc',
+    views: {
+      down: [at(13,
+        '.....W....W.....',
+        '......EWEW......',
+      )],
+      up: [at(13, '.....W....W.....')],
+      left: [at(13,
+        '.....W..........',
+        '.....E..........',
+      )],
+    },
+  },
+  /** Wound round the neck with one end down the front, or flying behind. */
+  scarf: {
+    on: 'body',
+    color: '#d8a040',
+    views: {
+      down: [at(12,
+        '.....EWWWWk.....',
+        '....EWWWWWWk....',
+        '.........Wk.....',
+        '.........Wk.....',
+        '.........kk.....',
+      )],
+      up: [at(12,
+        '.....EWWWWk.....',
+        '....EWWWWWWk....',
+        '......Wk........',
+        '......Wk........',
+      )],
+      left: [at(12,
+        '.....EWWWk......',
+        '.....WWWWWk.....',
+        '..........Wk....',
+        '...........Wk...',
+      )],
+    },
+  },
+  /** A bound book held to the chest. */
+  ledger: {
+    on: 'body',
+    color: '#7a2030',
+    views: {
+      down: [at(15,
+        '...EWWWk........',
+        '...WwwwW........',
+        '...kkkkk........',
+      )],
+      left: [at(14,
+        '...EW...........',
+        '...WW...........',
+        '...wW...........',
+        '...kk...........',
+      )],
+    },
+  },
+  /** A heavy chain with something hanging off it. */
+  chain: {
+    on: 'body',
+    color: '#e3b640',
+    views: {
+      down: [at(13,
+        '.....E....E.....',
+        '......E..E......',
+        '.......WW.......',
+        '.......kk.......',
+      )],
+      up: [at(13, '.....E....E.....')],
+      left: [at(13,
+        '.....E..........',
+        '.....W..........',
+      )],
+    },
+  },
+  /** A leather bag on the right hip, its strap across the chest. */
+  satchel: {
+    on: 'body',
+    color: '#7a4a24',
+    views: {
+      down: [at(13,
+        '..........k.....',
+        '.........k......',
+        '........k.......',
+        '.......k........',
+        '..EWWWk.........',
+        '..WWWWk.........',
+        '..kkkkk.........',
+      )],
+      up: [at(13,
+        '.....k..........',
+        '......k.........',
+        '.......k........',
+        '........k.......',
+        '.........kWWWE..',
+        '.........kWWWW..',
+        '.........kkkkk..',
+      )],
+      left: [at(13,
+        '........kk......',
+        '.......k........',
+        '................',
+        '................',
+        '..........EWk...',
+        '..........WWk...',
+        '..........kkk...',
+      )],
+    },
+  },
+  /** A flower in the buttonhole. */
+  rose: {
+    on: 'body',
+    color: '#d02a3a',
+    views: {
+      down: [at(14,
+        '.........EW.....',
+        '.........Wk.....',
+      )],
+      left: [at(14,
+        '.....EW.........',
+        '.....k..........',
+      )],
+    },
+  },
+  /** Folded under the left arm, the racing page out. */
+  newspaper: {
+    on: 'body',
+    color: '#e8e4d8',
+    views: {
+      down: [at(14,
+        '...........wwww.',
+        '...........w##w.',
+        '...........wwww.',
+        '...........w##w.',
+      )],
+      up: [at(14,
+        '.wwww...........',
+        '.w##w...........',
+        '.wwww...........',
+        '.w##w...........',
+      )],
+      left: [at(14,
+        '.......wwww.....',
+        '.......w##w.....',
+        '.......wwww.....',
+      )],
+    },
+  },
+  /** A takeaway cup in the left hand, lid and all. */
+  coffee: {
+    on: 'body',
+    color: '#b04a2a',
+    views: {
+      down: [at(15,
+        '.............ww.',
+        '.............EW.',
+        '.............Wk.',
+      )],
+      left: [at(14,
+        '..ww............',
+        '..EWS...........',
+        '..Wk............',
+      )],
+    },
+  },
+  /** A clerical collar: a black band and the white tab at the throat. */
+  collar: {
+    on: 'body',
+    color: '#1b1622',
+    views: {
+      down: [at(13, '.....##ww##.....')],
+      up: [at(13, '.....######.....')],
+      left: [at(13, '.....w##........')],
+    },
+  },
+  /** A bow tie at the collar. */
+  bowtie: {
+    on: 'body',
+    color: '#a01e30',
+    views: {
+      down: [at(13,
+        '......W..W......',
+        '......WEkW......',
+        '......W..W......',
+      )],
+      left: [at(13,
+        '.....W..........',
+        '.....k..........',
+      )],
+    },
+  },
+}
+
+// ---------------------------------------------------------------------------
 // Outfits
 // ---------------------------------------------------------------------------
 
@@ -1360,8 +2225,8 @@ interface Outfit {
   front?: ViewLayers
   /** Breton stripes on the top, checks on the trousers, white rubber soles. */
   patterns?: Array<'stripes' | 'checks' | 'soles'>
-  /** A child: the same head on a shorter body. */
-  small?: boolean
+  /** A body the role insists on: a child is a child, whatever the look says. */
+  build?: PersonBuild
   /** Hair the role insists on (the hero's, under his cap). */
   hair?: PersonHairStyle | 'hero'
 }
@@ -1769,7 +2634,7 @@ const OUTFITS: Record<NpcRole, (look: PersonLook) => Outfit> = {
     colors: {},
     shortSleeves: look.sleeves !== 'long',
     lower: look.lower ?? 'shorts',
-    small: true,
+    build: 'kid',
     over: { down: [NECKLINES[0][0]] },
   }),
 
@@ -1858,6 +2723,8 @@ const ACCESSORY_HAT_COLOR: Partial<Record<HatKind, string>> = { cap: '#2f3d5c', 
 /** What a hat of somebody's own is made of when their look does not say. */
 const STREET_HAT_COLOR: Partial<Record<HatKind, string>> = {
   beanie: '#b83a3a', fedora: '#4a3a2e', sunhat: '#e8d8a8', cowboy: '#8a5a30', beret: '#2a2a34',
+  bowler: '#26262c', flatcap: '#5a5248', captain: '#eeeeea', tophat: '#1e1e26', headphones: '#2a2a34',
+  bandana: '#c03030', hardhat: '#e8c020',
 }
 
 function paletteFor(look: PersonLook, outfit: Outfit, hat: HatKind | undefined): Palette {
@@ -1876,6 +2743,7 @@ function paletteFor(look: PersonLook, outfit: Outfit, hat: HatKind | undefined):
     apron: ramp(c.apron ?? '#e8e8e0'),
     metal: ramp(c.metal ?? '#e3b640'),
     pack: ramp(c.pack ?? '#8a5a2a'),
+    prop: ramp(look.propColor ?? (look.prop ? PROPS[look.prop].color : '#8a5a2a')),
     glass: ['#ffffff', '#cfe6f8', '#8fb4d4', '#2a3446'],
     eye: solid('#1a1420'),
     white: ['#ffffff', '#f4f4f8', '#c4c8d8', '#2a2a36'],
@@ -1895,30 +2763,40 @@ function layersFor(figure: Figure, facing: Facing, frame: WalkFrame, blink: bool
   const hair = hairStyle === 'hero' ? HERO_HAIR : (HAIR[hairStyle] ?? HAIR.short)
   const accessory = outfit.face ?? look.accessory
   const face = accessory === 'glasses' || accessory === 'shades' || accessory === 'earring' ? FACE[accessory] : undefined
-  const pose: Pose = frame === 0 ? 'stand' : 'stride'
+  const prop = look.prop ? PROPS[look.prop] : undefined
   const lower = outfit.lower ?? look.lower ?? 'trousers'
+  const build = BUILDS[outfit.build ?? look.build ?? 'regular']
+  // Clothes drawn for the regular body stay on whichever one wears them.
+  const clip = build !== REGULAR
+  const onHead = (layers: Layer[] = [], extra: Partial<Layer> = {}) => layers.map((l) => lowered(l, build.head, extra))
+  const onBody = (layers: Layer[] = [], extra: Partial<Layer> = {}) => layers.map((l) => lowered(l, build.torso, extra))
 
-  const layers: Layer[] = [...(outfit.behind?.[view] ?? [])]
+  const layers: Layer[] = onBody(outfit.behind?.[view])
   if (view === 'left') {
-    layers.push(frame === 0 ? BODY_LEFT.stand : frame === 1 ? BODY_LEFT.stride : BODY_LEFT.strideBack)
+    layers.push(frame === 0 ? build.left.stand : frame === 1 ? build.left.stride : build.left.strideBack)
   } else {
-    layers.push({ ...(view === 'down' ? BODY_DOWN : BODY_UP)[pose], mirror: frame === 2 })
+    const { stand, stride, strideOther } = build.down
+    const body = frame === 0 ? stand : frame === 1 ? stride : (strideOther ?? { ...stride, mirror: true })
+    const turned = view === 'up' && build.backMirrored
+    layers.push({ ...body, mirror: Boolean(body.mirror) !== Boolean(turned) })
   }
-  layers.push(...(outfit.over?.[view] ?? []))
-  if (lower === 'skirt') layers.push(SKIRT[view])
-  if (view === 'down') layers.push(HEAD_DOWN, blink ? BLINK_DOWN : EYES_DOWN)
-  else if (view === 'up') layers.push(HEAD_UP)
-  else layers.push(HEAD_LEFT, blink ? BLINK_LEFT : EYES_LEFT)
-  layers.push(...(face?.[view] ?? []))
-  layers.push(...hair[view].map((layer) => ({ ...layer, fromY: hat?.hairFrom })))
-  if (hat) layers.push(...hat.views[view])
-  layers.push(...(outfit.front?.[view] ?? []))
+  layers.push(...onBody(outfit.over?.[view], { clip }))
+  if (lower === 'skirt') layers.push(lowered(SKIRT[view], build.waist - 18))
+  if (prop?.on === 'body') layers.push(...onBody(prop.views[view]))
+  if (view === 'down') layers.push(...onHead([HEAD_DOWN, blink ? BLINK_DOWN : EYES_DOWN]))
+  else if (view === 'up') layers.push(...onHead([HEAD_UP]))
+  else layers.push(...onHead([HEAD_LEFT, blink ? BLINK_LEFT : EYES_LEFT]))
+  layers.push(...onHead(face?.[view]))
+  layers.push(...onHead(hair[view], hat ? { fromY: hat.hairFrom + build.head } : {}))
+  if (hat) layers.push(...onHead(hat.views[view]))
+  if (prop?.on === 'head') layers.push(...onHead(prop.views[view]))
+  layers.push(...onBody(outfit.front?.[view]))
   // Last, so it folds whatever the outfit put below the waist too.
-  if (seated) layers.push(SEATED_LOWER[view])
+  if (seated) layers.push(lowered(SEATED_LOWER[view], build.waist - 18))
 
   const post = (cells: Cells) => {
-    if (outfit.shortSleeves) recolor(cells, 'sleeve', 'skin', 15)
-    if (lower !== 'trousers') recolor(cells, 'legs', 'skin', 20)
+    if (outfit.shortSleeves) recolor(cells, 'sleeve', 'skin', build.elbow)
+    if (lower !== 'trousers') recolor(cells, 'legs', 'skin', build.knee)
     for (const pattern of outfit.patterns ?? []) {
       if (pattern === 'soles') recolor(cells, 'shoe', 'white', 22)
       for (let y = 0; y < PERSON_H; y++) {
@@ -1926,7 +2804,7 @@ function layersFor(figure: Figure, facing: Facing, frame: WalkFrame, blink: bool
           const i = y * PERSON_W + x
           if (cells[i] < 0) continue
           const material = materialOf(cells[i])
-          if (pattern === 'stripes' && (material === 'top' || material === 'sleeve') && y % 2 === 0 && y < 18) {
+          if (pattern === 'stripes' && (material === 'top' || material === 'sleeve') && y % 2 === 0 && y < build.waist) {
             cells[i] = cellOf('trim', (cells[i] % 4) as Tone)
           }
           if (pattern === 'checks' && material === 'legs' && (x + y) % 2 === 0) {
@@ -1935,7 +2813,8 @@ function layersFor(figure: Figure, facing: Facing, frame: WalkFrame, blink: bool
         }
       }
     }
-    if (outfit.small) dropRows(cells, [15, 19])
+    // A chair has its cushion on row 18: sit everybody's hips on it.
+    if (seated) shiftUp(cells, build.waist - 18)
   }
   return { layers, post, palette: paletteFor(look, outfit, hatKind) }
 }
@@ -2078,7 +2957,7 @@ export function figureKey(figure: Figure): string {
   const l = figure.look
   return [
     figure.role, l.skin, l.hair, l.hairStyle, l.shirt, l.accessory, l.trousers, l.shoes, l.lower, l.sleeves,
-    l.hat, l.hatColor, l.garment, l.garmentColor, l.wear?.style, l.wear?.color,
+    l.hat, l.hatColor, l.garment, l.garmentColor, l.wear?.style, l.wear?.color, l.build, l.prop, l.propColor,
   ].join('|')
 }
 

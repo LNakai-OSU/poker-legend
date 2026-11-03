@@ -122,6 +122,13 @@ export interface CharacterDef {
   /** Shown under their name at the table, e.g. "Calls everything". */
   style: string
   look: AvatarLook
+  /**
+   * How the overworld draws somebody with no `overworld` presence of their own
+   * — a boss, seen only at their table in the back room: a build, a hat, a
+   * prop. Laid over `look`. Somebody with a presence writes this in
+   * `overworld.look` instead.
+   */
+  streetLook?: Partial<PersonLook>
   /** Characters who never sit down — Marcus, Dana — have none. */
   seat?: Seat
   lines: Partial<TableLines>
@@ -259,7 +266,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
       // He works, he eats, he goes home and deals. The Friday game is at his
       // place because his place is where he already is.
       // Straight from work: overalls over the shirt he plays in.
-      look: { garment: 'overalls', garmentColor: '#3a5a8a', trousers: '#3a5a8a', shoes: '#5a3a22' },
+      look: { garment: 'overalls', garmentColor: '#3a5a8a', trousers: '#3a5a8a', shoes: '#5a3a22', hat: 'bandana', hatColor: '#c03030' },
       lines: ['Marcus: Catch me later. I am always around.'],
       schedule: [
         { period: 'morning', areaId: 'basin', col: 9, row: 11, lines: [
@@ -371,7 +378,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     },
     overworld: {
       // She is at the laundromat because it is warm and nobody asks her anything.
-      look: { garment: 'cardigan', garmentColor: '#4a4a54', lower: 'skirt', trousers: '#2e2e36' },
+      look: { garment: 'cardigan', garmentColor: '#4a4a54', lower: 'skirt', trousers: '#2e2e36', prop: 'scarf', propColor: '#d8a040' },
       lines: ['Dana: Mm.'],
       schedule: [
         { period: 'morning', areaId: 'laundromat', col: 8, row: 4, lines: [
@@ -502,7 +509,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     },
     overworld: {
       // A windbreaker he has had since the casino gave them away.
-      look: { garment: 'jacket', garmentColor: '#a8603a', sleeves: 'long' },
+      look: { garment: 'jacket', garmentColor: '#a8603a', sleeves: 'long', build: 'heavy', prop: 'chain' },
       lines: ['Ray: I am due. I can feel it.'],
       schedule: [
         { period: 'afternoon', areaId: 'sc-street', col: 18, row: 7, lines: [
@@ -532,7 +539,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
       lose: ['Sully: Well played.'],
     },
     overworld: {
-      look: { garment: 'vest', garmentColor: '#2e2e36', sleeves: 'short' },
+      look: { garment: 'vest', garmentColor: '#2e2e36', sleeves: 'short', build: 'tall', prop: 'satchel' },
       lines: ['Sully: Working.'],
       schedule: [
         { period: 'morning', areaId: 'sc-street', col: 12, row: 13, lines: [
@@ -558,7 +565,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
       lose: ['Deb: Alright. That was good.'],
     },
     overworld: {
-      look: { garment: 'jacket', garmentColor: '#2a1e1a', lower: 'skirt', trousers: '#5a3a24' },
+      look: { garment: 'jacket', garmentColor: '#2a1e1a', lower: 'skirt', trousers: '#5a3a24', prop: 'coffee' },
       lines: ['Deb: Been here longer than you.'],
       schedule: [
         { period: 'morning', areaId: 'rb-street', col: 9, row: 7, lines: [
@@ -584,7 +591,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
       lose: ['Mack: Hm.'],
     },
     overworld: {
-      look: { garment: 'hoodie', garmentColor: '#5a6a4a' },
+      look: { garment: 'hoodie', garmentColor: '#5a6a4a', hat: 'hardhat' },
       lines: ['Mack: Waiting on a hand. Same as always.'],
       schedule: [
         { period: 'afternoon', areaId: 'rb-street', col: 20, row: 12, lines: [
@@ -677,6 +684,8 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Lou Brannigan',
     style: 'Owns the saloon. Never folds a hand he likes.',
     look: { skin: '#d9a47a', hair: '#8a8a8a', hairStyle: 'short', shirt: '#7a2e2e', accessory: 'cap' },
+    // In the back room: a big man in a saloon keeper's waistcoat, his hat on and his cigar lit.
+    streetLook: { build: 'heavy', hat: 'cowboy', hatColor: '#c8a878', prop: 'cigar', garment: 'vest', garmentColor: '#2a2a2e' },
     seat: { skillTier: 'novice', archetype: 'station' },
     lines: {
       greeting: ['Lou: Sit. Thirty years I have been waiting for somebody worth the chair.'],
@@ -692,6 +701,8 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Captain Odette Marsh',
     style: 'Runs the boat. Folds to nothing but trouble.',
     look: { skin: '#c68a62', hair: '#2a2a3a', hairStyle: 'tied', shirt: '#1d2f55', accessory: 'cap' },
+    // In the cabin: her master's cap and her pipe.
+    streetLook: { hat: 'captain', prop: 'pipe', garment: 'jacket', garmentColor: '#16203c', trousers: '#16203c' },
     seat: { skillTier: 'amateur', archetype: 'nit' },
     lines: {
       greeting: ['Odette: The river keeps the ones who play badly. Sit down.'],
@@ -707,6 +718,8 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Mr. Bellamy',
     style: 'The Harbor Room’s house man. Has read every book on you.',
     look: { skin: '#e7bd96', hair: '#3a3a3a', hairStyle: 'short', shirt: '#243a2e', accessory: 'glasses' },
+    // Long, dark and buttoned up, a rose in the lapel.
+    streetLook: { build: 'tall', hat: 'bowler', prop: 'rose', garment: 'jacket', garmentColor: '#1e1e24' },
     seat: { skillTier: 'competent', archetype: 'regular' },
     lines: {
       greeting: ['Bellamy: Please. Sit. I have read about you. It was brief.'],
@@ -722,6 +735,8 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Inés Calloway',
     style: 'Owns the Cay Room. Raises first, asks later.',
     look: { skin: '#b9794f', hair: '#6b1d2a', hairStyle: 'long', shirt: '#0f6f6a', accessory: 'shades' },
+    // A hibiscus behind her ear.
+    streetLook: { prop: 'flower', propColor: '#f05a3a', lower: 'skirt', trousers: '#0f6f6a' },
     seat: { skillTier: 'sharp', archetype: 'maniac' },
     lines: {
       greeting: ['Inés: Darling. Sit. I do hope you brought enough.'],
@@ -737,6 +752,8 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Solomon Vale',
     style: 'The Mesa’s owner. Nobody has seen him bluff.',
     look: { skin: '#8a5a3a', hair: '#e6e6e6', hairStyle: 'bald', shirt: '#1a1a24', accessory: 'shades' },
+    // The old man in the white suit and the white top hat, on a cane.
+    streetLook: { build: 'elder', hat: 'tophat', hatColor: '#e8e4dc', garment: 'jacket', garmentColor: '#e8e4dc', trousers: '#e8e4dc' },
     seat: { skillTier: 'elite', archetype: 'regular' },
     lines: {
       greeting: ['Vale: Sit. The cameras are off. I like to see how people actually play.'],
@@ -814,6 +831,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     overworld: {
       // The rival: a town ahead of you, until the debt catches up. Nowhere at the
       // start — Kit is a rumour in Silver Creek and a face from Riverbend on.
+      look: { hat: 'flatcap', hatColor: '#3a3a44' },
       lines: ['Kit: Not now.'],
       schedule: [],
       chapters: [
@@ -1057,7 +1075,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     lines: { greeting: ['Hal: I do not play now. I watch other people play the way I taught them.'] },
     overworld: {
       // One man on both stools and on the Lumina street: the POIs carry no look of their own.
-      look: { trousers: '#3a3a46', shoes: '#2a1a10', lower: 'trousers', sleeves: 'long' },
+      look: { trousers: '#3a3a46', shoes: '#2a1a10', lower: 'trousers', sleeves: 'long', build: 'elder', prop: 'newspaper' },
       lines: ['Hal: Position. Always position.'],
       schedule: [],
       chapters: [
@@ -1094,7 +1112,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     overworld: {
       // A river woman's coat, not a banker's suit. She lends from a bait shed.
       role: 'local',
-      look: { garment: 'jacket', garmentColor: '#3a3a2e', trousers: '#2e2e26', sleeves: 'long' },
+      look: { garment: 'jacket', garmentColor: '#3a3a2e', trousers: '#2e2e26', sleeves: 'long', build: 'tall', prop: 'chain', propColor: '#d8d8e0' },
       lines: ['Cass: Nobody pays me back. You did.'],
       schedule: [],
       chapters: [
@@ -1118,6 +1136,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     lines: { greeting: ['Mr. Emeka: I do not sit down. I invest in people who do.'] },
     overworld: {
       role: 'suit',
+      look: { build: 'heavy', prop: 'rose', propColor: '#f0f0ea' },
       lines: ['Mr. Emeka: Patient. I said I liked patient.'],
       schedule: [],
       chapters: [
@@ -1141,7 +1160,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     lines: { greeting: ['Dutch: Me? No. I just hold the coats.'] },
     overworld: {
       // A yellow slicker in all weathers: the river is always about to happen.
-      look: { garment: 'jacket', garmentColor: '#d4a51c', trousers: '#3a3a30', sleeves: 'long' },
+      look: { garment: 'jacket', garmentColor: '#d4a51c', trousers: '#3a3a30', sleeves: 'long', build: 'heavy', prop: 'cigar' },
       lines: ['Dutch: Just here for the view. Lovely day for it. Three days, she said?'],
       schedule: [],
       chapters: [
@@ -1164,6 +1183,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     lines: { greeting: ['Abel: I do not play, thank you. I keep count.'] },
     overworld: {
       role: 'suit',
+      look: { build: 'tall', prop: 'coffee', propColor: '#3a5a8a' },
       lines: ['Abel: Mr. Emeka hopes you are well. He asked me to hope it too.'],
       schedule: [],
       chapters: [
@@ -1187,6 +1207,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     overworld: {
       // The Consortium's men dress identically. That is the point of them.
       role: 'collector',
+      look: { prop: 'ledger', propColor: '#24242c' },
       lines: ['Mr. Lowe: We are not here. You will know when we are here.'],
       schedule: [],
       chapters: [
@@ -1209,7 +1230,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     lines: { greeting: ['Ms. Fong: I keep the book. I do not write in it at the table.'] },
     overworld: {
       role: 'suit',
-      look: { lower: 'skirt' },
+      look: { lower: 'skirt', prop: 'ledger' },
       lines: ['Ms. Fong: I keep the book. Your page is short so far.'],
       schedule: [],
       chapters: [
@@ -1241,7 +1262,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
       lose: ['Dolores: Beginner\'s luck. Mine was in 1971.'],
     },
     overworld: {
-      look: { garment: 'cardigan', garmentColor: '#8a3a5a', sleeves: 'long' },
+      look: { garment: 'cardigan', garmentColor: '#8a3a5a', sleeves: 'long', build: 'elder', prop: 'pearls', propColor: '#c8a8e0' },
       lines: ['Dolores: Rub the foot. Go on. It does not bite. Much.'],
       schedule: [
         { period: 'afternoon', areaId: 'sc-floor', col: 13, row: 7, lines: [
@@ -1271,7 +1292,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
       lose: ['Gaines: The meek shall inherit it. Not today, evidently.'],
     },
     overworld: {
-      look: { garment: 'jacket', garmentColor: '#1c1c24', sleeves: 'long' },
+      look: { garment: 'jacket', garmentColor: '#1c1c24', sleeves: 'long', prop: 'collar' },
       lines: ['Gaines: Ten percent, my friend. Not for me. For the boat.'],
       schedule: [
         { period: 'evening', areaId: 'rb-boat', col: 17, row: 5, lines: [
@@ -1298,7 +1319,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
       lose: ['Contessa: Bloody hell. Mon dieu.'],
     },
     overworld: {
-      look: { garment: 'vest', garmentColor: '#40204a', sleeves: 'short' },
+      look: { garment: 'vest', garmentColor: '#40204a', sleeves: 'short', hat: 'tophat', hatColor: '#5a2a5a' },
       lines: ['Contessa: My late husband left me everything. His name was Gary.'],
       schedule: [
         { period: 'evening', areaId: 'ch-cardroom', col: 9, row: 6, lines: [
@@ -1324,7 +1345,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
       lose: ['Zeke: Chat, that was the nuts. That was fine. Do not clip that.'],
     },
     overworld: {
-      look: { garment: 'hoodie', garmentColor: '#c82060', sleeves: 'long' },
+      look: { garment: 'hoodie', garmentColor: '#c82060', sleeves: 'long', hat: 'headphones', hatColor: '#f0f0f4' },
       lines: ['Zeke: Live in four-three-two. Say something interesting.'],
       schedule: [
         { period: 'afternoon', areaId: 'nm-casino', col: 17, row: 8, lines: [
@@ -1343,6 +1364,8 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Nadia Okonkwo',
     style: 'Four years in the penthouse.',
     look: { skin: '#5e3a22', hair: '#0f0f0f', hairStyle: 'tied', shirt: '#101018', accessory: 'none' },
+    // A white dinner jacket and a gold bow tie: four years of dressing for the penthouse.
+    streetLook: { build: 'tall', prop: 'bowtie', propColor: '#d8b040', garment: 'jacket', garmentColor: '#e8e4dc' },
     seat: { skillTier: 'elite', archetype: 'regular' },
     lines: {
       greeting: [
