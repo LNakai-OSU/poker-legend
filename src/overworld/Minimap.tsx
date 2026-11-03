@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useOpenWorldMap } from '../game/WorldMap'
 import { DOOR, FURNITURE, GRASS, ROAD, SIDEWALK, WALL, WATER, type TileGrid } from './tiles'
+import { TYPE, UI_FONT } from '../game/pixel/webFont'
 
 /**
  * A corner map of the block you are standing on.
@@ -99,13 +100,13 @@ export function Minimap({
         borderRadius: 6,
         background: 'rgba(10,10,16,0.82)',
         border: '1px solid #2c3d5e',
-        fontFamily: 'monospace',
+        fontFamily: UI_FONT,
         pointerEvents: openWorld ? 'auto' : 'none',
         cursor: openWorld ? 'pointer' : undefined,
       }}
     >
       <canvas ref={canvasRef} style={{ display: 'block', imageRendering: 'pixelated' }} />
-      <div style={{ fontSize: 9, color: '#9aa4b8', marginTop: 4, textAlign: 'center' }}>{areaName}{openWorld ? ' ⌕' : ''}</div>
+      <div style={{ fontSize: TYPE.small, color: '#9aa4b8', marginTop: 4, textAlign: 'center' }}>{areaName}{openWorld ? ' ⌕' : ''}</div>
     </div>
   )
 }

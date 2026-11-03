@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { cloudEnabled, tokenFor, type AuthError } from './cloud'
 import { cleanName, knownProfiles, lastProfile, profileSlug } from './session'
+import { TYPE, UI_FONT } from './pixel/webFont'
 
 const panel: React.CSSProperties = {
   position: 'fixed',
@@ -11,7 +12,7 @@ const panel: React.CSSProperties = {
   justifyContent: 'center',
   background: '#07070c',
   color: '#e8e8f0',
-  fontFamily: 'monospace',
+  fontFamily: UI_FONT,
   padding: 16,
   overflowY: 'auto',
 }
@@ -23,8 +24,8 @@ const button: React.CSSProperties = {
   border: '1px solid #c8a24a',
   background: '#1c1a10',
   color: '#f0d27a',
-  fontFamily: 'monospace',
-  fontSize: 16,
+  fontFamily: UI_FONT,
+  fontSize: TYPE.body,
   cursor: 'pointer',
 }
 
@@ -68,8 +69,8 @@ export function SignIn({
         }}
         style={{ width: 'min(360px, 100%)', display: 'flex', flexDirection: 'column', gap: 14 }}
       >
-        <h1 style={{ margin: 0, color: '#f0d27a', fontSize: 28, textAlign: 'center' }}>Poker Legend</h1>
-        <p style={{ margin: 0, textAlign: 'center', color: '#a8a8c0', fontSize: 14 }}>
+        <h1 style={{ margin: 0, color: '#f0d27a', fontSize: TYPE.title, fontWeight: 'normal', textAlign: 'center' }}>Poker Legend</h1>
+        <p style={{ margin: 0, textAlign: 'center', color: '#a8a8c0', fontSize: TYPE.body }}>
           {cloudEnabled()
             ? 'Log in to carry your run to any device, or create an account.'
             : "Pick a name. Your run is saved under it on this device, apart from everyone else's."}
@@ -87,8 +88,8 @@ export function SignIn({
             border: '1px solid #4a4a66',
             background: '#10101a',
             color: '#e8e8f0',
-            fontFamily: 'monospace',
-            fontSize: 16,
+            fontFamily: UI_FONT,
+            fontSize: TYPE.body,
             padding: '0 12px',
           }}
         />
@@ -107,14 +108,14 @@ export function SignIn({
               border: '1px solid #4a4a66',
               background: '#10101a',
               color: '#e8e8f0',
-              fontFamily: 'monospace',
-              fontSize: 16,
+              fontFamily: UI_FONT,
+              fontSize: TYPE.body,
               padding: '0 12px',
             }}
           />
         )}
         {error && (
-          <p role="alert" style={{ margin: 0, color: '#ff8a8a', fontSize: 14, textAlign: 'center' }}>
+          <p role="alert" style={{ margin: 0, color: '#ff8a8a', fontSize: TYPE.body, textAlign: 'center' }}>
             {error}
           </p>
         )}
@@ -133,7 +134,7 @@ export function SignIn({
           <button
             type="button"
             onClick={() => setCreating((c) => !c)}
-            style={{ ...button, minHeight: 36, fontSize: 14, border: '1px solid #4a4a66', background: 'transparent', color: '#a8a8c0' }}
+            style={{ ...button, minHeight: 36, fontSize: TYPE.body, border: '1px solid #4a4a66', background: 'transparent', color: '#a8a8c0' }}
           >
             {creating ? 'I already have an account' : 'New here? Create an account'}
           </button>
@@ -145,7 +146,7 @@ export function SignIn({
                 key={n}
                 type="button"
                 onClick={() => (tokenFor(profileSlug(n)) || !cloudEnabled() ? void onSignIn(n, '', false) : setName(n))}
-                style={{ ...button, minHeight: 36, fontSize: 14, border: '1px solid #4a4a66', background: '#10101a', color: '#e8e8f0' }}
+                style={{ ...button, minHeight: 36, fontSize: TYPE.body, border: '1px solid #4a4a66', background: '#10101a', color: '#e8e8f0' }}
               >
                 {n}
               </button>
@@ -162,8 +163,8 @@ export function Displaced({ name, onReclaim }: { name: string; onReclaim: () => 
   return (
     <div style={panel} data-testid="displaced">
       <div style={{ width: 'min(360px, 100%)', display: 'flex', flexDirection: 'column', gap: 14, textAlign: 'center' }}>
-        <h2 style={{ margin: 0, color: '#f0d27a' }}>{name} is playing in another tab</h2>
-        <p style={{ margin: 0, color: '#a8a8c0', fontSize: 14 }}>
+        <h2 style={{ margin: 0, color: '#f0d27a', fontSize: TYPE.large, fontWeight: 'normal' }}>{name} is playing in another tab</h2>
+        <p style={{ margin: 0, color: '#a8a8c0', fontSize: TYPE.body }}>
           Two tabs on one save would overwrite each other. This one has paused.
         </p>
         <button type="button" onClick={onReclaim} style={button}>

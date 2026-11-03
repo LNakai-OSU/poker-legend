@@ -7,6 +7,7 @@ import { cloudEnabled, createAccount, logIn, tokenFor } from './game/cloud'
 import { activeProfile, profileSlug, signIn, useTabClaim } from './game/session'
 import { isPlaytester } from './game/playtest'
 import { Displaced, SignIn } from './game/SignIn'
+import { UI_FONT } from './game/pixel/webFont'
 
 /**
  * The game, or the editor at `#editor` (maps; `#editor/characters`, `#editor/events`).
@@ -72,7 +73,7 @@ function Session({ name }: { name: string }) {
       live = false
     }
   }, [slug, synced])
-  if (!synced) return <div style={{ position: 'fixed', inset: 0, background: '#07070c', color: '#a8a8c0', fontFamily: 'monospace', display: 'grid', placeItems: 'center' }}>Loading your run…</div>
+  if (!synced) return <div style={{ position: 'fixed', inset: 0, background: '#07070c', color: '#a8a8c0', fontFamily: UI_FONT, display: 'grid', placeItems: 'center' }}>Loading your run…</div>
 
   return (
     <>

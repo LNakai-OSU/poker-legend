@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { audio } from './audio'
+import { UI_FONT } from '../game/pixel/webFont'
 
 /** Starts a music bed for as long as the calling scene is mounted. */
 export function useAmbientMusic(mood: 'overworld' | 'table' | 'tense') {
@@ -51,7 +52,7 @@ export function SoundToggle() {
         border: '1px solid #4a4a66',
         background: 'rgba(10,10,16,0.8)',
         color: '#e8e8f0',
-        fontFamily: 'monospace',
+        fontFamily: UI_FONT,
         fontSize: 16,
         cursor: 'pointer',
       }}

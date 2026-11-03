@@ -1,5 +1,6 @@
 import type { Direction } from './GridPlayer'
 import { useTouchFirst } from '../game/device'
+import { UI_FONT } from '../game/pixel/webFont'
 
 /**
  * On-screen controls for touch devices. The overworld is keyboard-driven on
@@ -23,7 +24,7 @@ const padButton: React.CSSProperties = {
   borderRadius: 8,
   background: 'rgba(20,20,32,0.72)',
   color: '#e8e8f0',
-  fontFamily: 'monospace',
+  fontFamily: UI_FONT,
   fontSize: 20,
   display: 'flex',
   alignItems: 'center',
@@ -78,7 +79,7 @@ export function TouchControls({ onHold, onAction }: TouchControlsProps) {
           height: 72,
           borderRadius: '50%',
           background: 'rgba(58,157,92,0.85)',
-          fontSize: 22,
+          fontSize: 20,
           pointerEvents: 'auto',
         }}
         onPointerDown={(e) => {

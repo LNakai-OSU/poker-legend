@@ -6,6 +6,7 @@ import { wrapText } from './pixel/font'
 import { buttonHeight, DOCK } from './tableLayout'
 import { useViewport } from './useViewport'
 import { isActionKey, navStep, swallowDoubleClick, useKeyLayer } from './keys'
+import { TYPE, UI_FONT, readingSize } from './pixel/webFont'
 
 /**
  * A question a beat puts to the player, and the answers they can give.
@@ -114,10 +115,12 @@ export function ChoiceBox({ speaker, prompt, options, onChoose }: ChoiceBoxProps
           borderRadius: 8,
           padding: `14px ${INSET - 2}px max(14px, env(safe-area-inset-bottom))`,
           color: '#e8e8f0',
-          fontFamily: 'monospace',
+          fontFamily: UI_FONT,
+          fontSize: readingSize(view),
+          lineHeight: 1.2,
         }}
       >
-        {speaker && <div style={{ color: '#f2c14e', fontWeight: 'bold', marginBottom: 6 }}>{speaker}</div>}
+        {speaker && <div style={{ color: '#f2c14e', marginBottom: 6 }}>{speaker}</div>}
         <div data-testid="choice-prompt" style={{ marginBottom: 12 }}>
           {prompt}
         </div>
@@ -146,7 +149,7 @@ export function ChoiceBox({ speaker, prompt, options, onChoose }: ChoiceBoxProps
           })}
         </div>
         {!view.coarse && (
-          <div className="ed-muted" style={{ color: '#8a8aa0', fontSize: 12, marginTop: 8 }}>
+          <div className="ed-muted" style={{ color: '#8a8aa0', fontSize: TYPE.small, marginTop: 8 }}>
             {options.length > 1 ? `1–${options.length}` : '1'}, or ↑ ↓ and Space / E
           </div>
         )}

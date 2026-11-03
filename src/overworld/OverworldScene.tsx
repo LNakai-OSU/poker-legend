@@ -20,6 +20,7 @@ import type { Edge } from '../world/types'
 import { Minimap } from './Minimap'
 import { snap } from '../game/useCrispScale'
 import { pathBeside, pathTo, type Tile } from './paths'
+import { UI_FONT } from '../game/pixel/webFont'
 
 const MOVE_KEYS: Record<string, Direction> = {
   ArrowUp: 'up', w: 'up', W: 'up',
@@ -1083,11 +1084,12 @@ export function OverworldScene({
             top: 16,
             left: 16,
             color: '#e8e8f0',
-            fontFamily: 'monospace',
+            fontFamily: UI_FONT,
+            fontSize: 15,
             background: 'rgba(10,10,16,0.8)',
             padding: '6px 12px',
             borderRadius: 4,
-            lineHeight: 1.5,
+            lineHeight: '21px',
           }}
         >
           {hud}
@@ -1108,7 +1110,8 @@ export function OverworldScene({
             left: '50%',
             transform: 'translateX(-50%)',
             color: '#e8e8f0',
-            fontFamily: 'monospace',
+            fontFamily: UI_FONT,
+            fontSize: 15,
             background: 'rgba(10,10,16,0.88)',
             border: '1px solid #2c3d5e',
             padding: '4px 10px',

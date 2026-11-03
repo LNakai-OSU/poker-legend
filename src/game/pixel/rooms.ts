@@ -1,7 +1,7 @@
 import type { TableThemeId } from '../../world/types'
 import { dither, hash2, mix, shade } from './color'
 import { drawText, measureText } from './font'
-import { Raster } from './raster'
+import { Raster, pack, type Packed } from './raster'
 import type { Rect } from './tableArt'
 
 /**
@@ -263,13 +263,110 @@ function skyline(r: Raster, rect: Rect, body: string, lit: string, salt = 3) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Motion: the few things in a room that move while you sit at its table.
+// ---------------------------------------------------------------------------
+
+/**
+ * A part of the room that moves: a neon sign that stutters now and then, or
+ * water whose glints come and go. The room is one still picture; each motion
+ * is a second picture of just the pixels that change, laid over it and shown
+ * on a cycle (CSS, so it stops under reduced motion and costs no frames).
+ */
+export interface RoomMotion {
+  kind: 'flicker' | 'shimmer'
+  /** Where the changed pixels sit, in art pixels. */
+  x: number
+  y: number
+  /** The changed pixels; everything else is clear. */
+  frame: Raster
+  /** Seconds per cycle. */
+  period: number
+  /** Seconds into its cycle it starts, so no two signs stutter together. */
+  delay: number
+}
+
+export interface PaintedRoom {
+  raster: Raster
+  motion: RoomMotion[]
+}
+
+interface LitRecord {
+  kind: 'flicker' | 'shimmer'
+  /** Pixel index, the colour it was given, and the colour the second frame shows there. */
+  pixels: Array<[index: number, shown: Packed, alternate: Packed]>
+  salt: number
+}
+
+/** The motion being collected while a room is painted, or null outside paintRoom. */
+let recording: LitRecord[] | null = null
+
+function mixPacked(a: Packed, b: Packed, t: number): Packed {
+  const ch = (shift: number) => Math.round(((a >>> shift) & 0xff) * (1 - t) + ((b >>> shift) & 0xff) * t)
+  return ((0xff << 24) | (ch(16) << 16) | (ch(8) << 8) | ch(0)) >>> 0
+}
+
+/**
+ * Paints a neon sign and marks it as one that flickers: the second frame is
+ * the sign with its tubes dark — the wall behind, with a ghost of the glass.
+ */
+function neon(r: Raster, draw: () => void) {
+  if (!recording) return draw()
+  const before = r.pixels.slice()
+  draw()
+  const pixels: LitRecord['pixels'] = []
+  for (let i = 0; i < before.length; i++) {
+    const now = r.pixels[i]
+    if (now !== before[i]) pixels.push([i, now, mixPacked(before[i], now, 0.22)])
+  }
+  recording.push({ kind: 'flicker', pixels, salt: pixels[0]?.[0] ?? 0 })
+}
+
+function seaInk(px: number, py: number, rect: Rect, deep: string, light: string, sparkle: string, salt: number): string {
+  const v = (py - rect.y) / Math.max(1, rect.h)
+  const wave = (px + Math.round(Math.sin(py * 1.3) * 2) + py * 3) % 9 === 0
+  if (wave && hash2(px, py, salt) < 0.5) return sparkle
+  return dither(px, py, 1 - v) ? light : deep
+}
+
 function sea(r: Raster, rect: Rect, deep: string, light: string, sparkle: string) {
-  r.each(rect.x, rect.y, rect.w, rect.h, (px, py) => {
-    const v = (py - rect.y) / Math.max(1, rect.h)
-    const wave = (px + Math.round(Math.sin(py * 1.3) * 2) + py * 3) % 9 === 0
-    if (wave && hash2(px, py, 2) < 0.5) return sparkle
-    return dither(px, py, 1 - v) ? light : deep
-  })
+  r.each(rect.x, rect.y, rect.w, rect.h, (px, py) => seaInk(px, py, rect, deep, light, sparkle, 2))
+  if (!recording) return
+  // The second frame lights the other half of each wave crest, so the glints
+  // trade places along the same lines: water catching the light.
+  const pixels: LitRecord['pixels'] = []
+  for (let py = Math.max(0, rect.y); py < Math.min(r.height, rect.y + rect.h); py++) {
+    for (let px = Math.max(0, rect.x); px < Math.min(r.width, rect.x + rect.w); px++) {
+      const shown = pack(seaInk(px, py, rect, deep, light, sparkle, 2))
+      const alternate = pack(seaInk(px, py, rect, deep, light, sparkle, 7))
+      if (shown !== alternate) pixels.push([py * r.width + px, shown, alternate])
+    }
+  }
+  recording.push({ kind: 'shimmer', pixels, salt: rect.x * 31 + rect.y })
+}
+
+/**
+ * Turns what was recorded into overlays, keeping only pixels nothing was
+ * painted over afterwards: a window bar across the water stays a bar.
+ */
+function finishMotion(r: Raster, records: LitRecord[]): RoomMotion[] {
+  const out: RoomMotion[] = []
+  for (const rec of records) {
+    const kept = rec.pixels.filter(([i, shown]) => r.pixels[i] === shown)
+    if (kept.length === 0) continue
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity
+    for (const [i] of kept) {
+      const x = i % r.width
+      const y = Math.floor(i / r.width)
+      x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y)
+    }
+    const frame = new Raster(x1 - x0 + 1, y1 - y0 + 1)
+    for (const [i, , alternate] of kept) frame.put((i % r.width) - x0, Math.floor(i / r.width) - y0, alternate)
+    const luck = hash2(rec.salt, out.length, 11)
+    const period = rec.kind === 'flicker' ? 5 + luck * 6 : 1.4 + luck * 0.5
+    out.push({ kind: rec.kind, x: x0, y: y0, frame, period, delay: -luck * period })
+  }
+  return out
 }
 
 function brassLamp(r: Raster, x: number, y: number, brass: string, light: string) {
@@ -870,30 +967,36 @@ const ROOMS: Record<TableThemeId, Painter> = {
     const sign = 'POKER'
     const sw = measureText(sign) * 2
     const sy = Math.max(wall.ceiling + 4, wall.hang - 7)
+    const signsAt: number[] = []
     for (let k = 1; k * 56 < g.w / 2 + 40; k++) {
       for (const side of [-1, 1]) {
         const x = Math.round(g.w / 2 + side * (44 + k * 56))
         const kind = k % 3
-        if (kind === 1) neonText(r, '777', x - 8, sy + 2, '#f8e048')
-        else if (kind === 0) cactus(x - 2, wall.hang)
+        if (kind !== 2) signsAt.push(x)
+        if (kind === 1) neon(r, () => neonText(r, '777', x - 8, sy + 2, '#f8e048'))
+        else if (kind === 0) neon(r, () => cactus(x - 2, wall.hang))
       }
     }
-    bigNeon(r, sign, Math.round(g.w / 2 - sw / 2), sy, '#f048c8')
+    neon(r, () => bigNeon(r, sign, Math.round(g.w / 2 - sw / 2), sy, '#f048c8'))
     along(g, 168, Math.round(g.w / 2) % 168 + 112, (x) => {
       if (Math.abs(x - g.w / 2) < 60) return
+      // Not on top of a sign: a star drawn over the 777 read as a smudge.
+      if (signsAt.some((at) => Math.abs(at - x) < 24)) return
       // A neon star.
-      const pts = [[0, -5], [1, -2], [5, -2], [2, 1], [3, 5], [0, 3], [-3, 5], [-2, 1], [-5, -2], [-1, -2]]
-      for (let i = 0; i < pts.length; i++) {
-        const [ax, ay] = pts[i]
-        const [bx, by] = pts[(i + 1) % pts.length]
-        const steps = Math.max(Math.abs(bx - ax), Math.abs(by - ay))
-        for (let s = 0; s <= steps; s++) {
-          const px = Math.round(x + ax + ((bx - ax) * s) / steps)
-          const py = Math.round(sy + 3 + ay + ((by - ay) * s) / steps)
-          r.put(px, py, '#88f8ff')
+      neon(r, () => {
+        const pts = [[0, -5], [1, -2], [5, -2], [2, 1], [3, 5], [0, 3], [-3, 5], [-2, 1], [-5, -2], [-1, -2]]
+        for (let i = 0; i < pts.length; i++) {
+          const [ax, ay] = pts[i]
+          const [bx, by] = pts[(i + 1) % pts.length]
+          const steps = Math.max(Math.abs(bx - ax), Math.abs(by - ay))
+          for (let s = 0; s <= steps; s++) {
+            const px = Math.round(x + ax + ((bx - ax) * s) / steps)
+            const py = Math.round(sy + 3 + ay + ((by - ay) * s) / steps)
+            r.put(px, py, '#88f8ff')
+          }
         }
-      }
-      glow(r, x, sy + 3, 10, 9, '#48e8f8', 0.5)
+        glow(r, x, sy + 3, 10, 9, '#48e8f8', 0.5)
+      })
     })
     carpet(r, { x: 0, y: wall.floor, w: g.w, h: g.h - wall.floor }, '#0c0814', '#2a1840', '#f048c8', 'confetti')
     r.hline(0, wall.floor, g.w, '#48e8f8')
@@ -1008,10 +1111,21 @@ function tableShadow(r: Raster, felt: Rect) {
   })
 }
 
-export function paintRoom(theme: TableThemeId, g: RoomGeometry): Raster {
+/** The room as one still picture, and the parts of it that move. */
+export function paintRoomScene(theme: TableThemeId, g: RoomGeometry): PaintedRoom {
   const r = new Raster(g.w, g.h)
   const wall = wallOf(g)
-  ROOMS[theme](r, g, wall)
-  tableShadow(r, g.felt)
-  return r
+  const records: LitRecord[] = []
+  recording = records
+  try {
+    ROOMS[theme](r, g, wall)
+    tableShadow(r, g.felt)
+  } finally {
+    recording = null
+  }
+  return { raster: r, motion: finishMotion(r, records) }
+}
+
+export function paintRoom(theme: TableThemeId, g: RoomGeometry): Raster {
+  return paintRoomScene(theme, g).raster
 }

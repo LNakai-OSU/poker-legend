@@ -53,11 +53,13 @@ Nothing. All agents have finished and their worktrees and branches are removed.
      and viewpoint render as objects.
    - The map editor's preview should draw through the game's per-cell logic so
      variants, edges and carpets match the game.
-   - Mesa casino carpet is too loud (1B was asked to tone it down; check).
+   - ~~Mesa casino carpet is too loud~~ — closed: round 2 quieted it to a
+     near-black carpet with small dim magenta diamonds; checked again in
+     creator round 3 (2026-11-02) and it no longer competes with the floor.
    - Door labels can vanish against a building's sign.
-   - Table scene: rooms are static (no neon flicker/water shimmer), tall phones
-     show plain wall above the table, ♣/♠ glyphs are rough at 5px, menus/HUD/
-     dialogue box still use the system font.
+   - Table scene: tall phones show plain wall above the table. (Done in
+     creator round 3: neon flicker and water shimmer, seven-pixel ♣/♠, and the
+     menus/HUD/dialogue in the game's own pixel font.)
    - 1B's known rough edges: the door-label plate on Lumina's Atelier covers
      some of its gold lettering; several shop doors and island-hotel windows
      have no/dim lit glass at night; no light spill onto the Mesa fountain
@@ -174,3 +176,22 @@ to stay apart from the two beats. Marcus's room's "Dana" fixture is now a
 chapter of Dana's schedule. Tests: a play-through in `eventMachine.test.ts`;
 two browser scenarios (the poker night is won with the shuffle seeded while
 the table is up). STORYBOARD.md Act 0 and §6 "Done since" list what is left.
+
+## Creator round 3: type and table motion (2026-11-02, branch creator-r3-font-motion, not merged)
+
+- **Pixel font everywhere.** `src/game/pixel/webFont.ts` compiles the table's
+  glyph rows (`font.ts`) into a TrueType font in memory at start-up and
+  registers it as a `FontFace` ('Legend Pixel'), so the HTML UI — HUD, menus,
+  dialogue and question boxes, world map, sign-in — is set in the same pixels
+  as the table. No download, no font file. Ten font pixels to the em; UI type
+  is `TYPE` (10/15/20/30px), dialogue 20px where there is room.
+  `font-synthesis: none` (no fake bold). New glyphs: accents, arrows, ✓ ✕ ☰ ▸.
+- **Suits.** Font ♣♠♥♦ are seven pixels wide (the card's small pips); a big
+  card's index pip is the small pip, not a five-pixel blob.
+- **Motion.** Room painters mark what moves (`neon(r, draw)`, `sea`):
+  `paintRoomScene` returns the still room plus overlays of only the changed
+  pixels, shown on CSS step cycles (`.room-flicker`, `.room-shimmer`), off
+  under reduced motion. Mesa's neon stutters; the riverboat, harbour, Palm Cay
+  and finale water glints.
+- Left: Pixi canvas text (door labels, NPC name tags) is still monospace; tall
+  phones still show plain wall above the table.
