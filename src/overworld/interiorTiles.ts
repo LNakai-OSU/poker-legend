@@ -544,18 +544,24 @@ const vinyl = (variant: number): Draw => (px) => {
 // Carpets — each a 32x32 motif over four tiles
 // ---------------------------------------------------------------------------
 
-/** The reservation: dusty red-brown with big diamonds and brass studs where they meet. */
+/**
+ * The reservation: dark oxblood pile in two tones, diamonds of the lighter laid
+ * in the darker, with a small brass stud where four of them meet.
+ *
+ * It was red with big gold-centred diamonds and brass studs, and like the
+ * Strip's neon confetti before it, it was the loudest thing in the room. The
+ * felt, the machines and the people are what should catch the eye; the floor
+ * is a pattern you notice if you look down.
+ */
 const carpetDust = motif((x, y) => {
-  const dx = wrap(x - 16)
-  const dy = wrap(y - 16)
-  const d = dx + dy
-  if (wrap(x) + wrap(y) <= 2) return '#c08a3a'
-  if (d <= 1) return '#d8a24a'
-  if (d <= 4) return '#963a2c'
-  if (d === 14) return '#a2483a'
-  if (d === 15) return '#5e1f18'
-  if (d >= 26 && d <= 27) return '#8e3528'
-  return '#7a2b22'
+  // 0 at the middle of the motif, 32 at its corners.
+  const d = wrap(x - 16) + wrap(y - 16)
+  const fleck = (x * 7 + y * 13) % 37 === 0
+  if (wrap(x) + wrap(y) <= 1) return '#8a6634'
+  if (d === 15) return '#5e2620'
+  if (d === 16) return '#2a0f0d'
+  if (d < 15) return d <= 1 ? '#5a2420' : fleck ? '#552220' : '#4a1c19'
+  return fleck ? '#401614' : '#381412'
 })
 
 /** The card room: bottle green with a gold trellis. */
@@ -739,7 +745,7 @@ export const INTERIOR_TILES: Record<number, TileVariants> = {
 
 /** The band of a carpet's border: the outer line, the inner line, and the shade inside them. */
 export const CARPET_BORDERS: Record<number, [string, string, string]> = {
-  [CARPET]: ['#4a1a14', '#c08a3a', '#6a241c'],
+  [CARPET]: ['#240c0b', '#8a6634', '#3e1614'],
   [CARPET_GREEN]: ['#0f2e20', '#c8a048', '#174230'],
   [CARPET_TEAL]: ['#2e7a74', '#efe0b0', '#368c85'],
   [CARPET_NEON]: ['#0e0a14', '#a03894', '#1c1426'],
