@@ -64,7 +64,7 @@ export function DialogueBox({ speaker, lines, onFinish }: DialogueBoxProps) {
         lineHeight: 1.2,
       }}
     >
-      <div style={{ color: '#f2c14e', marginBottom: 6 }}>{speaker}</div>
+      {speaker && <div style={{ color: '#f2c14e', marginBottom: 6 }}>{speaker}</div>}
       {/* Two lines tall at least, so a short line doesn't make the box jump. */}
       <div style={{ minHeight: '2.4em' }}>{lines[index]}</div>
       <button

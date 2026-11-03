@@ -139,6 +139,11 @@ export type ReelScene =
   | 'alley'
   | 'rail'
   | 'night'
+  | 'penthouse'
+  | 'photo'
+  | 'papers'
+  | 'messages'
+  | 'window'
 
 /** The scripted scenes `cinematic` can play. */
 export type CinematicId = 'bad-beat'
@@ -711,6 +716,61 @@ export function arrivalClashes(events: GameEvent[]): Array<[GameEvent, GameEvent
  * Ordered roughly as the player meets them. An event fires on its trigger when
  * its conditions hold, and — unless it says otherwise — never again.
  */
+/**
+ * The ending film, played once the heads-up match is won and before the summary
+ * card: the penthouse, what is on the desk, the phone, the window. Narration
+ * has no `who`; the last line is the player's.
+ */
+export const ENDING_REEL: ReelPanel[] = [
+  {
+    scene: 'penthouse',
+    lines: [
+      { who: '', text: 'Porto Lumina. Forty-one floors up.' },
+      { who: '', text: 'Medals. Plaques. Trophies. Every wall of the room is a night you won.' },
+    ],
+  },
+  {
+    scene: 'photo',
+    lines: [
+      { who: '', text: 'On the desk, in a gold frame: you, and her. Both of you laughing at something off camera.' },
+      { who: '', text: 'It was taken before the first buy-in.' },
+    ],
+  },
+  {
+    scene: 'papers',
+    lines: [
+      { who: '', text: 'Under it, a stack of paper. Her signature is on the last page.' },
+      { who: '', text: 'The line beside it is blank. The pen has been waiting a while.' },
+    ],
+  },
+  {
+    scene: 'messages',
+    notifications: [
+      { from: 'OCT 14', text: 'Friday game is at 8. Ice is bought.' },
+      { from: 'OCT 21', text: 'Saw the final. UNREAL. Call me!!' },
+      { from: 'OCT 22', text: 'Dana says congrats too.' },
+      { from: 'OCT 29', text: 'Hey. You alright?' },
+      { from: 'NOV 2', text: 'Two weeks and nothing. Pick up.' },
+      { from: 'NOV 9', text: 'I heard about the divorce. I am sorry.' },
+      { from: 'NOV 16', text: 'Not mad. Just pick up.' },
+      { from: 'TODAY', text: 'Whenever you are ready. I am still here.' },
+    ],
+    lines: [
+      { who: '', text: 'Your phone. Marcus, again.' },
+      { who: '', text: 'Sixty-three unread. You have not answered one.' },
+      { who: '', text: 'You put it face down on the desk.' },
+    ],
+  },
+  {
+    scene: 'window',
+    lines: [
+      { who: '', text: 'You walk to the glass. The harbour is lit all the way out.' },
+      { who: '', text: 'You let out a long breath, and it fogs the window.' },
+      { who: 'You', text: "I've made it..." },
+    ],
+  },
+]
+
 export const EVENTS: GameEvent[] = [
   {
     id: 'poker-night',
