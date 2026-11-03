@@ -87,6 +87,16 @@ deb: {
   their own clothes: `garment: 'jacket' | 'vest' | 'hoodie' | 'overalls' |
   'stripes' | 'cardigan'` with `garmentColor`, `hat` with `hatColor`). A
   uniform covers a garment and decides its own hat.
+- `look.build` is the body under the clothes: `regular`, `heavy`, `tall`,
+  `elder` (stooped, on a cane) or `kid`. Strangers are made up in all of them.
+  `look.prop` (with `propColor`) is a thing of their own — `cigar`, `pipe`,
+  `flower`, `pearls`, `scarf`, `ledger`, `chain`, `satchel`, `rose`,
+  `newspaper`, `coffee`, `collar`, `bowtie` — and the hats after the first six
+  (`bowler`, `flatcap`, `captain`, `tophat`, `headphones`, `bandana`,
+  `hardhat`) are nobody's by chance. Every boss and everybody you meet again
+  has one of the two, and no two of them the same body with the same thing.
+- `streetLook` is the same overworld look for somebody with no `overworld`:
+  a boss, drawn only at their own table in the back room.
 - A point of interest on a map can say who stands there the same way:
   `role: 'bartender'`, `look: { hairStyle: 'bun' }`. Without them, the role
   comes from what the POI does and the look is made up from its id.
