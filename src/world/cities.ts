@@ -281,7 +281,7 @@ T++######T###########T#######++T
 T++######T###########T#######++T
 T++######T###########T#######++T
 T++##D###T#####D#####T###D###++T
-T++++++oo+++++++++++++oo+++++++T
+T+oo++++++++++++++++++++++++oo+T
 T++oo++++~~~~~~~~~~~~~~++++oo++T
 To+++++++~~~~~~~~~~~~~~+++++++oT
 --o-----o++++o+++o+++++o-----o--
@@ -293,7 +293,7 @@ To+oo++++++++++o+++++++++++o++oT
 T++##########################++T
 T++##########################++T
 T++##########################++T
-T++++oo+++++++++o++++++++oo++++T
+T++++++++++++++++++++++++++++++T
 TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT`)
 
 
@@ -680,7 +680,7 @@ const APARTMENT_ROOM = parseMap(`
 ^WWWWWWWWWWWWW^
 ^FWWWWWWWWWWWW^
 ^WWWWWWWWWWWFF^
-^FFWWWWFWWWWWF^
+^FFWWFWWWWWWWF^
 ^^^^^^D^^^^^^^^
 `)
 
@@ -1002,7 +1002,7 @@ const apartmentCity: CityDef = {
         {
           // Left on the stand by the door the morning of the game: the thing in
           // the flat that says go outside. Kept, afterwards.
-          ...local('apartment-door-note', 'Note by the Door', 7, 7, [
+          ...local('apartment-door-note', 'Note by the Door', 7, 8, [
             'Marcus’s note from the morning of the first game. SENT SOMEBODY. You kept it.',
           ]),
           requiresFlag: 'metDana',
@@ -1250,7 +1250,7 @@ const silverCreek: CityDef = {
       '#161018',
       [
         // Out walking: most of them about in the afternoon, few at night.
-        walker('sc-walk-rancher', 'Rancher', [[7, 7], [16, 7]], DAY, ['Rancher: Sold forty head this morning. Going to lose it by supper, the way my daddy did. Tradition.'], ['Rancher: Wind\'s from the east. Means nothing. I just like saying it.']),
+        walker('sc-walk-rancher', 'Rancher', [[6, 7], [13, 7]], DAY, ['Rancher: Sold forty head this morning. Going to lose it by supper, the way my daddy did. Tradition.'], ['Rancher: Wind\'s from the east. Means nothing. I just like saying it.']),
         walker('sc-walk-prospector', 'Old Prospector', [[19, 7], [25, 7]], NOON, ['Prospector: There\'s silver in that creek yet. I\'ve been saying it fifty years. One of these days I\'ll go look.']),
         walker('sc-walk-tourist', 'Tourist with a Camera', [[3, 12], [14, 12]], MORNINGS, ['Tourist: Is this the real West? It has a gift shop, so I assume so.']),
         walker('sc-walk-dancer', 'Line Dancer', [[18, 12], [26, 12]], NIGHTS, ['Line Dancer: Lessons Thursdays at the motel. Mostly it\'s me and the manager. He\'s improving.']),
@@ -1449,7 +1449,7 @@ const riverbend: CityDef = {
       '#0f1620',
       [
         // Out walking: most of them about in the afternoon, few at night.
-        walker('rb-walk-millhand', 'Mill Hand', [[5, 12], [18, 12]], DAY, ['Mill Hand: Shift change. Ten hours of sawdust and then the boat takes the rest.'], ['Mill Hand: Don\'t play the old man in the hat. He can\'t see the cards and he still wins.']),
+        walker('rb-walk-millhand', 'Mill Hand', [[11, 12], [18, 12]], DAY, ['Mill Hand: Shift change. Ten hours of sawdust and then the boat takes the rest.'], ['Mill Hand: Don\'t play the old man in the hat. He can\'t see the cards and he still wins.']),
         walker('rb-walk-basket', 'Woman with a Basket', [[12, 14], [21, 14]], NOON, ['Woman: Catfish, if the diner\'s buying. Eggs, if it isn\'t. Gossip either way.']),
         walker('rb-walk-boy', 'Kid with a Rod', [[10, 15], [19, 15]], MORNINGS, ['Kid: My uncle says the big one lives under the boat. He says that about everything.']),
         walker('rb-walk-clerk', 'Ferry Clerk', [[21, 12], [25, 12]], NIGHTS, ['Ferry Clerk: Last crossing\'s at ten. After that you swim, or you stay and lose.']),
@@ -1667,9 +1667,9 @@ const crescentHarbor: CityDef = {
       '#121020',
       [
         // Out walking: most of them about in the afternoon, few at night.
-        walker('ch-walk-dogs', 'Dog Walker', [[3, 7], [9, 7]], DAY, ['Dog Walker: They are not mine. I am paid. The small one bites, and he is the one they love.']),
-        walker('ch-walk-shopper', 'Shopper', [[13, 7], [20, 7]], LATE, ['Shopper: The tailor wanted three fittings. I have had four. I am beginning to suspect the tailor.']),
-        walker('ch-walk-sailor', 'Sailor on Leave', [[14, 12], [24, 12]], ['morning', 'afternoon', 'night'], ['Sailor: Six weeks at sea and the first thing I see is a card room. I\'m only human.']),
+        walker('ch-walk-dogs', 'Dog Walker', [[9, 7], [5, 7]], DAY, ['Dog Walker: They are not mine. I am paid. The small one bites, and he is the one they love.']),
+        walker('ch-walk-shopper', 'Shopper', [[16, 7], [20, 7]], LATE, ['Shopper: The tailor wanted three fittings. I have had four. I am beginning to suspect the tailor.']),
+        walker('ch-walk-sailor', 'Sailor on Leave', [[16, 12], [24, 12]], ['morning', 'afternoon', 'night'], ['Sailor: Six weeks at sea and the first thing I see is a card room. I\'m only human.']),
         walker('ch-walk-jogger', 'Jogger', [[26, 13], [29, 13]], MORNINGS, ['Jogger: Four times round the quay. It is not for my health. It is so I can say I did it.']),
         {
           id: 'ch-transit',
@@ -1959,7 +1959,7 @@ const palmCay: CityDef = {
       [
         // Out walking: most of them about in the afternoon, few at night.
         walker('pc-walk-sunhat', 'Woman in a Sun Hat', [[16, 7], [26, 7]], DAY, ['Woman: The hotel gave us a room facing the car park. Facing the car park! On an island!']),
-        walker('pc-walk-surfer', 'Kid with a Surfboard', [[2, 12], [14, 12]], MORNINGS, ['Kid: Waves are flat. Waves are always flat. I carry it so people think there are waves.']),
+        walker('pc-walk-surfer', 'Kid with a Surfboard', [[2, 12], [11, 12]], MORNINGS, ['Kid: Waves are flat. Waves are always flat. I carry it so people think there are waves.']),
         walker('pc-walk-porter', 'Hotel Porter', [[16, 12], [26, 12]], NIGHTS, ['Porter: Cases off the ferry, cases on the ferry. In between, they lose everything they packed for.']),
         walker('pc-walk-icecream', 'Ice-Cream Seller', [[13, 14], [19, 14]], NOON, ['Ice-Cream Seller: Coconut, mango, or rum and raisin. The rum and raisin is mostly rum.']),
         {
@@ -2216,7 +2216,7 @@ const neonMesa: CityDef = {
       [
         // Out walking: most of them about in the afternoon, few at night.
         walker('nm-walk-showgirl', 'Showgirl', [[15, 6], [19, 6]], NIGHTS, ['Showgirl: Two shows a night and a matinee. The feathers weigh more than you do. Excuse me.']),
-        walker('nm-walk-convention', 'Conventioneer', [[2, 9], [11, 9]], MORNINGS, ['Conventioneer: Dental supplies. Forty thousand of us. Not one of us has slept.']),
+        walker('nm-walk-convention', 'Conventioneer', [[8, 9], [11, 9]], MORNINGS, ['Conventioneer: Dental supplies. Forty thousand of us. Not one of us has slept.']),
         walker('nm-walk-bachelorette', 'Bachelorette', [[8, 15], [22, 15]], LATE, ['Bachelorette: We lost the bride an hour ago. She is fine. She is somewhere with a sash on.']),
         walker('nm-walk-gambler', 'Gambler on a Streak', [[19, 9], [24, 9]], NIGHTS, ['Gambler: Nine reds in a row. Then a black. I don\'t want to talk about the black.']),
         {
@@ -2533,7 +2533,7 @@ const portoLumina: CityDef = {
       '#141020',
       [
         // Out walking: most of them about in the afternoon, few at night.
-        walker('pl-walk-parasol', 'Lady with a Parasol', [[16, 6], [21, 6]], DAY, ['Lady: One walks the length of the pool and back. One does not run. One is seen.']),
+        walker('pl-walk-parasol', 'Lady with a Parasol', [[5, 18], [26, 18]], DAY, ['Lady: One walks the length of the pool and back. One does not run. One is seen.']),
         walker('pl-walk-linen', 'Man in Linen', [[5, 14], [14, 14]], LATE, ['Man in Linen: The yacht is at the mole. I prefer to walk. The yacht prefers it too.']),
         walker('pl-walk-nanny', 'Nanny with a Pram', [[16, 14], [26, 14]], MORNINGS, ['Nanny: The baby has a better tailor than I do. He has been to the Atelier twice.']),
         walker('pl-walk-yachtsman', 'Yachtsman', [[24, 8], [29, 8]], ['afternoon', 'night'], ['Yachtsman: My boat is the second biggest in the harbour. I think about the first one constantly.']),
@@ -3201,7 +3201,7 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'bed', col: 10, row: 2 },
     // A boat over the bed, the one window that sees sky, and the sofa under it.
     { stampId: 'poster-boat', col: 10, row: 1 },
-    { stampId: 'window-sky', col: 12, row: 1 },
+    { stampId: 'window-sky', col: 12, row: 1, afterDark: 'window-night' },
     { stampId: 'sofa', col: 11, row: 2 },
     { stampId: 'rug-blue', col: 4, row: 4 },
     { stampId: 'table-chairs', col: 2, row: 4 },
@@ -3215,7 +3215,7 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'crates', col: 13, row: 8 },
     { stampId: 'plant-tall', col: 1, row: 8 },
     { stampId: 'crates', col: 2, row: 8 },
-    { stampId: 'coat-stand', col: 7, row: 8 },
+    { stampId: 'coat-stand', col: 5, row: 8 },
   ],
   'marcus-house': [
     { stampId: 'bookshelf-dark', col: 1, row: 1 },
@@ -3544,17 +3544,14 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'bollard', col: 17, row: 9 },
     { stampId: 'parked-car-black-e', col: 3, row: 11 },
     { stampId: 'parked-car-silver-w', col: 24, row: 10 },
-    // Cypresses at the ends of the pool, beds against the colonnades, planters down the middle, the hedge behind the hotel.
+    // Cypresses at the ends of the pool, beds at the ends of the colonnades (never across the walk to the doors), planters down the middle.
     { stampId: 'cypress-pot', col: 1, row: 7 },
     { stampId: 'cypress-pot', col: 30, row: 7 },
     { stampId: 'planter-marble-2', col: 10, row: 13 },
     { stampId: 'planter-marble-2', col: 19, row: 13 },
-    { stampId: 'flowerbed-granite-2', col: 7, row: 6 },
-    { stampId: 'flowerbed-granite-2', col: 22, row: 6 },
+    { stampId: 'flowerbed-granite-2', col: 2, row: 6 },
+    { stampId: 'flowerbed-granite-2', col: 28, row: 6 },
     { stampId: 'cypress-pot', col: 15, row: 13 },
-    { stampId: 'hedge-2', col: 5, row: 18 },
-    { stampId: 'hedge-2', col: 25, row: 18 },
-    { stampId: 'bush-flowering', col: 16, row: 18 },
   ],
   'road-silvercreek': [
     { stampId: 'tree-street', col: 3, row: 1 },

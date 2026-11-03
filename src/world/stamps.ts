@@ -84,6 +84,12 @@ export interface PlacedStamp {
   stampId: string
   col: number
   row: number
+  /**
+   * Another stamp drawn in its place in the evening and at night, with the
+   * same footprint: a window onto sky by day is a window onto the lights after
+   * dark.
+   */
+  afterDark?: string
 }
 
 /** In a stamp's tiles, "whatever is already here". */

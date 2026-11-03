@@ -524,7 +524,16 @@ describe('objects on the map', () => {
       for (const poi of area.pois) {
         if (!poi.patrol) continue
         walkers++
+        // In front of a door and either side of a crossing, two deep: where
+        // everybody walks in and out, so a walker idling there is in the way.
+        const lanes = [
+          ...area.exits.flatMap((e) => [1, 2, -1, -2].map((d) => `${e.col},${e.row + d}`)),
+          ...area.map.flatMap((line, r) =>
+            line.flatMap((tile, c) => (tile === CROSSWALK ? [-2, -1, 1, 2].map((d) => `${c},${r + d}`) : [])),
+          ),
+        ]
         const taken = new Set([
+          ...lanes,
           ...area.pois.filter((p) => p !== poi).map((p) => `${p.col},${p.row}`),
           ...area.exits.map((e) => `${e.col},${e.row}`),
           ...arrivals,
@@ -554,6 +563,55 @@ describe('objects on the map', () => {
       }
     }
     expect(walkers).toBeGreaterThan(0)
+  })
+
+  it('lets you walk to every door and everybody from where you come in', () => {
+    // Objects go down one at a time, and each is fine alone: two flower beds at
+    // the ends of Lumina's pool walk shut its casino door off from the street.
+    // People stand in the way as much as objects do.
+    const key = (c: number, r: number) => `${c},${r}`
+    const around = (c: number, r: number) => [[c + 1, r], [c - 1, r], [c, r + 1], [c, r - 1]]
+    for (const area of areas) for (const period of TIME_PERIODS) {
+      const blocked = new Set([
+        ...area.pois.filter((p) => !p.hours || p.hours.includes(period)).map((p) => key(p.col, p.row)),
+        ...Object.values(CHARACTERS).flatMap((c) =>
+          allSchedules(c)
+            .flat()
+            .filter((e) => e.areaId === area.id && e.period === period)
+            .map((e) => key(e.col, e.row)),
+        ),
+      ])
+      const doors = new Set(area.exits.map((e) => key(e.col, e.row)))
+      const seen = new Set([key(area.playerStart.col, area.playerStart.row)])
+      const queue = [[area.playerStart.col, area.playerStart.row]]
+      while (queue.length > 0) {
+        const [c, r] = queue.shift()!
+        for (const [nc, nr] of around(c, r)) {
+          const k = key(nc, nr)
+          if (seen.has(k) || blocked.has(k) || doors.has(k) || !isWalkable(area.map, nc, nr)) continue
+          seen.add(k)
+          queue.push([nc, nr])
+        }
+      }
+      const reached = (c: number, r: number) => around(c, r).some(([nc, nr]) => seen.has(key(nc, nr)))
+      for (const exit of area.exits) {
+        expect(reached(exit.col, exit.row), `${area.id}: the ${exit.label} door can't be walked to in the ${period}`).toBe(true)
+      }
+      for (const poi of area.pois) {
+        // A bank of machines is played from any of its stools, as in the approach test.
+        if ((poi.hours && !poi.hours.includes(period)) || poi.action.kind === 'slots') continue
+        expect(reached(poi.col, poi.row), `${area.id}: ${poi.name} can't be walked to in the ${period}`).toBe(true)
+      }
+    }
+  })
+
+  it('draws a stamp after dark only in the footprint of the one it stands in for', () => {
+    for (const area of areas) {
+      for (const placed of area.stamps ?? []) {
+        if (!placed.afterDark) continue
+        expect(STAMP_BY_ID[placed.afterDark]?.tiles, `${area.id}: ${placed.afterDark} after dark`).toBe(STAMP_BY_ID[placed.stampId].tiles)
+      }
+    }
   })
 
   it('puts more people out walking in the afternoon than at night', () => {

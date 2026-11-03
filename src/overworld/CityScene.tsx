@@ -313,7 +313,11 @@ export function CityScene({
         )}
       onCueDone={onCueDone}
       outdoors={outdoors}
-      stamps={area.stamps}
+      stamps={
+        state.period === 'evening' || state.period === 'night'
+          ? area.stamps?.map((s) => (s.afterDark ? { ...s, stampId: s.afterDark } : s))
+          : area.stamps
+      }
       seated={seated}
       hud={
         <>

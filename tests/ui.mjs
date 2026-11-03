@@ -166,6 +166,13 @@ async function skipPrologue(page) {
     await page.locator('[data-testid="reel-skip"]').click().catch(() => {})
     await page.waitForTimeout(450)
   }
+  // One press now skips the whole opening film, and what is left after it is
+  // the one-line card on how to play: read it and carry on, as a player would.
+  const card = page.locator('[data-testid="event-dialogue"]')
+  if ((await card.innerText().catch(() => '')).includes('Arrow keys or WASD')) {
+    await card.locator('[data-testid="dialogue-advance"]').click()
+    await page.waitForTimeout(250)
+  }
 }
 
 async function step(page, key) {
