@@ -122,6 +122,7 @@ export function CityScene({
   const seatings = seatingFor(area, {
     present: scheduled.map(({ id, at }) => ({ id, col: at.col, row: at.row })),
     keepClear: [landing, ...walks],
+    hour: { period: state.period, day: state.day },
   })
   const sitters = seatings.flatMap((table) => table.sitters)
   const chairs = seatings.flatMap((table) =>

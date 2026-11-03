@@ -14,6 +14,7 @@ export const TABLES: Record<string, TableDef> = {
     bigBlind: 2,
     buyIn: 100,
     opponents: ['ray', 'sully'],
+    walkIns: ['bobbi', 'walt', 'dottie'],
   },
   'riverbend-mid': {
     id: 'riverbend-mid',
@@ -23,6 +24,7 @@ export const TABLES: Record<string, TableDef> = {
     bigBlind: 5,
     buyIn: 300,
     opponents: ['deb', 'mack', 'tiny', 'gus', 'pearl'],
+    walkIns: [],
   },
   'crescent-main': {
     id: 'crescent-main',
@@ -32,6 +34,7 @@ export const TABLES: Record<string, TableDef> = {
     bigBlind: 10,
     buyIn: 1000,
     opponents: ['corinne', 'vance', 'hollis', 'omar', 'bette'],
+    walkIns: [],
   },
   'palmcay-high': {
     id: 'palmcay-high',
@@ -41,6 +44,7 @@ export const TABLES: Record<string, TableDef> = {
     bigBlind: 25,
     buyIn: 2500,
     opponents: ['adaeze', 'kit'],
+    walkIns: ['lucien', 'sloane', 'ferris'],
   },
   'palmcay-tourist': {
     id: 'palmcay-tourist',
@@ -50,6 +54,7 @@ export const TABLES: Record<string, TableDef> = {
     bigBlind: 25,
     buyIn: 2500,
     opponents: ['bernard', 'rosa', { character: 'kit', persona: 'returning' }],
+    walkIns: ['maud', 'hector'],
   },
   'mesa-main': {
     id: 'mesa-main',
@@ -59,6 +64,7 @@ export const TABLES: Record<string, TableDef> = {
     bigBlind: 50,
     buyIn: 10000,
     opponents: ['lorna', 'dmitri', 'whitaker', 'teo', 'junie'],
+    walkIns: [],
   },
   'mesa-highroller': {
     id: 'mesa-highroller',
@@ -69,6 +75,7 @@ export const TABLES: Record<string, TableDef> = {
     buyIn: 40000,
     dressCode: 3,
     opponents: ['saul', 'priya'],
+    walkIns: ['cassius', 'ilse', 'rourke'],
   },
   'lumina-nosebleed': {
     id: 'lumina-nosebleed',
@@ -79,6 +86,7 @@ export const TABLES: Record<string, TableDef> = {
     buyIn: 30000,
     dressCode: 3,
     opponents: ['xue', 'marchetti', 'kingsley'],
+    walkIns: ['anselm', 'tamsin'],
   },
   'crescent-headsup': {
     id: 'crescent-headsup',

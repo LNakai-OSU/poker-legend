@@ -1,6 +1,6 @@
 import type { AvatarLook } from '../game/avatars'
 import type { Archetype, SkillTier } from '../engine/types'
-import type { OpponentDef, TableDef } from './types'
+import type { OpponentDef, SeatRef, TableDef } from './types'
 import type { NpcArt } from '../overworld/Npc'
 import type { NpcRole, PersonLook } from '../overworld/characterArt'
 import { TIME_PERIODS, type TimePeriod } from '../game/time'
@@ -1379,6 +1379,188 @@ export const CHARACTERS: Record<string, CharacterDef> = {
       lose: ['Nadia: ...that was very good.'],
     },
   },
+  bobbi: {
+    name: 'Bobbi',
+    style: 'Here for the free coffee.',
+    look: { skin: '#d9a67c', hair: '#5a3a22', hairStyle: 'tied', shirt: '#b0506a', accessory: 'none' },
+    seat: { skillTier: 'novice', archetype: 'station' },
+    lines: {
+      greeting: ['Bobbi: Is it my turn? It is my turn.'],
+      raise: ['Bobbi: Oh, why not.'],
+      call: ['Bobbi: I just want to see it.'],
+      fold: ['Bobbi: Nope. Bye, cards.'],
+      win: ['Bobbi: Was that good? That was good!'],
+      lose: ['Bobbi: More coffee, then.'],
+    },
+  },
+  walt: {
+    name: 'Walt',
+    style: 'Retired. Counts every chip twice.',
+    look: { skin: '#e0b894', hair: '#cfcfcf', hairStyle: 'bald', shirt: '#6a7a6a', accessory: 'glasses' },
+    seat: { skillTier: 'amateur', archetype: 'nit' },
+    lines: {
+      greeting: ['Walt: Evening. Do not rush me.'],
+      raise: ['Walt: I have the hand.'],
+      call: ['Walt: Fair price.'],
+      fold: ['Walt: I can wait.'],
+      win: ['Walt: Patience.'],
+      lose: ['Walt: It happens.'],
+    },
+  },
+  dottie: {
+    name: 'Dottie',
+    style: 'Knits between hands.',
+    look: { skin: '#c58f68', hair: '#9a9a9a', hairStyle: 'tied', shirt: '#8a4a7a', accessory: 'glasses' },
+    seat: { skillTier: 'amateur', archetype: 'regular' },
+    lines: {
+      greeting: ['Dottie: Do not mind the yarn, dear.'],
+      raise: ['Dottie: Up it goes.'],
+      call: ['Dottie: I will stay a while.'],
+      fold: ['Dottie: Not this one, dear.'],
+      win: ['Dottie: Lovely.'],
+      lose: ['Dottie: Back to the scarf.'],
+    },
+  },
+  lucien: {
+    name: 'Lucien',
+    style: 'Tips the dealer in advance.',
+    look: { skin: '#d8a982', hair: '#1e1e22', hairStyle: 'short', shirt: '#2a3a5a', accessory: 'shades' },
+    seat: { skillTier: 'competent', archetype: 'regular' },
+    lines: {
+      greeting: ['Lucien: Deal me in.'],
+      raise: ['Lucien: Make it interesting.'],
+      call: ['Lucien: I will see that.'],
+      fold: ['Lucien: Another time.'],
+      win: ['Lucien: Thank you, all.'],
+      lose: ['Lucien: A fair loss.'],
+    },
+  },
+  sloane: {
+    name: 'Sloane',
+    style: 'Quiet, and always ahead.',
+    look: { skin: '#f0c8a4', hair: '#a8483a', hairStyle: 'long', shirt: '#3a3a44', accessory: 'none' },
+    seat: { skillTier: 'sharp', archetype: 'nit' },
+    lines: {
+      greeting: ['Sloane: Good evening.'],
+      raise: ['Sloane: Raise.'],
+      call: ['Sloane: Call.'],
+      fold: ['Sloane: Fold.'],
+      win: ['Sloane: Thank you.'],
+      lose: ['Sloane: Noted.'],
+    },
+  },
+  ferris: {
+    name: 'Ferris',
+    style: 'Plays like the money is not his.',
+    look: { skin: '#b88660', hair: '#3a2a1a', hairStyle: 'short', shirt: '#c8a24a', accessory: 'cap' },
+    seat: { skillTier: 'competent', archetype: 'maniac' },
+    lines: {
+      greeting: ['Ferris: Big game! Let us go.'],
+      raise: ['Ferris: Pot-sized. Why not.'],
+      call: ['Ferris: In for a penny!'],
+      fold: ['Ferris: Ugh. Fine.'],
+      win: ['Ferris: Ha! Drinks on me!'],
+      lose: ['Ferris: Easy come.'],
+    },
+  },
+  maud: {
+    name: 'Maud',
+    style: 'On holiday, and it shows.',
+    look: { skin: '#f0c8a4', hair: '#d8c8a8', hairStyle: 'long', shirt: '#e08a7a', accessory: 'visor' },
+    seat: { skillTier: 'novice', archetype: 'whale' },
+    lines: {
+      greeting: ['Maud: Is this the one with the fish tank?'],
+      raise: ['Maud: Louder chips, please.'],
+      call: ['Maud: Why not, dear.'],
+      fold: ['Maud: Oh, I give up.'],
+      win: ['Maud: Beginner’s luck!'],
+      lose: ['Maud: Charming. Another.'],
+    },
+  },
+  hector: {
+    name: 'Hector',
+    style: 'Won a trip, lost the plot.',
+    look: { skin: '#a87450', hair: '#1a1a1a', hairStyle: 'short', shirt: '#4a9aa8', accessory: 'shades' },
+    seat: { skillTier: 'novice', archetype: 'station' },
+    lines: {
+      greeting: ['Hector: First time in a casino!'],
+      raise: ['Hector: Everything on the line!'],
+      call: ['Hector: I like your face. Call.'],
+      fold: ['Hector: Bye, cards.'],
+      win: ['Hector: Hah! Do I get a prize?'],
+      lose: ['Hector: Still a good trip.'],
+    },
+  },
+  cassius: {
+    name: 'Cassius',
+    style: 'Never looks at his own cards twice.',
+    look: { skin: '#6f4429', hair: '#1a1a1a', hairStyle: 'bald', shirt: '#1e1e26', accessory: 'shades' },
+    seat: { skillTier: 'elite', archetype: 'regular' },
+    lines: {
+      greeting: ['Cassius: Let us begin.'],
+      raise: ['Cassius: Higher.'],
+      call: ['Cassius: I will see it.'],
+      fold: ['Cassius: Not tonight.'],
+      win: ['Cassius: Obliged.'],
+      lose: ['Cassius: Well done.'],
+    },
+  },
+  ilse: {
+    name: 'Ilse',
+    style: 'Stacks chips like a bank teller.',
+    look: { skin: '#f0d0b0', hair: '#e8e0c8', hairStyle: 'tied', shirt: '#5a6a8a', accessory: 'glasses' },
+    seat: { skillTier: 'sharp', archetype: 'nit' },
+    lines: {
+      greeting: ['Ilse: Shall we?'],
+      raise: ['Ilse: Raise, precisely.'],
+      call: ['Ilse: Call.'],
+      fold: ['Ilse: No.'],
+      win: ['Ilse: As expected.'],
+      lose: ['Ilse: Interesting.'],
+    },
+  },
+  rourke: {
+    name: 'Rourke',
+    style: 'Owns three of the machines upstairs.',
+    look: { skin: '#c58f68', hair: '#7a5a3a', hairStyle: 'short', shirt: '#7a2a2a', accessory: 'none' },
+    seat: { skillTier: 'sharp', archetype: 'maniac' },
+    lines: {
+      greeting: ['Rourke: Table’s hot. Good.'],
+      raise: ['Rourke: Put it all out there.'],
+      call: ['Rourke: Ah, I am curious.'],
+      fold: ['Rourke: Ugh. Next.'],
+      win: ['Rourke: House money!'],
+      lose: ['Rourke: Cost of doing business.'],
+    },
+  },
+  anselm: {
+    name: 'Anselm',
+    style: 'Speaks only in odds.',
+    look: { skin: '#e0b894', hair: '#2a2a2a', hairStyle: 'short', shirt: '#4a4a6a', accessory: 'glasses' },
+    seat: { skillTier: 'elite', archetype: 'nit' },
+    lines: {
+      greeting: ['Anselm: Nineteen percent, I think.'],
+      raise: ['Anselm: Raise.'],
+      call: ['Anselm: The price is right.'],
+      fold: ['Anselm: Mathematically, no.'],
+      win: ['Anselm: As computed.'],
+      lose: ['Anselm: Variance.'],
+    },
+  },
+  tamsin: {
+    name: 'Tamsin',
+    style: 'Came for one hand. Stayed for the night.',
+    look: { skin: '#d8a077', hair: '#101018', hairStyle: 'long', shirt: '#8a2a5a', accessory: 'earring' },
+    seat: { skillTier: 'elite', archetype: 'maniac' },
+    lines: {
+      greeting: ['Tamsin: One hand. Maybe two.'],
+      raise: ['Tamsin: Up, up, up.'],
+      call: ['Tamsin: Show me.'],
+      fold: ['Tamsin: Take it.'],
+      win: ['Tamsin: One more!'],
+      lose: ['Tamsin: One more, then.'],
+    },
+  },
 }
 
 /** Everything the felt needs about one seat: who they are and how they talk. */
@@ -1427,8 +1609,8 @@ const FALLBACK_LOOK: AvatarLook = {
  * not exist is a content bug, and `content.test.ts` fails on it rather than
  * letting a nameless stranger appear on the felt.
  */
-export function seatsOf(table: TableDef): OpponentDef[] {
-  return table.opponents.map((ref) => {
+export function seatsOf(table: TableDef, lineup: SeatRef[] = table.opponents): OpponentDef[] {
+  return lineup.map((ref) => {
     const id = typeof ref === 'string' ? ref : ref.character
     const persona = typeof ref === 'string' ? undefined : ref.persona
     const character = CHARACTERS[id]

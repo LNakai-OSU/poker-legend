@@ -185,6 +185,10 @@ casino floor is a **private room** with a **boss** who plays you one on one.
   `winTarget` at that town's poker tables — net, over the whole run, counted when
   you leave a table. Reaching it opens the room for good; a bad night after does
   not shut it again. Slots, craps and the freerolls do not count.
+- An open cash game gives the table a `walkIns: [...]` pool (`[]` if `opponents`
+  is already five). It then seats one to five of `opponents` and `walkIns`
+  together, fewer in the morning and most at night, drawn afresh each day and
+  period (`src/world/lineup.ts`). Matches, bosses and private rooms omit it.
 - The boss's table (`bossOf` on the `TableDef`) is a match, like the final: your
   buy-in against theirs, no rebuy and no standing up, winner takes every chip. A
   loss costs the buy-in and a day, and you may try again.

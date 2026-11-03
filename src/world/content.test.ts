@@ -787,7 +787,7 @@ describe('the opponents', () => {
     // second, "plays every hand he is dealt" and "grinds small pots" were the same
     // bot with different captions.
     for (const table of Object.values(TABLES)) {
-      for (const opponent of seatsOf(table)) {
+      for (const opponent of seatsOf(table, [...table.opponents, ...(table.walkIns ?? [])])) {
         expect(
           opponent.archetype,
           `${opponent.name} at ${table.name} has no playing style`,
@@ -808,7 +808,7 @@ describe('the opponents', () => {
     // used to be possible to seat somebody with no personality entry at all and
     // get a nameless stranger on the felt.
     for (const table of Object.values(TABLES)) {
-      expect(() => seatsOf(table), `${table.name} seats somebody who does not exist`).not.toThrow()
+      expect(() => seatsOf(table, [...table.opponents, ...(table.walkIns ?? [])]), `${table.name} seats somebody who does not exist`).not.toThrow()
     }
   })
 

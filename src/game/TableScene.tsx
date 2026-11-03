@@ -10,6 +10,7 @@ import { TableCaption } from './TableCaption'
 import { tellCue } from './tellFlavor'
 import type { Announcement } from './HandAnnouncer'
 import { personalityFor, seatsOf } from '../world/characters'
+import { lineupFor } from '../world/lineup'
 import { talkOf } from '../world/talk'
 import { chooseSpeaker, speaksAboutOwnAction, type Moment } from './tableTalk'
 import { TABLE_HINTS, perkClarity } from '../world/tableHints'
@@ -139,7 +140,9 @@ function buildPlayers(table: TableDef, seats: OpponentDef[]): PlayerConfig[] {
 export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) {
   // Who is actually sitting here: the table names characters, and this looks
   // each one up once for the life of the table.
-  const seats = useMemo(() => seatsOf(table), [table])
+  // An open game is whoever is in at this hour; fixed when you sit down.
+  const [lineup] = useState(() => lineupFor(table, state.period, state.day))
+  const seats = useMemo(() => seatsOf(table, lineup), [table, lineup])
   const players = useMemo(() => buildPlayers(table, seats), [table, seats])
   /** Which of a character's personas has taken this seat, for what they say. */
   const personas = useMemo(

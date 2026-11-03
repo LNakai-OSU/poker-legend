@@ -50,6 +50,14 @@ export interface TableDef {
   bigBlind: number
   buyIn: number
   opponents: SeatRef[]
+  /**
+   * Makes this an open cash game, whose table fills and thins with the hour:
+   * who is at it is drawn from `opponents` and `walkIns` together, one to five
+   * of them (see `lineup.ts`). Leave it out for a match, a boss or a private
+   * room, where `opponents` are exactly who you play. `[]` is allowed when
+   * `opponents` is already a full table.
+   */
+  walkIns?: SeatRef[]
   /** Minimum dress-code level the room enforces (see ITEM dressCode effects). */
   dressCode?: number
   /** Heads-up finale tables end the game rather than being a normal cash game. */

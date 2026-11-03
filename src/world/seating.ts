@@ -1,6 +1,8 @@
 import { DOOR, isWalkable } from '../overworld/tiles'
 import { CHARACTERS, type CharacterDef } from './characters'
 import { TABLES } from './content'
+import { lineupFor } from './lineup'
+import type { TimePeriod } from '../game/time'
 import { STAMP_BY_ID, seatTile, stampSize, type PlacedStamp, type SeatFacing } from './stamps'
 import type { AreaDef, TableDef } from './types'
 
@@ -69,6 +71,8 @@ export interface SeatingOptions {
   present?: Array<{ id: string; col: number; row: number }>
   /** Tiles nobody may sit on: where the player is arriving. */
   keepClear?: Array<{ col: number; row: number }>
+  /** The hour, for open games whose players come and go (see `lineup.ts`). Without it they seat all they name. */
+  hour?: { period: TimePeriod; day: number }
   tables?: Record<string, TableDef>
   characters?: Record<string, CharacterDef>
 }
@@ -150,7 +154,7 @@ export function seatingFor(area: SeatingArea, options: SeatingOptions = {}): Tab
       (poi) => poi.action.kind === 'table' && inside(poi.col, poi.row) && tables[poi.action.tableId],
     )
     const game = dealer?.action.kind === 'table' ? tables[dealer.action.tableId] : undefined
-    const players = (game?.opponents ?? [])
+    const players = (game ? (options.hour ? lineupFor(game, options.hour.period, options.hour.day) : game.opponents) : [])
       .map((ref) => (typeof ref === 'string' ? ref : ref.character))
       .filter((id) => characters[id])
     return [{ table, stamp, seats: stamp.seats, inside, game, players }]

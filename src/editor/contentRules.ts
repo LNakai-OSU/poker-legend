@@ -96,7 +96,7 @@ function characterRules(id: string, character: CharacterDef, world: World): stri
     if (!character.lines.greeting?.length) problems.push(`${name} plays but says nothing when you sit down`)
   }
   for (const table of Object.values(world.tables)) {
-    for (const ref of table.opponents) {
+    for (const ref of [...table.opponents, ...(table.walkIns ?? [])]) {
       const seated = typeof ref === 'string' ? ref : ref.character
       if (seated !== id) continue
       if (!character.seat) {
