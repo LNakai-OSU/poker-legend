@@ -267,3 +267,24 @@ button {
   50% { opacity: 0.35; }
 }
 .casino-blink { animation: casino-blink 420ms steps(2, end) infinite; }
+
+/* The table rooms' idle motion (rooms.ts, RoomMotion). Each layer is the
+   second frame of a few pixels and is hidden until its cycle shows it: a neon
+   sign drops out twice, briefly, every several seconds; the glints on water
+   trade places. Steps, not fades, as a GBA would. */
+@keyframes neon-stutter {
+  0%, 82% { opacity: 0; }
+  83% { opacity: 1; }
+  84.5% { opacity: 0; }
+  86% { opacity: 1; }
+  90%, 100% { opacity: 0; }
+}
+.room-flicker { opacity: 0; animation: neon-stutter 7s steps(1, end) infinite; }
+@keyframes water-glint {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}
+.room-shimmer { opacity: 0; animation: water-glint 1.6s steps(1, end) infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .room-flicker, .room-shimmer { animation: none; }
+}

@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, type CSSProperties, type ReactNode } from 'react'
 import { TEXT_ZOOM, layoutScene, type SceneLayout, type SceneNeeds } from './tableLayout'
 import type { TableTheme } from './tableThemes'
-import { paintRoom } from './pixel/rooms'
+import { paintRoomScene, type RoomMotion } from './pixel/rooms'
 import { Panel } from './pixel/ui'
 import { PixelText } from './pixel/PixelText'
 import { INK } from './pixel/ink'
@@ -15,12 +15,21 @@ export function ArtCanvas({
   scale,
   paint,
   testId,
+  left = 0,
+  top = 0,
+  className,
+  style,
 }: {
   width: number
   height: number
   scale: number
   paint: (canvas: HTMLCanvasElement) => void
   testId?: string
+  /** Where it sits in the scene, in art pixels. */
+  left?: number
+  top?: number
+  className?: string
+  style?: CSSProperties
 }) {
   const ref = useRef<HTMLCanvasElement>(null)
   useEffect(() => {
@@ -31,17 +40,37 @@ export function ArtCanvas({
       ref={ref}
       aria-hidden="true"
       data-testid={testId}
+      className={className}
       width={width}
       height={height}
       style={{
         position: 'absolute',
-        left: 0,
-        top: 0,
+        left: left * scale,
+        top: top * scale,
         width: width * scale,
         height: height * scale,
         imageRendering: 'pixelated',
         pointerEvents: 'none',
+        ...style,
       }}
+    />
+  )
+}
+
+/** One moving part of the room — a sign's dark frame, the water's other glints — shown on its own cycle. */
+function MotionLayer({ motion, scale }: { motion: RoomMotion; scale: number }) {
+  const paint = useMemo(() => (canvas: HTMLCanvasElement) => motion.frame.paint(canvas), [motion])
+  return (
+    <ArtCanvas
+      width={motion.frame.width}
+      height={motion.frame.height}
+      scale={scale}
+      left={motion.x}
+      top={motion.y}
+      paint={paint}
+      testId={`room-${motion.kind}`}
+      className={`room-${motion.kind}`}
+      style={{ animationDuration: `${motion.period.toFixed(2)}s`, animationDelay: `${motion.delay.toFixed(2)}s` }}
     />
   )
 }
@@ -70,10 +99,11 @@ export function TableStage({ theme, needs, felt, dock }: TableStageProps) {
   // The room covers the whole window, a pixel or two past the art grid's edge.
   const roomW = Math.ceil(view.w / P)
   const roomH = Math.max(layout.h, Math.ceil(view.h / P))
-  const paint = useMemo(
-    () => (canvas: HTMLCanvasElement) => paintRoom(theme.id, { w: roomW, h: roomH, felt: layout.felt }).paint(canvas),
+  const room = useMemo(
+    () => paintRoomScene(theme.id, { w: roomW, h: roomH, felt: layout.felt }),
     [theme.id, roomW, roomH, layout.felt],
   )
+  const paint = useMemo(() => (canvas: HTMLCanvasElement) => room.raster.paint(canvas), [room])
 
   const { header } = layout
   const titleLine = layout.headerLines === 1 ? `${needs.title}   ${needs.subtitle}` : needs.title
@@ -98,6 +128,9 @@ export function TableStage({ theme, needs, felt, dock }: TableStageProps) {
       }}
     >
       <ArtCanvas width={roomW} height={roomH} scale={P} paint={paint} testId="room" />
+      {room.motion.map((m, i) => (
+        <MotionLayer key={`${theme.id}-${roomW}x${roomH}-${i}`} motion={m} scale={P} />
+      ))}
 
       {/* The sign in the corner: where you are, the stakes, what you have. */}
       <Panel
