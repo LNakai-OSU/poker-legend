@@ -1,7 +1,7 @@
 import type { StampArt } from '../stampArt'
 import { glow, icon, shadow, sprite, text, textCentred, textWidth, tint, type Px } from '../pixelArt'
 import {
-  archedWindow, awning, barrelRoof, brickWall, bulbs, doorAt, eaveShadow, flatRoof, glassDoors,
+  archedWindow, awning, barrelRoof, brickWall, bulbs, doorAt, eaveShadow, fanlight, flatRoof, glassDoors,
   groundShadow, plinth, puffs, roundWindow, sidingWall, slateRoof, stoneWall, stuccoWall, tinRoof, wallLamp,
   windowAt,
   type RoofPalette, type WallPalette, type WindowStyle,
@@ -137,6 +137,8 @@ const club: StampArt = {
       px(door.x - 3, door.y - 6, 22, 22, LIMESTONE.line)
       px(door.x - 2, door.y - 5, 20, 21, LIMESTONE.base)
       px(door.x - 2, door.y - 5, 20, 1, LIMESTONE.hi)
+      // A lit fanlight is the only sign anybody is in.
+      fanlight(px, door.x, door.y, '#2a2a30', '#ffd27a')
       doorAt(px, door.x, door.y, { line: '#0e0e12', trim: '#2a2a30', leaf: '#16241e', knob: BRASS })
       px(door.x + 7, door.y + 5, 2, 2, BRASS)
       for (const lx of [door.x - 8, door.y > 0 ? door.x + 21 : 0]) wallLamp(px, lx, door.y - 2, '#ffe080')
@@ -297,7 +299,7 @@ const menswear: StampArt = {
     }
     px(4, 59, 1, 17, 'rgba(255, 255, 255, 0.5)')
     for (const door of doorTiles(c)) {
-      doorAt(px, door.x, door.y, { line: '#0e1a14', trim: '#3a6a54', leaf: '#1e3a2e', glass: '#c8d0d0', knob: BRASS })
+      doorAt(px, door.x, door.y, { line: '#0e1a14', trim: '#3a6a54', leaf: '#1e3a2e', glass: '#c8d0d0', glazed: true, knob: BRASS })
     }
     // A hanging pair of scissors on a bracket.
     px(w - 12, 58, 8, 1, '#14141a')
@@ -501,13 +503,15 @@ const hotelCay: StampArt = {
     for (const y of [16, 34]) {
       for (let x = 6; x < w - 14; x += 24) {
         awning(px, x - 2, y, 18, 3, x % 48 === 6 ? CORAL : TEAL, '#ffffff', 2)
-        windowAt(px, x + 2, y + 5, 10, 9, ISLAND_WINDOW)
+        // French windows onto the balcony, so a room with its lamp on is a
+        // tall panel of light and not a pinprick behind a glazing cross.
+        windowAt(px, x + 2, y + 4, 10, 11, { ...ISLAND_WINDOW, bars: 'vertical', curtain: x % 48 === 6 ? '#f4c8a8' : '#f4e8c8' })
         // Balcony rail.
         px(x - 2, y + 15, 18, 1, '#ffffff')
         for (let bx = x - 2; bx < x + 16; bx += 2) px(bx, y + 15, 1, 3, '#ffffff')
       }
     }
-    doorAt(px, w / 2 - 8, h - 16, { line: '#2a5a5a', trim: '#ffffff', leaf: TEAL, glass: '#a8e8f0' })
+    doorAt(px, w / 2 - 8, h - 16, { line: '#2a5a5a', trim: '#ffffff', leaf: TEAL, glass: '#a8e8f0', glazed: true })
     plinth(px, 0, h - 2, w, '#c8b88a')
     groundShadow(px, w, 12, h)
   },
@@ -533,7 +537,7 @@ const boutique: StampArt = {
     px(19, 36, 6, 8, '#f48ab8')
     px(20, 35, 4, 1, '#f48ab8')
     px(6, 34, 1, 10, 'rgba(255, 255, 255, 0.6)')
-    for (const door of doorTiles(c)) doorAt(px, door.x, door.y, { line: '#2a5a5a', trim: '#ffffff', leaf: TEAL, glass: '#a8e8f0' })
+    for (const door of doorTiles(c)) doorAt(px, door.x, door.y, { line: '#2a5a5a', trim: '#ffffff', leaf: TEAL, glass: '#a8e8f0', glazed: true })
     windowAt(px, w - 26, 33, 20, 10, { ...ISLAND_WINDOW, flowers: true })
     plinth(px, 0, h - 2, w, '#a8c8b8')
     groundShadow(px, w, 15, h)

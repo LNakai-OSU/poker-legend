@@ -232,7 +232,7 @@ const giftShop: StampArt = {
       px(x, 30, 3, h - 30, TIMBER.line)
       px(x + 1, 30, 1, h - 30, TIMBER.hi)
     }
-    for (const door of doorTiles(c)) doorAt(px, door.x, door.y, { line: TIMBER.line, trim: TIMBER.hi, leaf: TURQUOISE_DARK })
+    for (const door of doorTiles(c)) doorAt(px, door.x, door.y, { line: TIMBER.line, trim: TIMBER.hi, leaf: TURQUOISE_DARK, glass: '#e8c890', glazed: true })
     // A barrel, and a cactus in a pot.
     px(26, h - 9, 6, 8, TIMBER.line)
     px(27, h - 9, 4, 8, '#9a6a3a')
@@ -274,7 +274,7 @@ const motel: StampArt = {
     glow('neon', () => {
       text(px, 'OFFICE', 7, 28, frame ? '#ff6a3a' : '#ff8a5a')
     })
-    doorAt(px, 32, 32, { line: TIMBER.line, trim: TURQUOISE, leaf: '#6a4226', glass: '#e8b858' })
+    doorAt(px, 32, 32, { line: TIMBER.line, trim: TURQUOISE, leaf: '#6a4226', glass: '#e8b858', glazed: true })
     // Ice machine and a soda machine against the wall.
     px(52, 26, 11, 20, '#c8d0d8')
     px(53, 27, 9, 18, '#e8eef4')
@@ -515,7 +515,7 @@ const landingDiner: StampArt = {
     windowAt(px, 54, 29, 20, 11, checked)
     windowAt(px, 78, 29, 12, 11, WHITE_WINDOW)
     for (const door of doorTiles(c)) {
-      doorAt(px, door.x, door.y, { line: '#2a4a5a', trim: '#ece8de', leaf: '#ece8de', glass: '#a8d0e0' })
+      doorAt(px, door.x, door.y, { line: '#2a4a5a', trim: '#ece8de', leaf: '#ece8de', glass: '#a8d0e0', glazed: true })
       // EAT, and an arrow that blinks at the door.
       px(door.x - 12, door.y - 12, 11, 7, '#1a1a22')
       glow('neon', () => {
@@ -568,6 +568,8 @@ const outfitters: StampArt = {
       // A barn door with its brace.
       px(door.x + 1, door.y - 2, 14, 18, '#3e1a10')
       px(door.x + 2, door.y - 1, 12, 17, '#8a3020')
+      // A window in the top of it, lit while the shop is open.
+      glow('window', () => px(door.x + 5, door.y + 1, 6, 4, '#e8c068'))
       for (let i = 0; i < 12; i++) {
         px(door.x + 2 + i, door.y - 1 + Math.round(i * 1.3), 1, 2, '#ece8de')
         px(door.x + 13 - i, door.y - 1 + Math.round(i * 1.3), 1, 2, '#ece8de')

@@ -1,9 +1,9 @@
 import type { ArtContext, StampArt } from '../stampArt'
 import { glow, icon, shadow, sprite, text, textCentred, textWidth, tint } from '../pixelArt'
 import {
-  acUnit, awning, barberPole, brickWall, bulbBorder, canopy, chimney, dish, displayWindow, doorAt, downpipe,
-  eaveShadow, fanlight, fireEscape, flatRoof, glassDoors, groundShadow, lintel, plinth, puffs,
-  rollerShutter, roundWindow, shingleRoof, sidingWall, signBoard, slateRoof, stoneWall, stuccoWall, tinRoof,
+  acUnit, awning, balcony, barberPole, brickWall, bulbBorder, canopy, chimney, chimneyStack, dish, displayWindow, doorAt, downpipe,
+  eaveShadow, fanlight, fireEscape, flatRoof, frontGable, glassDoors, groundShadow, lintel, plinth, puffs,
+  rollerShutter, roundWindow, shingleRoof, sidingWall, signBoard, slateRoof, stoneWall, stoop, stuccoWall, tinRoof,
   wallLamp, washer, waterTower, windowAt,
   type DoorStyle, type RoofPalette, type WallPalette, type WindowStyle,
 } from './buildingParts'
@@ -55,6 +55,36 @@ export const BASIN_WINDOW: WindowStyle = {
 const DARK_WINDOW: WindowStyle = { ...BASIN_WINDOW, glass: '#3a4a5a', glassHi: '#5a6e80' }
 const BASIN_DOOR: DoorStyle = { line: '#2a1a14', trim: '#ece2c8', leaf: '#2f5e44' }
 const STONE = '#c4b8a4'
+const IRON = '#26262c'
+const POT = '#b8643a'
+const THATCH: RoofPalette = {
+  line: '#3a2a14', ridge: '#b8984e', hi: '#d0b468', a: '#a8883e', b: '#987a36', seam: '#6a5428', fascia: '#e2d6bc',
+}
+
+/*
+ * Every house had the same cream-framed window with the same pale glass, so at
+ * night the street was one window repeated. Each house now has its own frame,
+ * curtains and glass, and the glass is chosen for the colour it lights up: the
+ * night pass turns pale glass cream, mid glass gold and dark glass amber.
+ */
+/** The terrace: white frames, blue-grey glass that lights gold. */
+const TERRACE_WINDOW: WindowStyle = { frame: '#2a1a14', trim: '#f4f0e6', glass: '#5e8cae', glassHi: '#86b4d0', sill: '#e2d6bc' }
+/** The clapboard house: white frames, navy shutters, pale glass that lights cream. */
+const CLAPBOARD_WINDOW: WindowStyle = {
+  frame: '#2a3440', trim: '#ffffff', glass: '#b0d4e8', glassHi: '#d4ecf6', sill: '#ffffff', shutters: '#2e3e62',
+}
+/** The walk-up: bottle-green frames. */
+const WALKUP_WINDOW: WindowStyle = { frame: '#1a2a20', trim: '#4e7a5e', glass: '#7fbcd8', glassHi: '#a8daf0', sill: STONE }
+/** The porch house: cream frames, green shutters, lace, glass that lights amber. */
+const PORCH_WINDOW: WindowStyle = {
+  frame: '#2a2a22', trim: '#f4f0e4', glass: '#4a6e84', glassHi: '#6a8ea4', sill: '#f4f0e4', shutters: '#3a6a4a', curtain: '#f4f0e4',
+}
+/** The bay-window house: oxblood frames. */
+const BAY_WINDOW: WindowStyle = { frame: '#3a1a14', trim: '#8a2e2a', glass: '#7fbcd8', glassHi: '#a8daf0', sill: '#e2d6bc' }
+/** The cottage: white frames, cornflower shutters. */
+const COTTAGE_WINDOW: WindowStyle = {
+  frame: '#3a2a22', trim: '#ffffff', glass: '#5e8cae', glassHi: '#86b4d0', sill: '#ffffff', shutters: '#4a78b0',
+}
 
 // ---------------------------------------------------------------------------
 // Basin Street
@@ -133,28 +163,34 @@ const bakery: StampArt = {
 
 /** A narrow red-brick terrace house with a chimney and a window box. */
 const houseA: StampArt = {
-  bleed: { ...EAVES, top: 4 },
+  bleed: { ...EAVES, top: 16 },
+  frames: 2,
   draw: (px, c) => {
     const roof = 28
-    chimney(px, c.w - 22, -4, 8, '#8e4434', '#b0a898')
+    // A stack on each party wall, two pots on each; the fire is lit on the right.
+    chimneyStack(px, 3, -8, 10, BASIN_BRICK.base, '#b0a898', POT, c.frame, false)
+    chimneyStack(px, c.w - 13, -8, 10, BASIN_BRICK.base, '#b0a898', POT, c.frame, true)
     shingleRoof(px, -2, 0, c.w + 4, roof, BASIN_ROOF)
     brickWall(px, 0, roof, c.w, c.h - roof, BASIN_BRICK)
     eaveShadow(px, 0, roof, c.w)
     downpipe(px, c.w - 3, roof, c.h - roof - 2, '#4a4a52')
     lintel(px, 9, roof + 5, 11, STONE)
-    windowAt(px, 9, roof + 5, 11, 9, BASIN_WINDOW)
+    windowAt(px, 9, roof + 5, 11, 10, { ...TERRACE_WINDOW, curtain: '#e8d8a0' })
+    // A Juliet balcony on the front bedroom.
+    balcony(px, 7, roof + 16, 15, IRON, STONE)
     lintel(px, c.w - 21, roof + 5, 11, STONE)
-    windowAt(px, c.w - 21, roof + 5, 11, 9, { ...BASIN_WINDOW, curtain: '#c86a5a' })
+    windowAt(px, c.w - 21, roof + 5, 11, 9, { ...TERRACE_WINDOW, curtain: '#c86a5a' })
     lintel(px, 6, c.h - 14, 13, STONE)
-    windowAt(px, 6, c.h - 14, 13, 8, { ...BASIN_WINDOW, flowers: true })
+    windowAt(px, 6, c.h - 14, 13, 8, { ...TERRACE_WINDOW, flowers: true })
     plinth(px, 0, c.h - 2, c.w, '#7a6a5e')
-    fanlight(px, 32, c.h - 16, '#e2d6bc', '#9fd0e8')
-    doorAt(px, 32, c.h - 16, BASIN_DOOR)
+    fanlight(px, 32, c.h - 16, '#f4f0e6', '#9fd0e8')
+    doorAt(px, 32, c.h - 16, { ...BASIN_DOOR, trim: '#f4f0e6', leaf: '#1e4a3a', knob: '#d8b048' })
+    stoop(px, 32, c.h - 16, '#c8c0b0', IRON)
     wallLamp(px, 49, c.h - 13, '#ffd27a')
     lintel(px, c.w - 19, c.h - 14, 13, STONE)
-    windowAt(px, c.w - 19, c.h - 14, 13, 8, BASIN_WINDOW)
+    windowAt(px, c.w - 19, c.h - 14, 13, 8, TERRACE_WINDOW)
     // A house number on the door frame.
-    text(px, '12', 25, c.h - 13, '#ece2c8')
+    text(px, '12', 25, c.h - 13, '#f4f0e6')
     groundShadow(px, c.w, roof, c.h)
   },
 }
@@ -223,26 +259,34 @@ const tenement: StampArt = {
     eaveShadow(px, 0, roof, c.w)
     // A cornice of corbelled brick under the roof line.
     for (let x = 1; x < c.w; x += 4) px(x, roof + 2, 2, 2, '#5a3a2a')
+    // Every flat its own curtains: somebody's mustard, somebody's violet, a
+    // dark one with nobody in, a box of geraniums.
     const floors = [13, 29]
-    for (const y of floors) {
+    const curtains = [['#c84a3a', '#d8a04a', '#8a5aa8'], ['#4a8a6a', '', '']]
+    floors.forEach((y, f) => {
       lintel(px, 7, y, 11, STONE)
-      windowAt(px, 7, y, 11, 10, BASIN_WINDOW)
+      windowAt(px, 7, y, 11, 10, { ...WALKUP_WINDOW, curtain: curtains[f][0] || undefined })
       lintel(px, 34, y, 11, STONE)
-      windowAt(px, 34, y, 11, 10, y === 13 ? { ...BASIN_WINDOW, curtain: '#d8a04a' } : DARK_WINDOW)
+      windowAt(px, 34, y, 11, 10, f === 0 ? { ...WALKUP_WINDOW, curtain: curtains[f][1] } : { ...WALKUP_WINDOW, glass: '#3a4a5a', glassHi: '#5a6e80' })
       lintel(px, 61, y, 11, STONE)
-      windowAt(px, 61, y, 11, 10, y === 29 ? { ...BASIN_WINDOW, flowers: true } : BASIN_WINDOW)
-    }
+      windowAt(px, 61, y, 11, 10, f === 1 ? { ...WALKUP_WINDOW, flowers: true } : { ...WALKUP_WINDOW, curtain: curtains[f][2] })
+    })
+    // An air conditioner hung out of the top-left flat.
+    px(9, 22, 7, 4, '#c8ccd0')
+    px(9, 22, 7, 1, '#e8eaec')
+    for (let x = 10; x < 15; x += 2) px(x, 23, 1, 2, '#8a8e94')
     fireEscape(px, 30, 20, 20, 12)
     fireEscape(px, 30, 36, 20, 0)
     // The stoop: a door up two steps, under a little stone hood.
     px(29, 45, 22, 2, STONE)
     px(29, 45, 22, 1, tint(STONE, 0.2))
-    doorAt(px, 32, 48, { line: '#1a1a20', trim: '#4a3a30', leaf: '#3a2a22', glass: '#d8b860' })
-    px(30, 62, 20, 2, '#9a9284')
-    lintel(px, 8, 51, 11, STONE)
-    windowAt(px, 8, 51, 11, 8, DARK_WINDOW)
-    lintel(px, 61, 51, 11, STONE)
-    windowAt(px, 61, 51, 11, 8, BASIN_WINDOW)
+    doorAt(px, 32, 48, { line: '#1a1a20', trim: '#4a3a30', leaf: '#3a2a22', glass: '#d8b860', glazed: true })
+    stoop(px, 32, 48, '#a8a090', IRON)
+    // The ground-floor flats, each under a striped awning of its own.
+    windowAt(px, 8, 52, 11, 8, DARK_WINDOW)
+    awning(px, 5, 47, 17, 3, '#2e5a8a', '#f4f0e4', 3)
+    windowAt(px, 61, 52, 11, 8, { ...WALKUP_WINDOW, curtain: '#e8d8a0' })
+    awning(px, 58, 47, 17, 3, '#a83a2a', '#f4f0e4', 3)
     plinth(px, 0, c.h - 2, 30, '#6a5e52')
     plinth(px, 50, c.h - 2, c.w - 50, '#6a5e52')
     groundShadow(px, c.w, roof, c.h)
@@ -293,14 +337,16 @@ const checks: StampArt = {
 
 /** Pale blue clapboard under slate, a dormer in the roof and a canopy over the door. */
 const houseB: StampArt = {
-  bleed: { ...EAVES, top: 2 },
+  bleed: { ...EAVES, top: 16 },
+  frames: 2,
   draw: (px, c) => {
     const roof = 30
+    chimneyStack(px, 8, -8, 12, '#8a4a3a', '#a8a090', POT, c.frame, true)
     slateRoof(px, -2, 0, c.w + 4, roof, SLATE_ROOF)
     // A dormer window with a little roof of its own.
     px(31, 8, 18, 15, '#1e2028')
     px(32, 9, 16, 13, '#d8e0e8')
-    windowAt(px, 35, 11, 10, 9, BASIN_WINDOW)
+    windowAt(px, 35, 11, 10, 9, { ...CLAPBOARD_WINDOW, shutters: undefined, curtain: '#e8b0b0' })
     px(29, 4, 22, 5, SLATE_ROOF.line)
     px(30, 5, 20, 3, SLATE_ROOF.ridge)
     px(31, 5, 18, 1, SLATE_ROOF.hi)
@@ -310,10 +356,12 @@ const houseB: StampArt = {
     // Corner boards.
     px(0, roof, 2, c.h - roof, '#eef2f6')
     px(c.w - 2, roof, 2, c.h - roof, '#d8dee4')
-    windowAt(px, 7, roof + 6, 13, 12, { ...BASIN_WINDOW, frame: '#2a3440', trim: '#ffffff', curtain: '#e8b0b0' })
-    windowAt(px, c.w - 20, roof + 6, 13, 12, { ...BASIN_WINDOW, frame: '#2a3440', trim: '#ffffff' })
+    windowAt(px, 8, roof + 6, 13, 12, { ...CLAPBOARD_WINDOW, curtain: '#e8b0b0', flowers: true })
+    windowAt(px, c.w - 21, roof + 6, 13, 12, { ...CLAPBOARD_WINDOW, flowers: true })
     canopy(px, 29, c.h - 21, 22, '#4e5666')
-    doorAt(px, 32, c.h - 16, { line: '#2a3440', trim: '#ffffff', leaf: '#b03434' })
+    doorAt(px, 32, c.h - 16, { line: '#2a3440', trim: '#ffffff', leaf: '#b03434', glass: '#d4ecf6' })
+    // Painted wooden steps.
+    stoop(px, 32, c.h - 16, '#e8ecf0', '#ffffff')
     plinth(px, 0, c.h - 2, c.w, '#8a8e94')
     groundShadow(px, c.w, roof, c.h)
   },
@@ -405,7 +453,7 @@ const patels: StampArt = {
       }
     }
     for (const door of doorTiles(c)) {
-      doorAt(px, door.x, door.y, { line: '#2a1a14', trim: '#d8d0c0', leaf: '#4a4a52', glass: '#a8d8f0' })
+      doorAt(px, door.x, door.y, { line: '#2a1a14', trim: '#d8d0c0', leaf: '#4a4a52', glass: '#a8d8f0', glazed: true })
       px(door.x + 6, door.y + 9, 5, 2, '#3aa860')
     }
     // The ice chest.
@@ -444,7 +492,7 @@ const barber: StampArt = {
     px(19, 48, 6, 2, '#f4f4f4')
     px(12, 45, 1, 14, 'rgba(255, 255, 255, 0.4)')
     // The door, with the card on its hook.
-    doorAt(px, 48, 48, { line: '#2a2a30', trim: '#f4f0e0', leaf: '#1e2e5a', glass: '#a8d0e8' })
+    doorAt(px, 48, 48, { line: '#2a2a30', trim: '#f4f0e0', leaf: '#1e2e5a', glass: '#a8d0e8', glazed: true })
     px(54, 53, 5, 3, '#f4f0e0')
     px(55, 54, 3, 1, '#3a3a40')
     plinth(px, 0, c.h - 2, c.w, '#8a8478')
@@ -529,7 +577,7 @@ const hotel: StampArt = {
     px(14, 14, 3, 1, '#2a2a30')
     px(14, 40, 3, 1, '#2a2a30')
     canopy(px, 26, 43, 28, '#6a1a2a', 'INN')
-    doorAt(px, 32, 48, { line: '#14141a', trim: '#8a7a5a', leaf: '#4a2a1e', glass: '#e8c068' })
+    doorAt(px, 32, 48, { line: '#14141a', trim: '#8a7a5a', leaf: '#4a2a1e', glass: '#e8c068', glazed: true })
     windowAt(px, 58, 51, 12, 8, DARK_WINDOW)
     plinth(px, 0, c.h - 2, c.w, '#5a524a')
     groundShadow(px, c.w, roof, c.h)
@@ -629,7 +677,7 @@ const donuts: StampArt = {
         px(5, 31 + row * 6, 50, 1, '#d8c8c0')
       }
     })
-    doorAt(px, 64, 32, { line: '#3a2a30', trim: '#ffffff', leaf: '#d83a7a', glass: '#f8e8e8' })
+    doorAt(px, 64, 32, { line: '#3a2a30', trim: '#ffffff', leaf: '#d83a7a', glass: '#f8e8e8', glazed: true })
     plinth(px, 0, c.h - 2, c.w, '#a08890')
     groundShadow(px, c.w, roof, c.h)
   },
@@ -659,7 +707,7 @@ const garage: StampArt = {
       px(tx + 2, ty + 2, 3, 2, '#4a4a52')
     }
     windowAt(px, 108, 30, 14, 9, DARK_WINDOW)
-    doorAt(px, 124, 32, { line: '#2a2a30', trim: '#8a8e94', leaf: '#4a5a6a', glass: '#7fbcd8' })
+    doorAt(px, 124, 32, { line: '#2a2a30', trim: '#8a8e94', leaf: '#4a5a6a', glass: '#7fbcd8', glazed: true })
     plinth(px, 0, c.h - 2, c.w, '#6a6a66')
     groundShadow(px, c.w, roof, c.h)
   },
@@ -671,26 +719,34 @@ const garage: StampArt = {
 
 /** Cream clapboard with green shutters, a moss-green roof and a porch over the door. */
 const houseC: StampArt = {
-  bleed: { ...EAVES, top: 4 },
+  bleed: { ...EAVES, top: 16 },
+  frames: 2,
   draw: (px, c) => {
     const roof = 28
-    chimney(px, 12, -4, 8, '#7a6a5a', '#a8a090')
+    chimneyStack(px, 10, -8, 10, '#7a6a5a', '#a8a090', POT, c.frame, true)
     shingleRoof(px, -2, 0, c.w + 4, roof, MOSS_ROOF)
+    // A gable over the porch, boards in it and a vent.
+    frontGable(px, 40, 6, 22, 1.05, MOSS_ROOF, CREAM_SIDING, '#f4f0e4')
+    px(38, 16, 5, 5, '#2a2a22')
+    px(39, 17, 3, 3, '#8a8070')
+    px(39, 18, 3, 1, '#5a5446')
     sidingWall(px, 0, roof, c.w, c.h - roof, CREAM_SIDING)
     eaveShadow(px, 0, roof, c.w)
-    const shut = { ...BASIN_WINDOW, shutters: '#3a6a4a' }
-    windowAt(px, 10, roof + 5, 10, 9, shut)
-    windowAt(px, c.w - 20, roof + 5, 10, 9, shut)
-    // Porch: a small roof on two posts.
+    windowAt(px, 10, roof + 5, 10, 9, PORCH_WINDOW)
+    windowAt(px, c.w - 20, roof + 5, 10, 9, PORCH_WINDOW)
+    // Porch: a small roof on two posts, a lamp under it.
     px(26, c.h - 22, 28, 4, MOSS_ROOF.line)
     px(27, c.h - 22, 26, 3, MOSS_ROOF.a)
     px(27, c.h - 22, 26, 1, MOSS_ROOF.hi)
     shadow(px, 27, c.h - 18, 26, 2, 0.35)
     px(28, c.h - 18, 2, 18, '#f4f0e4')
     px(50, c.h - 18, 2, 18, '#d8d0c0')
-    doorAt(px, 32, c.h - 16, { line: '#2a2a22', trim: '#f4f0e4', leaf: '#5a3a24' })
-    windowAt(px, 7, c.h - 13, 12, 8, shut)
-    windowAt(px, c.w - 19, c.h - 13, 12, 8, shut)
+    doorAt(px, 32, c.h - 16, { line: '#2a2a22', trim: '#f4f0e4', leaf: '#5a3a24', glass: '#6a8ea4' })
+    stoop(px, 32, c.h - 16, '#b89a74')
+    px(39, c.h - 18, 1, 2, IRON)
+    glow('lamp', () => px(38, c.h - 16, 3, 2, '#ffe080'))
+    windowAt(px, 7, c.h - 13, 12, 8, PORCH_WINDOW)
+    windowAt(px, c.w - 19, c.h - 13, 12, 8, PORCH_WINDOW)
     plinth(px, 0, c.h - 2, c.w, '#8a8070')
     groundShadow(px, c.w, roof, c.h)
   },
@@ -740,6 +796,7 @@ const marcus: StampArt = {
     windowAt(px, 6, c.h - 13, 13, 8, BASIN_WINDOW)
     for (const door of doorTiles(c)) {
       doorAt(px, door.x, door.y, { line: '#2a2a22', trim: '#f4f0e4', leaf: '#8a2a24' })
+      stoop(px, door.x, door.y, '#b8b0a0', '#f4f0e4')
       // The note: GAME 8PM.
       px(door.x + 6, door.y + 4, 5, 4, '#f8f4e0')
       px(door.x + 7, door.y + 5, 3, 1, '#3a3a40')
@@ -761,26 +818,37 @@ const marcus: StampArt = {
 
 /** Yellow-painted brick, red roof, a dish on the wall and a bay window. */
 const houseD: StampArt = {
-  bleed: { ...EAVES, top: 2 },
+  bleed: { ...EAVES, top: 16 },
+  frames: 2,
   draw: (px, c) => {
     const roof = 26
-    shingleRoof(px, -2, 0, c.w + 4, roof, BASIN_ROOF)
+    chimneyStack(px, c.w - 26, -8, 10, '#8a5a42', '#a8a090', POT, c.frame, true)
+    // A tin roof, rust where the sheets lap.
+    tinRoof(px, -2, 0, c.w + 4, roof, TIN)
     brickWall(px, 0, roof, c.w, c.h - roof, YELLOW_BRICK)
     eaveShadow(px, 0, roof, c.w)
     dish(px, c.w - 12, roof + 3)
-    windowAt(px, 8, roof + 6, 11, 9, { ...BASIN_WINDOW, curtain: '#5a8ac8' })
-    windowAt(px, 34, roof + 6, 11, 9, BASIN_WINDOW)
-    // A bay window, standing proud of the wall.
-    px(4, c.h - 17, 24, 15, '#6a5a48')
-    px(5, c.h - 16, 22, 13, '#ece2c8')
+    windowAt(px, 8, roof + 6, 11, 9, { ...BAY_WINDOW, curtain: '#5a8ac8' })
+    windowAt(px, 34, roof + 6, 11, 9, BAY_WINDOW)
+    balcony(px, 32, roof + 16, 15, IRON, '#c8b88a', 4)
+    // A bay window, standing proud of the wall, its glass lit at night.
+    px(4, c.h - 17, 24, 15, BAY_WINDOW.frame)
+    px(5, c.h - 16, 22, 13, BAY_WINDOW.trim)
     for (const x of [6, 13, 20]) {
-      px(x, c.h - 15, 6, 10, '#7fbcd8')
-      px(x, c.h - 15, 6, 4, '#a8daf0')
+      glow('window', () => {
+        px(x, c.h - 15, 6, 10, '#7fbcd8')
+        px(x, c.h - 15, 6, 4, '#a8daf0')
+      })
       px(x, c.h - 15, 2, 1, '#ffffff')
     }
-    px(4, c.h - 19, 24, 2, BASIN_ROOF.a)
-    px(4, c.h - 19, 24, 1, BASIN_ROOF.hi)
-    doorAt(px, 48, c.h - 16, { line: '#3a2a20', trim: '#ece2c8', leaf: '#3a4a7a' })
+    px(6, c.h - 15, 1, 10, '#f0d8a0')
+    px(25, c.h - 15, 1, 10, '#f0d8a0')
+    px(4, c.h - 19, 24, 2, TIN.a)
+    px(4, c.h - 19, 24, 1, TIN.hi)
+    // A striped awning over the door.
+    awning(px, 45, c.h - 21, 22, 4, '#2e6a4a', '#f4f0e4', 3)
+    doorAt(px, 48, c.h - 16, { line: '#3a2a20', trim: '#ece2c8', leaf: '#3a4a7a', glass: '#a8daf0' })
+    stoop(px, 48, c.h - 16, '#bab2a2')
     plinth(px, 0, c.h - 2, c.w, '#8a7a62')
     groundShadow(px, c.w, roof, c.h)
   },
@@ -788,15 +856,24 @@ const houseD: StampArt = {
 
 /** A small pink cottage with more roof than house. */
 const cottage: StampArt = {
-  bleed: { ...EAVES, top: 4 },
+  bleed: { ...EAVES, top: 16 },
+  frames: 2,
   draw: (px, c) => {
     const roof = 24
-    chimney(px, c.w - 16, -4, 8, '#8e4434', '#b0a898')
-    shingleRoof(px, -2, 0, c.w + 4, roof, BASIN_ROOF)
+    chimneyStack(px, c.w - 16, -8, 10, '#8e4434', '#b0a898', POT, c.frame, true)
+    // Thatch: deep straw, combed in courses, with a little eyebrow over a round window.
+    shingleRoof(px, -2, 0, c.w + 4, roof, THATCH, 3)
+    for (let x = 0; x < c.w; x += 5) px(x + ((x * 3) % 4), 4 + ((x * 7) % 15), 1, 2, THATCH.seam)
+    px(-2, roof - 3, c.w + 4, 2, tint(THATCH.a, -0.2))
+    px(16, 8, 14, 3, THATCH.ridge)
+    px(15, 9, 16, 1, THATCH.line)
+    roundWindow(px, 23, 13, 3, '#ffffff', '#86b4d0')
     stuccoWall(px, 0, roof, c.w, c.h - roof, { hi: '#f4dcd4', base: '#e8c4b8', lo: '#d0a89c', line: '#a07a70' })
     eaveShadow(px, 0, roof, c.w)
-    windowAt(px, 5, roof + 5, 12, 9, { ...BASIN_WINDOW, flowers: true })
-    doorAt(px, 32, c.h - 16, { line: '#3a2a22', trim: '#f4f0e4', leaf: '#4a7a5a' })
+    windowAt(px, 7, roof + 5, 12, 9, { ...COTTAGE_WINDOW, flowers: true, curtain: '#e8a0b8' })
+    windowAt(px, 51, roof + 6, 8, 8, { ...COTTAGE_WINDOW, shutters: undefined, bars: 'vertical' })
+    doorAt(px, 32, c.h - 16, { line: '#3a2a22', trim: '#ffffff', leaf: '#4a7a5a', glass: '#86b4d0' })
+    stoop(px, 32, c.h - 16, '#a8a090')
     plinth(px, 0, c.h - 2, c.w, '#8a7a72')
     groundShadow(px, c.w, roof, c.h)
   },

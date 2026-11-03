@@ -64,6 +64,11 @@ export interface DoorStyle {
   leaf: string
   /** A glass panel in the upper half of the door, in this colour. */
   glass?: string
+  /**
+   * A shop's door: the glass runs the height of the leaf above the kick plate,
+   * so it reads as lit from inside after dark rather than as a pinprick.
+   */
+  glazed?: boolean
   step?: string
   knob?: string
 }
@@ -400,7 +405,17 @@ export function doorAt(px: Px, x: number, y: number, s: DoorStyle) {
   px(x + 4, y + 2, 8, 12, tint(s.leaf, -0.45))
   px(x + 5, y + 3, 7, 11, s.leaf)
   px(x + 5, y + 3, 7, 1, tint(s.leaf, 0.2))
-  if (s.glass) {
+  if (s.glass && s.glazed) {
+    const glass = s.glass
+    px(x + 5, y + 3, 7, 9, tint(s.leaf, -0.4))
+    glow('window', () => {
+      px(x + 6, y + 4, 5, 7, glass)
+      px(x + 6, y + 4, 5, 3, tint(glass, 0.15))
+    })
+    px(x + 6, y + 4, 2, 1, '#ffffff')
+    px(x + 6, y + 5, 1, 1, '#ffffff')
+    px(x + 6, y + 8, 5, 1, tint(s.leaf, -0.1))
+  } else if (s.glass) {
     const glass = s.glass
     px(x + 6, y + 4, 5, 4, tint(s.leaf, -0.4))
     glow('window', () => px(x + 6, y + 4, 5, 4, glass))
@@ -410,8 +425,10 @@ export function doorAt(px: Px, x: number, y: number, s: DoorStyle) {
     px(x + 6, y + 4, 5, 3, tint(s.leaf, -0.2))
     px(x + 6, y + 4, 5, 1, tint(s.leaf, -0.35))
   }
-  px(x + 6, y + 9, 5, 3, tint(s.leaf, -0.2))
-  px(x + 6, y + 9, 5, 1, tint(s.leaf, -0.35))
+  if (!s.glazed) {
+    px(x + 6, y + 9, 5, 3, tint(s.leaf, -0.2))
+    px(x + 6, y + 9, 5, 1, tint(s.leaf, -0.35))
+  }
   px(x + 10, y + 8, 1, 1, s.knob ?? '#f2c14e')
   // The step.
   const step = s.step ?? '#bab2a2'
@@ -657,4 +674,80 @@ export function canopy(px: Px, x: number, y: number, w: number, color: string, w
   px(x, y, w, 1, tint(color, 0.25))
   if (words) textCentred(px, words, x + w / 2, y, '#f4ead0')
   shadow(px, x, y + 5, w, 2, 0.35)
+}
+
+// ---------------------------------------------------------------------------
+// Houses
+// ---------------------------------------------------------------------------
+
+/**
+ * Two steps up to a door, wider than its frame, with an iron railing down
+ * each side if `rail` is given. Drawn after the door; (x, y) is the top-left
+ * of the door's tile.
+ */
+export function stoop(px: Px, x: number, y: number, stone: string, rail?: string) {
+  // The upper tread is the threshold, the lower one runs out past the frame.
+  px(x + 2, y + 12, 12, 2, tint(stone, 0.05))
+  px(x + 2, y + 12, 12, 1, tint(stone, 0.25))
+  px(x, y + 14, 16, 2, tint(stone, -0.12))
+  px(x, y + 14, 16, 1, tint(stone, 0.12))
+  px(x + 2, y + 13, 12, 1, tint(stone, -0.3))
+  shadow(px, x + 16, y + 13, 1, 3, 0.3)
+  if (!rail) return
+  for (const rx of [x, x + 15]) {
+    px(rx, y + 7, 1, 8, rail)
+    px(rx, y + 6, 1, 1, tint(rail, 0.4))
+  }
+  px(x, y + 9, 1, 1, tint(rail, 0.3))
+  px(x + 15, y + 9, 1, 1, tint(rail, 0.3))
+}
+
+/**
+ * A little iron balcony across the foot of an upper window: a stone slab
+ * and a railing with balusters, drawn over the glass. (x, y) is the slab's
+ * top-left; the rail stands `h` above it.
+ */
+export function balcony(px: Px, x: number, y: number, w: number, iron: string, slab: string, h = 5) {
+  px(x, y, w, 2, slab)
+  px(x, y, w, 1, tint(slab, 0.2))
+  shadow(px, x, y + 2, w, 2, 0.32)
+  px(x, y - h, w, 1, iron)
+  for (let bx = x; bx < x + w; bx += 2) px(bx, y - h + 1, 1, h - 1, iron)
+  px(x, y - 2, w, 1, tint(iron, 0.15))
+}
+
+/**
+ * A chimney stack with its pots, and smoke from them on a lit fire: the
+ * smoke rises on alternate frames, so the art needs `frames: 2`.
+ */
+export function chimneyStack(
+  px: Px, x: number, y: number, h: number, brick: string, cap: string, pot: string, frame: number, lit: boolean,
+) {
+  chimney(px, x, y + 2, h, brick, cap)
+  for (const dx of [1, 5]) {
+    px(x + dx, y, 2, 3, tint(pot, -0.25))
+    px(x + dx, y, 2, 2, pot)
+    px(x + dx, y, 1, 2, tint(pot, 0.25))
+  }
+  if (lit) puffs(px, x + 4, y - 3, frame)
+}
+
+/**
+ * A gable facing the street, stood on a roof: a steep triangle with a roof
+ * edge and bargeboards, the wall inside it in boards. (cx, top) is its peak;
+ * `slope` is how much wider it gets each row.
+ */
+export function frontGable(
+  px: Px, cx: number, top: number, h: number, slope: number, roof: RoofPalette, wall: WallPalette, barge: string,
+) {
+  for (let row = 0; row < h; row++) {
+    const half = Math.round(row * slope)
+    const y = top + row
+    px(cx - half - 3, y, half * 2 + 6, 1, roof.line)
+    px(cx - half - 2, y, half * 2 + 4, 1, row % 2 === 0 ? roof.a : roof.b)
+    px(cx - half - 1, y, 1, 1, barge)
+    px(cx + half, y, 1, 1, tint(barge, -0.2))
+    if (half > 0) px(cx - half, y, half * 2, 1, row % 3 === 2 ? wall.lo : wall.base)
+  }
+  shadow(px, cx - Math.round(h * slope) - 3, top + h, Math.round(h * slope) * 2 + 6, 1, 0.35)
 }
