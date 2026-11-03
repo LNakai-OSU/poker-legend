@@ -321,6 +321,12 @@ the stop and a lost first night, to Marcus at your door). No two may hold at onc
 skips the whole film: the reels, scenes and pauses straight after it. What follows
 the film still happens.
 
+**The ending film.** Winning the heads-up match plays `EndingFilm` (`game/EndingFilm.tsx`) before
+the summary card, drawn like the opening: the walk through the penthouse and its walls
+of medals, the photo on the desk, the divorce papers, Marcus's unanswered thread, and the
+window at night, ending on "I've made it...". What is said and written in it is data in
+`world/ending.ts`; the sets are `game/endingArt.ts`. Every line waits for a press.
+
 **People moving.** `moveNpc` walks somebody to a tile — or `to: 'player'`, the
 free tile beside you nearest them — along the way a person would go, at
 `pace: 'walk'` or `'run'`, and the beat waits until they are there. `from` brings
