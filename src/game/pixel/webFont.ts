@@ -382,5 +382,20 @@ export function installPixelFont(): void {
   const bytes = buildPixelFont()
   const face = new FontFace(PIXEL_FONT_FAMILY, bytes.buffer as ArrayBuffer)
   document.fonts.add(face)
-  face.load().catch((err: unknown) => console.warn('pixel font failed to load', err))
+  loading = face.load().then(
+    () => undefined,
+    (err: unknown) => console.warn('pixel font failed to load', err),
+  )
+}
+
+let loading: Promise<void> = Promise.resolve()
+
+/**
+ * Resolves once the pixel font can be drawn with. Text on a canvas (Pixi's
+ * door signs and names) is rasterised once, when it is made, so one made
+ * before the font has loaded is set in the fallback for good.
+ */
+export function pixelFontReady(): Promise<void> {
+  installPixelFont()
+  return loading
 }

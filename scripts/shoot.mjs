@@ -3,8 +3,11 @@
  *
  *   node scripts/shoot.mjs --areas basin,sc-floor --periods morning,night \
  *     --out /some/dir [--port 5173] [--size 960x640] [--editor] \
- *     [--sheet overview] [--cols 3] [--walk ArrowDown,ArrowDown]
+ *     [--sheet overview] [--cols 3] [--walk ArrowDown,ArrowDown] \
+ *     [--state '{"flags":{"metDana":true},"completedEventIds":[]}'] [--wait 1500]
  *
+ * --state is merged over the seeded save (flags merged key by key), to shoot a
+ * point in the story rather than the default one.
  * Every image an agent looks at stays in its context and is paid for again on
  * every later call, so look at ONE contact sheet of many shots rather than
  * many shots, and open an individual file only to inspect detail. Shots are
@@ -30,15 +33,18 @@ const out = args.out ?? '.'
 const walk = args.walk ? String(args.walk).split(',') : []
 mkdirSync(out, { recursive: true })
 
-const save = (areaId, period) =>
-  JSON.stringify({
+const extra = args.state ? JSON.parse(String(args.state)) : {}
+const save = (areaId, period) => {
+  const seeded = {
     day: 2, period, cash: 50000, cityId: 'apartment', areaId,
     unlockedCityIds: ['apartment', 'silverCreek', 'riverbend', 'crescentHarbor', 'palmCay', 'neonMesa', 'portoLumina'],
     ownedItemIds: [], completedMissionIds: [], acceptedMissionIds: [], lessonIds: [], unlockedTableIds: [],
     debts: [], huntedInCityId: null, huntGraceUntilDay: 0, restedUntilDay: 0, finaleRematchDay: 0,
     completedEventIds: [], flags: { wonPokerNight: true, beatFinalRival: false, hasPenthouse: false },
     stats: { handsWon: 0, biggestPot: 0, tablesPlayed: 0 },
-  })
+  }
+  return JSON.stringify({ ...seeded, ...extra, flags: { ...seeded.flags, ...extra.flags } })
+}
 
 const browser = await chromium.launch()
 const shots = []
@@ -66,7 +72,7 @@ for (const area of areas) {
       await page.addInitScript(([k, v]) => localStorage.setItem(k, v), ['poker-legend-save-v2', save(area, period)])
       await page.goto(base)
       await page.waitForSelector('canvas', { timeout: 20000 })
-      await page.waitForTimeout(1500)
+      await page.waitForTimeout(Number(args.wait ?? 1500))
       for (const key of walk) {
         await page.keyboard.press(key)
         await page.waitForTimeout(220)

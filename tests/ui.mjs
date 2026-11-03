@@ -806,7 +806,8 @@ await test('the collector who catches you has a face, and says their piece befor
   await page.locator('[data-testid="event-dialogue"]').waitFor({ state: 'visible', timeout: 25000 })
   const said = await dialogueText(page)
   assert(/Dutch/.test(said), `the collector is nobody in particular (saw: ${said.slice(0, 120)})`)
-  assert(/Cash: \$1,000/.test(await page.locator('body').innerText()), 'the money went before he had said a word')
+  const cash = () => page.locator('[data-testid="hud-cash"]').innerText()
+  assert((await cash()) === '$1,000', 'the money went before he had said a word')
   await talkThrough(page)
   await page.locator('[data-testid="caught-by"]').waitFor()
   const who = await page.locator('[data-testid="caught-by"]').innerText()
@@ -814,7 +815,8 @@ await test('the collector who catches you has a face, and says their piece befor
   await page.locator('button', { hasText: 'Pick yourself up' }).click()
   await page.waitForTimeout(600)
   const body = await page.locator('body').innerText()
-  assert(/Cash: \$250\b/.test(body), `they did not take three quarters (saw: ${body.match(/Cash: \$[\d,]+/)?.[0]})`)
+  const left = await cash()
+  assert(left === '$250', `they did not take three quarters (saw: ${left})`)
   assert(/Owed: \$1,875/.test(body), 'the debt moved when they caught you')
   assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
 })
@@ -1574,6 +1576,95 @@ await test('the town is one continuous place', async () => {
   assert((await areaNameOf(page)).includes('Seventh'), 'could not get back out')
   assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
   await page.close()
+})
+
+/**
+ * How many pixels of the guide's gold are in a box round its arrow, read off a
+ * screenshot so it counts what is drawn and not what the scene meant to draw.
+ */
+async function guideGold(page) {
+  const at = await page.getAttribute('[data-testid="overworld"]', 'data-guide-at')
+  if (!at) return { at, gold: 0 }
+  const [x, y, deg] = at.split(',').map(Number)
+  // The tip is at (x, y); the body runs back from it, against the way it points.
+  const cx = x - Math.cos((deg * Math.PI) / 180) * 12
+  const cy = y - Math.sin((deg * Math.PI) / 180) * 12
+  const png = await page.screenshot({ clip: { x: Math.max(0, cx - 20), y: Math.max(0, cy - 20), width: 40, height: 40 } })
+  const gold = await page.evaluate(async (b64) => {
+    const img = new Image()
+    img.src = `data:image/png;base64,${b64}`
+    await img.decode()
+    const c = document.createElement('canvas')
+    c.width = img.width
+    c.height = img.height
+    const ctx = c.getContext('2d')
+    ctx.drawImage(img, 0, 0)
+    const d = ctx.getImageData(0, 0, c.width, c.height).data
+    let n = 0
+    for (let i = 0; i < d.length; i += 4) {
+      if (Math.abs(d[i] - 0xf2) < 24 && Math.abs(d[i + 1] - 0xc1) < 24 && Math.abs(d[i + 2] - 0x4e) < 36) n++
+    }
+    return n
+  }, png.toString('base64'))
+  return { at, gold }
+}
+
+/**
+ * The overworld says what is next and points the way, from the flat's door to
+ * Marcus's table; its corner panels keep off the street.
+ *
+ * The first poker night was a line on the Jobs page and nothing on the street,
+ * so a new player walked Basin Street end to end looking for it. The HUD was
+ * three lines of small type, and the corner map sat over the shop windows for
+ * as long as you stood there.
+ */
+await test('the overworld points the way to the first poker night, and its corners keep off the street', async () => {
+  const page = await newPage(openedSave())
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(600)
+  const overworld = '[data-testid="overworld"]'
+
+  const next = await page.locator('[data-testid="hud-next"]').innerText()
+  assert(/^Next: Marcus.s (poker )?game/.test(next), `the HUD does not say what is next (saw: ${next})`)
+  const status = await page.locator('[data-testid="hud-status"]').boundingBox()
+  assert(status.height <= 32, `where, when and what you have is more than one line (${status.height}px tall)`)
+
+  // Out of the flat's door, and the arrow is drawn over it.
+  const [door] = await exitsOf(page)
+  const guide = await page.getAttribute(overworld, 'data-guide')
+  assert(guide === `door:${door.col},${door.row}`, `the guide does not point at the way out (points at "${guide}")`)
+  const drawn = await guideGold(page)
+  assert(drawn.gold > 40, `no arrow is drawn where the guide says (${drawn.gold} gold pixels at ${drawn.at})`)
+
+  // Then along the street toward the depot.
+  await enterDoor(page, 'Outside')
+  await page.waitForTimeout(400)
+  const street = await page.getAttribute(overworld, 'data-guide')
+  assert(street === 'edge:east', `on Basin Street the guide points at "${street}", not east to the depot`)
+  assert((await guideGold(page)).gold > 40, 'no arrow on Basin Street')
+
+  // The corner map is up as you arrive, and then out of the way of the windows.
+  const map = page.locator('[data-testid="minimap"]')
+  assert((await map.getAttribute('data-shown')) === 'yes', 'the corner map is not shown on arriving')
+  await page.waitForFunction(() => document.querySelector('[data-testid="minimap"]')?.dataset.shown === 'no', null, { timeout: 9000 })
+  await page.waitForTimeout(800)
+  const opacity = await map.evaluate((el) => getComputedStyle(el).opacity)
+  assert(Number(opacity) < 0.05, `the corner map is still over the street (opacity ${opacity})`)
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+
+  // On a phone the HUD fits beside the menu and sound buttons.
+  const phone = await newPage(openedSave(), devices['iPhone 13'])
+  await phone.goto(BASE)
+  await phone.waitForSelector('canvas')
+  await phone.waitForTimeout(600)
+  const hud = await phone.locator('[data-testid="hud"]').boundingBox()
+  const menu = await phone.locator('[data-testid="settings-button"]').boundingBox()
+  assert(hud.x + hud.width <= menu.x, `the HUD runs under the menu button (${hud.x + hud.width} > ${menu.x})`)
+  const phoneStatus = await phone.locator('[data-testid="hud-status"]').boundingBox()
+  assert(phoneStatus.height <= 26, `the phone's status line wraps (${phoneStatus.height}px tall)`)
+  await phone.close()
 })
 
 /**

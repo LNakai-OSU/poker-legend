@@ -20,7 +20,10 @@ import type { Edge } from '../world/types'
 import { Minimap } from './Minimap'
 import { snap } from '../game/useCrispScale'
 import { pathBeside, pathTo, type Tile } from './paths'
-import { UI_FONT } from '../game/pixel/webFont'
+import { TYPE, UI_FONT, pixelFontReady } from '../game/pixel/webFont'
+import { GuideMarker, type GuideInsets, type GuideTarget, type SceneGuide } from './guide'
+import { edgeTile } from '../world/wayfinding'
+import { useViewport } from '../game/useViewport'
 
 const MOVE_KEYS: Record<string, Direction> = {
   ArrowUp: 'up', w: 'up', W: 'up',
@@ -145,6 +148,8 @@ interface OverworldSceneProps {
   background?: string
   /** Optional persistent corner UI, e.g. a wallet readout. */
   hud?: ReactNode
+  /** What to point the player at for the next step: a door, a side of the street, somebody. */
+  guide?: SceneGuide | null
   /** The hour, for its light. See PERIOD_LIGHT. */
   period?: TimePeriod
   /** Out of doors, where the hour's light falls. Rooms keep their lamps on. */
@@ -200,6 +205,7 @@ export function OverworldScene({
   interactables,
   background = '#101018',
   hud,
+  guide = null,
   period = 'morning',
   outdoors = false,
   stamps,
@@ -277,6 +283,13 @@ export function OverworldScene({
   const lightRef = useRef(light)
   lightRef.current = light
   const isTouch = useIsTouchDevice()
+  const viewport = useViewport()
+  const guideRef = useRef(guide)
+  guideRef.current = guide
+  // An arrow at the edge of the window stays off the corner panels along the
+  // top and the prompt (and on a phone the d-pad) along the bottom.
+  const guideInsetsRef = useRef<GuideInsets>({ top: 0, bottom: 0, left: 0, right: 0 })
+  guideInsetsRef.current = { top: 84, left: 20, right: 20, bottom: isTouch ? 210 : 60 }
 
   useEffect(() => {
     talkingRef.current = talkingId
@@ -330,6 +343,8 @@ export function OverworldScene({
         resolution: window.devicePixelRatio || 1,
         autoDensity: true,
       })
+      // Signs and names are lettered once, when made: in the fallback, if too soon.
+      await pixelFontReady()
       if (cancelled) {
         instance.destroy(true)
         return
@@ -416,6 +431,9 @@ export function OverworldScene({
       // which was which was to walk into each one. Signposts, so always shown.
       // Each is lettered on a small dark plate with a lit rim, so it reads
       // against a pale fanlight or a busy sign as well as against brick.
+      // How far each sign stands above its door, in screen pixels, so the guide's
+      // arrow can point at the sign rather than through it.
+      const signLift = new Map<string, number>()
       for (const exit of exits) {
         if (exit.signed === false) continue
         const sign = new Container()
@@ -423,12 +441,13 @@ export function OverworldScene({
           text: exit.label,
           style: {
             fill: '#f6e6b8',
-            fontSize: 10,
-            fontFamily: 'monospace',
-            stroke: { color: '#0c0c14', width: 2, join: 'round' },
+            fontSize: TYPE.small,
+            fontFamily: UI_FONT,
           },
         })
+        // On a whole pixel, or the font's pixels are smeared across two.
         words.anchor.set(0.5, 1)
+        words.position.set(-(words.width % 2) / 2, 0)
         const plate = new Graphics()
           .roundRect(-words.width / 2 - 4, -words.height - 2, words.width + 8, words.height + 3, 2)
           .fill({ color: 0x14121c, alpha: 0.86 })
@@ -437,6 +456,7 @@ export function OverworldScene({
         sign.scale.set(1 / zoom)
         sign.position.set(exit.col * TILE_SIZE + TILE_SIZE / 2, exit.row * TILE_SIZE - 2)
         signs.addChild(sign)
+        signLift.set(`${exit.col},${exit.row}`, 2 * zoom + words.height + 2)
       }
 
       let hunter: GridPlayer | null = null
@@ -450,6 +470,9 @@ export function OverworldScene({
         overlay.addChild(alert)
       }
       instance.stage.addChild(world)
+      // Over the street, in the window's own pixels: the way to the next step.
+      const marker = new GuideMarker()
+      instance.stage.addChild(marker.view)
 
       // Everybody standing in the street is lit by what they stand in: a
       // lamp's pool, a shop window's spill, or the blue of the night.
@@ -785,6 +808,34 @@ export function OverworldScene({
       let sinceHunterStep = 0
       let caught = false
       let elapsed = 0
+
+      // Where the guide's target is on screen this frame.
+      const guideTargetOf = (guide: SceneGuide | null): GuideTarget | null => {
+        if (!guide) return null
+        const toScreen = (x: number, y: number) => ({ x: world.x + x * zoom, y: world.y + y * zoom })
+        if (guide.kind === 'door') {
+          const top = toScreen(guide.col * TILE_SIZE, guide.row * TILE_SIZE)
+          const lift = signLift.get(`${guide.col},${guide.row}`) ?? 0
+          return {
+            x: top.x + (TILE_SIZE * zoom) / 2,
+            y: top.y - lift - 4,
+            points: 'down',
+            door: { x: top.x, y: top.y, size: TILE_SIZE * zoom },
+          }
+        }
+        if (guide.kind === 'edge') {
+          const tile = edgeTile(map, guide.edge, player)
+          if (!tile) return null
+          const centre = toScreen(tile.col * TILE_SIZE + TILE_SIZE / 2, tile.row * TILE_SIZE + TILE_SIZE / 2)
+          return { ...centre, points: guide.edge }
+        }
+        const npc = npcs.find((n) => n.config.id === guide.id)
+        if (!npc) return null
+        const anchor = npc.captionAnchor()
+        const head = toScreen(anchor.x, anchor.y)
+        // Over the name, when it is showing.
+        return { x: head.x, y: head.y - (npc.label.visible ? npc.label.height * zoom + 4 : 4), points: 'down' }
+      }
       const stepMs = chaser?.stepMs ?? 430
       // Whoever was being talked to last frame, so they can be let go of when
       // the text box closes.
@@ -904,6 +955,12 @@ export function OverworldScene({
         }
 
         centerCamera()
+        marker.place(
+          talkingRef.current || pausedRef.current ? null : guideTargetOf(guideRef.current),
+          { w: instance.screen.width, h: instance.screen.height },
+          guideInsetsRef.current,
+          elapsed,
+        )
 
         if (lit && lightMap) {
           for (const sprite of people()) {
@@ -944,6 +1001,8 @@ export function OverworldScene({
         // a tile's pixels.
         const view = `${world.x},${world.y},${zoom}`
         if (wrapper && wrapper.dataset.view !== view) wrapper.dataset.view = view
+        // Where the guide's arrow is, so the suite can look for it in the pixels.
+        if (wrapper && wrapper.dataset.guideAt !== marker.at) wrapper.dataset.guideAt = marker.at
         // Where everybody is actually drawn, a tile at a time, so the suite can
         // watch somebody a beat is walking rather than only where they will end.
         if (wrapper) {
@@ -996,6 +1055,7 @@ export function OverworldScene({
   }, [])
 
   const talking = interactables.find((i) => i.id === talkingId) ?? null
+  const hudSize = viewport.w >= 720 ? TYPE.large : TYPE.body
 
   const chairs = useMemo(
     () =>
@@ -1038,6 +1098,10 @@ export function OverworldScene({
       data-chairs={JSON.stringify(chairs)}
       // Which light the street is in, for the browser suite: 'day' indoors and in the morning.
       data-light={light && period !== 'morning' ? period : 'day'}
+      // What the guide is pointing at, for the browser suite.
+      data-guide={
+        guide ? (guide.kind === 'door' ? `door:${guide.col},${guide.row}` : guide.kind === 'edge' ? `edge:${guide.edge}` : `actor:${guide.id}`) : ''
+      }
       // The walkable grid, so the browser suite can path by breadth-first search
       // instead of walking greedily at a target and giving up when furniture gets
       // in the way. A greedy walker could also blunder into a doorway and leave
@@ -1079,17 +1143,26 @@ export function OverworldScene({
       />
       {hud && (
         <div
+          data-testid="hud"
           style={{
             position: 'absolute',
-            top: 16,
-            left: 16,
+            // Level with the menu and sound buttons in the other corner, and
+            // never wide enough to run under them.
+            top: 'max(12px, env(safe-area-inset-top))',
+            left: 12,
+            maxWidth: viewport.w - 12 - HUD_CLEAR_RIGHT,
+            boxSizing: 'border-box',
             color: '#e8e8f0',
             fontFamily: UI_FONT,
-            fontSize: 15,
-            background: 'rgba(10,10,16,0.8)',
-            padding: '6px 12px',
+            // The font's own sizes, so every letter is on whole pixels: two to a
+            // font pixel on a desktop, a pixel and a half on a phone's retina.
+            fontSize: hudSize,
+            lineHeight: `${Math.round(hudSize * 1.3)}px`,
+            background: 'rgba(10,10,16,0.84)',
+            border: '1px solid #2c3d5e',
+            padding: '5px 10px',
             borderRadius: 4,
-            lineHeight: '21px',
+            pointerEvents: 'none',
           }}
         >
           {hud}
@@ -1147,6 +1220,9 @@ export function OverworldScene({
     </div>
   )
 }
+
+/** Room left at the right of the top edge for the menu and sound buttons. */
+const HUD_CLEAR_RIGHT = 112
 
 /** How fast the player walks under their own steam, which a scripted walk sets back. */
 const PLAYER_SPEED = 220

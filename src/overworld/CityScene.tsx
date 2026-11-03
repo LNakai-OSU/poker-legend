@@ -1,7 +1,7 @@
 import { OverworldScene, type ChaserConfig, type Interactable, type SceneCue, type SceneExit } from './OverworldScene'
 import { AREAS, CITIES, MISSIONS, SPONSORS, collectorSpawn, findArea } from '../world/content'
 import { isWalkable } from './tileRenderer'
-import { goalStatus, missionStatus, privateRoomOpen } from '../game/progression'
+import { missionStatus, privateRoomOpen } from '../game/progression'
 import { CASINO_GOALS } from '../world/goals'
 import { daysUntilDue, huntingSponsorId, totalOwed, type GameState, type StoryFlag } from '../game/state'
 import type { PoiAction, PoiDef } from '../world/types'
@@ -15,6 +15,10 @@ import { seatingFor } from '../world/seating'
 import type { SeatedConfig } from './sitters'
 import type { CastPlace, Cue } from '../game/eventMachine'
 import { besideTile } from './paths'
+import { nextHeading, type Destination } from '../world/nextSteps'
+import { firstHop } from '../world/wayfinding'
+import type { SceneGuide } from './guide'
+import { useViewport } from '../game/useViewport'
 
 /** How fast a beat walks somebody, in pixels a second: a stroll beside you, or a run to catch you. */
 const PACE_SPEED = { walk: 118, run: 250 } as const
@@ -61,6 +65,7 @@ export function CityScene({
   const areaId = area.id
   const hunted = state.huntedInCityId === city.id
   useAmbientMusic(hunted ? 'tense' : 'overworld')
+  const viewport = useViewport()
 
   // Falling back to the area's own start if the tile handed in is not somewhere
   // you could actually stand: out of bounds, or inside a wall. Without this a
@@ -215,9 +220,9 @@ export function CityScene({
 
   const owed = totalOwed(state)
   const due = daysUntilDue(state)
-  const goal = goalStatus(state, city.id)
-  // Net winnings at this town's poker tables; losses count against it, so it can be below zero.
-  const runningTotal = state.casino.net[city.id] ?? 0
+  // What is next, and the way to it from here (`world/nextSteps.ts`).
+  const next = nextHeading(state, city.id)
+  const guide = guideFor(next?.goTo ?? null, areaId, state, interactables)
 
   return (
     <OverworldScene
@@ -319,35 +324,14 @@ export function CityScene({
           : area.stamps
       }
       seated={seated}
+      guide={guide}
       hud={
         <>
-          <div>{area.name}</div>
-          <div style={{ color: '#9a9ab0', fontSize: 12 }}>
-            {city.name} &middot; Day {state.day} &middot; {PERIOD_LABEL[state.period]}
+          {/* One line: where, when, and what you have. A phone has room for the last two. */}
+          <div data-testid="hud-status" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {viewport.w >= 600 ? `${area.name} · ` : ''}Day {state.day}, {PERIOD_LABEL[state.period]} ·{' '}
+            <span data-testid="hud-cash">${state.cash.toLocaleString()}</span>
           </div>
-          <div>Cash: ${state.cash.toLocaleString()}</div>
-          {goal && goal.phase === 'win' && (
-            <div data-testid="goal-total" style={{ width: 200 }}>
-              <div style={{ color: '#9ad0ff', fontSize: 12 }}>Poker winnings here</div>
-              <div style={{ color: runningTotal >= 0 ? '#8ae0a0' : '#e08a8a' }}>
-                {runningTotal < 0 ? '-' : ''}${Math.abs(runningTotal).toLocaleString()} / ${goal.goal.winTarget.toLocaleString()}
-              </div>
-              <div style={{ height: 6, background: '#2a2a3a', borderRadius: 3, overflow: 'hidden', marginTop: 2 }}>
-                <div
-                  style={{
-                    height: '100%',
-                    width: `${Math.max(0, Math.min(100, (runningTotal / goal.goal.winTarget) * 100))}%`,
-                    background: '#4ac878',
-                  }}
-                />
-              </div>
-            </div>
-          )}
-          {goal && goal.phase === 'boss' && (
-            <div data-testid="goal-hud" style={{ color: '#9ad0ff', fontSize: 12, maxWidth: 220 }}>
-              Goal: {goal.line}
-            </div>
-          )}
           {owed > 0 && (
             <div style={{ color: due !== null && due < 0 ? '#e05a5a' : '#f2c14e' }}>
               Owed: ${owed.toLocaleString()}
@@ -355,10 +339,45 @@ export function CityScene({
             </div>
           )}
           {hunted && <div style={{ color: '#e05a5a' }}>They sent someone. Get out of town or pay up.</div>}
+          {next && (
+            <div data-testid="hud-next">
+              <span style={{ color: '#9aa4b8' }}>Next:</span> <span style={{ color: '#f2c14e' }}>{next.hud}</span>
+            </div>
+          )}
+          {next?.progress && (
+            <div
+              data-testid="goal-total"
+              title={`$${next.progress.won.toLocaleString()} of $${next.progress.target.toLocaleString()}`}
+              style={{ height: 4, background: '#2a2a3a', marginTop: 3, marginBottom: 2 }}
+            >
+              <div
+                style={{
+                  height: '100%',
+                  width: `${Math.max(0, Math.min(100, (next.progress.won / next.progress.target) * 100))}%`,
+                  background: '#4ac878',
+                }}
+              />
+            </div>
+          )}
         </>
       }
     />
   )
+}
+
+/**
+ * What to point at on the way to `goTo`: the door or the side of the street the
+ * walk there starts with, or, once you are there, whoever you came for. Shut
+ * private rooms are not a way through.
+ */
+function guideFor(goTo: Destination | null, areaId: string, state: GameState, here: Interactable[]): SceneGuide | null {
+  if (!goTo) return null
+  const hop = firstHop(areaId, goTo.areaId, (exit) => !exit.privateRoomOf || privateRoomOpen(state, exit.privateRoomOf))
+  if (!hop) return null
+  if (hop.kind === 'door') return { kind: 'door', col: hop.col, row: hop.row }
+  if (hop.kind === 'edge') return { kind: 'edge', edge: hop.edge }
+  const id = goTo.characterId ? `character-${goTo.characterId}` : goTo.poiId
+  return id && here.some((i) => i.id === id) ? { kind: 'actor', id } : null
 }
 
 /**

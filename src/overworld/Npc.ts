@@ -4,6 +4,7 @@ import { propTexture, type PropKind } from './sprites'
 import { personFrames, type Facing, type Figure, type PersonFrames } from './characterArt'
 import { isObjectKind, objectTexture, type ObjectKind } from './objectArt'
 import { lookFromId } from './casting'
+import { TYPE, UI_FONT } from '../game/pixel/webFont'
 
 /**
  * How something standing on the map is drawn: a person, a prop, a small object,
@@ -110,9 +111,9 @@ export class Npc {
       text: config.name,
       style: {
         fill: config.color !== undefined ? `#${config.color.toString(16).padStart(6, '0')}` : '#ffffff',
-        fontSize: 10,
-        fontFamily: 'monospace',
-        fontWeight: 'bold',
+        // The pixel font has one weight; a bold one would be smeared, not heavier.
+        fontSize: TYPE.small,
+        fontFamily: UI_FONT,
         stroke: { color: '#0c0c14', width: 3, join: 'round' },
       },
     })

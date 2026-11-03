@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useOpenWorldMap } from '../game/WorldMap'
+import { useIsTouchDevice } from './TouchControls'
 import { DOOR, FURNITURE, GRASS, ROAD, SIDEWALK, WALL, WATER, type TileGrid } from './tiles'
 import { TYPE, UI_FONT } from '../game/pixel/webFont'
 
@@ -10,6 +11,11 @@ import { TYPE, UI_FONT } from '../game/pixel/webFont'
  * like a corridor and left no way to tell where the bus stop was without walking
  * the whole length of it. This draws the area at a glance: where the roads go,
  * which buildings have doors, who is standing about, and where you are.
+ *
+ * It is shown as you come into an area and fades a few seconds later: the
+ * corner it stands in is the top of the street, where the windows and the
+ * signs are, and there is no corner of every map that is always empty. Hovering
+ * the corner brings it back; the menu's World map is there all along.
  */
 
 const TILE_COLORS: Record<number, string> = {
@@ -25,6 +31,9 @@ const DEFAULT_TILE = '#363c48'
 
 /** Pixels per tile. Three keeps a 30-wide boulevard under 100px on a phone. */
 const SCALE = 3
+
+/** How long it stays up after you arrive, or after the pointer leaves it. */
+export const MINIMAP_SHOWN_MS = 4000
 
 export interface MinimapMarker {
   col: number
@@ -46,6 +55,16 @@ export function Minimap({
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const openWorld = useOpenWorldMap()
+  const isTouch = useIsTouchDevice()
+  // A new area is a new scene, and a new one of these: it starts shown.
+  const [faded, setFaded] = useState(false)
+  const [hovered, setHovered] = useState(false)
+  useEffect(() => {
+    if (hovered) return
+    const timer = window.setTimeout(() => setFaded(true), MINIMAP_SHOWN_MS)
+    return () => window.clearTimeout(timer)
+  }, [hovered])
+  const awake = hovered || !faded
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -89,6 +108,12 @@ export function Minimap({
       aria-label={openWorld ? 'Open the world map' : undefined}
       onClick={openWorld ?? undefined}
       data-player={`${player.col},${player.row}`}
+      data-shown={awake ? 'yes' : 'no'}
+      onMouseEnter={() => {
+        setHovered(true)
+        setFaded(false)
+      }}
+      onMouseLeave={() => setHovered(false)}
       style={{
         position: 'absolute',
         // Below the settings and sound buttons, which are fixed to the top-right
@@ -101,7 +126,11 @@ export function Minimap({
         background: 'rgba(10,10,16,0.82)',
         border: '1px solid #2c3d5e',
         fontFamily: UI_FONT,
-        pointerEvents: openWorld ? 'auto' : 'none',
+        opacity: awake ? 1 : 0,
+        transition: 'opacity 600ms',
+        // Faded, it still answers a mouse coming to look; a finger that taps
+        // the street there is not asking for a map.
+        pointerEvents: openWorld && (awake || !isTouch) ? 'auto' : 'none',
         cursor: openWorld ? 'pointer' : undefined,
       }}
     >
