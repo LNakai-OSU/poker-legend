@@ -1,12 +1,10 @@
-import { useRef, useState } from 'react'
+import { useRef } from 'react'
 import { daysUntilRematch, type GameState } from './state'
 import { swallowDoubleClick, useMenuKeys } from './keys'
 import { buttonStyle } from './MenuScenes'
 import { SPONSORS, TABLES } from '../world/content'
 import { CHARACTERS } from '../world/characters'
 import { TYPE, UI_FONT } from './pixel/webFont'
-import { ReelScene } from './ReelScene'
-import { ENDING_REEL } from '../world/events'
 
 const HEADING = { fontSize: TYPE.large, fontWeight: 'normal', color: '#f2c14e' } as const
 
@@ -79,9 +77,6 @@ export function FinaleLostScene({ state, onContinue }: { state: GameState; onCon
 
 /** Won the heads-up match — the penthouse, and open-ended play afterwards. */
 export function EndingScene({ state, onContinue }: { state: GameState; onContinue: () => void }) {
-  // The film first — the penthouse, the desk, the phone, the window — then the card.
-  const [watched, setWatched] = useState(false)
-  if (!watched) return <ReelScene title="The Penthouse" panels={ENDING_REEL} onDone={() => setWatched(true)} />
   return (
     <FullScreen background="#0d1420">
       <h2 style={HEADING}>Porto Lumina, forty-one floors up.</h2>

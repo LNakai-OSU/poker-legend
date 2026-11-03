@@ -321,11 +321,6 @@ the stop and a lost first night, to Marcus at your door). No two may hold at onc
 skips the whole film: the reels, scenes and pauses straight after it. What follows
 the film still happens.
 
-**The ending film.** Winning the heads-up match plays `ENDING_REEL` (`events.ts`) before
-the summary card: the penthouse and its walls of medals, the photo on the desk, the
-divorce papers, Marcus's unanswered thread, and the window at night, ending on
-"I've made it...". Narration lines have no `who`; it is skippable like any reel.
-
 **People moving.** `moveNpc` walks somebody to a tile — or `to: 'player'`, the
 free tile beside you nearest them — along the way a person would go, at
 `pace: 'walk'` or `'run'`, and the beat waits until they are there. `from` brings
