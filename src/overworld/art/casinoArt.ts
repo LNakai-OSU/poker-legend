@@ -975,6 +975,43 @@ const lightPool: StampArt = {
   },
 }
 
+/** A suit, five units square, from a picture of it. */
+function suit(px: Px, x: number, y: number, rows: string[], color: string) {
+  rows.forEach((line, r) => [...line].forEach((ch, c) => ch === '#' && px(x + c, y + r, 1, 1, color)))
+}
+
+const SPADE = ['..#..', '.###.', '#####', '..#..', '.###.']
+const HEART = ['.#.#.', '#####', '#####', '.###.', '..#..']
+const DIAMOND = ['..#..', '.###.', '#####', '.###.', '..#..']
+const CLUB = ['.###.', '#.#.#', '#####', '..#..', '.###.']
+
+/**
+ * The house's mark set into the floor inside the door: a brass ring laid into
+ * the carpet with the four suits round a star, the first thing you walk over.
+ */
+const inlayCrest: StampArt = {
+  draw: (px, c) => {
+    const cx = c.w / 2
+    const cy = c.h / 2
+    oval(px, 3, 4, c.w - 4, c.h - 6, 'rgba(10, 8, 20, 0.18)')
+    oval(px, 2, 3, c.w - 4, c.h - 6, '#6a4a1a')
+    oval(px, 3, 4, c.w - 6, c.h - 8, '#d8a840')
+    oval(px, 4, 4, c.w - 10, c.h - 10, '#f2d27a')
+    oval(px, 5, 5, c.w - 10, c.h - 10, '#b8862e')
+    oval(px, 6, 6, c.w - 12, c.h - 12, '#6a4a1a')
+    oval(px, 7, 7, c.w - 14, c.h - 14, 'rgba(18, 10, 26, 0.62)')
+    // The star in the middle, and the four suits round it.
+    px(cx - 1, cy - 4, 2, 8, '#f2d27a')
+    px(cx - 4, cy - 1, 8, 2, '#f2d27a')
+    px(cx - 2, cy - 2, 4, 4, '#d8a840')
+    px(cx - 1, cy - 1, 1, 1, '#fff4d0')
+    suit(px, cx - 2, 8, SPADE, '#f4ecd8')
+    suit(px, cx - 3 + 12, cy - 2, HEART, '#e0483e')
+    suit(px, cx - 2, c.h - 13, DIAMOND, '#e0483e')
+    suit(px, cx - 3 - 10, cy - 2, CLUB, '#f4ecd8')
+  },
+}
+
 export const CASINO_ART: Record<string, StampArt> = {
   'slot-bank': slotBank([RED, BLUE, GREEN, PURPLE, ORANGE], 3),
   'slot-bank-6': slotBank([RED, BLUE, GREEN, PURPLE, ORANGE], 3),
@@ -1016,6 +1053,7 @@ export const CASINO_ART: Record<string, StampArt> = {
   fern,
   'velvet-rope': velvetRope,
   'light-pool': lightPool,
+  'inlay-crest': inlayCrest,
   'prize-car': prizeCar,
   'change-booth': changeBooth,
 }

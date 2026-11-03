@@ -291,6 +291,7 @@ export const STAMPS: StampDef[] = [
   fixture('fern', 'Fern', 'A fern in a brass pot.', ['F']),
   fixture('velvet-rope', 'Velvet rope', 'Brass posts and a red rope.', ['FFF']),
   fixture('light-pool', 'Pool of light', 'Light from a chandelier on the floor. You can walk through it.', ['???', '???', '???']),
+  fixture('inlay-crest', 'Crest inlay', 'The house\'s mark in brass in the floor inside the door: a ring round the four suits. Walk over it.', ['???', '???'], 'casino'),
   fixture('prize-car', 'Prize car', 'A convertible with a bow on it, turning on a lit plinth under a WIN ME sign.', ['FFF', 'FFF'], 'casino'),
   {
     id: 'change-booth',

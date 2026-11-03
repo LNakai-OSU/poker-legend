@@ -320,7 +320,7 @@ const SILVER_CREEK_FLOOR = parseMap(`
 ^,,,,,,,,,,,,,,,,,,^
 ^F,FFFF,,,,,,FFFF,F^
 ^F,FFFF,,,,,,FFFF,,^
-^,,,,,,,,,,,,,,,,,,^
+^F,,,,,F,,,,,,,,,,,^
 ^^^^^^^^^^D^^^^^^D^^
 `)
 
@@ -383,9 +383,9 @@ const CAY_FLOOR = parseMap(`
 ^F''FFF'FFFF''FFF'F^
 ^F''''''''''''''''F^
 ^''''''''''''''''''^
-^''FFFF'''FF''FFFF'^
-^F'FFFF'''''''FFFFF^
-^''''''''''''''''''^
+^'FFF'F'''FF''FFFF'^
+^F''''F'''''''FFFFF^
+^''''''FFF'''''''''^
 ^^^^^^D^^^D^^^^^^^^^
 `)
 
@@ -422,8 +422,8 @@ const LUMINA_FLOOR = parseMap(`
 ^MMMMMMMMMMMM&FF&&&^
 ^MMMFFFMMMMMM&&&&&&^
 ^FMMFFFMMFFMM&&&&&F^
-^FMMMMMMMMMMMFFF&&F^
-^MMMMMMMMMMMMMMMMMM^
+^FFMMMMMMMMMMFFF&&F^
+^FFMMMMMMMMMMMMMMMM^
 ^^^^^^^^^^D^^^^^^^^^
 `)
 
@@ -1286,6 +1286,9 @@ const silverCreek: CityDef = {
       { col: 10, row: 10 },
       '#161018',
       [
+        // Who meets you at the door.
+        { ...local('sc-hatcheck', 'Hat Check', 8, 10, ['Hat Check: Hats on the hooks, guns in the box, manners at the door. One out of three ain’t bad.']), role: 'clerk' },
+        { ...local('sc-floor-manager', 'Floor Manager', 11, 10, ['Floor Manager: Howdy. Cards at the back, dice on the right, slots wherever there is a wall. Lou don’t like trouble, and neither do I.']), role: 'suit' },
         {
           id: 'slots',
           name: 'Slot Row',
@@ -1993,6 +1996,9 @@ const palmCay: CityDef = {
       { col: 10, row: 12 },
       '#0c1a1c',
       [
+        // Who meets you at the door.
+        { ...local('pc-coatcheck', 'Coat Check', 3, 11, ['Coat Check: Coats, hats, shopping. You would be amazed what people check in Palm Cay. Last week, a parrot.']), role: 'clerk' },
+        { ...local('pc-floor-manager', 'Floor Manager', 11, 12, ['Floor Manager: Welcome to the Cay Room. Tables either side, the wheel ahead, the bar at the back. Sandals are fine. Bare feet are not.']), role: 'suit' },
         {
           id: 'cay-dealer',
           name: 'Dealer',
@@ -2557,6 +2563,9 @@ const portoLumina: CityDef = {
       { col: 10, row: 10 },
       '#141020',
       [
+        // Who meets you at the door.
+        { ...local('pl-coatcheck', 'Coat Check', 3, 10, ['Coat Check: Your coat. Ticket forty-one. Do not lose it; the coat will outlive us both.']), role: 'clerk' },
+        { ...local('pl-floor-manager', 'Floor Manager', 9, 10, ['Floor Manager: Good evening. The main table is to your left, the salon behind the rope. Madame asks that nobody counts their chips aloud.']), role: 'suit' },
         {
           id: 'pl-roulette',
           name: 'Roulette Table',
@@ -2778,6 +2787,10 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'slot-bank', col: 3, row: 8 },
     { stampId: 'slot-bank-western', col: 13, row: 8 },
     { stampId: 'cactus', col: 18, row: 8 },
+    // Inside the door: the hat rack, a cactus in the corner, the house's star underfoot.
+    { stampId: 'coat-stand', col: 7, row: 10 },
+    { stampId: 'cactus', col: 1, row: 10 },
+    { stampId: 'inlay-crest', col: 9, row: 9 },
   ],
   // From the gangway the view is columns 4 to 18 and the whole height of the
   // room, so nothing on the back wall may reach into the hidden wall top: the
@@ -2856,8 +2869,14 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'poker-table-teal', col: 3, row: 5 },
     { stampId: 'slot-bank-reef', col: 8, row: 6 },
     { stampId: 'poker-table-teal', col: 13, row: 5 },
-    { stampId: 'slot-bank-island', col: 3, row: 10 },
     { stampId: 'roulette', col: 9, row: 9 },
+    // Inside the door: the coat check and its rail, a palm, the rope by the
+    // owner's door, and the house's crest in the floor where you come in.
+    { stampId: 'rack-suits', col: 2, row: 10 },
+    { stampId: 'coat-stand', col: 4, row: 10 },
+    { stampId: 'palm', col: 6, row: 10 },
+    { stampId: 'velvet-rope', col: 7, row: 12 },
+    { stampId: 'inlay-crest', col: 9, row: 11 },
     { stampId: 'slot-bank-reef', col: 14, row: 10 },
     { stampId: 'palm', col: 1, row: 7 },
     { stampId: 'fern', col: 1, row: 11 },
@@ -2910,6 +2929,10 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'fern', col: 18, row: 5 },
     { stampId: 'palm', col: 1, row: 8 },
     { stampId: 'palm', col: 18, row: 8 },
+    // Inside the door: the coat check in the corner, the crest underfoot.
+    { stampId: 'rack-suits', col: 1, row: 10 },
+    { stampId: 'coat-stand', col: 2, row: 9 },
+    { stampId: 'inlay-crest', col: 9, row: 9 },
   ],
   'ch-club': [
     { stampId: 'bookshelf-dark', col: 1, row: 1 },
