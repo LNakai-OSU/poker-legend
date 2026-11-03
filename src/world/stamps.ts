@@ -606,6 +606,19 @@ const STREET_FURNITURE: StampDef[] = [
     '???',
     'o?o',
   ]),
+  // Out of town: what the errands in the outskirts stand at.
+  streetThing('woodpile', 'Woodpile', 'Split logs in a stack and an axe in the block.', ['o']),
+  streetThing('tumbleweed', 'Tumbleweed', 'Dry brush, waiting on the wind. You can walk through it.', ['?']),
+  streetThing('scrap-heap', 'Scrap heap', 'Dead neon tubing and half a giant letter.', ['o']),
+  streetThing('dead-letter', 'Dead sign letter', 'A bulb letter four feet tall, off a casino long gone. A different letter each time.', ['o']),
+  streetThing('crab-traps', 'Crab traps', 'Wire traps stacked on the sand, a float on top.', ['o']),
+  streetThing('net-heap', 'Torn nets', 'A heap of net with cork floats in it.', ['o']),
+  streetThing('fish-rack', 'Fish rack', 'A timber drying rack strung with perch.', ['o']),
+  streetThing('reeds', 'Reeds', 'Tall reeds and cattails at the water\'s edge.', ['o']),
+  streetThing('chapel-arch', 'Chapel arch', 'A white arch hung with roses under a CHAPEL sign in pink tube. Stand between the legs.', [
+    '???',
+    'o?o',
+  ]),
   streetThing('fountain-lumina', 'Lumina fountain', 'A gilded figure on a plinth, jets arcing in. Over a pool fourteen by two.', [
     '~'.repeat(14),
     '~'.repeat(14),

@@ -1,5 +1,5 @@
 import type { StampArt } from '../stampArt'
-import { INK, glow, oval, shadow, tint } from '../pixelArt'
+import { INK, glow, neonText, oval, shadow, textWidth, tint } from '../pixelArt'
 
 /**
  * The things a room collects along its walls and in its corners.
@@ -276,6 +276,214 @@ const fishTank: StampArt = {
 }
 
 // ---------------------------------------------------------------------------
+// Out of town
+// ---------------------------------------------------------------------------
+//
+// The outskirts are where the errands are, and an errand needs something to
+// stand at: the woodpile you are paid to split, the heap of dead tubing you
+// carry, the traps on the sand. Each is a tile, so it can sit under the
+// errand's own point of interest and be the thing you walk up to.
+
+/** Split logs stacked in a pyramid, and an axe left in the chopping block. */
+const woodpile: StampArt = {
+  bleed: { top: 3 },
+  draw: (px) => {
+    shadow(px, 0, 13, 16, 3, 0.35)
+    for (const [x, y] of [[0, 9], [4, 9], [8, 9], [2, 5], [6, 5], [4, 1]]) {
+      oval(px, x, y, 5, 5, '#4a2e1a')
+      oval(px, x + 1, y + 1, 3, 3, '#d8b078')
+      px(x + 2, y + 2, 1, 1, '#a07040')
+    }
+    px(12, 10, 4, 5, '#6a4428')
+    px(12, 10, 4, 1, '#c8a070')
+    px(13, 11, 2, 1, '#a07848')
+    px(13, -2, 1, 12, '#a8784a')
+    px(13, -2, 1, 1, '#d0a068')
+    px(11, -2, 4, 3, '#8a909a')
+    px(11, -2, 1, 3, '#d8dce4')
+  },
+}
+
+/** A ball of dry brush the wind has left for now. You can walk through it. */
+const tumbleweed: StampArt = {
+  draw: (px) => {
+    shadow(px, 3, 13, 11, 2, 0.22)
+    oval(px, 3, 4, 11, 10, '#7a5a32')
+    oval(px, 4, 5, 9, 8, '#a8844e')
+    for (const [x, y, w] of [[5, 6, 5], [4, 8, 7], [6, 10, 5], [7, 5, 2], [9, 12, 2]] as const) px(x, y, w, 1, '#5e4424')
+    for (const [x, y] of [[6, 7], [10, 7], [5, 10], [11, 10], [8, 9], [9, 6]]) px(x, y, 1, 1, '#d2b478')
+    px(2, 8, 1, 1, '#a8844e')
+    px(14, 7, 1, 1, '#a8844e')
+    px(8, 3, 1, 1, '#a8844e')
+  },
+}
+
+/** Dead neon tubing in a tangle, a broken letter on top, glass in the dust round it. */
+const scrapHeap: StampArt = {
+  bleed: { top: 2 },
+  draw: (px) => {
+    shadow(px, 0, 12, 16, 4, 0.32)
+    px(1, 8, 14, 6, '#3a3440')
+    px(2, 7, 12, 2, '#4a4452')
+    // Tubes, unlit: pink and blue gone grey at the bends.
+    for (const [x, y, w, col] of [[2, 6, 9, '#b0587e'], [4, 9, 10, '#5a8aa8'], [1, 11, 7, '#8a6aa8'], [9, 12, 6, '#b0587e']] as const) {
+      px(x, y, w, 1, col)
+      px(x, y + 1, w, 1, tint(col, -0.4))
+      px(x + w - 2, y, 1, 1, '#cfc8d8')
+    }
+    // Half a giant letter E, its bulbs gone.
+    px(9, -1, 2, 8, '#d8d0c0')
+    px(9, -1, 5, 2, '#d8d0c0')
+    px(9, 3, 4, 2, '#d8d0c0')
+    for (const [x, y] of [[10, 0], [12, 0], [10, 4]]) px(x, y, 1, 1, '#5a5262')
+    for (const [x, y] of [[0, 14], [5, 15], [14, 14], [3, 13]]) px(x, y, 1, 1, '#bfe4f0')
+  },
+}
+
+/** A sign letter four feet tall, off a casino that is not there any more, leant against the dust. */
+const DEAD_LETTERS: Array<{ shape: string[]; face: string }> = [
+  { shape: ['.##.', '#..#', '####', '#..#', '#..#'], face: '#e8c84a' },
+  { shape: ['####', '#...', '###.', '#...', '####'], face: '#f2f0e6' },
+  { shape: ['.##.', '#...', '.##.', '...#', '##..'], face: '#e86aa8' },
+  { shape: ['..#.', '.###', '####', '.###', '..#.'], face: '#ff8a4a' },
+]
+
+const deadLetter: StampArt = {
+  variants: DEAD_LETTERS.length,
+  bleed: { top: 8 },
+  standsUp: 4,
+  draw: (px, c) => {
+    const { shape, face } = DEAD_LETTERS[c.variant % DEAD_LETTERS.length]
+    shadow(px, 1, 12, 15, 4, 0.3)
+    // Each cell of the letter is a 3x4 block: a painted face, a dark side, a dead bulb.
+    shape.forEach((row, r) => {
+      ;[...row].forEach((on, k) => {
+        if (on !== '#') return
+        const x = 1 + k * 3
+        const y = -7 + r * 4
+        px(x, y, 3, 4, tint(face, -0.55))
+        px(x, y, 3, 3, tint(face, -0.12))
+        px(x + 1, y + 1, 1, 1, '#4a4450')
+      })
+    })
+    px(13, -6, 2, 20, '#6a6470')
+    px(13, -6, 1, 20, '#8a8490')
+  },
+}
+
+/** Wire crab traps stacked three high, a float tied to the top one. */
+const crabTraps: StampArt = {
+  bleed: { top: 2 },
+  draw: (px) => {
+    shadow(px, 0, 13, 16, 3, 0.3)
+    for (const [x, y] of [[0, 8], [8, 8], [4, 2]]) {
+      px(x, y, 8, 6, '#3a4a48')
+      px(x + 1, y + 1, 6, 4, '#7a8a80')
+      for (let k = 1; k < 7; k += 2) px(x + k, y + 1, 1, 4, '#3a4a48')
+      px(x + 1, y + 3, 6, 1, '#3a4a48')
+      px(x, y, 8, 1, '#a8b4a8')
+    }
+    oval(px, 11, -1, 4, 4, '#f05a3a')
+    px(12, -1, 1, 1, '#ffb090')
+    px(12, 3, 1, 2, '#e8d8b0')
+  },
+}
+
+/** A heap of torn net, cork floats in it, a needle and twine on top. */
+const netHeap: StampArt = {
+  bleed: { top: 1 },
+  draw: (px) => {
+    shadow(px, 0, 13, 16, 3, 0.3)
+    oval(px, 0, 3, 16, 12, '#4a5a4a')
+    oval(px, 1, 4, 14, 10, '#6a7a5e')
+    for (let y = 5; y < 13; y += 2) px(2, y, 12, 1, '#4a5a4a')
+    for (let x = 3; x < 14; x += 3) px(x, 4, 1, 9, '#4a5a4a')
+    for (const [x, y] of [[3, 6], [10, 5], [6, 10], [12, 10]]) {
+      px(x, y, 2, 2, '#e8a44a')
+      px(x, y, 1, 1, '#ffd08a')
+    }
+    px(8, 1, 1, 5, '#d8dce4')
+    oval(px, 6, 0, 4, 3, '#e8d8b0')
+  },
+}
+
+/** A timber drying rack strung with perch. */
+const fishRack: StampArt = {
+  bleed: { top: 6 },
+  standsUp: 4,
+  draw: (px) => {
+    shadow(px, 0, 13, 16, 3, 0.3)
+    for (const x of [1, 13]) {
+      px(x, -5, 2, 19, '#6a4428')
+      px(x, -5, 1, 19, '#9a6e44')
+    }
+    for (const y of [-4, 4]) {
+      px(0, y, 16, 1, '#8a5e38')
+      for (let x = 3; x < 13; x += 3) {
+        px(x, y + 1, 2, 5, '#a8b0a0')
+        px(x, y + 1, 1, 5, '#d0d8c8')
+        px(x, y + 5, 2, 1, '#6a7468')
+      }
+    }
+  },
+}
+
+/** Tall reeds at the water's edge, a cattail or two among them. */
+const reeds: StampArt = {
+  bleed: { top: 8 },
+  standsUp: 6,
+  draw: (px) => {
+    shadow(px, 1, 13, 14, 3, 0.22)
+    for (const [x, top, col] of [[1, -2, '#5a7a3a'], [3, -6, '#6a8a42'], [5, 0, '#4e6e34'], [7, -7, '#6a8a42'], [9, -3, '#5a7a3a'], [11, -5, '#7a9a4a'], [13, 1, '#4e6e34']] as const) {
+      px(x, top, 1, 16 - top, col)
+      px(x + 1, top + 3, 1, 13 - top, tint(col, -0.25))
+    }
+    for (const [x, y] of [[3, -6], [11, -5]]) {
+      px(x, y, 2, 4, '#6a3e22')
+      px(x, y, 1, 1, '#8a5a32')
+    }
+  },
+}
+
+/**
+ * The chapel's arch on two legs, hung with plastic roses, and over it CHAPEL in
+ * pink tube on a board, lit day and night. You can stand under it.
+ */
+const chapelArch: StampArt = {
+  bleed: { top: 18, left: 2, right: 2 },
+  standsUp: 16,
+  frames: 2,
+  lights: [{ x: 24, y: 18, reach: 26, color: '#ffc8e8', strength: 0.6 }],
+  draw: (px, c) => {
+    const w = c.w
+    shadow(px, 2, 28, w - 4, 4, 0.26)
+    // The legs and the arch, white trellis.
+    for (const x of [3, w - 6]) {
+      px(x, 0, 3, 32, '#d8d4cc')
+      px(x, 0, 1, 32, '#ffffff')
+      px(x + 2, 0, 1, 32, '#a8a49c')
+    }
+    px(3, -2, w - 6, 3, '#d8d4cc')
+    px(5, -4, w - 10, 2, '#ffffff')
+    px(8, -5, w - 16, 1, '#ffffff')
+    // Roses up the legs and over the top.
+    for (const [x, y] of [[2, 4], [5, 10], [2, 16], [5, 22], [w - 7, 6], [w - 4, 12], [w - 7, 18], [w - 4, 24], [10, -4], [18, -5], [26, -5], [34, -4]]) {
+      px(x, y, 2, 2, '#e83a6a')
+      px(x, y, 1, 1, '#ff8ab0')
+      px(x + 2, y + 1, 1, 1, '#3a8a3a')
+    }
+    // CHAPEL on its board, over the arch.
+    px(8, -17, w - 16, 11, INK)
+    px(9, -16, w - 18, 9, '#2a1430')
+    const words = 'CHAPEL'
+    const x = Math.round((w - textWidth(words)) / 2)
+    neonText(px, words, x, -14, '#ffe0f6', '#c8309a')
+    // The L buzzes: lit in one frame, out in the other.
+    if (c.frame) px(x + textWidth('CHAPE') + 1, -15, 4, 7, '#2a1430')
+  },
+}
+
+// ---------------------------------------------------------------------------
 // On the wall
 // ---------------------------------------------------------------------------
 
@@ -381,4 +589,13 @@ export const PROPS_ART: Record<string, StampArt> = {
   calendar,
   'wall-shelf': wallShelf,
   dartboard,
+  woodpile,
+  tumbleweed,
+  'scrap-heap': scrapHeap,
+  'dead-letter': deadLetter,
+  'crab-traps': crabTraps,
+  'net-heap': netHeap,
+  'fish-rack': fishRack,
+  reeds,
+  'chapel-arch': chapelArch,
 }

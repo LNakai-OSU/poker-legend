@@ -38,6 +38,12 @@ export interface ErrandPerson {
   lines: string[]
   /** A fixture rather than a person: a hedge, an altar, the end of a pier. */
   thing?: boolean
+  /**
+   * How a fixture is drawn, when it is not a signpost: `none` when the map
+   * already draws it as an object (the woodpile, the phone box), so the object
+   * is the thing you walk up to and the outskirts are not a field of signposts.
+   */
+  art?: PoiDef['art']
   look?: PoiDef['look']
   role?: PoiDef['role']
 }
@@ -623,6 +629,7 @@ export const ERRANDS: Errand[] = [
         col: 17,
         row: 11,
         thing: true,
+        art: 'none',
         lines: ['The water is brown, slow and very quiet. Something large is thinking about you. (It only bites by day.)'],
       },
     ],
@@ -1489,6 +1496,7 @@ export const ERRANDS: Errand[] = [
         col: 8,
         row: 6,
         thing: true,
+        art: 'none',
         lines: ['A white arch hung with plastic roses, lit from behind by the sign that says CHAPEL in letters four feet tall.'],
       },
     ],
@@ -1735,6 +1743,7 @@ export const ERRANDS: Errand[] = [
         col: 23,
         row: 5,
         thing: true,
+        art: 'none',
         lines: ['A tall cypress hedge. Something in it is whining, softly, in a cultured way.'],
       },
     ],
@@ -1900,28 +1909,28 @@ export const ERRANDS: Errand[] = [
         lines: ['Lamplighter: Only after dark. In daylight the lamps are just brass.'],
         look: { hair: '#d8d8dc', hairStyle: 'short', hat: 'cap', hatColor: '#3a3a4a' },
       },
-      { id: 'pl-lamp-a', name: 'Gilded Lamp', areaId: 'pl-outskirts', col: 12, row: 8, thing: true, lines: ['A gilded lamp, dark, with a ladder’s worth of glass above you. It waits for dusk.'] },
-      { id: 'pl-lamp-b', name: 'Gilded Lamp', areaId: 'pl-outskirts', col: 19, row: 5, thing: true, lines: ['A gilded lamp, dark, over the water. It waits for dusk.'] },
+      { id: 'pl-lamp-a', name: 'Gilded Lamp', areaId: 'pl-outskirts', col: 12, row: 8, thing: true, art: 'none', lines: ['A gilded lamp, dark, with a ladder’s worth of glass above you. It waits for dusk.'] },
+      { id: 'pl-lamp-b', name: 'Gilded Lamp', areaId: 'pl-outskirts', col: 19, row: 5, thing: true, art: 'none', lines: ['A gilded lamp, dark, over the water. It waits for dusk.'] },
     ],
   },
 ]
 
 /** Notice boards and benches the errands put in the outskirts: a hint of the next job, and somewhere to stand. */
 const SCENERY: ErrandPerson[] = [
-  { id: 'sc-board', name: 'Notice Board', areaId: 'sc-outskirts', col: 11, row: 9, thing: true, lines: ['Pinned flyers: LOST — one casserole dish, answers to Room 2. WANTED — a lie for a man with a hat. See Wendell. (He is not in Room 6.)'] },
-  { id: 'rb-board', name: 'Bait Board', areaId: 'rb-outskirts', col: 10, row: 9, thing: true, lines: ['BAIT 4 SALE. WANTED: patience, for Cornelius. ALSO: a man to witness a coin flip. Sal is by the ferry. He is not fishing.'] },
-  { id: 'ch-board', name: 'Pier Board', areaId: 'ch-outskirts', col: 8, row: 10, thing: true, lines: ['MACKEREL 40. REWARD for one accordion (Gull & Anchor, ticket 4471). The light needs a lookout. Odalys: ask about the Bellweather.'] },
-  { id: 'rb-fishrack', name: 'Fish Rack', areaId: 'rb-outskirts', col: 12, row: 9, thing: true, lines: ['A drying rack of perch and a man who could use a hand. (An hour’s work, by day, for a few dollars. Only if you are nearly broke.)'] },
-  { id: 'pc-board', name: 'Beach Board', areaId: 'pc-outskirts', col: 14, row: 2, thing: true, lines: ['LAGOON BEACH. HUTS BY THE WEEK. NO DOGS, NO DEBT, NO SPEECHES. A man in a dinghy needs sardines. A woman needs her ring.'] },
-  { id: 'nm-board', name: 'Chapel Board', areaId: 'nm-outskirts', col: 12, row: 5, thing: true, lines: ['OPEN 24 HRS. WITNESSES WANTED, any hour. Dee’s sign wants a transformer. Ask at the Mesa Motors showroom. Do not ask about the Eldorado.'] },
-  { id: 'pl-board', name: 'Terrace Notice', areaId: 'pl-outskirts', col: 16, row: 3, thing: true, lines: ['Madame Wen asks guests not to feed the dogs. There are no dogs. A jacket waits at the atelier for a man on the bench.'] },
-  { id: 'pc-crabtraps', name: 'Crab Traps', areaId: 'pc-outskirts', col: 16, row: 6, thing: true, lines: ['Wire crab traps stacked on the sand. (An hour’s work, by day, for a little money. Only if you are nearly broke.)'] },
-  { id: 'nm-scrapheap', name: 'Scrap Heap', areaId: 'nm-outskirts', col: 12, row: 12, thing: true, lines: ['A heap of dead tubing and glass, waiting to be carried. (An hour’s work, by day, for a little money. Only if you are nearly broke.)'] },
+  { id: 'sc-board', name: 'Notice Board', areaId: 'sc-outskirts', col: 11, row: 9, thing: true, art: 'none', lines: ['Pinned flyers: LOST — one casserole dish, answers to Room 2. WANTED — a lie for a man with a hat. See Wendell. (He is not in Room 6.)'] },
+  { id: 'rb-board', name: 'Bait Board', areaId: 'rb-outskirts', col: 10, row: 9, thing: true, art: 'none', lines: ['BAIT 4 SALE. WANTED: patience, for Cornelius. ALSO: a man to witness a coin flip. Sal is by the ferry. He is not fishing.'] },
+  { id: 'ch-board', name: 'Pier Board', areaId: 'ch-outskirts', col: 8, row: 10, thing: true, art: 'none', lines: ['MACKEREL 40. REWARD for one accordion (Gull & Anchor, ticket 4471). The light needs a lookout. Odalys: ask about the Bellweather.'] },
+  { id: 'rb-fishrack', name: 'Fish Rack', areaId: 'rb-outskirts', col: 12, row: 9, thing: true, art: 'none', lines: ['A drying rack of perch and a man who could use a hand. (An hour’s work, by day, for a few dollars. Only if you are nearly broke.)'] },
+  { id: 'pc-board', name: 'Beach Board', areaId: 'pc-outskirts', col: 14, row: 2, thing: true, art: 'none', lines: ['LAGOON BEACH. HUTS BY THE WEEK. NO DOGS, NO DEBT, NO SPEECHES. A man in a dinghy needs sardines. A woman needs her ring.'] },
+  { id: 'nm-board', name: 'Chapel Board', areaId: 'nm-outskirts', col: 12, row: 5, thing: true, art: 'none', lines: ['OPEN 24 HRS. WITNESSES WANTED, any hour. Dee’s sign wants a transformer. Ask at the Mesa Motors showroom. Do not ask about the Eldorado.'] },
+  { id: 'pl-board', name: 'Terrace Notice', areaId: 'pl-outskirts', col: 16, row: 3, thing: true, art: 'none', lines: ['Madame Wen asks guests not to feed the dogs. There are no dogs. A jacket waits at the atelier for a man on the bench.'] },
+  { id: 'pc-crabtraps', name: 'Crab Traps', areaId: 'pc-outskirts', col: 16, row: 6, thing: true, art: 'none', lines: ['Wire crab traps stacked on the sand. (An hour’s work, by day, for a little money. Only if you are nearly broke.)'] },
+  { id: 'nm-scrapheap', name: 'Scrap Heap', areaId: 'nm-outskirts', col: 12, row: 12, thing: true, art: 'none', lines: ['A heap of dead tubing and glass, waiting to be carried. (An hour’s work, by day, for a little money. Only if you are nearly broke.)'] },
   { id: 'sc-hand1', name: 'Hitcher', areaId: 'sc-outskirts', col: 25, row: 2, lines: ['Hitcher: Somebody’s been through here in a Groucho moustache. Said his name was Brad. Gave me a lift. I hadn’t asked.'] },
   { id: 'sc-hand2', name: 'Trucker', areaId: 'sc-outskirts', col: 6, row: 12, lines: ['Trucker: A man in Room 2 eats nothing but casserole these days. It’s on the whole road, how happy his sister is.'] },
   { id: 'rb-hand1', name: 'Boy with a Bucket', areaId: 'rb-outskirts', col: 7, row: 12, lines: ['Boy with a bucket: There’s a woman who sings to a catfish. She’s not very good. The catfish seems to like it.'] },
   { id: 'rb-hand2', name: 'Houseboat Neighbour', areaId: 'rb-outskirts', col: 3, row: 8, lines: ['Neighbour: Dutch’s mum is eighty-one. She says she’s never been so spoiled. A woman with flowers comes now.'] },
-  { id: 'ch-hand1', name: 'Fisherman', areaId: 'ch-outskirts', col: 23, row: 7, lines: ['Fisherman: The light’s been on every night this month. The Captain says it’s the tide. I say it’s Abel.'] },
+  { id: 'ch-hand1', name: 'Fisherman', areaId: 'ch-outskirts', col: 22, row: 7, lines: ['Fisherman: The light’s been on every night this month. The Captain says it’s the tide. I say it’s Abel.'] },
   { id: 'ch-hand2', name: 'Deckhand', areaId: 'ch-outskirts', col: 7, row: 12, lines: ['Deckhand: The accordion is back on the boulevard. You can hear it from the fish stall. Odalys hums along. Don’t tell her I said so.'] },
   { id: 'pc-hand1', name: 'Sunbather', areaId: 'pc-outskirts', col: 24, row: 10, lines: ['Sunbather: The commodore is still out there in his dinghy. And a woman in white brings him pears, daily. It’s very romantic, in a way.'] },
   { id: 'pc-hand2', name: 'Swimmer', areaId: 'pc-outskirts', col: 3, row: 6, lines: ['Swimmer: Heard there was a ring in a salt shaker. I looked in every shaker on the beach. I found a lot of salt.'] },
@@ -1929,15 +1938,15 @@ const SCENERY: ErrandPerson[] = [
   { id: 'nm-hand2', name: 'Streamer', areaId: 'nm-outskirts', col: 23, row: 5, lines: ['Streamer: Somebody objected at a wedding here. Live. I have the clip on loop. I’m not even sure it was real.'] },
   { id: 'pl-hand1', name: 'Gardener', areaId: 'pl-outskirts', col: 25, row: 3, lines: ['Gardener: A very thin dog sleeps in the hedge now. Nobody trims that corner. Nobody has been asked to.'] },
   { id: 'pl-hand2', name: 'Waiter', areaId: 'pl-outskirts', col: 10, row: 9, lines: ['Waiter: An old man in a grey jacket sits on the bench in the afternoons. He tips like a man who has saved up.'] },
-  { id: 'sc-woodpile', name: 'Woodpile', areaId: 'sc-outskirts', col: 14, row: 10, thing: true, lines: ['A woodpile and an axe. (An hour’s work, by day, for a little money. Only if you are nearly broke.)'] },
-  { id: 'ch-nets', name: 'Torn Nets', areaId: 'ch-outskirts', col: 6, row: 9, thing: true, lines: ['A heap of torn nets and a woman with a needle. (An hour’s work, by day, for a little money. Only if you are nearly broke.)'] },
-  { id: 'pl-planters', name: 'Marble Planters', areaId: 'pl-outskirts', col: 14, row: 9, thing: true, lines: ['Marble planters waiting to be moved. (An hour’s work, by day, for good money. Only if you are nearly broke.)'] },
-  { id: 'sc-phone', name: 'Pay Phone', areaId: 'sc-outskirts', col: 3, row: 9, thing: true, lines: ['A pay phone with its cord cut. Somebody has written on the box: “NICO CALLED. SAID BRAD’S NOT HOME.”'] },
-  { id: 'rb-phone', name: 'Pay Phone', areaId: 'rb-outskirts', col: 20, row: 2, thing: true, lines: ['A pay phone nailed to a post. A note: “MUM HAS CALLED TWICE. LOGISTICS IS NOT A JOB.”'] },
-  { id: 'ch-phone', name: 'Pay Phone', areaId: 'ch-outskirts', col: 13, row: 3, thing: true, lines: ['A salt-rusted pay phone. Scrawled: “THE ACCORDION IS BACK. SO IS ABEL.”'] },
-  { id: 'pc-phone', name: 'Pay Phone', areaId: 'pc-outskirts', col: 22, row: 2, thing: true, lines: ['A pay phone in a bamboo hut. A card: “MRS. TRAN: PEARS DELIVERED. COMMODORE: STILL AFLOAT.”'] },
-  { id: 'nm-phone', name: 'Pay Phone', areaId: 'nm-outskirts', col: 3, row: 12, thing: true, lines: ['A pay phone, lit pink by the sign. A sticker: “ELVIRA: 24 HRS. DEE: DO NOT CALL AFTER VACANCY.”'] },
-  { id: 'pl-phone', name: 'Pay Phone', areaId: 'pl-outskirts', col: 2, row: 3, thing: true, lines: ['A brass pay phone nobody uses. A card: “MADAME WEN HAS NO DOGS. THE GUARD SAYS SO.”'] },
+  { id: 'sc-woodpile', name: 'Woodpile', areaId: 'sc-outskirts', col: 14, row: 10, thing: true, art: 'none', lines: ['A woodpile and an axe. (An hour’s work, by day, for a little money. Only if you are nearly broke.)'] },
+  { id: 'ch-nets', name: 'Torn Nets', areaId: 'ch-outskirts', col: 6, row: 9, thing: true, art: 'none', lines: ['A heap of torn nets and a woman with a needle. (An hour’s work, by day, for a little money. Only if you are nearly broke.)'] },
+  { id: 'pl-planters', name: 'Marble Planters', areaId: 'pl-outskirts', col: 14, row: 9, thing: true, art: 'none', lines: ['Marble planters waiting to be moved. (An hour’s work, by day, for good money. Only if you are nearly broke.)'] },
+  { id: 'sc-phone', name: 'Pay Phone', areaId: 'sc-outskirts', col: 3, row: 9, thing: true, art: 'none', lines: ['A pay phone with its cord cut. Somebody has written on the box: “NICO CALLED. SAID BRAD’S NOT HOME.”'] },
+  { id: 'rb-phone', name: 'Pay Phone', areaId: 'rb-outskirts', col: 20, row: 2, thing: true, art: 'none', lines: ['A pay phone nailed to a post. A note: “MUM HAS CALLED TWICE. LOGISTICS IS NOT A JOB.”'] },
+  { id: 'ch-phone', name: 'Pay Phone', areaId: 'ch-outskirts', col: 13, row: 3, thing: true, art: 'none', lines: ['A salt-rusted pay phone. Scrawled: “THE ACCORDION IS BACK. SO IS ABEL.”'] },
+  { id: 'pc-phone', name: 'Pay Phone', areaId: 'pc-outskirts', col: 22, row: 2, thing: true, art: 'none', lines: ['A pay phone in a bamboo hut. A card: “MRS. TRAN: PEARS DELIVERED. COMMODORE: STILL AFLOAT.”'] },
+  { id: 'nm-phone', name: 'Pay Phone', areaId: 'nm-outskirts', col: 3, row: 12, thing: true, art: 'none', lines: ['A pay phone, lit pink by the sign. A sticker: “ELVIRA: 24 HRS. DEE: DO NOT CALL AFTER VACANCY.”'] },
+  { id: 'pl-phone', name: 'Pay Phone', areaId: 'pl-outskirts', col: 2, row: 3, thing: true, art: 'none', lines: ['A brass pay phone nobody uses. A card: “MADAME WEN HAS NO DOGS. THE GUARD SAYS SO.”'] },
   { id: 'sc-dog', name: 'Stray Dog', areaId: 'sc-outskirts', col: 19, row: 10, lines: ['Stray Dog: (wags, and follows the smell of the casserole you do not have)'] },
   { id: 'rb-dog', name: 'Stray Dog', areaId: 'rb-outskirts', col: 8, row: 10, lines: ['Stray Dog: (sits by the bank and watches the water like a very small, very patient angler)'] },
   { id: 'ch-dog', name: 'Harbour Dog', areaId: 'ch-outskirts', col: 12, row: 11, lines: ['Harbour Dog: (has a mackerel and the look of somebody who will not be sharing)'] },
@@ -1949,12 +1958,12 @@ const SCENERY: ErrandPerson[] = [
 
 /** A signpost at each gap in the trees, so the way down to the outskirts is something you can see. */
 const SIGNPOSTS: ErrandPerson[] = [
-  { id: 'sc-signpost', name: 'Path Sign', areaId: 'road-silvercreek', col: 17, row: 12, thing: true, lines: ['A hand-painted board nailed to a post: SAND DOLLAR MOTOR COURT. WEEKLY RATES. NO VACANCY (LIES). An arrow points south down the dirt path.'] },
-  { id: 'rb-signpost', name: 'Path Sign', areaId: 'road-riverbend', col: 13, row: 11, thing: true, lines: ['A board on a post: MUDDY BEND. BAIT, TACKLE, ADVICE. The path runs south to the river.'] },
-  { id: 'ch-signpost', name: 'Path Sign', areaId: 'road-crescent', col: 12, row: 11, thing: true, lines: ['A painted sign: FISH PIER. FRESH CATCH, PAWN, LIGHT. A stone path runs south to the quay.'] },
-  { id: 'pc-signpost', name: 'Path Sign', areaId: 'road-palmcay', col: 25, row: 11, thing: true, lines: ['A bleached board: LAGOON BEACH. HUTS BY THE WEEK. A sandy path runs south.'] },
-  { id: 'nm-signpost', name: 'Path Sign', areaId: 'road-mesa', col: 18, row: 12, thing: true, lines: ['A tin sign, still faintly lit: THE BONEYARD. CHAPEL OPEN 24 HRS. A dirt track runs south.'] },
-  { id: 'pl-signpost', name: 'Path Sign', areaId: 'road-lumina', col: 8, row: 12, thing: true, lines: ['A marble plaque: BELVEDERE. A stair of white stone runs south between the cypresses.'] },
+  { id: 'sc-signpost', name: 'Motor Court Sign', areaId: 'road-silvercreek', col: 17, row: 12, thing: true, lines: ['A hand-painted board nailed to a post: SAND DOLLAR MOTOR COURT. WEEKLY RATES. NO VACANCY (LIES). An arrow points south down the dirt path.'] },
+  { id: 'rb-signpost', name: 'Muddy Bend Sign', areaId: 'road-riverbend', col: 13, row: 11, thing: true, lines: ['A board on a post: MUDDY BEND. BAIT, TACKLE, ADVICE. The path runs south to the river.'] },
+  { id: 'ch-signpost', name: 'Fish Pier Sign', areaId: 'road-crescent', col: 12, row: 11, thing: true, lines: ['A painted sign: FISH PIER. FRESH CATCH, PAWN, LIGHT. A stone path runs south to the quay.'] },
+  { id: 'pc-signpost', name: 'Lagoon Beach Sign', areaId: 'road-palmcay', col: 25, row: 11, thing: true, lines: ['A bleached board: LAGOON BEACH. HUTS BY THE WEEK. A sandy path runs south.'] },
+  { id: 'nm-signpost', name: 'Boneyard Sign', areaId: 'road-mesa', col: 18, row: 12, thing: true, lines: ['A tin sign, still faintly lit: THE BONEYARD. CHAPEL OPEN 24 HRS. A dirt track runs south.'] },
+  { id: 'pl-signpost', name: 'Belvedere Plaque', areaId: 'road-lumina', col: 8, row: 12, thing: true, lines: ['A marble plaque: BELVEDERE. A stair of white stone runs south between the cypresses.'] },
 ]
 
 // ---------------------------------------------------------------------------
@@ -1969,7 +1978,7 @@ function speakerOf(lines: string[], fallback: string): string {
 
 /** Every new fixture in one area. Spread into its `pois`. */
 export function errandPois(areaId: string): PoiDef[] {
-  const benches: ErrandPerson[] = DARK_BENCHES.map((b) => ({ id: b.id, name: b.name, areaId: b.areaId, col: b.col, row: b.row, thing: true, lines: b.lines }))
+  const benches: ErrandPerson[] = DARK_BENCHES.map((b) => ({ id: b.id, name: b.name, areaId: b.areaId, col: b.col, row: b.row, thing: true, art: 'none', lines: b.lines }))
   return [...ERRANDS.flatMap((e) => e.people), ...SIGNPOSTS, ...SCENERY, ...benches]
     .filter((p) => p.areaId === areaId)
     .map((p) => ({
@@ -1980,7 +1989,7 @@ export function errandPois(areaId: string): PoiDef[] {
       color: p.thing ? THING_COLOR : POI_COLOR,
       lines: p.lines,
       action: { kind: 'flavor' as const },
-      ...(p.thing ? { art: 'sign' as const } : {}),
+      ...(p.thing ? { art: p.art ?? ('sign' as const) } : {}),
       ...(p.look ? { look: p.look } : {}),
       ...(p.role ? { role: p.role } : {}),
     }))
