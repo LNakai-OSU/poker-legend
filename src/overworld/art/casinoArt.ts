@@ -130,10 +130,27 @@ const TOPPER = 8
  * slot; a belly glass in the topper's colours; the payout tray; the plinth.
  * The lever runs up the right side with a red ball on top.
  */
-function slotMachine(px: Px, x: number, y: number, c: Colourway, reels: [Reel, Reel, Reel], frame: number, emblem: Reel | 'star') {
+/** An upright stands under an arched topper; a slant-top is a low cabinet with a light bar, a head shorter. */
+type Cabinet = 'upright' | 'slant'
+
+/**
+ * `spinning` blurs the reels: somebody is playing it. In a bank the machines
+ * that are being played take turns, one frame spinning and the next showing
+ * where the reels stopped.
+ */
+function slotMachine(
+  px: Px, x: number, y: number, c: Colourway, reels: [Reel, Reel, Reel], frame: number, emblem: Reel | 'star',
+  cabinet: Cabinet = 'upright', spinning = false,
+) {
   // The gap either side of the cabinet is in shadow, so a bank reads as separate machines.
   px(x, y, 16, 32, '#0e0c14')
-  // The topper: an arch of light.
+  if (cabinet === 'slant') slantTop(px, x, y, c, frame)
+  else archTopper(px, x, y, c, frame, emblem)
+  slotCabinet(px, x, y, c, reels, frame, spinning)
+}
+
+/** The upright's topper: an arch of light with the game's emblem in it. */
+function archTopper(px: Px, x: number, y: number, c: Colourway, frame: number, emblem: Reel | 'star') {
   const t = y - TOPPER
   px(x + 4, t, 8, 1, INK)
   px(x + 2, t + 1, 12, 1, INK)
@@ -158,7 +175,26 @@ function slotMachine(px: Px, x: number, y: number, c: Colourway, reels: [Reel, R
     px(x + 5, t + 7, 6, 1, '#d8d0c0')
     sprite(px, SYMBOLS[emblem], x + 6, t + 3, SYMBOL_COLOURS)
   }
+  // The arch's glass flares in one frame and settles in the other.
+  if (frame % 2) {
+    px(x + 3, t + 2, 2, 1, '#ffffff')
+    px(x + 11, t + 2, 2, 1, '#ffffff')
+  }
+}
+
+/** The slant-top's head: no topper, a strip of chasing bulbs over a low lit panel. */
+function slantTop(px: Px, x: number, y: number, c: Colourway, frame: number) {
+  px(x + 1, y - 3, 14, 5, INK)
+  px(x + 2, y - 2, 12, 3, frame % 2 ? c.topperHi : c.topper)
+  px(x + 2, y - 2, 12, 1, c.topperHi)
+  for (let i = 0; i < 6; i++) px(x + 2 + i * 2 + (frame % 2), y - 3, 1, 1, '#fff4a0')
+  px(x + 6, y - 1, 4, 1, c.topperLo)
+}
+
+function slotCabinet(px: Px, x: number, y: number, c: Colourway, reels: [Reel, Reel, Reel], frame: number, spinning: boolean) {
+  // A row of bulbs along the head of the cabinet, chasing.
   px(x + 1, y + 1, 14, 1, c.trim)
+  for (let k = 0; k < 7; k++) if ((k + frame) % 2 === 0) px(x + 2 + k * 2, y + 1, 1, 1, '#fff4a0')
   // Cabinet, lit down the left, shaded down the right.
   px(x + 1, y + 2, 14, 26, INK)
   px(x + 2, y + 2, 12, 25, c.cabinet)
@@ -172,12 +208,19 @@ function slotMachine(px: Px, x: number, y: number, c: Colourway, reels: [Reel, R
     // The reel curves away top and bottom, darker where it turns.
     px(rx, y + 4, 3, 1, '#b8b0a0')
     px(rx, y + 12, 3, 1, '#b8b0a0')
-    // The bottom of the symbol above and the top of the one below.
-    const above = SYMBOLS[reels[(r + 1) % 3]]
-    const below = SYMBOLS[reels[(r + 2) % 3]]
-    sprite(px, [above[4]], rx, y + 5, SYMBOL_COLOURS)
-    sprite(px, [below[0]], rx, y + 11, SYMBOL_COLOURS)
-    sprite(px, SYMBOLS[reels[r]], rx, y + 6, SYMBOL_COLOURS)
+    if (spinning) {
+      // A blur of symbols going past: streaks in their colours, a different run on each reel.
+      const streaks = ['#e02020', '#e8b020', '#15151d', '#2a9a3a']
+      for (let k = 0; k < 4; k++) px(rx, y + 5 + k * 2, 3, 1, streaks[(k + r) % streaks.length])
+      px(rx + 1, y + 5, 1, 7, 'rgba(255, 255, 255, 0.45)')
+    } else {
+      // The bottom of the symbol above and the top of the one below.
+      const above = SYMBOLS[reels[(r + 1) % 3]]
+      const below = SYMBOLS[reels[(r + 2) % 3]]
+      sprite(px, [above[4]], rx, y + 5, SYMBOL_COLOURS)
+      sprite(px, [below[0]], rx, y + 11, SYMBOL_COLOURS)
+      sprite(px, SYMBOLS[reels[r]], rx, y + 6, SYMBOL_COLOURS)
+    }
     if (r < 2) px(rx + 3, y + 4, 1, 9, '#9a9aa8')
   }
   // The payline, marked at both ends, and a glint on the glass.
@@ -201,7 +244,7 @@ function slotMachine(px: Px, x: number, y: number, c: Colourway, reels: [Reel, R
   px(x + 11, y + 20, 2, 1, INK)
   // The belly glass, lit in the topper's colours.
   px(x + 2, y + 22, 12, 4, c.topperLo)
-  px(x + 3, y + 22, 10, 3, c.topper)
+  px(x + 3, y + 22, 10, 3, frame % 2 ? tint(c.topper, 0.25) : c.topper)
   px(x + 3, y + 22, 10, 1, c.topperHi)
   px(x + 5, y + 24, 6, 1, c.trim)
   // Payout tray with a coin or two in it.
@@ -240,15 +283,24 @@ const REEL_SETS: Array<[Reel, Reel, Reel]> = [
 /** How many looks a bank has: which colours, which games, which sign over it. */
 const BANK_VARIANTS = 6
 
-/** The game a bank is, lit over its toppers: the name, the board, the lettering. */
-const MARQUEES: Array<{ words: string; ink: string }> = [
-  { words: 'LUCKY 7', ink: '#ffe066' },
-  { words: 'WILD', ink: '#ffffff' },
-  { words: 'BONUS', ink: '#ffe066' },
-  { words: 'HOT', ink: '#fff4c8' },
-  { words: 'DIAMOND', ink: '#e8f6ff' },
-  { words: 'TRIPLE', ink: '#ffe066' },
-]
+/** The lettering a marquee is lit in, by look. */
+const MARQUEE_INKS = ['#ffe066', '#ffffff', '#ffe066', '#fff4c8', '#e8f6ff', '#ffe066']
+
+/**
+ * The games a kind of bank plays, lit over its toppers: one name per look. A
+ * house's machines are named for the house — the saloon plays GOLD RUSH, the
+ * riverboat SHOWBOAT — so the same six words are not over every bank in the
+ * game.
+ */
+const GAMES = {
+  generic: ['LUCKY 7', 'WILD', 'BONUS', 'HOT', 'DIAMOND', 'TRIPLE'],
+  western: ['GOLD RUSH', 'HIGH NOON', 'BUFFALO', 'LUCKY 7', 'WILD WEST', 'NUGGET'],
+  river: ['SHOWBOAT', 'RIVER GOLD', 'PADDLE 7', 'CAPTAIN', 'BIG CATCH', 'TRIPLE'],
+  island: ['TIKI', 'ALOHA', 'LAGOON', 'LUCKY 7', 'VOLCANO', 'COCONUT'],
+  reef: ['CORAL', 'PEARL', 'TREASURE', 'SEA GOLD', 'BONUS', 'REEF'],
+  salon: ['ROYALE', 'BELLA', 'DOLCE', 'ORO', 'CORONA', 'LUCKY 7'],
+  strip: ['NEON 7', 'STARDUST', 'SIZZLE', 'WILD', 'VEGAS', 'DIAMOND'],
+} satisfies Record<string, string[]>
 
 /** How far a bank's marquee rises above its footprint, in art units. */
 const MARQUEE_TOP = 17
@@ -280,7 +332,7 @@ function marquee(px: Px, w: number, way: Colourway, words: string, ink: string, 
  * and lights a different sign, so a room with two of the same bank in it has
  * two different banks.
  */
-function slotBank(pool: Colourway[], take: number, seat = '#c82a2a', sign = true): StampArt {
+function slotBank(pool: Colourway[], take: number, seat = '#c82a2a', sign = true, games: string[] = GAMES.generic): StampArt {
   return {
     frames: 2,
     variants: BANK_VARIANTS,
@@ -295,15 +347,19 @@ function slotBank(pool: Colourway[], take: number, seat = '#c82a2a', sign = true
         const way = ways[(v % 2 ? Math.floor(i / 2) : i) % ways.length]
         const emblem = (['7', 'star', 'cherry', 'bar', 'bell'] as const)[(i + v * 2) % 5]
         const reels = REEL_SETS[(i * 5 + c.cols + v * 2) % REEL_SETS.length]
-        slotMachine(px, i * 16, 0, way, reels, c.frame + i, emblem)
+        // A bank is not a row of one machine: every third cabinet is a slant-top, a head shorter.
+        const cabinet: Cabinet = (i + v) % 3 === 1 ? 'slant' : 'upright'
+        // One in four is being played, its reels spinning every other frame.
+        const spinning = (i * 3 + v) % 4 === 0 && (c.frame + i) % 2 === 1
+        slotMachine(px, i * 16, 0, way, reels, c.frame + i, emblem, cabinet, spinning)
         if (c.rows > 2) stool(px, i * 16, 32, seat)
       }
       // A chrome kick rail along the foot of the bank, and its shadow.
       px(0, 31, c.w, 1, '#8a8e98')
       shadow(px, 0, 32, c.w, 1, 0.4)
       if (sign) {
-        const { words, ink } = MARQUEES[v % MARQUEES.length]
-        marquee(px, c.w, ways[0], words, ink, c.frame)
+        const words = games[v % games.length]
+        marquee(px, c.w, ways[0], words, MARQUEE_INKS[v % MARQUEE_INKS.length], c.frame)
       }
     },
   }
@@ -922,12 +978,12 @@ const lightPool: StampArt = {
 export const CASINO_ART: Record<string, StampArt> = {
   'slot-bank': slotBank([RED, BLUE, GREEN, PURPLE, ORANGE], 3),
   'slot-bank-6': slotBank([RED, BLUE, GREEN, PURPLE, ORANGE], 3),
-  'slot-bank-western': slotBank([RED, GREEN, SADDLE, BURGUNDY], 2, '#8a5a2a'),
-  'slot-bank-brass': slotBank([GREEN, RED, BURGUNDY, NAVY], 3, '#6a3a2a'),
-  'slot-bank-island': slotBank([BLUE, GREEN, RED, LAGOON], 3, '#e8d8b0'),
-  'slot-bank-reef': slotBank([CORAL, SEAFOAM, SUNSHINE, LAGOON], 3, '#e8d8b0'),
-  'slot-bank-ivory': slotBank([IVORY, BURGUNDY, EMERALD, NAVY], 2, '#a81c2c'),
-  'slot-bank-neon': slotBank([NEON_PINK, NEON_CYAN, NEON_LIME, NEON_ORANGE, NEON_VIOLET], 2, '#4fe8ff'),
+  'slot-bank-western': slotBank([RED, GREEN, SADDLE, BURGUNDY], 2, '#8a5a2a', true, GAMES.western),
+  'slot-bank-brass': slotBank([GREEN, RED, BURGUNDY, NAVY], 3, '#6a3a2a', true, GAMES.river),
+  'slot-bank-island': slotBank([BLUE, GREEN, RED, LAGOON], 3, '#e8d8b0', true, GAMES.island),
+  'slot-bank-reef': slotBank([CORAL, SEAFOAM, SUNSHINE, LAGOON], 3, '#e8d8b0', true, GAMES.reef),
+  'slot-bank-ivory': slotBank([IVORY, BURGUNDY, EMERALD, NAVY], 2, '#a81c2c', true, GAMES.salon),
+  'slot-bank-neon': slotBank([NEON_PINK, NEON_CYAN, NEON_LIME, NEON_ORANGE, NEON_VIOLET], 2, '#4fe8ff', true, GAMES.strip),
   'slot-bank-jackpot': jackpotBank([NEON_CYAN, NEON_PINK, NEON_VIOLET], 2, '#2a0a3a', '#ff4fd8'),
   'slot-bank-gold': jackpotBank([IVORY, BURGUNDY, EMERALD], 2, '#3a0a14', '#a81c2c'),
   'poker-table': pokerTable4(CLASSIC),
