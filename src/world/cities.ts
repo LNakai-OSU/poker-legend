@@ -974,14 +974,14 @@ const apartmentCity: CityDef = {
           'Underneath, smaller: the 14 bus, you know the one.',
         ]),
         {
-          // Slid under the door the morning of the game, beside it on the floor:
-          // the thing in the flat that says go outside. Kept, afterwards.
-          ...local('apartment-door-note', 'Note under the Door', 7, 7, [
+          // Left on the stand by the door the morning of the game: the thing in
+          // the flat that says go outside. Kept, afterwards.
+          ...local('apartment-door-note', 'Note by the Door', 7, 7, [
             'Marcus’s note from the morning of the first game. SENT SOMEBODY. You kept it.',
           ]),
           requiresFlag: 'metDana',
           lockedLines: [
-            'Slid under the door, in Marcus’s capitals: SENT SOMEBODY TO FETCH YOU. GO OUTSIDE AND LET THEM.',
+            'Propped by the door where you cannot miss it, in Marcus’s capitals: SENT SOMEBODY TO FETCH YOU. GO OUTSIDE AND LET THEM.',
             'Underneath, smaller: IT IS DANA FROM THE LAUNDROMAT. BE NICE. SHE WRITES THINGS DOWN.',
           ],
         },
