@@ -1020,6 +1020,8 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     // He does not sit down any more. If anybody ever seats him, this is what he says.
     lines: { greeting: ['Hal: I do not play now. I watch other people play the way I taught them.'] },
     overworld: {
+      // One man on both stools and on the Lumina street: the POIs carry no look of their own.
+      look: { trousers: '#3a3a46', shoes: '#2a1a10', lower: 'trousers', sleeves: 'long' },
       lines: ['Hal: Position. Always position.'],
       schedule: [],
       chapters: [

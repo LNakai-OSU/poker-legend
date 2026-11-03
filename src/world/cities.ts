@@ -794,15 +794,6 @@ function local(
  * Something to look at whose picture is a stamp: a bank of dryers, a cooler.
  * Nothing is drawn for it, because the object it stands on already is.
  */
-/**
- * Hal teaches in Crescent Harbor and again on the Strip. Without a look of his
- * own he was drawn from each POI's id, so the same man had two faces.
- */
-const HAL_LOOK: PoiDef['look'] = {
-  skin: '#d2a07a', hair: '#c8c4bc', hairStyle: 'short', shirt: '#7a5e3e', accessory: 'glasses',
-  trousers: '#3a3a46', shoes: '#2a1a10', lower: 'trousers', sleeves: 'long',
-}
-
 function thing(id: string, name: string, col: number, row: number, lines: string[]): PoiDef {
   return { id, name, col, row, color: COLORS.local, lines, art: 'none', action: { kind: 'flavor' } }
 }
@@ -1602,7 +1593,6 @@ const crescentHarbor: CityDef = {
           row: 6,
           color: COLORS.person,
           role: 'local',
-          look: HAL_LOOK,
           lines: [
             'Hal: Forty years in card rooms and I still take students.',
             'Hal: I do not sell luck. I sell the things you should already be counting.',
@@ -2091,7 +2081,6 @@ const neonMesa: CityDef = {
           row: 8,
           color: COLORS.person,
           role: 'local',
-          look: HAL_LOOK,
           lines: [
             'Hal: You made it out here. Good.',
             'Hal: Everything I teach costs more now, because it is worth more now.',
