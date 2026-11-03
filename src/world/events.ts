@@ -768,12 +768,14 @@ export const EVENTS: GameEvent[] = [
     id: 'dana-walks-you-to-the-bus',
     about:
       'The opening: Dana runs to catch you outside your door, walks you to the depot and rides the 14 with ' +
-      'you to Marcus’s door. How you answer her is remembered (`dana-reveal`).',
+      'you to Marcus’s door — or, if you have a stop to make first, goes on ahead to wait at the bus stop. ' +
+      'How you answer her is remembered (`dana-reveal`).',
     trigger: { kind: 'enterArea', areaId: 'basin', onLoad: true },
     conditions: [
       { kind: 'flag', flag: 'wonPokerNight', set: false },
       { kind: 'eventDone', eventId: 'poker-night', done: false },
       { kind: 'flag', flag: 'metDana', set: false },
+      { kind: 'flag', flag: 'danaAtTheStop', set: false },
       { kind: 'period', period: ['morning', 'afternoon', 'evening'] },
     ],
     actions: [
@@ -819,93 +821,129 @@ export const EVENTS: GameEvent[] = [
           },
         ],
       },
-      { kind: 'dialogue', speaker: 'dana', lines: ['Dana: The 14 goes from the depot. Walk with me.'] },
-      { kind: 'moveNpc', characterId: 'dana', to: { col: 26, row: 7 }, youFollow: true },
-      { kind: 'fade', to: 'out' },
-      { kind: 'teleport', areaId: 'depot', col: 6, row: 2, with: ['dana'] },
-      { kind: 'fade', to: 'in' },
-      { kind: 'dialogue', speaker: 'dana', lines: ['Dana: There. Get on. I am going your way.'] },
       {
-        kind: 'ride',
-        areaId: 'eastgate',
-        col: 9,
-        row: 13,
-        with: ['dana'],
-        caption: 'Dana takes the window seat and watches the town go past like she is counting it.',
-        during: [
+        kind: 'dialogue',
+        speaker: 'dana',
+        lines: [
+          'Dana: The 14 goes from the depot, the far end of Seventh. Walk with me.',
+          'Dana: Or go and win Patel his dollar back first. The busker has had it off him eleven mornings running.',
+        ],
+      },
+      {
+        kind: 'choice',
+        speaker: 'dana',
+        prompt: 'The bus now, or Patel’s first?',
+        options: [
           {
-            kind: 'dialogue',
-            speaker: 'dana',
-            lines: [
-              'Dana: Marcus thinks he is going to win tonight. He is not.',
-              'Dana: Everything on the table, winner takes the lot. His rule.',
-              'Dana: Win it, and you have a bankroll. Lose it, and he deals you in again. He always does.',
+            label: 'Walk with her',
+            then: [
+              { kind: 'moveNpc', characterId: 'dana', to: { col: 26, row: 7 }, youFollow: true },
+              { kind: 'fade', to: 'out' },
+              { kind: 'teleport', areaId: 'depot', col: 6, row: 2, with: ['dana'] },
+              { kind: 'fade', to: 'in' },
+              { kind: 'dialogue', speaker: 'dana', lines: ['Dana: Back row, on the left. You see who gets on before they see you.'] },
+              {
+                kind: 'ride',
+                areaId: 'eastgate',
+                col: 9,
+                row: 13,
+                with: ['dana'],
+                caption: 'Dana takes the window seat and watches the town go past like she is counting it.',
+                during: [
+                  {
+                    kind: 'dialogue',
+                    speaker: 'dana',
+                    lines: [
+                      'Dana: Marcus thinks he is going to win tonight. He is not.',
+                      'Dana: Everything on the table, winner takes the lot. His rule.',
+                      'Dana: Win it, and you have a bankroll. Lose it, and he deals you in again. He always does.',
+                    ],
+                  },
+                ],
+              },
+              {
+                kind: 'dialogue',
+                speaker: 'dana',
+                lines: ['Dana: Marcus is the middle door, up the street. Walk with me.'],
+              },
+              {
+                kind: 'moveNpc',
+                characterId: 'dana',
+                to: { col: 11, row: 5 },
+                youFollow: true,
+              },
+              { kind: 'dialogue', speaker: 'dana', lines: [
+                'Dana: Middle door. He has been setting out chairs since lunch.',
+                'Dana: After you. Wipe your feet. He will notice.',
+              ] },
+              { kind: 'fade', to: 'out' },
+              { kind: 'teleport', areaId: 'marcus-house', col: 7, row: 9, with: ['dana'] },
+              { kind: 'fade', to: 'in' },
+              {
+                kind: 'dialogue',
+                lines: ['Inside, the front room is lit, and somebody is shuffling a deck. Badly.'],
+              },
+              {
+                kind: 'dialogue',
+                speaker: 'dana',
+                lines: ['Dana: Table is this way. Stay close. The carpet bites.'],
+              },
+              {
+                kind: 'moveNpc',
+                characterId: 'dana',
+                // Her chair at the table: the one her schedule keeps her in tonight.
+                to: { col: 9, row: 5 },
+                youFollow: true,
+              },
+              {
+                kind: 'dialogue',
+                speaker: 'marcus',
+                lines: [
+                  'Marcus: There they are! Sit, sit. Mind the rug, it is load-bearing.',
+                  'Marcus: I have snacks. Pretzels. The good pretzels, the ones I told Patel were for a funeral.',
+                ],
+              },
+              {
+                kind: 'dialogue',
+                speaker: 'dana',
+                lines: [
+                  'Dana: Marcus, you told Mr. Patel the funeral was yours.',
+                  'Marcus: It will be, if I lose again.',
+                  'Dana: You lose every Friday.',
+                  'Marcus: That is called consistency. It is a quality.',
+                ],
+              },
+              {
+                kind: 'dialogue',
+                speaker: 'marcus',
+                lines: [
+                  'Marcus: House rules. Everything on the table, winner takes the lot. If anyone cries, they cry quietly.',
+                  'Marcus: Deal them in. Dana, you are in the big chair.',
+                  'Dana: I am always in the big chair.',
+                ],
+              },
+              { kind: 'startPokerNight' },
+            ],
+          },
+          {
+            // A few minutes on your own before the bus: Mr Patel's dollar
+            // (`errand-patel`), and Dana waiting at the stop (`dana-waits-at-the-stop`).
+            label: 'Patel’s first',
+            then: [
+              { kind: 'setFlag', flag: 'danaAtTheStop' },
+              {
+                kind: 'dialogue',
+                speaker: 'dana',
+                lines: [
+                  'Dana: Then I will be at the stop. Patel’s is the first door on Seventh; the busker is outside it.',
+                  'Dana: Do not make me come and find you twice.',
+                ],
+              },
+              { kind: 'moveNpc', characterId: 'dana', to: { col: 27, row: 7 }, leaves: true },
             ],
           },
         ],
       },
-      {
-        kind: 'dialogue',
-        speaker: 'dana',
-        lines: ['Dana: Marcus is the middle door, up the street. Walk with me.'],
-      },
-      {
-        kind: 'moveNpc',
-        characterId: 'dana',
-        to: { col: 11, row: 5 },
-        youFollow: true,
-      },
-      { kind: 'dialogue', speaker: 'dana', lines: [
-        'Dana: Middle door. He has been setting out chairs since lunch.',
-        'Dana: After you. Wipe your feet. He will notice.',
-      ] },
-      { kind: 'fade', to: 'out' },
-      { kind: 'teleport', areaId: 'marcus-house', col: 7, row: 9, with: ['dana'] },
-      { kind: 'fade', to: 'in' },
-      {
-        kind: 'dialogue',
-        lines: ['Inside, the front room is lit, and somebody is shuffling a deck. Badly.'],
-      },
-      {
-        kind: 'dialogue',
-        speaker: 'dana',
-        lines: ['Dana: Table is this way. Stay close. The carpet bites.'],
-      },
-      {
-        kind: 'moveNpc',
-        characterId: 'dana',
-        // Her chair at the table: the one her schedule keeps her in tonight.
-        to: { col: 9, row: 5 },
-        youFollow: true,
-      },
-      {
-        kind: 'dialogue',
-        speaker: 'marcus',
-        lines: [
-          'Marcus: There they are! Sit, sit. Mind the rug, it is load-bearing.',
-          'Marcus: I have snacks. Pretzels. The good pretzels, the ones I told Patel were for a funeral.',
-        ],
-      },
-      {
-        kind: 'dialogue',
-        speaker: 'dana',
-        lines: [
-          'Dana: Marcus, you told Mr. Patel the funeral was yours.',
-          'Marcus: It will be, if I lose again.',
-          'Dana: You lose every Friday.',
-          'Marcus: That is called consistency. It is a quality.',
-        ],
-      },
-      {
-        kind: 'dialogue',
-        speaker: 'marcus',
-        lines: [
-          'Marcus: House rules. Everything on the table, winner takes the lot. If anyone cries, they cry quietly.',
-          'Marcus: Deal them in. Dana, you are in the big chair.',
-          'Dana: I am always in the big chair.',
-        ],
-      },
-      { kind: 'startPokerNight' },
     ],
   },
   {
@@ -1032,6 +1070,126 @@ export const EVENTS: GameEvent[] = [
           'Marcus: It will be, if I lose again.',
           'Dana: You lose every Friday.',
           'Marcus: That is called consistency. It is a quality.',
+        ],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'marcus',
+        lines: [
+          'Marcus: House rules. Everything on the table, winner takes the lot. If anyone cries, they cry quietly.',
+          'Marcus: Deal them in. Dana, you are in the big chair.',
+          'Dana: I am always in the big chair.',
+        ],
+      },
+      { kind: 'startPokerNight' },
+    ],
+  },
+  {
+    id: 'dana-waits-at-the-stop',
+    about:
+      'The opening, when you told Dana you had a stop to make first: she is at the bus stop when you reach the ' +
+      'depot, says what she heard about Patel’s dollar, and rides the 14 with you to Marcus’s door.',
+    trigger: { kind: 'enterArea', areaId: 'depot', onLoad: true },
+    conditions: [
+      { kind: 'flag', flag: 'wonPokerNight', set: false },
+      { kind: 'eventDone', eventId: 'poker-night', done: false },
+      { kind: 'flag', flag: 'metDana' },
+      { kind: 'flag', flag: 'danaAtTheStop' },
+      { kind: 'period', period: ['morning', 'afternoon', 'evening'] },
+    ],
+    actions: [
+      { kind: 'wait', ms: 300 },
+      // Where her schedule has her while she waits (characters.ts, Dana's chapters).
+      { kind: 'moveNpc', characterId: 'dana', from: { col: 8, row: 2 }, to: 'player' },
+      {
+        kind: 'if',
+        when: [{ kind: 'eventDone', eventId: 'errand-patel-done' }],
+        then: [
+          {
+            kind: 'if',
+            when: [{ kind: 'flag', flag: 'errandPatelRaised' }],
+            then: [
+              {
+                kind: 'dialogue',
+                speaker: 'dana',
+                lines: [
+                  'Dana: Four sevens. You had him beat, and you raised a man holding nothing so he could call you.',
+                  'Dana: Marcus does that. Tonight, do not do what Marcus does.',
+                ],
+              },
+            ],
+            else: [
+              {
+                kind: 'dialogue',
+                speaker: 'dana',
+                lines: [
+                  'Dana: The busker is telling all of Seventh you called him with two sevens and a straight face.',
+                  'Dana: Patel came out from behind the counter to watch. He has not done that in nine years.',
+                ],
+              },
+            ],
+          },
+        ],
+        else: [
+          {
+            kind: 'if',
+            when: [{ kind: 'eventDone', eventId: 'errand-patel-ask' }],
+            then: [{ kind: 'dialogue', speaker: 'dana', lines: ['Dana: Patel’s dollar still in your pocket? It keeps. Marcus does not.'] }],
+            else: [{ kind: 'dialogue', speaker: 'dana', lines: ['Dana: The long way round. Good. Now you know where everything is.'] }],
+          },
+        ],
+      },
+      { kind: 'dialogue', speaker: 'dana', lines: ['Dana: Here it comes. Back row, on the left. You see who gets on before they see you.'] },
+      { kind: 'moveNpc', characterId: 'dana', to: { col: 7, row: 2 }, youFollow: true },
+      {
+        kind: 'ride',
+        areaId: 'eastgate',
+        col: 9,
+        row: 13,
+        with: ['dana'],
+        caption: 'Dana takes the window seat and watches the town go past like she is counting it.',
+        during: [
+          {
+            kind: 'dialogue',
+            speaker: 'dana',
+            lines: [
+              'Dana: Marcus thinks he is going to win tonight. He is not.',
+              'Dana: Everything on the table, winner takes the lot. His rule.',
+              'Dana: Win it, and you have a bankroll. Lose it, and he deals you in again. He always does.',
+            ],
+          },
+        ],
+      },
+      { kind: 'dialogue', speaker: 'dana', lines: ['Dana: Marcus is the middle door, up the street. Walk with me.'] },
+      { kind: 'moveNpc', characterId: 'dana', to: { col: 11, row: 5 }, youFollow: true },
+      { kind: 'dialogue', speaker: 'dana', lines: ['Dana: After you. Wipe your feet. He will notice.'] },
+      { kind: 'fade', to: 'out' },
+      { kind: 'teleport', areaId: 'marcus-house', col: 7, row: 9, with: ['dana'] },
+      { kind: 'fade', to: 'in' },
+      { kind: 'dialogue', lines: ['Inside, the front room is lit, and somebody is shuffling a deck. Badly.'] },
+      { kind: 'moveNpc', characterId: 'dana', to: { col: 9, row: 5 }, youFollow: true },
+      {
+        kind: 'if',
+        when: [{ kind: 'eventDone', eventId: 'errand-patel-done' }],
+        then: [
+          {
+            kind: 'dialogue',
+            speaker: 'marcus',
+            lines: [
+              'Marcus: There they are! Patel rang. Patel has never rung anybody. He says you took the busker.',
+              'Marcus: I am a little scared of you now. Sit, sit. Mind the rug, it is load-bearing.',
+            ],
+          },
+        ],
+        else: [
+          {
+            kind: 'dialogue',
+            speaker: 'marcus',
+            lines: [
+              'Marcus: There they are! Sit, sit. Mind the rug, it is load-bearing.',
+              'Marcus: I have snacks. Pretzels. The good pretzels, the ones I told Patel were for a funeral.',
+            ],
+          },
         ],
       },
       {
@@ -2829,6 +2987,43 @@ export const EVENTS: GameEvent[] = [
     ],
   },
   {
+    id: 'poker-night-lost',
+    about:
+      'Up from Marcus’s table the first night without the money: the first loss is a beat, not a silence. ' +
+      'Marcus says the chairs stay out, Dana says what she saw, and you know where to find him to go again.',
+    trigger: { kind: 'enterArea', areaId: 'marcus-house', onLoad: true },
+    conditions: [
+      { kind: 'flag', flag: 'wonPokerNight', set: false },
+      { kind: 'eventDone', eventId: 'poker-night' },
+      { kind: 'chapter', cityId: 'apartment' },
+      // The hours he is home, which are the hours his game is on.
+      { kind: 'period', period: ['afternoon', 'evening', 'night'] },
+    ],
+    actions: [
+      { kind: 'wait', ms: 400 },
+      { kind: 'dialogue', lines: ['Your last chip goes across the felt. Marcus counts it twice, like it might be a trick.'] },
+      { kind: 'moveNpc', characterId: 'marcus', from: { col: 5, row: 6 }, to: 'player' },
+      {
+        kind: 'dialogue',
+        speaker: 'marcus',
+        lines: [
+          'Marcus: Everything on the table. I hate that rule. I made that rule.',
+          'Marcus: The chairs stay out. Any night, from the afternoon. Talk to me and I deal you straight back in.',
+        ],
+      },
+      { kind: 'moveNpc', characterId: 'dana', from: { col: 9, row: 5 }, to: 'player' },
+      {
+        kind: 'dialogue',
+        speaker: 'dana',
+        lines: [
+          'Dana: You raised the river again. It worked on Tuesday because nobody on Tuesday was watching.',
+          'Dana: Bet the good hands, and let Marcus do the bluffing. He is bad at it.',
+        ],
+      },
+      { kind: 'dialogue', speaker: 'marcus', lines: ['Marcus: Do not tell them how I play. I am right here.'] },
+    ],
+  },
+  {
     id: 'marcus-deals-you-back-in',
     about:
       'The way back from broke: below the cheapest seat on the ladder, Marcus offers the kitchen table ' +
@@ -4321,6 +4516,11 @@ export const EVENTS: GameEvent[] = [
       // Back from the mail: at the kitchen table where you read it, not at the door.
       { kind: 'teleport', areaId: 'home', col: 3, row: 5 },
       { kind: 'fade', to: 'in' },
+      // After the film, or after skipping it: how to play, once, in one line.
+      {
+        kind: 'dialogue',
+        lines: ['Arrow keys or WASD to walk. Space to talk (or tap). Esc opens the menu, and Jobs there says what to do next.'],
+      },
     ],
   },
   {

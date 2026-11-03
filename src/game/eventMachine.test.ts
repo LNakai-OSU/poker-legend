@@ -307,8 +307,9 @@ describe('the night of the first game, played through', () => {
     expect(walk?.id).toBe('dana-walks-you-home')
     // Getting up is not walking in: only a beat that says `onLoad` is asked then.
     expect(walk?.trigger).toEqual({ kind: 'enterArea', areaId: 'marcus-house', onLoad: true })
+    // Up a loser is a beat of its own (`poker-night-lost`), never the walk home.
     const lost = at({ flags: { ...justWon.flags!, wonPokerNight: false } })
-    expect(eventFor(EVENTS, { kind: 'enterArea', areaId: 'marcus-house' }, lost)).toBeUndefined()
+    expect(eventFor(EVENTS, { kind: 'enterArea', areaId: 'marcus-house' }, lost)?.id).toBe('poker-night-lost')
     // A save that won before this was written, and has heard Marcus's send-off.
     const heard = at({ completedEventIds: [...justWon.completedEventIds!, 'marcus-sends-you-off'] })
     expect(eventFor(EVENTS, { kind: 'enterArea', areaId: 'marcus-house' }, heard)).toBeUndefined()
@@ -386,6 +387,47 @@ describe('the night of the first game, played through', () => {
     const walked = harness({ areaId: 'sc-street', cityId: 'silverCreek', unlockedCityIds: ['apartment', 'silverCreek'] }).state
     expect(eventFor(EVENTS, { kind: 'enterArea', areaId: 'sc-street' }, walked)?.id).toBe('arrive-silvercreek')
   })
+
+  /** Plays a beat answering each question in turn from `answers`, then the first answer. */
+  function playAnswering(h: ReturnType<typeof harness>, beat: GameEvent, answers: number[]): string[] {
+    const said: string[] = []
+    h.machine.run(beat)
+    for (let guard = 0; h.machine.isRunning && guard < 500; guard++) {
+      const stage = h.stage
+      if (stage.dialogue) {
+        said.push(...stage.dialogue.lines)
+        h.machine.advance()
+      } else if (stage.choice) h.machine.choose(answers.shift() ?? 0)
+      else if (stage.cues.length > 0) for (const cue of stage.cues) h.machine.cueDone(cue.id)
+      else h.tick(1000)
+    }
+    expect(h.machine.isRunning, `${beat.id} never finished`).toBe(false)
+    return said
+  }
+
+  it('lets you stop at Patel’s before the bus, with Dana waiting at the stop and remembering how it went', () => {
+    const h = harness({ areaId: 'basin' })
+    const first = eventFor(EVENTS, { kind: 'enterArea', areaId: 'basin' }, h.state)!
+    expect(first.id).toBe('dana-walks-you-to-the-bus')
+    const said = playAnswering(h, first, [0, 1]).join('\n')
+    expect(said).toMatch(/Patel his dollar/)
+    expect(h.log).not.toContain('poker night')
+    expect(h.state.flags.danaAtTheStop && h.state.flags.metDana).toBe(true)
+
+    // The busker took the dollar: Dana says so at the stop, then the 14 and the table as ever.
+    const raised = harness({
+      ...h.state,
+      areaId: 'depot',
+      completedEventIds: [...h.state.completedEventIds, 'dana-walks-you-to-the-bus', 'errand-patel-ask', 'errand-patel-leg1', 'errand-patel-done'],
+      flags: { ...h.state.flags, errandPatelRaised: true },
+    })
+    const stop = eventFor(EVENTS, { kind: 'enterArea', areaId: 'depot' }, raised.state)!
+    expect(stop.id).toBe('dana-waits-at-the-stop')
+    const atTheStop = playAnswering(raised, stop, []).join('\n')
+    expect(atTheStop).toMatch(/Four sevens/)
+    expect(atTheStop).toMatch(/Patel rang/)
+    expect(raised.log).toContain('poker night')
+  })
 })
 
 describe('a reel', () => {
@@ -405,6 +447,39 @@ describe('a reel', () => {
     h.machine.reelDone()
     expect(h.stage.reel).toBeUndefined()
     expect(h.stage.dialogue?.lines[0]).toBe('Marcus: After.')
+  })
+
+  it('plays the next part of the film when one ends by itself, and skips all of it in one press', () => {
+    const film: GameEvent['actions'] = [
+      { kind: 'reel', panels: [{ scene: 'bathroom', lines: [] }] },
+      { kind: 'cinematic', id: 'bad-beat' },
+      { kind: 'wait', ms: 500 },
+      { kind: 'reel', panels: [{ scene: 'night', lines: [] }] },
+      { kind: 'dialogue', lines: ['After.'] },
+    ]
+    const watched = harness()
+    watched.machine.run(beat(film))
+    watched.machine.reelDone()
+    expect(watched.stage.cinematic?.scene).toBe('bad-beat')
+
+    const skipped = harness()
+    skipped.machine.run(beat(film))
+    skipped.machine.reelDone(true)
+    expect(skipped.stage.reel).toBeUndefined()
+    expect(skipped.stage.cinematic).toBeUndefined()
+    expect(skipped.stage.dialogue?.lines[0]).toBe('After.')
+  })
+
+  it('lets the opening be skipped in one press, lands you at home, and says how to play', () => {
+    const h = harness({ areaId: 'home' })
+    h.machine.run(EVENTS.find((e) => e.id === 'prologue')!)
+    for (let guard = 0; !h.stage.reel && guard < 20; guard++) h.tick(1000)
+    h.machine.reelDone(true)
+    for (let guard = 0; !h.stage.dialogue && guard < 20; guard++) h.tick(1000)
+    expect(h.stage.reel).toBeUndefined()
+    expect(h.stage.cinematic).toBeUndefined()
+    expect(h.state.areaId).toBe('home')
+    expect(h.stage.dialogue?.lines.join(' ')).toMatch(/walk.*Space to talk.*menu.*Jobs/)
   })
 })
 

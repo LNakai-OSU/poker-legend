@@ -36,6 +36,9 @@ const STORY_SEEN = [
   // The opening: Dana walks you to the 14.
   'dana-walks-you-to-the-bus',
   'dana-at-the-depot',
+  'dana-waits-at-the-stop',
+  // Up from his table without the money, the first time.
+  'poker-night-lost',
   // The night of the first game: Dana walks you home, Marcus rides out with you.
   'dana-walks-you-home',
   'marcus-rides-out-with-you',

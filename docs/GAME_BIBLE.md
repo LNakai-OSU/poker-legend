@@ -302,6 +302,15 @@ the branch sat you down at a table.
   phone. Keys: an answer's number picks it; ↑ ↓ move the pointer and Enter or
   Space picks.
 
+**What next.** Before a town has a casino goal for the Jobs page to lead with,
+`world/nextSteps.ts` does: a line and the conditions it holds under ("Go outside.
+Someone is looking for you." from the first tick of a new game, through Dana at
+the stop and a lost first night, to Marcus at your door). No two may hold at once.
+
+**Films.** A `reel` or `cinematic` can be skipped (Skip, or Esc), and skipping one
+skips the whole film: the reels, scenes and pauses straight after it. What follows
+the film still happens.
+
 **People moving.** `moveNpc` walks somebody to a tile — or `to: 'player'`, the
 free tile beside you nearest them — along the way a person would go, at
 `pace: 'walk'` or `'run'`, and the beat waits until they are there. `from` brings
@@ -468,6 +477,9 @@ to do next.
   tell perk at Lou's table and a line from Lou); sell him and Lou says so instead.
   Lou names Dennis's chip, and Ray says which message reached his sister.
 - **First timers.** Ray (Silver Creek's first scene) mentions Loretta and Menu → Jobs.
+- **Before the bus.** Basin has one job, Mr Patel's dollar (`errand-patel`): offered by
+  Dana on the morning of the first game ("Patel's first"), a liar's poker read against
+  the busker, $10-$40. Basin has no casino, so it is outside the per-town counts.
 - **Two-flag jobs.** Wick (price, then play) and Ilse (name, then symptom) set two flags,
   so a half-right answer has its own ending and pay.
 - **Seeing the maps.** `node scripts/shoot.mjs --areas sc-outskirts,rb-outskirts,

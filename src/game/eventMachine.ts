@@ -91,6 +91,13 @@ export const FORCED_RIDE_MS = 3600
 /** Somebody who has not arrived after this long is stood where they were going, so a beat can never hang on a walk. */
 export const CUE_TIMEOUT_MS = 20000
 
+/**
+ * What a film is made of. Skipping one skips the whole film: the reels, scenes
+ * and pauses that run on straight after it (the opening is three reels and a
+ * scene, and one press should get you out of all of them).
+ */
+const FILM = new Set<string>(['reel', 'cinematic', 'wait'])
+
 /** Everything the machine cannot do by itself. */
 export interface MachineHost {
   getState(): GameState
@@ -184,18 +191,29 @@ export class EventMachine {
     this.pump()
   }
 
-  /** The scripted scene is over, or the player skipped it. */
-  cinematicDone(): void {
+  /** The scripted scene is over, or (`skipped`) the player skipped the film it is part of. */
+  cinematicDone(skipped = false): void {
     if (!this.running || !this.stage.cinematic) return
     this.setStage({ ...this.stage, cinematic: undefined })
+    if (skipped) this.skipFilm()
     this.pump()
   }
 
-  /** The film is over, or the player skipped it. */
-  reelDone(): void {
+  /** The film is over, or (`skipped`) the player skipped it, and the rest of the film with it. */
+  reelDone(skipped = false): void {
     if (!this.running || !this.stage.reel) return
     this.setStage({ ...this.stage, reel: undefined })
+    if (skipped) this.skipFilm()
     this.pump()
+  }
+
+  /**
+   * Drops the rest of the film: every reel, scene and pause up to the next thing
+   * that is not one. Whatever comes after the film — a line, a flag, a teleport
+   * home — still happens.
+   */
+  private skipFilm() {
+    while (this.queue.length > 0 && FILM.has(this.queue[0].kind)) this.queue.shift()
   }
 
   /** The player picked an answer, by its place in the list shown. False if it is closed. */

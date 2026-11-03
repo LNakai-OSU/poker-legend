@@ -21,7 +21,8 @@ export function ReelScene({
 }: {
   title?: string
   panels: ReelPanel[]
-  onDone: () => void
+  /** `skipped` when the player skipped it: the rest of the film goes too. */
+  onDone: (skipped?: boolean) => void
 }) {
   const [at, setAt] = useState({ panel: 0, line: 0 })
   // The stills are scaled to whole device pixels, as everything else in the opening is.
@@ -31,10 +32,10 @@ export function ReelScene({
   const panel = panels[at.panel]
   const line = panel?.lines[at.line]
 
-  const done = () => {
+  const done = (skipped = false) => {
     if (finished.current) return
     finished.current = true
-    onDone()
+    onDone(skipped)
   }
 
   // An empty panel has nothing to turn; move past it rather than stall on it.
@@ -58,7 +59,7 @@ export function ReelScene({
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
       e.preventDefault()
-      done()
+      done(true)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -124,7 +125,7 @@ export function ReelScene({
       )}
       <button
         data-testid="reel-skip"
-        onClick={done}
+        onClick={() => done(true)}
         style={{
           position: 'absolute',
           top: 12,

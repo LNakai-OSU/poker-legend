@@ -303,6 +303,26 @@ export const CHARACTERS: Record<string, CharacterDef> = {
           ],
         },
         {
+          // The same day, when you told Dana you had a stop to make first: he is
+          // still at home getting the room ready, not out on Basin Street.
+          when: [
+            { kind: 'flag', flag: 'danaAtTheStop' },
+            { kind: 'flag', flag: 'wonPokerNight', set: false },
+            { kind: 'eventDone', eventId: 'poker-night', done: false },
+          ],
+          schedule: [
+            { period: 'afternoon', areaId: 'marcus-house', col: 5, row: 6, lines: [
+              'Marcus: You made it! Dana said you had business. You do not have business.',
+            ] },
+            { period: 'evening', areaId: 'marcus-house', col: 5, row: 6, lines: [
+              'Marcus: Door is open. Chairs are out.',
+            ] },
+            { period: 'night', areaId: 'marcus-house', col: 5, row: 6, lines: [
+              'Marcus: Still up. Cannot sleep before a session. You know how it is.',
+            ] },
+          ],
+        },
+        {
           // A week off, at the midpoint. Home again once you have gone on.
           when: [{ kind: 'chapter', cityId: 'palmCay' }, { kind: 'flag', flag: 'wonPokerNight' }],
           lines: ['Marcus: Four drinks with umbrellas in. I regret nothing.'],
@@ -391,6 +411,22 @@ export const CHARACTERS: Record<string, CharacterDef> = {
             ] },
             { period: 'night', areaId: 'marcus-house', col: 9, row: 5, lines: [
               'Dana: He is going to lose. He always loses.',
+            ] },
+          ],
+        },
+        {
+          // You told her you had a stop to make first: she waits at the bus stop
+          // (`dana-waits-at-the-stop`) till the game, and at night has gone on ahead.
+          when: [
+            { kind: 'flag', flag: 'danaAtTheStop' },
+            { kind: 'eventDone', eventId: 'poker-night', done: false },
+          ],
+          schedule: [
+            { period: 'morning', areaId: 'depot', col: 8, row: 2, lines: ['Dana: The 14 waits for nobody. It waits for me.'] },
+            { period: 'afternoon', areaId: 'depot', col: 8, row: 2, lines: ['Dana: The 14 waits for nobody. It waits for me.'] },
+            { period: 'evening', areaId: 'depot', col: 8, row: 2, lines: ['Dana: The 14 waits for nobody. It waits for me.'] },
+            { period: 'night', areaId: 'marcus-house', col: 9, row: 5, lines: [
+              'Dana: You missed the last bus. I did not. Sit down.',
             ] },
           ],
         },
