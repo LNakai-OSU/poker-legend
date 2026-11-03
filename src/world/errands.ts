@@ -1493,7 +1493,7 @@ export const ERRANDS: Errand[] = [
         id: 'nm-arch',
         name: 'The Arch',
         areaId: 'nm-outskirts',
-        col: 8,
+        col: 9,
         row: 6,
         thing: true,
         art: 'none',

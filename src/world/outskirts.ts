@@ -206,9 +206,9 @@ const SPECS: OutskirtsSpec[] = [
       // The chapel, its fan palm, and the arch you get married under.
       { stampId: 'cottage-eastgate', col: 3, row: 3 },
       { stampId: 'palm-planter', col: 2, row: 5 },
-      { stampId: 'chapel-arch', col: 7, row: 5 },
+      { stampId: 'chapel-arch', col: 8, row: 5 },
       { stampId: 'noticeboard', col: 12, row: 5 },
-      { stampId: 'saguaro', col: 11, row: 6 },
+      { stampId: 'saguaro', col: 13, row: 6 },
       // Dee's sign, the one billboard still standing, and the car somebody parked under it.
       { stampId: 'billboard-mesa', col: 19, row: 3 },
       { stampId: 'parked-car-white-e', col: 19, row: 5 },
