@@ -19,7 +19,7 @@ import {
   findArea,
   findItem,
 } from './content'
-import { CHAR_FOR_TILE, DOOR, FURNITURE, PROP, ROAD, WALL, isWalkable, parseMap } from '../overworld/tiles'
+import { CHAR_FOR_TILE, CROSSWALK, DOOR, FURNITURE, PROP, ROAD, WALL, isWalkable, parseMap } from '../overworld/tiles'
 import { KEEP, STAMP_BY_ID, stampSize } from './stamps'
 import { CHARACTERS, allSchedules, charactersIn, periodsAway, scheduleConflicts, seatsOf } from './characters'
 import { TIME_PERIODS } from '../game/time'
@@ -508,6 +508,60 @@ describe('objects on the map', () => {
           expect(covered.has(`${c},${r}`), `${area.id}: prop at (${c},${r}) is not any object`).toBe(true)
         }),
       )
+    }
+  })
+
+  it('walks everybody out walking along the pavement, clear of the road, the doors and everyone else', () => {
+    // A walker's beat is walked a tile at a time with nobody looking at the map:
+    // a leg over the road would have them stroll through the traffic, one through
+    // a doorway would walk them out of the world, and one through somebody's
+    // spot would have them stand there waiting for good.
+    let walkers = 0
+    for (const area of areas) {
+      const arrivals = Object.values(AREAS)
+        .flatMap(({ area: from }) => from.exits.filter((e) => e.toAreaId === area.id))
+        .map((e) => `${e.toCol},${e.toRow}`)
+      for (const poi of area.pois) {
+        if (!poi.patrol) continue
+        walkers++
+        const taken = new Set([
+          ...area.pois.filter((p) => p !== poi).map((p) => `${p.col},${p.row}`),
+          ...area.exits.map((e) => `${e.col},${e.row}`),
+          ...arrivals,
+          `${area.playerStart.col},${area.playerStart.row}`,
+          ...Object.values(CHARACTERS).flatMap((c) =>
+            allSchedules(c).flat().filter((e) => e.areaId === area.id).map((e) => `${e.col},${e.row}`),
+          ),
+        ])
+        expect(poi.patrol.length, `${poi.id} has nowhere to walk`).toBeGreaterThan(0)
+        expect(poi.hours?.length ?? 1, `${poi.id} is never out`).toBeGreaterThan(0)
+        let at = { col: poi.col, row: poi.row }
+        for (const turn of poi.patrol) {
+          expect(turn.col === at.col || turn.row === at.row, `${poi.id}: (${at.col},${at.row}) to (${turn.col},${turn.row}) is not a straight leg`).toBe(true)
+          const steps = Math.abs(turn.col - at.col) + Math.abs(turn.row - at.row)
+          for (let i = 0; i <= steps; i++) {
+            const col = at.col + Math.sign(turn.col - at.col) * i
+            const row = at.row + Math.sign(turn.row - at.row) * i
+            const tile = area.map[row]?.[col]
+            expect(
+              isWalkable(area.map, col, row) && tile !== ROAD && tile !== CROSSWALK && tile !== DOOR,
+              `${poi.id} walks over (${col},${row}) in ${area.id}`,
+            ).toBe(true)
+            expect(taken.has(`${col},${row}`), `${poi.id} walks through somebody's spot at (${col},${row}) in ${area.id}`).toBe(false)
+          }
+          at = turn
+        }
+      }
+    }
+    expect(walkers).toBeGreaterThan(0)
+  })
+
+  it('puts more people out walking in the afternoon than at night', () => {
+    for (const area of areas) {
+      const out = (period: string) => area.pois.filter((p) => p.patrol && (!p.hours || p.hours.includes(period as never))).length
+      if (!area.pois.some((p) => p.patrol)) continue
+      expect(out('afternoon'), `${area.id}: nobody walking in the afternoon`).toBeGreaterThanOrEqual(3)
+      expect(out('afternoon'), `${area.id}: as busy at night as at noon`).toBeGreaterThan(out('night'))
     }
   })
 

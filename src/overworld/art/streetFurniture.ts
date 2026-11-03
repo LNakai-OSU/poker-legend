@@ -457,6 +457,59 @@ const mooring: StampArt = {
   },
 }
 
+/**
+ * A roadside shrine: a little stone niche on a post with a peaked cap, a saint
+ * in blue inside, a candle burning at their feet and flowers left at the foot
+ * of the post. The candle is lit, so out of town at night it is a small warm
+ * mark to walk towards.
+ */
+const shrine: StampArt = {
+  bleed: { top: 14, right: 2 },
+  standsUp: 8,
+  lights: [{ x: 8, y: 2, reach: 22, color: '#ffc46a', strength: 0.7 }],
+  draw: (px) => {
+    const stone = '#b4ab9a'
+    const stoneHi = '#d8d0c0'
+    const stoneLo = '#7e7668'
+    const line = '#4a443c'
+    footShadow(px, 9, 13, 12)
+    // The post.
+    px(5, 3, 6, 12, line)
+    px(6, 3, 4, 11, stone)
+    px(6, 3, 1, 11, stoneHi)
+    px(9, 4, 1, 10, stoneLo)
+    px(4, 13, 8, 2, line)
+    px(5, 13, 6, 1, stoneHi)
+    // The niche, and its cap.
+    px(2, -9, 12, 13, line)
+    px(3, -8, 10, 11, stone)
+    px(3, -8, 1, 11, stoneHi)
+    px(12, -8, 1, 11, stoneLo)
+    px(3, -11, 10, 2, line)
+    px(5, -13, 6, 2, line)
+    px(7, -14, 2, 1, line)
+    px(4, -11, 8, 1, '#a0523e')
+    px(6, -13, 4, 1, '#c0664c')
+    px(7, -16, 2, 2, '#e0d8c0')
+    // Inside: dark, a figure in blue and white, and the candle.
+    px(5, -6, 6, 8, '#2a2230')
+    px(7, -5, 2, 2, '#f0dcc0')
+    px(6, -3, 4, 4, '#4a6ac8')
+    px(7, -3, 1, 4, '#8aa8f0')
+    px(6, -6, 4, 1, '#f2d26a')
+    px(4, 2, 8, 1, stoneHi)
+    glow('lamp', () => {
+      px(8, 0, 1, 2, '#f8f0e0')
+      px(8, -1, 1, 1, '#ffd27a')
+    })
+    // What people left at the foot of it.
+    for (const [x, y, c] of [[3, 12, '#e8506a'], [4, 11, '#f2c84a'], [12, 12, '#f08ad0'], [11, 11, '#ffffff'], [13, 13, '#e8506a']] as const) {
+      px(x, y, 1, 1, c)
+      px(x, y + 1, 1, 1, '#3e7a3a')
+    }
+  },
+}
+
 /** A noticeboard on two legs, flyers pinned three deep. */
 const noticeboard: StampArt = {
   bleed: { top: 8, right: 2 },
@@ -1305,6 +1358,7 @@ export const STREET_FURNITURE: Record<string, StampArt> = {
   bollard,
   'bollard-mooring': mooring,
   noticeboard,
+  shrine,
   'phone-box': phoneBox,
   'flowerbed-brick-2': bed({ ...BRICK_BED, plant: 'flowers', colors: ['#e8829e', '#f2c94c', '#f2ead2', '#9ab8f0'] }),
   'flowerbed-brick-3': bed({ ...BRICK_BED, plant: 'flowers', colors: ['#f2c94c', '#e8603e', '#f2ead2', '#e8829e'] }),

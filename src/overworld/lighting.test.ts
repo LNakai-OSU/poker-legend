@@ -123,5 +123,21 @@ describe('a town of its own', () => {
 
   it('does not change a town in the evening', () => {
     expect(townLight('neon', EVENING)).toBe(EVENING)
+    expect(townLight('marble', EVENING, true)).toBe(EVENING)
+  })
+
+  it('lets the open country be lighter at night than the town it is outside', () => {
+    // The outskirts have a lamp or two at most: at the town's own night the
+    // paths and the way back to the road were lost in the blue.
+    const lum = (hex: string) => {
+      const n = parseInt(hex.slice(1), 16)
+      return ((n >> 16) & 0xff) * 0.299 + ((n >> 8) & 0xff) * 0.587 + (n & 0xff) * 0.114
+    }
+    for (const theme of ['marble', 'neon', 'island']) {
+      const town = townLight(theme, NIGHT)!
+      const open = townLight(theme, NIGHT, true)!
+      expect(lum(open.ambient)).toBeGreaterThan(lum(town.ambient) + 20)
+      expect(lum(open.ambient)).toBeLessThan(150)
+    }
   })
 })

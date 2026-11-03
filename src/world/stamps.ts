@@ -555,6 +555,7 @@ const STREET_FURNITURE: StampDef[] = [
   streetThing('bollard', 'Bollard', 'Steel, with a reflective band.', ['o']),
   streetThing('bollard-mooring', 'Mooring bollard', 'Cast iron on the quay, rope coiled at its foot.', ['o']),
   streetThing('noticeboard', 'Noticeboard', 'Flyers pinned three deep.', ['o']),
+  streetThing('shrine', 'Roadside shrine', 'A stone niche on a post, a saint inside, a candle lit and flowers left at its foot.', ['o']),
   streetThing('phone-box', 'Telephone box', 'Red, glazed, a light in its roof.', ['?', 'o']),
   streetThing('flowerbed-brick-2', 'Brick flower bed', 'A raised bed in a brick border.', ['oo']),
   streetThing('flowerbed-brick-3', 'Long brick flower bed', 'A raised bed in a brick border.', ['ooo']),

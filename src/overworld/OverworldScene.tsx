@@ -159,6 +159,8 @@ interface OverworldSceneProps {
   areaName?: string
   /** The town's tile palette. */
   theme?: string
+  /** Out under open sky, where the night is lighter (see `AreaDef.moonlit`). */
+  moonlit?: boolean
   /**
    * Which sides of this map carry on into another one. Walking off such a side is
    * how streets join: no doorway, no tile to stand on, just the next map.
@@ -207,6 +209,7 @@ export function OverworldScene({
   onExit,
   areaName = '',
   theme = 'default',
+  moonlit = false,
   openEdges,
   openChairs,
   onSit,
@@ -269,7 +272,7 @@ export function OverworldScene({
   // The light is set from the period after mount, and again whenever an event
   // moves the clock on while you are standing in the street.
   const applyLightRef = useRef<(light: PeriodLight | null) => void>(() => {})
-  const light = useMemo(() => (outdoors ? townLight(theme, PERIOD_LIGHT[period]) : null), [outdoors, theme, period])
+  const light = useMemo(() => (outdoors ? townLight(theme, PERIOD_LIGHT[period], moonlit) : null), [outdoors, theme, period, moonlit])
   const lightRef = useRef(light)
   lightRef.current = light
   const isTouch = useIsTouchDevice()
@@ -541,7 +544,10 @@ export function OverworldScene({
         for (const cfg of list) {
           const npc = npcs.find((n) => n.config.id === cfg.id)
           if (!npc) addNpc(cfg)
-          else if (!npc.walking && (npc.config.col !== cfg.col || npc.config.row !== cfg.row)) npc.place(cfg.col, cfg.row)
+          // Somebody out walking their beat is wherever the walk has got them to.
+          else if (!npc.walking && !npc.config.patrol && (npc.config.col !== cfg.col || npc.config.row !== cfg.row)) {
+            npc.place(cfg.col, cfg.row)
+          }
         }
       }
       syncPeopleRef.current = syncPeople
@@ -783,12 +789,68 @@ export function OverworldScene({
       // the text box closes.
       let wasTalkingTo: string | null = null
 
+      // People out walking (`PoiDef.patrol`): up and down a short beat a tile at
+      // a time, stopping a moment at each end. A step is only taken onto a tile
+      // nobody is on or stepping onto, so a walker waits for you rather than
+      // walking through you, and held up long enough turns back. Whoever you are
+      // talking to stands still and looks at you until you are done.
+      const strolls = new Map<Npc, { route: Tile[]; leg: number; dir: 1 | -1; rest: number; held: number }>()
+      const STROLL_SPEED = 52
+      const strollFree = (npc: Npc, col: number, row: number) => {
+        if (npcAt(col, row, npc)) return false
+        if (hunter && hunter.col === col && hunter.row === row) return false
+        if (player.col === col && player.row === row) return false
+        if (!player.moving) return true
+        const [dc, dr] = DELTAS[player.facing]
+        return !(player.col + dc === col && player.row + dr === row)
+      }
+      const stroll = (npc: Npc) => {
+        const s = strolls.get(npc)
+        if (!s || talkingRef.current === npc.config.id || pausedRef.current || leaving) return
+        const goal = s.route[s.leg]
+        const col = npc.config.col
+        const row = npc.config.row
+        if (col === goal.col && row === goal.row) {
+          if (s.leg + s.dir < 0 || s.leg + s.dir >= s.route.length) s.dir = s.dir === 1 ? -1 : 1
+          s.leg += s.dir
+          s.rest = 900 + Math.random() * 2200
+          return
+        }
+        const next =
+          goal.col !== col ? { col: col + Math.sign(goal.col - col), row } : { col, row: row + Math.sign(goal.row - row) }
+        if (!strollFree(npc, next.col, next.row)) {
+          s.rest = 450
+          if (++s.held >= 5) {
+            // Somebody is standing in the way: go back the way they came.
+            s.held = 0
+            s.dir = s.dir === 1 ? -1 : 1
+            s.leg = Math.min(s.route.length - 1, Math.max(0, s.leg + s.dir))
+          }
+          return
+        }
+        s.held = 0
+        npc.walk([next], STROLL_SPEED, () => stroll(npc))
+      }
+      const strollAll = (deltaMs: number) => {
+        for (const npc of npcs) {
+          if (!npc.config.patrol?.length || npc.walking) continue
+          let s = strolls.get(npc)
+          if (!s) {
+            s = { route: [{ col: npc.config.col, row: npc.config.row }, ...npc.config.patrol], leg: 1, dir: 1, rest: Math.random() * 2400, held: 0 }
+            strolls.set(npc, s)
+          }
+          if ((s.rest -= deltaMs) > 0) continue
+          stroll(npc)
+        }
+      }
+
       instance.ticker.add((ticker) => {
         elapsed += ticker.deltaMS
         // Idle life: a blink, a glance up the street. Whole frames, never a
         // sub-pixel drift — the art is on a grid and stays on it.
         for (const npc of npcs) npc.update(ticker.deltaMS)
         for (const sitter of sitters) sitter.update(ticker.deltaMS)
+        strollAll(ticker.deltaMS)
         if (wasTalkingTo !== talkingRef.current) {
           npcs.find((n) => n.config.id === wasTalkingTo)?.release()
           wasTalkingTo = talkingRef.current

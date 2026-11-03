@@ -132,7 +132,8 @@ export function CityScene({
   const behind = (col: number, row: number) => !isWalkable(area.map, col, row)
 
   const interactables: Interactable[] = [
-    ...area.pois.map((poi) => {
+    // Somebody out walking is only out at their hours.
+    ...area.pois.filter((poi) => !poi.hours || poi.hours.includes(state.period)).map((poi) => {
       const art = artForPoi(poi)
       const role = figures.get(poi.id)?.role
       // A beat written for this fixture gets first refusal, as it does for a
@@ -152,6 +153,7 @@ export function CityScene({
         // People at a post keep their eyes on it; everybody else looks about.
         restless: art === 'person' && !behind(poi.col, poi.row) && (role === 'local' || role === 'tourist' || role === 'kid'),
         labelled: poi.labelled,
+        patrol: poi.patrol,
         verb: verbForPoi(poi),
         lines: linesFor(state, poi),
         onFinish:
@@ -233,6 +235,7 @@ export function CityScene({
       onCaught={onCaught}
       areaName={area.name}
       theme={city.theme}
+      moonlit={area.moonlit}
       openChairs={chairs}
       onSit={(tableId) => {
         const dealer = area.pois.find((p) => p.action.kind === 'table' && p.action.tableId === tableId)

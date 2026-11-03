@@ -169,11 +169,27 @@ const TOWN_NIGHT: Record<string, Partial<PeriodLight>> = {
   neon: { ambient: '#4c4284' },
 }
 
-/** The hour's light as it falls in a particular town. */
-export function townLight(themeId: string, light: PeriodLight | null): PeriodLight | null {
+/** What the open country's night is lifted towards: moonlight, pale and a little blue. */
+const MOONLIGHT = '#a8b4e8'
+/** How far towards it: enough that a path and an edge read, not so far that it is not night. */
+const MOON_LIFT = 0.32
+
+function mixHex(a: string, b: string, t: number): string {
+  const [ar, ag, ab] = channels(a)
+  const [br, bg, bb] = channels(b)
+  const c = (x: number, y: number) => Math.round((x + (y - x) * t) * 255).toString(16).padStart(2, '0')
+  return `#${c(ar, br)}${c(ag, bg)}${c(ab, bb)}`
+}
+
+/**
+ * The hour's light as it falls in a particular town — and, `moonlit`, out in
+ * the open beyond it, where the night is lighter (see `AreaDef.moonlit`).
+ */
+export function townLight(themeId: string, light: PeriodLight | null, moonlit = false): PeriodLight | null {
   if (!light || light.lamps < 1) return light
   const own = TOWN_NIGHT[themeId]
-  return own ? { ...light, ...own } : light
+  const night = own ? { ...light, ...own } : light
+  return moonlit ? { ...night, ambient: mixHex(night.ambient, MOONLIGHT, MOON_LIFT) } : night
 }
 
 /** The light map as a sprite to multiply the street by, and a way to ask what light falls where. */

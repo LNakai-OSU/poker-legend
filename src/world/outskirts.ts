@@ -164,7 +164,9 @@ const SPECS: OutskirtsSpec[] = [
     id: 'pc-outskirts',
     base: ':',
     gap: [22, 24],
-    paints: [['~', 2, 8, 17, 12], ['B', 9, 8, 9, 10]],
+    // The lagoon and its jetty, a boardwalk down off the road, and a tide pool
+    // left in the sand.
+    paints: [['~', 2, 8, 17, 12], ['B', 9, 8, 9, 10], ['B', 23, 1, 23, 4], ['~', 24, 12, 25, 12]],
     stamps: [
       { stampId: 'cottage-eastgate', col: 3, row: 2 },
       { stampId: 'flowerbed-coral-2', col: 9, row: 2 },
@@ -194,6 +196,13 @@ const SPECS: OutskirtsSpec[] = [
       { stampId: 'crab-traps', col: 18, row: 12 },
       { stampId: 'net-heap', col: 19, row: 12 },
       { stampId: 'crates', col: 22, row: 12 },
+      // Brenda's palm at the water, the little shrine by it, a rock off the point.
+      { stampId: 'palm-tall', col: 6, row: 6 },
+      { stampId: 'shrine', col: 3, row: 7 },
+      { stampId: 'rocks-red', col: 26, row: 8 },
+      // Reeds where the lagoon meets the sand.
+      { stampId: 'reeds', col: 18, row: 8 },
+      { stampId: 'reeds', col: 1, row: 12 },
     ],
   },
   // The Boneyard: where the Strip's dead signs come to lie down, and a chapel that never closes.
@@ -201,14 +210,16 @@ const SPECS: OutskirtsSpec[] = [
     id: 'nm-outskirts',
     base: ':',
     gap: [14, 16],
-    paints: [['_', 14, 1, 16, 4]],
+    // The track down off the road, and the path worn across the yard from the
+    // chapel to the bench under the lamp.
+    paints: [['_', 14, 1, 16, 4], ['_', 15, 5, 15, 7], ['_', 4, 7, 24, 7], ['_', 10, 8, 10, 8]],
     stamps: [
       // The chapel, its fan palm, and the arch you get married under.
       { stampId: 'cottage-eastgate', col: 3, row: 3 },
       { stampId: 'palm-planter', col: 2, row: 5 },
       { stampId: 'chapel-arch', col: 8, row: 5 },
       { stampId: 'noticeboard', col: 12, row: 5 },
-      { stampId: 'saguaro', col: 13, row: 6 },
+      { stampId: 'saguaro', col: 11, row: 3 },
       // Dee's sign, the one billboard still standing, and the car somebody parked under it.
       { stampId: 'billboard-mesa', col: 19, row: 3 },
       { stampId: 'parked-car-white-e', col: 19, row: 5 },
@@ -240,6 +251,13 @@ const SPECS: OutskirtsSpec[] = [
       { stampId: 'tumbleweed', col: 19, row: 12 },
       { stampId: 'barrel-cactus', col: 26, row: 12 },
       { stampId: 'rocks-red', col: 26, row: 1 },
+      // Lights either side of the track, so the way back to the road shows at night.
+      { stampId: 'lamp-chrome', col: 13, row: 1 },
+      { stampId: 'lamp-chrome', col: 17, row: 1 },
+      // A candle for somebody by the chapel; more red rock.
+      { stampId: 'shrine', col: 7, row: 4 },
+      { stampId: 'rocks-red-2', col: 2, row: 9 },
+      { stampId: 'rocks-red', col: 8, row: 2 },
     ],
   },
   // The Belvedere: marble terraces over the water, cypresses, a bench nobody walks to.
@@ -247,7 +265,8 @@ const SPECS: OutskirtsSpec[] = [
     id: 'pl-outskirts',
     base: '+',
     gap: [10, 12],
-    paints: [['"', 1, 1, 8, 5], ['~', 16, 7, 26, 12]],
+    // The garden, the water, a lawn on the lower terrace and a bed of flowers by it.
+    paints: [['"', 1, 1, 8, 5], ['~', 16, 7, 26, 12], ['"', 1, 8, 3, 9], ['*', 5, 10, 6, 10]],
     stamps: [
       // Cypresses either side of the stair down from the road.
       { stampId: 'cypress-pot', col: 9, row: 1 },
@@ -278,6 +297,11 @@ const SPECS: OutskirtsSpec[] = [
       { stampId: 'bench-stone', col: 4, row: 12 },
       { stampId: 'planter-marble-2', col: 10, row: 12 },
       { stampId: 'flowerbed-granite-2', col: 12, row: 12 },
+      // Lamps at the head of the stair, so the way back up shows after dark.
+      { stampId: 'lamp-gilded', col: 8, row: 1 },
+      { stampId: 'lamp-gilded', col: 14, row: 1 },
+      // A shrine at the end of the lawn, a candle always lit in it.
+      { stampId: 'shrine', col: 1, row: 7 },
     ],
   },
 ]

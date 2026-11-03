@@ -4,6 +4,7 @@ import type { NpcRole, PersonLook } from '../overworld/characterArt'
 import type { Archetype, SkillTier } from '../engine/types'
 import type { CityId } from '../game/state'
 import type { PlacedStamp } from './stamps'
+import type { TimePeriod } from '../game/time'
 
 /**
  * Who a table seats.
@@ -219,6 +220,17 @@ export interface PoiDef {
    */
   requiresFlag?: string
   lockedLines?: string[]
+  /**
+   * Somebody out walking: the tiles they turn at on a short beat, in order,
+   * after the one they start on (`col`, `row`). They walk it there and back a
+   * tile at a time, pausing at each end, and stop when spoken to. Each leg runs
+   * straight along a row or a column, over pavement — never the road, a
+   * doorway, or where somebody else stands (the content tests check). A street
+   * with three or four of them reads as a street people use.
+   */
+  patrol?: Array<{ col: number; row: number }>
+  /** The hours they are about, when not all of them: a street is busiest in the afternoon, quietest at night. */
+  hours?: TimePeriod[]
 }
 
 export type VenueKind = 'restaurant' | 'club'
@@ -322,6 +334,12 @@ export interface AreaDef {
    * of its chairs are taken. Left out, tables fill as they happen to.
    */
   crowd?: number
+  /**
+   * Under open sky, out of town: no street lamps, but nothing between you and the
+   * moon either, so its night is a lighter blue than a street's and a path and
+   * the way back to the road still read without a lamp on them.
+   */
+  moonlit?: boolean
 }
 
 export interface CityDef {

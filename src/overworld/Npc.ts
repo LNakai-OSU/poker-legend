@@ -43,6 +43,8 @@ export interface NpcConfig {
   facing?: Facing
   /** Glances about now and then. People at a post — dealers, clerks — keep still. */
   restless?: boolean
+  /** Out walking: the tiles they turn at, after the one they start on (see `PoiDef.patrol`). */
+  patrol?: Array<{ col: number; row: number }>
 }
 
 /** Canvas pixels per art unit. */
