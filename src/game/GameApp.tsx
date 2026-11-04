@@ -5,7 +5,8 @@ import { BusTransition } from './BusTransition'
 import { rideRoad } from './busRide'
 import { TableScene, type SessionResult } from './TableScene'
 import { buttonStyle as menuButtonStyle, MentorScene, MenuScreen, ShopScene, SponsorScene, TravelScene } from './MenuScenes'
-import { CaughtScene, EndingScene, FinaleLostScene } from './EndScenes'
+import { CaughtScene, FinaleLostScene } from './EndScenes'
+import { EndingFilm } from './EndingFilm'
 import { CrapsScene, RouletteScene, SlotsScene } from './CasinoGameScenes'
 import { PenthouseScene, VenueScene } from './VenueScenes'
 import { SideNav } from './SideNav'
@@ -84,7 +85,6 @@ type View =
   | { kind: 'venue'; venueId: string }
   | { kind: 'penthouse' }
   | { kind: 'caught' }
-  | { kind: 'ending' }
   | { kind: 'finaleLost' }
 
 export function GameApp({ playtest = false }: { playtest?: boolean }) {
@@ -354,7 +354,12 @@ export function GameApp({ playtest = false }: { playtest?: boolean }) {
       if (table.isFinale) return lostFinalChallenge(settled)
       return settled
     })
-    if (table.isFinale) setView({ kind: result.finaleWon ? 'ending' : 'finaleLost' })
+    if (table.isFinale && result.finaleWon) {
+      // The ending is an event: the film, then Dana. It is what the playtest panel plays too.
+      setView({ kind: 'city' })
+      const ending = eventFor(EVENTS, { kind: 'finaleWon' }, state)
+      if (ending) events.run(ending)
+    } else if (table.isFinale) setView({ kind: 'finaleLost' })
     else {
       // The boss comes out to meet you when the room opens (`<town>-boss-door`), so nothing else is said first.
       getUpFromTable()
@@ -652,9 +657,6 @@ export function GameApp({ playtest = false }: { playtest?: boolean }) {
     case 'caught':
       return <CaughtScene sponsorId={caughtBy} onRestart={backToCity} />
 
-    case 'ending':
-      return <EndingScene state={state} onContinue={backToCity} />
-
     case 'finaleLost':
       return <FinaleLostScene state={state} onContinue={backToCity} />
 
@@ -729,7 +731,8 @@ export function GameApp({ playtest = false }: { playtest?: boolean }) {
           />
         </div>
       )}
-      {events.stage.cinematic && <BadBeatIntro key={events.stage.cinematic.id} onDone={events.cinematicDone} />}
+      {events.stage.cinematic?.scene === 'bad-beat' && <BadBeatIntro key={events.stage.cinematic.id} onDone={events.cinematicDone} />}
+      {events.stage.cinematic?.scene === 'ending' && <EndingFilm key={events.stage.cinematic.id} onDone={events.cinematicDone} />}
       {events.stage.reel && (
         <ReelScene
           key={events.stage.reel.id}

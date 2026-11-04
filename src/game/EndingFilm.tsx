@@ -862,7 +862,7 @@ function drawAfterShot(c: Ctx, t: number, beat: number, since: number) {
 
 // ---------------------------------------------------------------------------
 
-export function EndingFilm({ onDone, startAt = 'stage' }: { onDone: () => void; startAt?: EndingShot }) {
+export function EndingFilm({ onDone, startAt = 'stage' }: { onDone: (skipped?: boolean) => void; startAt?: EndingShot }) {
   const canvas = useRef<HTMLCanvasElement>(null)
   const isTop = useKeyLayer(true)
   const touch = useTouchFirst()
@@ -893,10 +893,10 @@ export function EndingFilm({ onDone, startAt = 'stage' }: { onDone: () => void; 
   const breathAt = useRef<number | null>(null)
   const breathStart = useRef<number | null>(null)
 
-  const done = () => {
+  const done = (skipped = false) => {
     if (finished.current) return
     finished.current = true
-    onDone()
+    onDone(skipped)
   }
 
   const enter = (s: EndingShot, now: number) => {
@@ -987,7 +987,7 @@ export function EndingFilm({ onDone, startAt = 'stage' }: { onDone: () => void; 
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault()
-        done()
+        done(true)
         return
       }
       if (!isActionKey(e) || !isTop()) return
@@ -1173,7 +1173,7 @@ export function EndingFilm({ onDone, startAt = 'stage' }: { onDone: () => void; 
         data-testid="ending-skip"
         onClick={(e) => {
           e.stopPropagation()
-          done()
+          done(true)
         }}
         style={{
           position: 'absolute',

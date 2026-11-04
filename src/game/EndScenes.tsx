@@ -1,11 +1,10 @@
-import { useRef, useState } from 'react'
+import { useRef } from 'react'
 import { daysUntilRematch, type GameState } from './state'
 import { swallowDoubleClick, useMenuKeys } from './keys'
 import { buttonStyle } from './MenuScenes'
 import { SPONSORS, TABLES } from '../world/content'
 import { CHARACTERS } from '../world/characters'
 import { TYPE, UI_FONT } from './pixel/webFont'
-import { EndingFilm } from './EndingFilm'
 
 const HEADING = { fontSize: TYPE.large, fontWeight: 'normal', color: '#f2c14e' } as const
 
@@ -72,27 +71,6 @@ export function FinaleLostScene({ state, onContinue }: { state: GameState; onCon
           : 'Build the roll back, and be better when she sits down again.'}
       </p>
       <button style={{ ...buttonStyle, marginTop: 12 }} onClick={onContinue}>Walk out</button>
-    </FullScreen>
-  )
-}
-
-/** Won the heads-up match — the penthouse, and open-ended play afterwards. */
-export function EndingScene({ state, onContinue }: { state: GameState; onContinue: () => void }) {
-  // The film first — the stage, the penthouse, the statement, the phone, the credits — then the card.
-  const [watched, setWatched] = useState(false)
-  if (!watched) return <EndingFilm onDone={() => setWatched(true)} />
-  return (
-    <FullScreen background="#0d1420">
-      <h2 style={HEADING}>You won.</h2>
-      <p>
-        Day {state.day}. ${state.cash.toLocaleString()} on you, a table by the window that was
-        Nadia&rsquo;s, and a phone that has not stopped lighting up.
-      </p>
-      <p style={{ color: '#9a9ab0' }}>
-        There is no next stop above this one. There is the game, whenever you want it, and a
-        call you could return.
-      </p>
-      <button style={{ ...buttonStyle, marginTop: 12 }} onClick={onContinue}>Go back out</button>
     </FullScreen>
   )
 }

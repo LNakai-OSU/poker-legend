@@ -334,8 +334,10 @@ is left frozen by the petition), Marcus's unanswered thread, the window at night
 it..."), the credits over the skyline, and after them Marcus's call at first light, unanswered.
 What is said and written in it is data in `world/ending.ts`; the sets are `game/endingArt.ts` and
 the shot functions in `EndingFilm.tsx`. Every line waits for a press; only the credits scroll
-themselves (a press speeds them). The `final-won` event adds no reels of its own, so nothing
-cheerful follows the film.
+themselves (a press speeds them). It is the `ending` cinematic of the `final-won` event, which the
+playtest panel can play on demand from its Scenes list; Dana's one line follows it, and nothing
+cheerful does. The broadcast scenes before and after the final use the `booth` set, not the old
+`studio` rectangles.
 
 **People moving.** `moveNpc` walks somebody to a tile — or `to: 'player'`, the
 free tile beside you nearest them — along the way a person would go, at

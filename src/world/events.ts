@@ -141,7 +141,7 @@ export type ReelScene =
   | 'night'
 
 /** The scripted scenes `cinematic` can play. */
-export type CinematicId = 'bad-beat'
+export type CinematicId = 'bad-beat' | 'ending'
 
 /** One thing said in a reel. `who` is a character id or a plain name, such as a commentator. */
 export interface ReelLine {
@@ -4560,7 +4560,7 @@ export const EVENTS: GameEvent[] = [
                 title: 'Back in the building',
                 panels: [
                   {
-                    scene: 'studio',
+                    scene: 'booth',
                     ticker: 'YOU 15,000 · 7 BB · LAST OF 6',
                     lines: [
                       {
@@ -4657,7 +4657,7 @@ export const EVENTS: GameEvent[] = [
         title: 'Bust',
         panels: [
           {
-            scene: 'studio',
+            scene: 'booth',
             ticker: 'ELIMINATED · 6TH PLACE',
             lines: [
               {
@@ -4831,7 +4831,7 @@ export const EVENTS: GameEvent[] = [
             ],
           },
           {
-            scene: 'studio',
+            scene: 'booth',
             ticker: 'YOU 15,000 · 7 BB · LAST OF 6',
             lines: [
               {
@@ -4857,11 +4857,13 @@ export const EVENTS: GameEvent[] = [
   {
     id: 'final-won',
     about:
-      'The last chip is yours, and the ending film has already shown what it cost: the empty ' +
-      'stage, the settlement, the petition, the credits. This is the one line after it, back on ' +
-      'the street, and then open-ended play.',
+      'The last chip is yours. The ending film plays (the empty stage, the settlement, the ' +
+      'petition, the credits, a missed call), then Dana says the one line after it, back on ' +
+      'the street, and open-ended play begins. Playable on demand from the playtest panel.',
     trigger: { kind: 'finaleWon' },
     actions: [
+      { kind: 'fade', to: 'out' },
+      { kind: 'cinematic', id: 'ending' },
       {
         kind: 'dialogue',
         speaker: 'dana',

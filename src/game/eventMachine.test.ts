@@ -484,8 +484,9 @@ describe('a reel', () => {
 })
 
 describe('the final table', () => {
-  function play(h: ReturnType<typeof harness>, event: GameEvent): { reels: number } {
+  function play(h: ReturnType<typeof harness>, event: GameEvent): { reels: number; scenes: string[] } {
     let reels = 0
+    const scenes: string[] = []
     h.machine.run(event)
     for (let guard = 0; h.machine.isRunning && guard < 200; guard++) {
       const stage = h.stage
@@ -493,10 +494,13 @@ describe('the final table', () => {
       else if (stage.reel) {
         reels++
         h.machine.reelDone()
+      } else if (stage.cinematic) {
+        scenes.push(stage.cinematic.scene)
+        h.machine.cinematicDone()
       } else if (stage.choice) h.machine.choose(0)
       else h.tick(1000)
     }
-    return { reels }
+    return { reels, scenes }
   }
   const final = (id: string) => EVENTS.find((e) => e.id === id)!
 
@@ -516,10 +520,11 @@ describe('the final table', () => {
     }
   })
 
-  it('leaves the celebrating to the ending film, and has Dana say the one sour thing after it', () => {
+  it('plays the ending film when it is won, and has Dana say the one sour thing after it', () => {
     const h = harness({ areaId: 'pl-casino', flags: { ...initialState().flags, hasPenthouse: true } })
-    const { reels } = play(h, final('final-won'))
+    const { reels, scenes } = play(h, final('final-won'))
     // The commentators, the rail and the credits are the film's (`world/ending.ts`), not a reel here.
+    expect(scenes).toEqual(['ending'])
     expect(reels).toBe(0)
     expect(h.machine.isRunning).toBe(false)
   })
