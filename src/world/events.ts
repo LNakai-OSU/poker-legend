@@ -4857,90 +4857,18 @@ export const EVENTS: GameEvent[] = [
   {
     id: 'final-won',
     about:
-      'The last chip is yours. The commentators lose it, the rail is on its feet, and the ' +
-      'credits roll — then the ending card, and open-ended play.',
+      'The last chip is yours, and the ending film has already shown what it cost: the empty ' +
+      'stage, the settlement, the petition, the credits. This is the one line after it, back on ' +
+      'the street, and then open-ended play.',
     trigger: { kind: 'finaleWon' },
     actions: [
-      { kind: 'fade', to: 'out' },
       {
-        kind: 'reel',
-        title: 'Champion',
-        panels: [
-          {
-            scene: 'studio',
-            ticker: 'WINNER · LEGENDS INVITATIONAL · $750,000',
-            lines: [
-              {
-                who: 'Chip',
-                text:
-                  'IT IS OVER! FROM SEVEN BIG BLINDS TO EVERY CHIP ON THE TABLE! I HAVE NEVER ' +
-                  'SEEN ANYTHING LIKE IT IN MY LIFE!',
-              },
-              {
-                who: 'Dr. Anand',
-                text:
-                  'That is a lie, Chip, we both watched the same thing in Tahoe in 2019. But I ' +
-                  'will grant you this is better.',
-              },
-              {
-                who: 'Dr. Anand',
-                text:
-                  'Nineteen percent, three times in a row. I need to sit down. I am sitting ' +
-                  'down. I am standing up again.',
-              },
-            ],
-          },
-          {
-            scene: 'rail',
-            caption: 'The rail comes over the ropes.',
-            lines: [
-              {
-                who: 'marcus',
-                text:
-                  'Marcus: THE KITCHEN TABLE STILL STANDS! I SAID IT WOULD! I SAID IT IN BASIN!',
-              },
-              {
-                who: 'dana',
-                text: 'Dana: I did not write this one down. Some things you only get to see once.',
-              },
-              { who: 'Dolores', text: 'Dolores: Told you. The foot knew. The foot always knows.' },
-            ],
-          },
-          {
-            scene: 'night',
-            caption: 'Porto Lumina, forty-one floors up, a long time after the cameras go dark.',
-            lines: [
-              { who: 'You', text: 'The lights are on. For once I do not need them.' },
-              { who: 'You', text: 'Somewhere a fruit basket is being very, very polite.' },
-            ],
-          },
-        ],
-      },
-      {
-        kind: 'reel',
-        title: 'Credits',
-        panels: [
-          {
-            scene: 'night',
-            caption: 'POKER LEGEND',
-            lines: [
-              { who: 'THE SHORT STACK', text: 'You' },
-              { who: 'THE KITCHEN TABLE', text: 'Marcus' },
-              { who: 'THE WATCHER', text: 'Dana' },
-              { who: 'THE ONE WHO WAS DUE', text: 'Ray' },
-              { who: 'THE FOOT', text: 'Lucky Dolores' },
-              { who: 'THE TITHE', text: 'Reverend Gaines' },
-              { who: 'THE ACCENT', text: 'The Contessa' },
-              { who: 'THE THURSDAY', text: 'Bernard' },
-              { who: 'THE CHAT', text: 'Zeke "KingPin"' },
-              { who: 'THE COACH WHO NEVER SOLD THE LAST LESSON', text: 'Hal' },
-              { who: 'THE FIVE-SECOND MIRACLE', text: 'Chip Van Doren' },
-              { who: 'THE APOLOGY FOR THE MATHS', text: 'Dr. Priyanka Anand' },
-              { who: 'THE FINAL BOSS', text: 'Nadia Okonkwo' },
-              { who: 'THE FRUIT BASKET', text: 'Nobody will say who sent it' },
-              { who: 'THANK YOU FOR PLAYING', text: 'Now go home. Tell somebody you won.' },
-            ],
-          },
+        kind: 'dialogue',
+        speaker: 'dana',
+        lines: [
+          'Dana: I put it in the book as a win. It is the only column I have.',
+          'Dana: Marcus called me. He did not ask where you were. He asked if you were eating.',
+          'Dana: Call him back. I am not going to say it twice.',
         ],
       },
     ],

@@ -326,10 +326,16 @@ skips the whole film: the reels, scenes and pauses straight after it. What follo
 the film still happens.
 
 **The ending film.** Winning the heads-up match plays `EndingFilm` (`game/EndingFilm.tsx`) before
-the summary card, drawn like the opening: the walk through the penthouse and its walls
-of medals, the photo on the desk, the divorce papers, Marcus's unanswered thread, and the
-window at night, ending on "I've made it...". What is said and written in it is data in
-`world/ending.ts`; the sets are `game/endingArt.ts`. Every line waits for a press.
+the summary card, drawn like the opening, and it is a bummer on purpose: sour success. Nine
+shots: the stage after the last hand (confetti on nobody, Nadia walking out, the feed cutting
+to an advert), the walk through the penthouse and its walls of medals, the photo on the desk, the
+divorce papers, the settlement statement (the prize, less tax, backers, counsel, and half of what
+is left frozen by the petition), Marcus's unanswered thread, the window at night ("I've made
+it..."), the credits over the skyline, and after them Marcus's call at first light, unanswered.
+What is said and written in it is data in `world/ending.ts`; the sets are `game/endingArt.ts` and
+the shot functions in `EndingFilm.tsx`. Every line waits for a press; only the credits scroll
+themselves (a press speeds them). The `final-won` event adds no reels of its own, so nothing
+cheerful follows the film.
 
 **People moving.** `moveNpc` walks somebody to a tile — or `to: 'player'`, the
 free tile beside you nearest them — along the way a person would go, at

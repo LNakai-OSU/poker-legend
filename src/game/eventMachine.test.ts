@@ -516,10 +516,11 @@ describe('the final table', () => {
     }
   })
 
-  it('shows the commentators and the rail when it is won, and ends the beat for the credits', () => {
+  it('leaves the celebrating to the ending film, and has Dana say the one sour thing after it', () => {
     const h = harness({ areaId: 'pl-casino', flags: { ...initialState().flags, hasPenthouse: true } })
     const { reels } = play(h, final('final-won'))
-    expect(reels).toBeGreaterThanOrEqual(2)
+    // The commentators, the rail and the credits are the film's (`world/ending.ts`), not a reel here.
+    expect(reels).toBe(0)
     expect(h.machine.isRunning).toBe(false)
   })
 

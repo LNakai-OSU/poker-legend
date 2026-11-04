@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { ENDING_FILM, type EndingLine, type EndingMessage } from '../world/ending'
 import { HERO_FIGURE } from '../overworld/casting'
-import { drawPerson, type WalkFrame } from '../overworld/characterArt'
+import { drawPerson, type Figure, type WalkFrame } from '../overworld/characterArt'
+import { figureForCharacter, lookFromId } from '../overworld/casting'
+import { CHARACTERS } from '../world/characters'
 import { isActionKey, useKeyLayer } from './keys'
 import { useTouchFirst } from './device'
 import { TABLE_THEMES } from './tableThemes'
@@ -16,6 +18,7 @@ import { UI_FONT } from './pixel/webFont'
 import {
   DESK_LAMP,
   FEET_Y,
+  noise,
   PENTHOUSE_LIGHTS,
   PENTHOUSE_SPARKLES,
   PHOTO,
@@ -36,15 +39,16 @@ import {
 } from './endingArt'
 
 /**
- * The ending: after the last hand, the penthouse. One scene in five shots — the
- * walk through the room the wins built, the photograph on the desk, the papers
- * beside it, the phone, the window — cut together with a dip to black, in the
- * same pixel density as the opening. Like the opening it never moves on by the
+ * The ending: after the last hand, and none of it is a party. The stage with the
+ * confetti coming down on nobody, the walk through the penthouse the wins built,
+ * the photograph on the desk, the divorce papers, the settlement statement, the
+ * phone, the window, the credits, and one more thing after them — cut together
+ * with a dip to black, in the same pixel density as the opening. Like the opening it never moves on by the
  * clock: every line is turned with Space (or E, X, Enter, a tap), and only the
  * walking and the light move by themselves.
  */
 
-export type EndingShot = 'walk' | 'photo' | 'papers' | 'phone' | 'window'
+export type EndingShot = 'stage' | 'walk' | 'photo' | 'papers' | 'ledger' | 'phone' | 'window' | 'credits' | 'after'
 
 const GOLD = '#c9a14a'
 const THEME = TABLE_THEMES.finale
@@ -483,7 +487,7 @@ function silhouette(): HTMLCanvasElement {
   return (heroTint = cv)
 }
 
-function drawWindowShot(c: Ctx, t: number, breathAt: number | null, rise: number) {
+function drawWindowShot(c: Ctx, t: number, breathAt: number | null, rise: number, withHero = true) {
   const A = assets()
   fillRect(c, '#07060e', 0, 0, VIEW_W, VIEW_H)
   c.save()
@@ -559,6 +563,7 @@ function drawWindowShot(c: Ctx, t: number, breathAt: number | null, rise: number
   c.scale(1, -1)
   c.drawImage(c.canvas, 0, 96, VIEW_W, WIN.y + WIN.h - 96, 0, 96, VIEW_W, WIN.y + WIN.h - 96)
   c.restore()
+  if (!withHero) return
   // You, from behind, with the city on your shoulders. A breath lifts them.
   const sil = silhouette()
   const hx = 136
@@ -579,8 +584,285 @@ function drawWindowShot(c: Ctx, t: number, breathAt: number | null, rise: number
 }
 
 // ---------------------------------------------------------------------------
+// The stage, the statement, the credits, and what comes after them.
+// ---------------------------------------------------------------------------
 
-export function EndingFilm({ onDone, startAt = 'walk' }: { onDone: () => void; startAt?: EndingShot }) {
+const CONFETTI = ['#f2c14e', '#c8402f', '#4a7ae8', '#e8e4d8', '#3ac87a']
+const money = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`
+
+let nadia: Figure | null = null
+let sweeper: Figure | null = null
+
+function drawStageShot(c: Ctx, t: number, beat: number, since: number) {
+  const k = Math.min(beat, 5)
+  fillRect(c, '#06050c', 0, 0, VIEW_W, VIEW_H)
+  // The big screen over the table: the winner, then an advert.
+  fillRect(c, '#2a2a5a', 62, 12, 196, 56)
+  fillRect(c, '#0b0d22', 64, 14, 192, 52)
+  if (k < 4) {
+    label(c, 'LEGENDS INVITATIONAL', 160, 20, '#c9a14a', 'centre')
+    fillRect(c, '#c9a14a', 80, 31, 160, 1)
+    label(c, 'WINNER', 160, 38, '#e8e4d8', 'centre')
+    label(c, money(750000), 160, 50, '#f2d27a', 'centre')
+    if (Math.floor(t / 500) % 2) label(c, '● LIVE', 72, 18, '#e0402f')
+  } else {
+    fillRect(c, '#14305a', 64, 14, 192, 52)
+    fillRect(c, '#e8e4d8', 148, 26, 24, 14)
+    label(c, 'FIRST FEDERAL', 160, 46, '#e8e4d8', 'centre')
+    label(c, 'BACK AFTER THESE MESSAGES', 160, 56, '#8aa0c8', 'centre')
+  }
+  // The truss, and the lamps hanging from it; they come down as the room empties.
+  fillRect(c, '#14122a', 0, 0, VIEW_W, 8)
+  const lit = Math.max(0.25, 1 - k * 0.17)
+  for (let i = 0; i < 12; i++) {
+    const x = 14 + i * 27
+    fillRect(c, '#2a2850', x - 2, 8, 5, 3)
+    c.fillStyle = `rgba(${i % 2 ? '255,226,150' : '150,170,255'},${0.07 * lit})`
+    c.beginPath()
+    c.moveTo(x - 2, 11)
+    c.lineTo(x + 3, 11)
+    const aim = 160 + (i - 5.5) * 8
+    c.lineTo(aim + 34, 138)
+    c.lineTo(aim - 34, 138)
+    c.closePath()
+    c.fill()
+  }
+  // The stage.
+  fillRect(c, '#120e1c', 0, 100, VIEW_W, 80)
+  for (let y = 104; y < 150; y += 8) fillRect(c, '#1a1426', 0, y, VIEW_W, 1)
+  // The table: rail, felt, the last hand where it was left.
+  c.fillStyle = '#3a2412'
+  c.beginPath()
+  c.ellipse(160, 130, 80, 20, 0, 0, Math.PI * 2)
+  c.fill()
+  c.fillStyle = '#0f5a34'
+  c.beginPath()
+  c.ellipse(160, 129, 74, 16, 0, 0, Math.PI * 2)
+  c.fill()
+  c.fillStyle = 'rgba(255,255,255,0.08)'
+  c.beginPath()
+  c.ellipse(160, 126, 60, 10, 0, 0, Math.PI * 2)
+  c.fill()
+  const board = [['9', '#c8402f'], ['5', '#14141c'], ['2', '#c8402f'], ['J', '#14141c'], ['7', '#c8402f']]
+  board.forEach(([r, col], i) => {
+    fillRect(c, '#e8e4d8', 130 + i * 13, 122, 10, 13)
+    label(c, r, 132 + i * 13, 126, col)
+  })
+  // Her two, turned over; and the stack that was hers, pushed to the middle.
+  fillRect(c, '#e8e4d8', 196, 136, 9, 11)
+  fillRect(c, '#e8e4d8', 207, 136, 9, 11)
+  label(c, 'K', 198, 139, '#c8402f')
+  label(c, 'Q', 209, 139, '#c8402f')
+  for (let i = 0; i < 6; i++) {
+    fillRect(c, i % 2 ? '#c8402f' : '#2a4aa8', 96, 140 - i * 2, 12, 2)
+    fillRect(c, '#e8e4d8', 96, 140 - i * 2, 12, 1)
+  }
+  for (let i = 0; i < 9; i++) fillRect(c, i % 3 ? '#f2c14e' : '#2a4aa8', 112, 142 - i * 2, 12, 2)
+  // You, at your end of it. Her, till she goes.
+  const hero = (x: number) => {
+    c.fillStyle = 'rgba(0,0,0,0.45)'
+    c.beginPath()
+    c.ellipse(x + 16, 133, 14, 3, 0, 0, Math.PI * 2)
+    c.fill()
+    drawPerson(c, HERO_FIGURE, 'down', 0, { x, y: 86, scale: 2 })
+  }
+  nadia ??= figureForCharacter('nadia', CHARACTERS.nadia)
+  if (k < 4) {
+    c.fillStyle = 'rgba(0,0,0,0.45)'
+    c.beginPath()
+    c.ellipse(236, 133, 14, 3, 0, 0, Math.PI * 2)
+    c.fill()
+    drawPerson(c, nadia, k === 3 ? 'left' : 'down', 0, { x: 220, y: 86, scale: 2 })
+  } else if (k === 4) {
+    const nx = 220 + since / 16
+    if (nx < 340) drawPerson(c, nadia, 'right', (Math.floor(t / 150) % 3) as WalkFrame, { x: nx, y: 86 - (Math.floor(t / 150) % 3 ? 1 : 0), scale: 2 })
+  }
+  hero(60)
+  // A pool of light that stays on you after the rest has gone.
+  glow(c, 76, 112, 70, '255,226,170', 0.14)
+  // Cameras at either side, tally lights on until they turn away.
+  for (const [x, flip] of [[8, 1], [286, -1]] as const) {
+    fillRect(c, '#0e0c1c', x, 92, 24, 24)
+    fillRect(c, '#1c1a34', x + (flip > 0 ? 18 : -4), 98, 8, 10)
+    fillRect(c, '#05040a', x + (flip > 0 ? 22 : -6), 101, 4, 4)
+    fillRect(c, '#0e0c1c', x + 10, 116, 4, 18)
+    fillRect(c, k < 4 ? '#e03020' : '#3a1a1a', x + (flip > 0 ? 3 : 17), 95, 3, 3)
+  }
+  // Confetti, and where it has landed.
+  for (let i = 0; i < 70; i++) {
+    const x = 10 + Math.floor(noise(i, 7) * 300)
+    const y = 104 + Math.floor(noise(i, 8) * 70)
+    fillRect(c, CONFETTI[i % 5], x, y, i % 3 ? 1 : 2, 1)
+  }
+  const falling = [150, 80, 32, 14, 6, 0][k]
+  for (let i = 0; i < falling; i++) {
+    const x = noise(i, 1, 3) * VIEW_W + Math.sin(t / 700 + i) * 6
+    const y = (t / (16 + (i % 6) * 5) + noise(i, 2, 3) * VIEW_H * 2) % VIEW_H
+    fillRect(c, CONFETTI[i % 5], x, y, i % 3 ? 1 : 2, i % 4 === 0 ? 2 : 1)
+  }
+  // The crowd, from behind: arms up while the cheer lasts, then sitting down, then gone.
+  const stay = [46, 40, 26, 18, 9, 5][k]
+  for (let i = 0; i < stay; i++) {
+    const x = ((i * 313) % 330) - 6
+    const y = 158 + Math.floor(noise(i, 5) * 14) + (k >= 2 ? 3 : 0)
+    fillRect(c, '#0a0914', x, y, 8, 22)
+    fillRect(c, '#0a0914', x + 1, y - 4, 6, 5)
+    fillRect(c, k < 2 ? '#3a3260' : '#241e3c', x + 1, y - 4, 6, 1)
+    if (k < 2 && i % 2) {
+      const up = Math.floor(t / 180 + i) % 2
+      fillRect(c, '#0a0914', x - 1, y - 8 - up * 2, 2, 8)
+      fillRect(c, '#0a0914', x + 7, y - 8 - (1 - up) * 2, 2, 8)
+    }
+  }
+  // Somebody comes with a broom.
+  if (k >= 5) {
+    sweeper ??= { role: 'local', look: lookFromId('stage-hand', 'Stage hand', 'local') }
+    const sx = 130 + Math.sin(t / 1800) * 40
+    c.fillStyle = 'rgba(0,0,0,0.4)'
+    c.beginPath()
+    c.ellipse(sx + 16, 163, 12, 3, 0, 0, Math.PI * 2)
+    c.fill()
+    drawPerson(c, sweeper, Math.cos(t / 1800) > 0 ? 'right' : 'left', (Math.floor(t / 200) % 3) as WalkFrame, { x: sx, y: 116, scale: 2 })
+  }
+  // The lights go down; yours stay on.
+  c.fillStyle = `rgba(0,0,8,${k * 0.07})`
+  c.fillRect(0, 0, VIEW_W, VIEW_H)
+  dust(c, t, 18, 10, 120, '255,236,190')
+  vignette(c, 0.55)
+}
+
+function drawLedgerShot(c: Ctx, t: number, since: number) {
+  const L = FILM.ledger
+  deskScene(c, t)
+  const W = 204
+  const x = 58
+  const y = 3
+  const H = 174
+  fillRect(c, 'rgba(0,0,0,0.5)', x + 5, y + 6, W, H)
+  fillRect(c, '#c8c2ae', x + 3, y + 3, W, H)
+  fillRect(c, '#ece6d4', x, y, W, H)
+  fillRect(c, '#d8d2be', x, y, W, 1)
+  label(c, L.title, x + W / 2, y + 8, '#2a2a34', 'centre')
+  label(c, L.subtitle, x + W / 2, y + 18, '#6a6a7a', 'centre')
+  fillRect(c, '#2a2a34', x + 10, y + 29, W - 20, 1)
+  const left = x + 12
+  const right = x + W - 12
+  const row = (n: number, text: string, amount: string, color = '#2a2a34', strong = false) => {
+    const yy = y + 36 + n * 12
+    label(c, text, left, yy, strong ? '#14141c' : color)
+    if (strong) label(c, text, left + 1, yy, '#14141c')
+    label(c, amount, right - measureText(amount), yy, color)
+  }
+  const step = Math.floor(since / 520)
+  const net = L.prize - L.deductions.reduce((a, d) => a + d.amount, 0)
+  const held = net * L.heldShare
+  let n = 0
+  if (step >= n++) row(0, 'Prize', money(L.prize))
+  L.deductions.forEach((d, i) => {
+    if (step >= i + 1) row(i + 1, d.label, `−${money(d.amount)}`, '#a8281f')
+  })
+  const after = L.deductions.length + 1
+  if (step >= after) {
+    fillRect(c, '#2a2a34', left, y + 36 + after * 12 - 3, right - left, 1)
+    row(after, 'Net to you', money(net), '#2a2a34', true)
+  }
+  if (step >= after + 1) row(after + 1, L.heldLabel, `−${money(held)}`, '#a8281f')
+  if (step >= after + 2) {
+    fillRect(c, '#2a2a34', left, y + 36 + (after + 2) * 12 - 3, right - left, 1)
+    fillRect(c, '#2a2a34', left, y + 36 + (after + 2) * 12 - 1, right - left, 1)
+    row(after + 2, 'AVAILABLE', money(held), '#14603a', true)
+  }
+  if (step >= after + 3) label(c, L.footnote, x + W / 2, y + H - 12, '#6a6a7a', 'centre')
+  dust(c, t, 16, 30, 110, '255,226,170')
+  vignette(c, 0.5)
+}
+
+/** Where the credits stop: the last words sit in the middle of the glass. */
+function creditsLength() {
+  return 56 + FILM.credits.entries.length * 26 + 30 + FILM.credits.thanks.length * 14
+}
+const CREDITS_SPEED = 13
+
+function drawCreditsShot(c: Ctx, t: number, scroll: number) {
+  drawWindowShot(c, t, null, 0, false)
+  fillRect(c, 'rgba(4,3,10,0.66)', 0, 0, VIEW_W, VIEW_H)
+  const base = VIEW_H + 6 - scroll
+  const C = FILM.credits
+  label(c, C.title, 160, base, '#f2d27a', 'centre')
+  label(c, C.title, 161, base, '#f2d27a', 'centre')
+  fillRect(c, '#c9a14a', 120, base + 12, 80, 1)
+  C.entries.forEach((e, i) => {
+    const y = base + 40 + i * 26
+    if (y < -12 || y > VIEW_H) return
+    label(c, e.role, 160, y, '#c9a14a', 'centre')
+    label(c, e.name, 160, y + 10, '#ece8dc', 'centre')
+  })
+  C.thanks.forEach((line, i) => {
+    const y = base + 56 + C.entries.length * 26 + 30 + i * 14
+    if (y < -12 || y > VIEW_H) return
+    label(c, line, 160, y, i === 0 ? '#f2d27a' : '#9aa0c8', 'centre')
+  })
+  vignette(c, 0.6)
+}
+
+function drawAfterShot(c: Ctx, t: number, beat: number, since: number) {
+  deskScene(c, t)
+  // First light: the window's city has gone grey.
+  fillRect(c, 'rgba(120,132,158,0.2)', 0, 0, VIEW_W, VIEW_H)
+  fillRect(c, 'rgba(5,5,12,0.45)', 0, 0, VIEW_W, VIEW_H)
+  const ringing = beat === 1 || beat === 2
+  const buzz = ringing && Math.floor(t / 90) % 3 === 0 ? 1 : 0
+  const px = 118 + buzz
+  const py = 108
+  const pw = 84
+  const ph = 52
+  if (ringing) glow(c, px + pw / 2, py + ph / 2, 110, '110,150,255', 0.16 + 0.05 * Math.sin(t / 160))
+  fillRect(c, 'rgba(0,0,0,0.5)', px + 4, py + 6, pw, ph)
+  fillRect(c, '#1c1c24', px, py, pw, ph)
+  fillRect(c, '#34343e', px, py, pw, 1)
+  const sx = px + 3
+  const sy = py + 3
+  const sw = pw - 6
+  const sh = ph - 6
+  const L = FILM.after
+  if (ringing) {
+    fillRect(c, '#142a52', sx, sy, sw, sh)
+    label(c, L.contact, sx + sw / 2, sy + 6, '#ece8dc', 'centre')
+    label(c, 'incoming call', sx + sw / 2, sy + 17, '#8aa0d8', 'centre')
+    fillRect(c, '#c83a30', sx + 8, sy + sh - 12, 14, 8)
+    fillRect(c, '#38b060', sx + sw - 22, sy + sh - 12, 14, 8)
+  } else if (beat >= 3) {
+    fillRect(c, '#10131c', sx, sy, sw, sh)
+    label(c, 'Missed call', sx + sw / 2, sy + 8, '#e0605d', 'centre')
+    label(c, L.contact, sx + sw / 2, sy + 19, '#8a8aa0', 'centre')
+  } else {
+    fillRect(c, '#0a0b10', sx, sy, sw, sh)
+  }
+  // Your hand, not quite on it.
+  if (beat === 2) {
+    const tremor = Math.sin(t / 90) * 0.6
+    const tx = px + pw - 15
+    const ty = py + ph - 20 - Math.min(5, since / 700) + tremor
+    c.fillStyle = HERO_FIGURE.look.skin
+    c.beginPath()
+    c.ellipse(tx + 26, ty + 20, 30, 8, -0.55, 0, Math.PI * 2)
+    c.fill()
+    c.fillStyle = 'rgba(0,0,0,0.18)'
+    c.beginPath()
+    c.ellipse(tx + 29, ty + 22, 26, 5, -0.55, 0, Math.PI * 2)
+    c.fill()
+    c.fillStyle = HERO_FIGURE.look.skin
+    c.beginPath()
+    c.ellipse(tx + 4, ty + 3, 8, 3.2, -0.65, 0, Math.PI * 2)
+    c.fill()
+  }
+  dust(c, t, 12, 30, 110, '190,200,230')
+  vignette(c, 0.62)
+}
+
+// ---------------------------------------------------------------------------
+
+export function EndingFilm({ onDone, startAt = 'stage' }: { onDone: () => void; startAt?: EndingShot }) {
   const canvas = useRef<HTMLCanvasElement>(null)
   const isTop = useKeyLayer(true)
   const touch = useTouchFirst()
@@ -592,7 +874,11 @@ export function EndingFilm({ onDone, startAt = 'walk' }: { onDone: () => void; s
   const shot = useRef<EndingShot>(startAt)
   const beat = useRef(0)
   const shotT0 = useRef(0)
-  const trans = useRef<{ to: EndingShot; t0: number } | null>(null)
+  const trans = useRef<{ to: EndingShot; t0: number; ms: number } | null>(null)
+  // Within a shot that turns on its own beats: when this one began.
+  const beatT0 = useRef(0)
+  const creditsY = useRef(0)
+  const creditsEnd = useRef<number | null>(null)
   const endAt = useRef<number | null>(null)
   const finished = useRef(false)
   // The walk.
@@ -618,6 +904,13 @@ export function EndingFilm({ onDone, startAt = 'walk' }: { onDone: () => void; s
     setShotName(s)
     beat.current = 0
     shotT0.current = now
+    beatT0.current = now
+    creditsY.current = 0
+    creditsEnd.current = null
+    if (s === 'stage') setLine(FILM.stage[0])
+    if (s === 'ledger') setLine(FILM.ledger.lines[0])
+    if (s === 'credits') setLine(null)
+    if (s === 'after') setLine(FILM.after.lines[0])
     if (s === 'photo') setLine(FILM.photo[0])
     if (s === 'papers') setLine(FILM.papers.lines[0])
     if (s === 'phone') {
@@ -628,9 +921,9 @@ export function EndingFilm({ onDone, startAt = 'walk' }: { onDone: () => void; s
     if (s === 'walk') setLine(null)
   }
 
-  const cutTo = (s: EndingShot) => {
+  const cutTo = (s: EndingShot, ms = FADE_OUT) => {
     setLine(null)
-    trans.current = { to: s, t0: performance.now() }
+    trans.current = { to: s, t0: performance.now(), ms }
   }
 
   const press = () => {
@@ -644,12 +937,33 @@ export function EndingFilm({ onDone, startAt = 'walk' }: { onDone: () => void; s
       return
     }
     const next = beat.current + 1
-    if (s === 'photo') {
+    if (s === 'stage') {
+      if (next >= FILM.stage.length) return cutTo('walk', 900)
+      beat.current = next
+      beatT0.current = performance.now()
+      setLine(FILM.stage[next])
+    } else if (s === 'ledger') {
+      if (next >= FILM.ledger.lines.length) return cutTo('phone')
+      beat.current = next
+      setLine(FILM.ledger.lines[next])
+    } else if (s === 'credits') {
+      creditsY.current += 36
+    } else if (s === 'after') {
+      if (next >= FILM.after.lines.length) {
+        endAt.current = performance.now()
+        setEnded(true)
+        setLine(null)
+        return
+      }
+      beat.current = next
+      beatT0.current = performance.now()
+      setLine(FILM.after.lines[next])
+    } else if (s === 'photo') {
       if (next >= FILM.photo.length) return cutTo('papers')
       beat.current = next
       setLine(FILM.photo[next])
     } else if (s === 'papers') {
-      if (next >= FILM.papers.lines.length) return cutTo('phone')
+      if (next >= FILM.papers.lines.length) return cutTo('ledger')
       beat.current = next
       setLine(FILM.papers.lines[next])
     } else if (s === 'phone') {
@@ -658,12 +972,7 @@ export function EndingFilm({ onDone, startAt = 'walk' }: { onDone: () => void; s
       phone.current.target = FILM.phone.beats[next].upTo
       setLine(FILM.phone.beats[next].line)
     } else if (s === 'window') {
-      if (next >= FILM.window.length) {
-        endAt.current = performance.now()
-        setEnded(true)
-        setLine(null)
-        return
-      }
+      if (next >= FILM.window.length) return cutTo('credits', 1600)
       beat.current = next
       setLine(FILM.window[next])
       // The breath: when it is said.
@@ -709,7 +1018,22 @@ export function EndingFilm({ onDone, startAt = 'walk' }: { onDone: () => void; s
         c.imageSmoothingEnabled = false
         const t = now - t0
         const s = shot.current
-        if (s === 'walk') {
+        if (s === 'stage') {
+          drawStageShot(c, t, beat.current, now - beatT0.current)
+        } else if (s === 'ledger') {
+          drawLedgerShot(c, t, now - shotT0.current)
+        } else if (s === 'credits') {
+          if (!trans.current) creditsY.current += (dt / 1000) * CREDITS_SPEED
+          const stop = creditsLength() - 70
+          if (creditsY.current >= stop) {
+            creditsY.current = stop
+            creditsEnd.current ??= now
+            if (now - creditsEnd.current > 4200 && !trans.current) cutTo('after', 1800)
+          }
+          drawCreditsShot(c, t, creditsY.current)
+        } else if (s === 'after') {
+          drawAfterShot(c, t, beat.current, now - beatT0.current)
+        } else if (s === 'walk') {
           // A line holds you where it comes; you walk on when it is turned.
           const stops = FILM.walk.stops
           const due = stops[nextStop.current]
@@ -758,7 +1082,7 @@ export function EndingFilm({ onDone, startAt = 'walk' }: { onDone: () => void; s
         // The cut: a dip to black going out and coming in.
         let dip = 0
         if (trans.current) {
-          dip = Math.min(1, (now - trans.current.t0) / FADE_OUT)
+          dip = Math.min(1, (now - trans.current.t0) / trans.current.ms)
           if (dip >= 1) {
             const to = trans.current.to
             trans.current = null
@@ -820,13 +1144,17 @@ export function EndingFilm({ onDone, startAt = 'walk' }: { onDone: () => void; s
           minHeight: 28 * P,
           marginTop: 2 * P,
           flex: 'none',
-          opacity: ended ? 0 : 1,
+          opacity: ended || shotName === 'credits' ? 0 : 1,
           transition: 'opacity 600ms',
         }}
       >
-        {line?.you && (
+        {(line?.you || line?.who) && (
           <div style={{ marginBottom: 2 * P }}>
-            <PixelText text="You" scale={P} ink={{ color: '#a8281f', shadow: '#e8c8c0' }} />
+            <PixelText
+              text={line.you ? 'You' : line.who!}
+              scale={P}
+              ink={line.you ? { color: '#a8281f', shadow: '#e8c8c0' } : { color: '#1f4e8c', shadow: '#c8d4e8' }}
+            />
           </div>
         )}
         <PixelText text={line ? line.text : ' '} scale={P} wrap ink={INK.dark} />

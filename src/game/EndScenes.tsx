@@ -78,24 +78,21 @@ export function FinaleLostScene({ state, onContinue }: { state: GameState; onCon
 
 /** Won the heads-up match — the penthouse, and open-ended play afterwards. */
 export function EndingScene({ state, onContinue }: { state: GameState; onContinue: () => void }) {
-  // The film first — the penthouse, the desk, the phone, the window — then the card.
+  // The film first — the stage, the penthouse, the statement, the phone, the credits — then the card.
   const [watched, setWatched] = useState(false)
   if (!watched) return <EndingFilm onDone={() => setWatched(true)} />
   return (
     <FullScreen background="#0d1420">
-      <h2 style={HEADING}>Porto Lumina, forty-one floors up.</h2>
+      <h2 style={HEADING}>You won.</h2>
       <p>
-        The lift attendant does not ask who you are. The room is corner glass, harbour on two sides,
-        and the felt table by the window was left exactly where Nadia kept it.
-      </p>
-      <p>
-        You started with a friend&rsquo;s kitchen table and whatever was in your pocket. Day {state.day}, and
-        you are holding ${state.cash.toLocaleString()}.
+        Day {state.day}. ${state.cash.toLocaleString()} on you, a table by the window that was
+        Nadia&rsquo;s, and a phone that has not stopped lighting up.
       </p>
       <p style={{ color: '#9a9ab0' }}>
-        There is no next stop above this one. There is just the game, whenever you want it.
+        There is no next stop above this one. There is the game, whenever you want it, and a
+        call you could return.
       </p>
-      <button style={{ ...buttonStyle, marginTop: 12 }} onClick={onContinue}>Keep playing</button>
+      <button style={{ ...buttonStyle, marginTop: 12 }} onClick={onContinue}>Go back out</button>
     </FullScreen>
   )
 }

@@ -25,9 +25,25 @@ describe('the ending film', () => {
   })
 
   it('has something to say in every shot', () => {
-    for (const lines of [ENDING_FILM.photo, ENDING_FILM.papers.lines, ENDING_FILM.window]) {
+    for (const lines of [ENDING_FILM.stage, ENDING_FILM.photo, ENDING_FILM.papers.lines, ENDING_FILM.ledger.lines, ENDING_FILM.window, ENDING_FILM.after.lines]) {
       expect(lines.length).toBeGreaterThan(0)
       for (const l of lines) expect(l.text.trim()).not.toBe('')
     }
+  })
+
+  it('costs more than it pays: the statement leaves you with less than a fifth of the prize', () => {
+    const { prize, deductions, heldShare } = ENDING_FILM.ledger
+    const net = prize - deductions.reduce((a, d) => a + d.amount, 0)
+    expect(net).toBeGreaterThan(0)
+    expect(net * (1 - heldShare)).toBeLessThan(prize * 0.2)
+  })
+
+  it('credits everyone it names, and ends on a thank-you', () => {
+    const { entries, thanks } = ENDING_FILM.credits
+    for (const e of entries) {
+      expect(e.role.trim()).not.toBe('')
+      expect(e.name.trim()).not.toBe('')
+    }
+    expect(thanks[0]).toBe('THANK YOU FOR PLAYING')
   })
 })
