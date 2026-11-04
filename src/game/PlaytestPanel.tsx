@@ -5,7 +5,7 @@ import { CASINO_GOALS } from '../world/goals'
 import { CHARACTERS } from '../world/characters'
 import { TABLES } from '../world/content'
 import { TIME_PERIODS } from './time'
-import { TOWN_ORDER, type CityId, type GameState } from './state'
+import { TOWN_ORDER, recordBossBeaten, type CityId, type GameState } from './state'
 import { cleanCash } from './playtest'
 import { useKeyLayer } from './keys'
 
@@ -214,15 +214,31 @@ export function PlaytestPanel({
           })}
         </div>
 
-        {section('Bosses: open the private room and sit down against them now')}
+        {section('Bosses: sit down against them now, or mark one beaten (opens the room) without playing')}
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {TOWN_ORDER.filter((id) => CASINO_GOALS[id]).map((id) => {
             const goal = CASINO_GOALS[id]
             const beaten = state.casino.bossBeaten.includes(id)
             return (
-              <button key={id} type="button" data-testid={`boss-${id}`} style={button} onClick={() => onPlayBoss(id)}>
-                {CHARACTERS[goal.bossId]?.name ?? goal.bossId} ({CITIES[id].name}, ${TABLES[goal.tableId].buyIn.toLocaleString()}){beaten ? ' ✓' : ''}
-              </button>
+              <span key={id} style={{ display: 'inline-flex', gap: 2 }}>
+                <button type="button" data-testid={`boss-${id}`} style={button} onClick={() => onPlayBoss(id)}>
+                  {CHARACTERS[goal.bossId]?.name ?? goal.bossId} ({CITIES[id].name}, ${TABLES[goal.tableId].buyIn.toLocaleString()}){beaten ? ' ✓' : ''}
+                </button>
+                <button
+                  type="button"
+                  data-testid={`boss-mark-${id}`}
+                  style={{ ...button, borderColor: beaten ? '#4a4a66' : GOLD, color: beaten ? DIM : GOLD }}
+                  onClick={() =>
+                    setState((s) =>
+                      beaten
+                        ? { ...s, casino: { ...s.casino, bossBeaten: s.casino.bossBeaten.filter((c) => c !== id) } }
+                        : recordBossBeaten(s, id),
+                    )
+                  }
+                >
+                  {beaten ? 'Unmark' : 'Mark beaten'}
+                </button>
+              </span>
             )
           })}
         </div>
