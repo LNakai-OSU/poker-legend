@@ -31,8 +31,8 @@ import { SoundToggle, useAudioUnlock } from '../audio/SoundToggle'
 import { playSound } from '../audio/audio'
 import {
   BUST_LINE,
-  advanceDay,
   advancePeriod,
+  endSession,
   arriveAt,
   caughtByCollectors,
   huntingSponsorId,
@@ -312,7 +312,7 @@ export function GameApp({ playtest = false }: { playtest?: boolean }) {
       const goal = CASINO_GOALS[table.bossOf]
       const boss = CHARACTERS[goal.bossId]
       const won = result.finaleWon === true
-      const settled = advanceDay({
+      const settled = endSession({
         ...state,
         cash: state.cash + (won ? result.chipsCashedOut : 0),
         stats: {
@@ -334,7 +334,7 @@ export function GameApp({ playtest = false }: { playtest?: boolean }) {
     sessionSpend.current = 0
     setState((s) => {
       const counted = table.isFinale ? s : recordCasinoSession(s, s.cityId, net, CASINO_GOALS[s.cityId]?.winTarget)
-      const next = advanceDay({
+      const next = endSession({
         ...counted,
         cash: s.cash + result.chipsCashedOut,
         stats: {

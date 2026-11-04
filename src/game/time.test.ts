@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { PERIOD_LIGHT, TIME_PERIODS, periodAfter, periodIndex } from './time'
-import { advanceDay, advancePeriod, initialState, takeStake } from './state'
+import { advanceDay, advancePeriod, endSession, initialState, takeStake } from './state'
 
 describe('the clock', () => {
   it('runs morning to night and round again', () => {
@@ -68,6 +68,18 @@ describe('time passing in a run', () => {
     // not at the hour you sat down.
     const played = advanceDay({ ...initialState(), period: 'evening' })
     expect(played).toMatchObject({ day: 2, period: 'morning' })
+  })
+
+  it('takes one period to get up from a table, so every hour comes round equally', () => {
+    let state = { ...initialState() }
+    const seen: Record<string, number> = { morning: 0, afternoon: 0, evening: 0, night: 0 }
+    for (let i = 0; i < 40; i++) {
+      state = endSession(state)
+      seen[state.period]++
+    }
+    expect(Object.values(seen)).toEqual([10, 10, 10, 10])
+    expect(endSession({ ...initialState(), period: 'afternoon' })).toMatchObject({ day: 1, period: 'evening' })
+    expect(endSession({ ...initialState(), period: 'night' })).toMatchObject({ day: 2, period: 'morning' })
   })
 
   it('sets the collectors on you for sitting out a debt past midnight', () => {

@@ -36,7 +36,7 @@ them are enforced by tests rather than trusted.
    outskirts, then it stops you ("Oop, just the highway over there.") — no one
    walks into the next casino without having beaten the boss behind them.
 4. **Days are the scarce resource.** Debts come due on a day count and a
-   session at a table costs a day. Time pressure is the game's only real
+   session at a table costs one period of one (a day is four of them). Time pressure is the game's only real
    antagonist, so nothing may quietly hand the player more days.
 5. **Nothing costs money without doing something.** Every item on sale has an
    effect; every meal buys something; a cash sink with a sentence attached is
@@ -537,9 +537,11 @@ A day has four periods: `morning`, `afternoon`, `evening`, `night`.
 
 **The hour is not what the economy is denominated in.** Days are the scarce
 resource (rule 4). Periods move on the things that cost no days at all — a bus
-ride across town, an hour over a meal — so passing time buys you *somewhere to
-be*, not more time to play. Anything that costs a day puts you in the next
-morning.
+ride across town, an hour over a meal, getting up from a table (`endSession`, one
+period) — so passing time buys you *somewhere to be*, not more time to play. The
+clock runs round at an even pace, so the character meets mornings, afternoons,
+evenings and nights equally often. Only `advanceDay` (being caught, an event that
+says so) jumps to the next morning.
 
 A character's `schedule` says where they are at each period. It is looked up per
 area and per hour, not simulated: a schedule is a statement about where somebody

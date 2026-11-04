@@ -339,6 +339,16 @@ export function advanceDay(state: GameState, days = 1): GameState {
 }
 
 /**
+ * Getting up from a table. A session takes one period of the day, the same as a
+ * bus ride or an hour over a meal, so the clock runs round morning, afternoon,
+ * evening and night at an even pace and a player meets each as often as the
+ * others. (It used to cost the whole day and drop you at morning every time.)
+ */
+export function endSession(state: GameState): GameState {
+  return advancePeriod(state, 1)
+}
+
+/**
  * Puts the clock somewhere and lets the collectors catch up.
  *
  * Both ways time passes come through here, because the check that matters is
