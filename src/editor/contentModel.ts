@@ -797,7 +797,7 @@ function actionShape(value: unknown, path: string, problems: Problems) {
       return
     case 'cinematic':
       keys(value, path, ['kind', 'id'], [], problems)
-      oneOf(value.id, ['bad-beat', 'ending', 'slide'], `${path}.id`, problems)
+      oneOf(value.id, ['bad-beat', 'ending', 'slide', 'retry'], `${path}.id`, problems)
       return
     case 'reel': {
       keys(value, path, ['kind', 'panels'], ['title'], problems)

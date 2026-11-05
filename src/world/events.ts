@@ -145,7 +145,7 @@ export type ReelScene =
   | 'night'
 
 /** The scripted scenes `cinematic` can play. */
-export type CinematicId = 'bad-beat' | 'ending' | 'slide'
+export type CinematicId = 'bad-beat' | 'ending' | 'slide' | 'retry'
 
 /** One thing said in a reel. `who` is a character id or a plain name, such as a commentator. */
 export interface ReelLine {
@@ -4867,9 +4867,9 @@ export const EVENTS: GameEvent[] = [
   {
     id: 'final-lost',
     about:
-      "Out of chips at the final: you run out the back door, the sponsors' people on your " +
-      'heels, and the friends you made on the way get in their way. Then you go back in at the ' +
-      'same deficit. Plays every time the table is lost.',
+      "Out of chips at the final: you run out the back door down the alley with the sponsors' people on your " +
+      'heels, then a Play again screen puts you back at the same table with 15,000. Plays every time the ' +
+      'table is lost.',
     trigger: { kind: 'finaleLost' },
     repeatable: true,
     actions: [
@@ -4914,167 +4914,8 @@ export const EVENTS: GameEvent[] = [
           },
         ],
       },
-      {
-        kind: 'choice',
-        prompt: 'How do you get out?',
-        options: [
-          {
-            label: 'The fire stairs',
-            then: [
-              {
-                kind: 'reel',
-                panels: [
-                  {
-                    scene: 'alley',
-                    lines: [
-                      {
-                        who: 'You',
-                        text:
-                          'Up three flights. Down three flights. I forget which way I was going.',
-                      },
-                      {
-                        who: 'marcus',
-                        text:
-                          'Marcus: Left! No — your left! — I am blocking the door with a ' +
-                          'banquet chair. I have been blocking things since 1998.',
-                      },
-                      { who: 'Mr. Lowe', text: 'Mr. Lowe: Sir, that is a fire exit.' },
-                      { who: 'marcus', text: 'Marcus: Then it is a very well-attended one.' },
-                    ],
-                  },
-                ],
-              },
-            ],
-          },
-          {
-            label: 'Through the kitchen',
-            then: [
-              {
-                kind: 'reel',
-                panels: [
-                  {
-                    scene: 'alley',
-                    lines: [
-                      { who: 'You', text: 'Pans. Steam. A man shouting about a béarnaise.' },
-                      {
-                        who: 'dana',
-                        text:
-                          'Dana: They went that way. I said it in four languages. One of them ' +
-                          'was Latin.',
-                      },
-                      { who: 'Dutch', text: 'Dutch: She is lying. I can tell. Is she lying?' },
-                      {
-                        who: 'dana',
-                        text: 'Dana: Yes. But you will take a very long time to decide.',
-                      },
-                    ],
-                  },
-                ],
-              },
-            ],
-          },
-          {
-            label: 'Straight out, tip the doorman',
-            then: [
-              {
-                kind: 'reel',
-                panels: [
-                  {
-                    scene: 'alley',
-                    lines: [
-                      {
-                        who: 'You',
-                        text:
-                          'A twenty to the doorman. He looks at the twenty. He looks at me. He ' +
-                          'looks at the twenty.',
-                      },
-                      {
-                        who: 'hal',
-                        text:
-                          'Hal: Gentlemen. A word on pot odds. It will take about forty minutes.',
-                      },
-                      { who: 'Ms. Fong', text: 'Ms. Fong: We have a schedule, sir.' },
-                      { who: 'hal', text: 'Hal: So did Custer.' },
-                    ],
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      },
-      {
-        kind: 'if',
-        when: [
-          { kind: 'flag', flag: 'stakedKit' },
-        ],
-        then: [
-          {
-            kind: 'reel',
-            panels: [
-              {
-                scene: 'alley',
-                lines: [
-                  { who: 'kit', text: 'Kit: I owe you for the stake. This is me paying in kind.' },
-                  {
-                    who: 'kit',
-                    text:
-                      "Kit: Do not look back. I have wrecked a lot of people's evenings. I am " +
-                      'very good at it.',
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      },
-      {
-        kind: 'reel',
-        title: 'Back in',
-        panels: [
-          {
-            scene: 'rail',
-            caption:
-              'A hand on the back of your jacket, and the loading dock door swings open on the ' +
-              'light.',
-            lines: [
-              {
-                who: 'marcus',
-                text:
-                  'Marcus: They have not called your name. Go back in. The seat is still warm. ' +
-                  'It is also, technically, still yours.',
-              },
-              {
-                who: 'Dolores',
-                text: 'Dolores: Rub the foot, honey. For luck. Do not tell the foot I said so.',
-              },
-              {
-                who: 'dana',
-                text: 'Dana: Seven big blinds. You have done more with less. Probably.',
-              },
-            ],
-          },
-          {
-            scene: 'booth',
-            ticker: 'YOU 15,000 · 7 BB · LAST OF 6',
-            lines: [
-              {
-                who: 'Chip',
-                text: 'And what is this! The short stack is BACK! He has returned to the table!',
-              },
-              {
-                who: 'Dr. Anand',
-                text:
-                  'I will say, with some professional reluctance, that this is not in the rules.',
-              },
-              {
-                who: 'Chip',
-                text: 'The rules, Doctor, are a suggestion. Fifteen thousand. Deal the cards!',
-              },
-            ],
-          },
-        ],
-      },
+      // Out of the alley and out of chips. One screen, one button, and you are back at the table with 15,000.
+      { kind: 'cinematic', id: 'retry' },
       { kind: 'startTable', tableId: 'lumina-finale' },
     ],
   },

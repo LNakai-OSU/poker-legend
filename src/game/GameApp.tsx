@@ -23,6 +23,7 @@ import { currentStanding } from '../overworld/OverworldScene'
 import { useEventRunner } from './useEventRunner'
 import { BadBeatIntro } from './BadBeatIntro'
 import { SlideMontage } from './SlideMontage'
+import { PlayAgain } from './PlayAgain'
 import { ReelScene } from './ReelScene'
 import { DialogueBox } from './DialogueBox'
 import { ChoiceBox } from './ChoiceBox'
@@ -761,6 +762,7 @@ export function GameApp({ playtest = false }: { playtest?: boolean }) {
           />
         </div>
       )}
+      {events.stage.cinematic?.scene === 'retry' && <PlayAgain key={events.stage.cinematic.id} onDone={events.cinematicDone} />}
       {events.stage.cinematic?.scene === 'slide' && <SlideMontage key={events.stage.cinematic.id} onDone={events.cinematicDone} />}
       {events.stage.cinematic?.scene === 'bad-beat' && <BadBeatIntro key={events.stage.cinematic.id} onDone={events.cinematicDone} />}
       {events.stage.cinematic?.scene === 'ending' && <EndingFilm key={events.stage.cinematic.id} onDone={events.cinematicDone} />}

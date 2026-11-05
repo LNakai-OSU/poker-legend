@@ -504,20 +504,13 @@ describe('the final table', () => {
   }
   const final = (id: string) => EVENTS.find((e) => e.id === id)!
 
-  it('sends you back to the same table after a loss, however you got out', () => {
-    for (const choice of [0, 1, 2]) {
-      const h = harness({ areaId: 'pl-casino', cash: 200000, flags: { ...initialState().flags, stakedKit: true } })
-      h.machine.run(final('final-lost'))
-      let guard = 0
-      while (h.machine.isRunning && guard++ < 200) {
-        const stage = h.stage
-        if (stage.reel) h.machine.reelDone()
-        else if (stage.choice) h.machine.choose(choice)
-        else if (stage.dialogue) h.machine.advance()
-        else h.tick(1000)
-      }
-      expect(h.log).toContain('table lumina-finale')
-    }
+  it('runs out through the alley, shows the Play again screen, and sits you back at the same table', () => {
+    const h = harness({ areaId: 'pl-casino', cash: 200000 })
+    const { reels, scenes } = play(h, final('final-lost'))
+    expect(reels).toBeGreaterThan(0)
+    // The Play again screen is the last thing before the table, and the table only comes once it is pressed.
+    expect(scenes).toEqual(['retry'])
+    expect(h.log).toContain('table lumina-finale')
   })
 
   it('plays the ending film when it is won, and has Dana say the one sour thing after it', () => {
