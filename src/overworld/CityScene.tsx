@@ -98,7 +98,14 @@ export function CityScene({
     const place = cast[id]
     if (!place || place.areaId !== areaId) return at
     if ('beside' in place) {
-      const spot = besideTile(area.map, landing, (c, r) => taken.has(`${c},${r}`))
+      // Through a door, they go in ahead of you: the tile in front of where you
+      // came in, not a second figure materialising at your shoulder by the wall.
+      const cameInByDoor = area.exits.some((e) => e.col === landing.col && e.row === landing.row + 1)
+      const ahead = { col: landing.col, row: landing.row - 1 }
+      const spot =
+        cameInByDoor && isWalkable(area.map, ahead.col, ahead.row) && !taken.has(`${ahead.col},${ahead.row}`)
+          ? ahead
+          : besideTile(area.map, landing, (c, r) => taken.has(`${c},${r}`))
       taken.add(`${spot.col},${spot.row}`)
       return spot
     }

@@ -421,6 +421,9 @@ export function OverworldScene({
       const removeNpc = (npc: Npc) => {
         const at = npcs.indexOf(npc)
         if (at >= 0) npcs.splice(at, 1)
+        // Their moonlit rim goes with them, or it stays behind as a shadow.
+        rims.get(npc.sprite)?.destroy()
+        rims.delete(npc.sprite)
         npc.sprite.destroy({ children: true })
         npc.label.destroy()
       }
