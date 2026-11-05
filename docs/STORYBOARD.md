@@ -191,7 +191,7 @@ them.
 | The Fixer's job; Lorna heads up; the Consortium; the Invitational | various | existing | — | existing | built |
 | Send-off: "Ninety. Take the plane." | Dana | talkTo dana | after `dana-mesa`, cash ≥ $90,000 | `dana-sends-you-up` | built |
 
-### Act 6 — Porto Lumina · the Challenge, $120,000 heads up
+### Act 6 — Porto Lumina · the tournament, then the Invitational final
 
 - **Face:** Nadia Okonkwo. **Want:** the penthouse. **Problem:** the buy-in,
   and Madame Wen offering it. **Thread:** Kit as the warning; Dana's reveal;
@@ -201,14 +201,16 @@ them.
 
 | Beat | Who / where | Trigger | Conditions | Event id | Status |
 |---|---|---|---|---|---|
-| Arrival card: thirty at the nosebleed, a hundred and twenty for the match | Photographer, the waterfront | enterArea pl-street | — | `arrive-lumina` | built |
+| Arrival card: thirty at the nosebleed, twenty to enter the tournament | Photographer, the waterfront | enterArea pl-street | — | `arrive-lumina` | built |
 | **Kit, broken**: forty hands; the Consortium's men; "don't take Wen's money" | Kit, waterfront, morning/afternoon | talkTo kit | chapter Lumina, no penthouse | `kit-lumina` | built |
-| **Nadia names the match** — she knows the kitchen table; somebody has been writing to her; she has sent a car for Marcus | Nadia, casino | interact nadia | — | `nadia-names-the-match` | built |
+| **Nadia names the match** — greets you at the foyer rope: she knows the kitchen table; somebody has been writing to her; she has sent a car for Marcus; win the Poker Legends tournament to make the final | Nadia, the gap in the foyer rope | standOn pl-casino (20,22) | chapter Lumina | `nadia-names-the-match` | built |
+| **The tournament** — the desk at the back ($20,000); ten rounds of ten hands, blinds up each round (100/200 → 2,000/4,000), a knocked-out player replaced from a pool with a stack to suit the stage; after round ten it is the final table, played to one winner; lose and it is $20,000 again from round one | Tournament Desk | table | — | `lumina-tournament` → `tournament-won` / `tournament-lost` | built |
+| **The slide** — montage (the buy-in, a hot start, down to $15,000, the lights go), the men's room, Marcus's pep talk, the broadcast back on | — | tournamentWon | — | `tournament-won` → `lumina-finale` | built |
 | **Dana's reveal**: "I'm the someone." | Dana, casino floor, evening/night | talkTo dana | chapter Lumina, no penthouse | `dana-reveal` | built |
 | Marcus at the rail: "Whatever happens, the kitchen table is still in my kitchen." | Marcus, waterfront / casino | talkTo marcus | after `nadia-names-the-match`, no penthouse | `marcus-at-the-rail` | built |
 | Hal on the eve: the heads-up lesson he never sold (button posts the small blind, acts first pre-flop and last after; open wide from it) | Hal, waterfront, evening/night | talkTo hal | chapter Lumina, no penthouse | `hal-on-the-eve` | built |
 | Madame Wen's stake | Wen | sponsor | — | `wen` (sponsor) | built |
-| The Challenge | Nadia | table | — | `lumina-finale` → ending / loss scene | built |
+| The Invitational final | Nadia's table | after `tournament-won` | $15,000 against 720,000 | `lumina-finale` → `final-won` / `final-lost` (back to the same table at $15,000) | built |
 
 ### Aftermath — forty-one floors up
 
@@ -500,6 +502,12 @@ Hal teaches the nerd's side of the game; Dr. Anand is the nerd on the air.
 - Walking into an empty chair at any table offers a seat (Space or X); the
   dealer is not needed. Betting works with the arrows and Space at every
   table.
+- The tournament in front of the final (2026-11-04): `TableDef.tournament`
+  (rules in `engine/tournament.ts`, the between-hands step in
+  `game/tournamentFlow.ts`), the `tournamentWon` / `tournamentLost` triggers, the
+  `wonTournament` flag (the Invitational table refuses you without it), `standOn`
+  beats now actually fire, `final-lost` runs on a lost final (it never did), and the
+  Lumina casino is a 40×26 hall with nine tournament tables.
 - The heads-up rematch week is gone. The beats written for it
   (`nadia-makes-you-wait`, the `challenge` conditions) are now only reachable
   by a save that quit mid-way; `nadia-rematch` takes you straight back to the

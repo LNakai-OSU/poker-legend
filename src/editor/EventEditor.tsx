@@ -76,6 +76,8 @@ const TRIGGER_LABEL: Record<EventTrigger['kind'], string> = {
   caught: 'the collectors catch you',
   finaleWon: 'you win the final table',
   finaleLost: 'you lose the final table',
+  tournamentWon: 'you win the tournament',
+  tournamentLost: 'you are knocked out of the tournament',
 }
 
 const CONDITION_LABEL: Record<EventCondition['kind'], string> = {
@@ -697,6 +699,8 @@ function TriggerTarget({ trigger, options, onChange }: { trigger: EventTrigger; 
       )
     case 'finaleWon':
     case 'finaleLost':
+    case 'tournamentWon':
+    case 'tournamentLost':
       return <span className="ed-muted ed-small">plays when the final table ends</span>
     case 'caught':
       return <span className="ed-muted ed-small">whoever&rsquo;s collectors they are: add a &ldquo;collectors are in town&rdquo; condition</span>

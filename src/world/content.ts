@@ -178,6 +178,25 @@ export const TABLES: Record<string, TableDef> = {
     bossOf: 'neonMesa',
     opponents: ['vale'],
   },
+  // The way to the final: a hundred hands in ten rounds with the blinds going up
+  // every round, a new player in every chair that is emptied, then the six that
+  // are left play it out. Win it and you are seated at the Invitational.
+  'lumina-tournament': {
+    id: 'lumina-tournament',
+    name: 'The Poker Legends Tournament',
+    theme: 'lumina',
+    smallBlind: 100,
+    bigBlind: 200,
+    buyIn: 20000,
+    dressCode: 4,
+    tournament: {
+      rounds: 10,
+      handsPerRound: 10,
+      blinds: [[100, 200], [150, 300], [200, 400], [300, 600], [400, 800], [600, 1200], [800, 1600], [1000, 2000], [1500, 3000], [2000, 4000]],
+    },
+    opponents: ['xue', 'marchetti', 'kingsley', 'saul', 'priya'],
+    walkIns: ['cassius', 'ilse', 'rourke', 'anselm', 'tamsin', 'lucien', 'sloane', 'ferris', 'maud', 'hector', 'dmitri', 'whitaker', 'lorna', 'teo', 'junie', 'omar', 'bette', 'hollis', 'corinne', 'vance'],
+  },
   // The televised final of the Legends Invitational: six at the table, and you
   // are the short stack by a mile — the story opens here and comes back to it
   // until you win it. Nothing is paid to sit and nothing is kept for losing;
@@ -191,7 +210,6 @@ export const TABLES: Record<string, TableDef> = {
     buyIn: 100000,
     yourStack: 0.15,
     freeroll: true,
-    proof: 120000,
     prize: 750000,
     dressCode: 4,
     isFinale: true,

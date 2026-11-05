@@ -23,6 +23,10 @@ export const STORY_FLAGS = {
     set: 'you have beaten the final rival',
     clear: 'you have not beaten the final rival yet',
   },
+  wonTournament: {
+    set: 'you have won the Poker Legends tournament and have a seat at the Invitational',
+    clear: 'you have not won the Poker Legends tournament',
+  },
   hasPenthouse: {
     set: 'you own the penthouse',
     clear: 'you do not own the penthouse',

@@ -239,6 +239,11 @@ export function CityScene({
       playerStart={landing}
       interactables={interactables}
       exits={exits}
+      onStandOn={(col, row) => {
+        // Where you stand can start a beat (Nadia at the rope). Not while one already has the screen.
+        const event = onEvent && !paused ? eventFor(EVENTS, { kind: 'standOn', areaId, col, row }, state) : undefined
+        if (event && onEvent) onEvent(event)
+      }}
       onExit={(exit) => {
         const target = area.exits.find((e) => e.col === exit.col && e.row === exit.row)
         if (target) onEnterArea(target.toAreaId, target.toCol, target.toRow)

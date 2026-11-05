@@ -204,6 +204,30 @@ export class TexasHoldEmTable {
     p.stack = amount
   }
 
+  /**
+   * Seats somebody new in a knocked-out player's chair, between hands: a
+   * tournament that keeps its table full. Same seat, same place relative to the
+   * button; the newcomer has no history with anyone, so nobody has a read on them.
+   */
+  replacePlayer(oldId: string, next: PlayerConfig): void {
+    if (this.handInProgress) throw new Error('cannot replace a player mid-hand')
+    const idx = this.roster.findIndex((p) => p.id === oldId)
+    if (idx < 0) throw new Error(`unknown player ${oldId}`)
+    if (this.roster.some((p) => p.id === next.id)) throw new Error(`${next.id} is already seated`)
+    this.roster[idx] = {
+      ...next,
+      stack: next.startingStack,
+      holeCards: [],
+      folded: false,
+      allIn: false,
+      streetContribution: 0,
+      handContribution: 0,
+      hasActedThisStreet: false,
+    }
+    this.actionCounts.delete(oldId)
+    this.tellCache.delete(oldId)
+  }
+
   private seatsInHandOrder(): number[] {
     const n = this.roster.length
     const order: number[] = []

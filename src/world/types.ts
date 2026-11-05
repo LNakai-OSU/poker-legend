@@ -2,6 +2,7 @@ import type { TileGrid } from '../overworld/tileRenderer'
 import type { NpcArt } from '../overworld/Npc'
 import type { NpcRole, PersonLook } from '../overworld/characterArt'
 import type { Archetype, SkillTier } from '../engine/types'
+import type { TournamentRules } from '../engine/tournament'
 import type { CityId } from '../game/state'
 import type { PlacedStamp } from './stamps'
 import type { TimePeriod } from '../game/time'
@@ -69,6 +70,14 @@ export interface TableDef {
   yourStack?: number
   /** Nothing is paid to sit down, and nothing is kept for losing: the stack is given. */
   freeroll?: boolean
+  /**
+   * Makes this a tournament: `buyIn` is the entry fee and the chips you start
+   * with, the blinds rise every round, and a knocked-out player is replaced from
+   * `walkIns` until the last round is done. Then it is the final table, played to
+   * one winner. You cannot stand up, and nothing is paid back: the prize is the
+   * seat at the final (`tournamentWon`).
+   */
+  tournament?: TournamentRules
   /** Cash you must be holding, not spending, to be let in. */
   proof?: number
   /** What winning the table pays, in a freeroll. */

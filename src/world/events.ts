@@ -54,6 +54,8 @@ export type EventTrigger =
   /** The final table is over: the last chip is yours, or you are out of them. */
   | { kind: 'finaleWon' }
   | { kind: 'finaleLost' }
+  | { kind: 'tournamentWon' }
+  | { kind: 'tournamentLost' }
 
 /** What has to be true for it to fire. All of them must hold. */
 export type EventCondition =
@@ -569,6 +571,10 @@ function sameTrigger(a: EventTrigger, b: EventTrigger): boolean {
       return b.kind === 'finaleWon'
     case 'finaleLost':
       return b.kind === 'finaleLost'
+    case 'tournamentWon':
+      return b.kind === 'tournamentWon'
+    case 'tournamentLost':
+      return b.kind === 'tournamentLost'
   }
 }
 
@@ -2284,7 +2290,7 @@ export const EVENTS: GameEvent[] = [
   // Act 6 — Porto Lumina. Everything that followed you up was pointing here.
   {
     id: 'arrive-lumina',
-    about: 'Arriving at Porto Lumina: the nosebleed, the match, and the man who photographs the winner. Then you walk in to its table.',
+    about: 'Arriving at Porto Lumina: the nosebleed, the tournament, and the man who photographs the winner. Then you walk in to the casino, where Nadia is waiting at the foyer rope (`nadia-names-the-match`).',
     trigger: { kind: 'enterArea', areaId: 'pl-street' },
     actions: [
       {
@@ -2295,7 +2301,7 @@ export const EVENTS: GameEvent[] = [
         kind: 'dialogue',
         speaker: 'Photographer',
         lines: [
-          'Photographer: Thirty thousand at the nosebleed. A hundred and twenty for the match with Ms. Okonkwo.',
+          'Photographer: Thirty thousand at the nosebleed. Twenty to enter the Poker Legends tournament, and the winner sits down with Ms. Okonkwo at the Invitational.',
           'Photographer: Four years I have photographed her winning. Give me a reason to photograph somebody else.',
         ],
       },
@@ -2303,7 +2309,7 @@ export const EVENTS: GameEvent[] = [
       // and through it, rather than being left at the stop to find it.
       { kind: 'movePlayer', to: { col: 15, row: 6 } },
       { kind: 'fade', to: 'out' },
-      { kind: 'teleport', areaId: 'pl-casino', col: 10, row: 10 },
+      { kind: 'teleport', areaId: 'pl-casino', col: 20, row: 23 },
       { kind: 'fade', to: 'in' },
     ],
   },
@@ -2331,10 +2337,13 @@ export const EVENTS: GameEvent[] = [
   {
     id: 'nadia-names-the-match',
     about:
-      'Meeting the final rival before the table: she knows the kitchen table, somebody ' +
-      'has been writing to her about you, and she sends a car for Marcus. What you ask her is ' +
+      'Coming through the foyer rope into the casino, Nadia is the first to greet you: she knows the kitchen table, somebody ' +
+      'has been writing to her about you, she sends a car for Marcus, and she says what it takes: win ' +
+      'the Poker Legends tournament and you have a seat at the Invitational. What you ask her is ' +
       'heard again by Dana (`dana-reveal`) and Marcus (`marcus-at-the-rail`).',
-    trigger: { kind: 'interact', poiId: 'nadia' },
+    // The foyer is roped off but for one gap, so you cannot come into the hall without stepping on it.
+    trigger: { kind: 'standOn', areaId: 'pl-casino', col: 20, row: 22 },
+    conditions: [{ kind: 'chapter', cityId: 'portoLumina' }],
     actions: [
       {
         kind: 'dialogue',
@@ -2342,7 +2351,9 @@ export const EVENTS: GameEvent[] = [
         lines: [
           'Nadia: So you are the one from the kitchen table in Basin.',
           'Nadia: Somebody I trust has been writing to me about you since Marcus’s game.',
-          'Nadia: Tonight is the final table of the Legends Invitational. Six chairs, one winner, and the floor upstairs goes with the trophy.',
+          'Nadia: Tonight the Poker Legends tournament plays out on this floor. Nine tables, ten rounds of ten hands, and the blinds go up with every round.',
+          'Nadia: Win it, and you have a seat at the final table of the Legends Invitational. Win that, and the floor upstairs goes with the trophy.',
+          'Nadia: The entry desk is at the back, under the chandelier. Twenty thousand. Lose, and it is twenty thousand again, from the first hand.',
           'Nadia: I have sent a car for your friend Marcus. A challenger should have somebody at the rail.',
         ],
       },
@@ -2379,7 +2390,7 @@ export const EVENTS: GameEvent[] = [
           },
         ],
       },
-      { kind: 'dialogue', speaker: 'nadia', lines: ['Nadia: Come back when you are ready. You will know.'] },
+      { kind: 'dialogue', speaker: 'nadia', lines: ['Nadia: The desk is open whenever you are.'] },
     ],
   },
   {
@@ -4027,27 +4038,8 @@ export const EVENTS: GameEvent[] = [
     ],
   },
 
-  // The match lost. She makes you wait a week; everyone who followed you up
-  // says what to do with it; the rematch is the comeback.
-  {
-    id: 'nadia-makes-you-wait',
-    about: 'Lost the match: Nadia will not play the same person twice in a week. Come back as somebody else.',
-    trigger: { kind: 'interact', poiId: 'nadia' },
-    conditions: [
-      { kind: 'eventDone', eventId: 'nadia-names-the-match' },
-      { kind: 'challenge', status: 'lost' },
-    ],
-    actions: [
-      {
-        kind: 'dialogue',
-        speaker: 'nadia',
-        lines: [
-          'Nadia: Not tonight. I do not play the same person twice in one week.',
-          'Nadia: Come back as somebody else. Somebody I have not read about.',
-        ],
-      },
-    ],
-  },
+  // The final lost. There is no waiting: the back door, the friends in the way, and the
+  // same table at the same deficit (`final-lost`). Nadia seats you again if you come to her.
   {
     id: 'nadia-rematch',
     about: 'Back after a loss: Nadia seats you again, at once, at the same deficit. Every loss comes back to this.',
@@ -4524,17 +4516,171 @@ export const EVENTS: GameEvent[] = [
     ],
   },
   {
+    id: 'tournament-registrar-closed',
+    about: 'The desk after you have won the floor: the seat is yours, go and see Nadia.',
+    trigger: { kind: 'interact', poiId: 'lumina-tournament-desk' },
+    repeatable: true,
+    conditions: [{ kind: 'flag', flag: 'wonTournament' }],
+    actions: [
+      {
+        kind: 'dialogue',
+        lines: ['Registrar: The tournament is over, and you won it. Your seat is at the Invitational. Ms. Okonkwo is by the door.'],
+      },
+    ],
+  },
+  {
+    id: 'tournament-lost',
+    about:
+      'Knocked out of the tournament: the entry is gone and the desk will take another, from round one. ' +
+      'Plays every time.',
+    trigger: { kind: 'tournamentLost' },
+    repeatable: true,
+    actions: [
+      { kind: 'fade', to: 'out' },
+      {
+        kind: 'reel',
+        title: 'Knocked out',
+        panels: [
+          {
+            scene: 'booth',
+            ticker: 'POKER LEGENDS · ELIMINATED',
+            lines: [
+              { who: 'Chip', text: 'And that is the end of the road for our challenger, folks! The cards have spoken!' },
+              { who: 'Dr. Anand', text: 'The tournament is a hundred hands long. Variance is not. I would only say: it is twenty thousand to find out again.' },
+            ],
+          },
+        ],
+      },
+      { kind: 'fade', to: 'in' },
+      {
+        kind: 'dialogue',
+        speaker: 'nadia',
+        lines: [
+          'Nadia: The desk is at the back. Round one is at the top of the hour.',
+          'Nadia: Everybody who has sat in that seat has lost it once. The ones I remember lost it twice.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'tournament-won',
+    about:
+      'The floor is won and the table is announced as the final one: a montage of the buy-in, a good ' +
+      'start and the long slide down to 15,000, the lights going out; then the men\'s room, where ' +
+      'Marcus finds you and talks you back into the chair; the broadcast comes back on and you play ' +
+      'the Invitational\'s final table with the 15,000. Where the opening prologue left off.',
+    trigger: { kind: 'tournamentWon' },
+    actions: [
+      { kind: 'fade', to: 'out' },
+      {
+        kind: 'reel',
+        title: 'Live from Porto Lumina',
+        panels: [
+          { scene: 'logo', lines: [] },
+          {
+            scene: 'booth',
+            ticker: 'FINAL TABLE · YOU 100,000 · 6 LEFT',
+            lines: [
+              { who: 'Chip', text: 'The floor is won and the seat is taken, folks! Six players, one hundred thousand each for our challenger, and the keys to the penthouse!' },
+              { who: 'Dr. Anand', text: 'He has bought in at the Invitational on the strength of a hundred hands. I will be watching the stacks, not the story.' },
+            ],
+          },
+          {
+            scene: 'booth',
+            ticker: 'YOU 142,000 · CHIP LEADER',
+            lines: [
+              { who: 'Chip', text: 'And what a start! Kings over queens, a flush draw that gets there, and our challenger is the chip leader after twelve hands!' },
+              { who: 'Dr. Anand', text: 'It is twelve hands. I would like it on the record that I said it is twelve hands.' },
+            ],
+          },
+          {
+            scene: 'booth',
+            ticker: 'YOU 98,000',
+            lines: [
+              { who: 'Chip', text: 'The Contessa has found her spot, and the Reverend tithes himself a pot! Our challenger gives some back!' },
+              { who: 'Dr. Anand', text: 'Gives back. That is generous phrasing.' },
+            ],
+          },
+          {
+            scene: 'booth',
+            ticker: 'YOU 61,000',
+            lines: [
+              { who: 'Chip', text: 'Bernard has called three streets with ace-high and been right. It is Thursday for Bernard, folks!' },
+              { who: 'Dr. Anand', text: 'It is not. But he is correct about the cards.' },
+            ],
+          },
+          {
+            scene: 'booth',
+            ticker: 'YOU 34,000 · 17 BB',
+            lines: [
+              { who: 'Chip', text: 'Zeke is streaming this to eleven thousand people and one of them is his mum, and he has just won a pot off our challenger with a bluff!' },
+              { who: 'Dr. Anand', text: 'The mum was very proud. Seventeen big blinds, now.' },
+            ],
+          },
+          {
+            scene: 'booth',
+            ticker: 'YOU 15,000 · 7 BB · LAST OF 6',
+            lines: [
+              { who: 'Chip', text: 'And Nadia calls the all-in, and our challenger is down to fifteen thousand! Seven big blinds!' },
+              { who: 'Dr. Anand', text: 'From first to last in under an hour. There is a technical term for that. It is not a compliment.' },
+            ],
+          },
+          {
+            scene: 'booth',
+            ticker: 'TECHNICAL DIFFICULTY',
+            lines: [
+              { who: 'Chip', text: 'Wait. The lights. Folks, are the lights going? We are— we are going to a—' },
+              { who: 'Dr. Anand', text: 'The rig has tripped. Do not adjust your set.' },
+            ],
+          },
+          {
+            scene: 'bathroom',
+            caption: 'The men\'s room, Porto Lumina. A fluorescent tube hums. Play is suspended for fifteen minutes.',
+            lines: [
+              { who: 'You', text: 'A hundred thousand. A hundred thousand dollars of somebody else\'s hope, and I have fifteen of it left.' },
+              { who: 'You', text: 'I was good. For twelve hands I was the best player in the building. What did I do?' },
+              { who: 'You', text: 'Nine days ago I was a man with forty dollars and a fridge that hums. Maybe that was the real me, and this is the lie.' },
+            ],
+          },
+          {
+            scene: 'bathroom',
+            caption: 'The door swings. Somebody is wearing a sports jacket to a men\'s room, and has brought a paper cup.',
+            lines: [
+              { who: 'marcus', text: 'Marcus: There he is. I told the usher I was your uncle. He asked which side and I said the loud side.' },
+              { who: 'marcus', text: 'Marcus: Listen. Nobody in that room has been at my kitchen table. Nobody. You have beaten a man who had never lost with a pair of nothing, and he cried.' },
+              { who: 'marcus', text: 'Marcus: Fifteen thousand is not nothing. It is seven big blinds, and you have never needed more than a good first night and a bad idea.' },
+              { who: 'marcus', text: 'Marcus: Go and sit down. Be a story I can tell. And if it goes wrong, the kitchen table is still in my kitchen.' },
+              { who: 'You', text: 'Marcus. Is that a paper cup of water, or of vodka?' },
+              { who: 'marcus', text: 'Marcus: Water. I am not an animal. Drink it. Wash your face. Go.' },
+            ],
+          },
+          {
+            scene: 'booth',
+            ticker: 'YOU 15,000 · 7 BB · LAST OF 6',
+            lines: [
+              { who: 'Chip', text: 'The lights are back, folks! The rig is fixed, and the short stack returns to the table!' },
+              { who: 'Dr. Anand', text: 'We are back live. Fifteen thousand against a combined seven hundred and twenty thousand. I would say the odds are long.' },
+              { who: 'Chip', text: 'The odds, Doctor, are a suggestion. Deal the cards!' },
+            ],
+          },
+        ],
+      },
+      { kind: 'startTable', tableId: 'lumina-finale' },
+    ],
+  },
+  {
     id: 'final-table-start',
     about:
-      'Sitting down for the final: the lights come back on in the studio, the commentators ' +
-      'recap who you scouted, and you take the seat — at 7 big blinds, with the whole table ' +
-      'ahead of you. Repeatable, so Not yet is allowed.',
+      'Sitting down for the final when you come to Nadia with the seat already won (the walk ' +
+      'there from `tournament-won` was interrupted, or you left the table): the lights come ' +
+      'back on in the studio, the commentators recap who you scouted, and you take the seat — ' +
+      'at 7 big blinds, with the whole table ahead of you. Repeatable, so Not yet is allowed.',
     trigger: { kind: 'interact', poiId: 'nadia' },
     repeatable: true,
     conditions: [
       { kind: 'eventDone', eventId: 'nadia-names-the-match' },
       { kind: 'flag', flag: 'hasPenthouse', set: false },
-      { kind: 'cashAtLeast', amount: 120000 },
+      { kind: 'flag', flag: 'wonTournament' },
       { kind: 'challenge', status: 'unplayed' },
     ],
     actions: [
@@ -4542,7 +4688,7 @@ export const EVENTS: GameEvent[] = [
         kind: 'dialogue',
         speaker: 'nadia',
         lines: [
-          'Nadia: The final is at nine. You have the proof of funds, so you have the seat. The seat is the one at the end.',
+          'Nadia: The final is at nine. You won the floor, so you have the seat. The seat is the one at the end.',
           'Nadia: You will be the short stack. That is not an insult. That is the arithmetic.',
         ],
       },

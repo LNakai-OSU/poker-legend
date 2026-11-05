@@ -299,7 +299,7 @@ export function GameApp({ playtest = false }: { playtest?: boolean }) {
     }
     // The finale has no Leave button on purpose, and one side loses everything
     // they put up. Both of those have to be said before the money moves.
-    if ((table.isFinale && !table.freeroll) || table.bossOf) {
+    if ((table.isFinale && !table.freeroll) || table.bossOf || table.tournament) {
       setView({ kind: 'finaleCommit', tableId })
       return
     }
@@ -307,6 +307,24 @@ export function GameApp({ playtest = false }: { playtest?: boolean }) {
   }
 
   const handleLeaveTable = (table: (typeof TABLES)[string], result: SessionResult) => {
+    // The tournament: the entry fee is spent either way, and the prize is the seat at the Invitational.
+    if (table.tournament) {
+      const won = result.tournamentWon === true
+      sessionSpend.current = 0
+      const stats = {
+        handsWon: state.stats.handsWon + result.handsWon,
+        biggestPot: Math.max(state.stats.biggestPot, result.biggestPot),
+        tablesPlayed: state.stats.tablesPlayed + 1,
+      }
+      const settled = endSession({ ...state, stats, flags: won ? { ...state.flags, wonTournament: true } : state.flags })
+      setState(() => (won || settled.cash >= BUST_LINE ? settled : recordBust(settled)))
+      getUpFromTable()
+      playSound(won ? 'cash' : 'lose')
+      // What follows is an event: the montage into the final, or the walk back to the booth.
+      const next = eventFor(EVENTS, { kind: won ? 'tournamentWon' : 'tournamentLost' }, { ...settled, flags: won ? { ...settled.flags, wonTournament: true } : settled.flags })
+      if (next) events.run(next)
+      return
+    }
     // A town's boss, one on one: win and the bus to the next town will take you.
     if (table.bossOf) {
       const goal = CASINO_GOALS[table.bossOf]
@@ -359,7 +377,13 @@ export function GameApp({ playtest = false }: { playtest?: boolean }) {
       setView({ kind: 'city' })
       const ending = eventFor(EVENTS, { kind: 'finaleWon' }, state)
       if (ending) events.run(ending)
-    } else if (table.isFinale) setView({ kind: 'finaleLost' })
+    } else if (table.isFinale) {
+      // Out of chips at the final: the back door, the friends in the way, and the same table at the same deficit.
+      setView({ kind: 'city' })
+      const lost = eventFor(EVENTS, { kind: 'finaleLost' }, state)
+      if (lost) events.run(lost)
+      else setView({ kind: 'finaleLost' })
+    }
     else {
       // The boss comes out to meet you when the room opens (`<town>-boss-door`), so nothing else is said first.
       getUpFromTable()
@@ -508,16 +532,21 @@ export function GameApp({ playtest = false }: { playtest?: boolean }) {
       return (
         <MenuScreen title={table.name} onBack={backToCity} backLabel="Not tonight">
           <p data-testid="finale-commitment" style={{ color: '#f2c14e' }}>
-            One match, ${table.buyIn.toLocaleString()} each, winner takes every chip on the table.
+            {table.tournament
+              ? `The entry is $${table.buyIn.toLocaleString()}, for $${table.buyIn.toLocaleString()} in chips. Ten rounds of ten hands, the blinds up every round. Whoever is knocked out is replaced.`
+              : `One match, $${table.buyIn.toLocaleString()} each, winner takes every chip on the table.`}
           </p>
           <p>
-            You are locked in for the whole match. There is no cashing out and no standing up
-            &mdash; it is over when one of you has all the chips.
+            {table.tournament
+              ? 'You are locked in until you are knocked out or the final table is won. There is no cashing out and no standing up.'
+              : 'You are locked in for the whole match. There is no cashing out and no standing up \u2014 it is over when one of you has all the chips.'}
           </p>
           <p>
-            {table.bossOf
+            {table.tournament
+              ? 'Last standing at the final table of the tournament gets the seat at the Invitational. Knocked out, and the entry is gone: it is $' + table.buyIn.toLocaleString() + ' to go again, from round one.'
+              : table.bossOf
               ? `If that is ${rival}, the $${table.buyIn.toLocaleString()} is theirs, and you do not get to the next town until you have beaten them.`
-              : `If that is her, the $${table.buyIn.toLocaleString()} is hers, and she will not put the match up again for another week.`}
+              : `If that is her, the $${table.buyIn.toLocaleString()} is hers.`}
           </p>
           <p style={{ color: '#9a9ab0' }}>
             Your roll ${state.cash.toLocaleString()} &rarr; ${(state.cash - table.buyIn).toLocaleString()} once
@@ -528,7 +557,7 @@ export function GameApp({ playtest = false }: { playtest?: boolean }) {
             style={menuButtonStyle}
             onClick={() => buyInAndSit(table)}
           >
-            Put up the ${table.buyIn.toLocaleString()}
+            {table.tournament ? 'Pay the' : 'Put up the'} ${table.buyIn.toLocaleString()}
           </button>
         </MenuScreen>
       )
@@ -690,7 +719,7 @@ export function GameApp({ playtest = false }: { playtest?: boolean }) {
   // it is not an escape hatch any more, but the match is meant to feel like a
   // door that has shut behind you and a menu button undercuts that.
   const lockedInAtTable =
-    view.kind === 'table' && (TABLES[view.tableId]?.isFinale === true || TABLES[view.tableId]?.bossOf !== undefined)
+    view.kind === 'table' && (TABLES[view.tableId]?.isFinale === true || TABLES[view.tableId]?.bossOf !== undefined || TABLES[view.tableId]?.tournament !== undefined)
 
   // Escape opens the menu when nothing else has the keys — no text box, no
   // question, no menu of its own (where Escape is the way out instead).

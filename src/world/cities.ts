@@ -409,22 +409,35 @@ const MESA_FLOOR = parseMap(`
 
 /**
  * Porto Lumina: white marble, gold columns, chandelier light, a roped salon in burgundy
- * for the last game. From the door you see columns 3 to 17 and rows 2 down, so the
- * bar, the progressive bank and the cage stand a step out from the wall, inside it.
+ * for the last game. The hall is forty tiles across, and the tournament fills the middle of it.
  */
 const LUMINA_FLOOR = parseMap(`
-^^^^^^^^^^^^^^^^^^^^
-^mmmmmmmmmmmmmmmmmm^
-^FMFFFFFMMMMFFFFFFF^
-^FMFFFFFFFFFFFFFFFF^
-^MMMMMMMFFFFM&&&&&&^
-^FMMMMMMMMMMM&&&&&F^
-^MMMMMMMMMMMM&FF&&&^
-^MMMFFFMMMMMM&&&&&&^
-^FMMFFFMMFFMM&&&&&F^
-^FFMMMMMMMMMMFFF&&F^
-^FFMMMMMMMMMMMMMMMM^
-^^^^^^^^^^D^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm^
+^FFFFFFMFMFFFFFMMMFFFFFMMMFMFFFFMMFFFFF^
+^FFFFFFMFMFFFFFMMMFFFFFMMMFMFFFFMMFFFFF^
+^MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM^
+^MMMMMMMF&&&&&&&&&&&&&&&&&&&&&&FMMMMMMM^
+^MMFFFMMF&&FFF&&&&FFF&&&&FFF&&&FMMMMMMM^
+^MMMMMMM&&&FFF&&&&FFF&&&&FFF&&&&MMMMMMM^
+^FMMMMMM&&&&&&&&&&&&&&&&&&&&&&&&MMMMMMF^
+^FMFFFMM&&&&&&&&&&&&&&&&&&&&&&&&MMFFMMF^
+^MMMMMMM&&&&&&&&&&&&&&&&&&&&&&&&MMMMMMM^
+^MMMMMMM&&&&&&&&&&&&&&&&&&&&&&&&FMMMMMM^
+^MMFFFMF&&&FFF&&&&FFF&&&&FFF&&&&MMMMMMM^
+^MMMMMMM&&&FFF&&&&FFF&&&&FFF&&&&MMMMMMM^
+^MMMMMMM&&&&&&&&&&&&&&&&&&&&&&&&MFFFMMM^
+^FMFFFMMF&&&&&&&&&&&&&&&&&&&&&&&MFFFMMF^
+^MMMMMMMF&&&&&&&&&&&&&&&&&&&&&&FMMMMMMM^
+^MMMMMMM&&&&&&&&&&&&&&&&&&&&&&&FMMMMMMM^
+^MFFFMMM&&&FFF&&&&FFF&&&&FFF&&&&MMMMMMM^
+^MMMMMMF&&&FFF&&&&FFF&&&&FFF&&&&MMMMMMM^
+^MMMMMMF&&&&&&&&&&&&&&&&&&&&&&&&MMMMMMM^
+^MMMMMMM&&&&&&&&&&&&&&&&&&&&&&&&MMMMFMM^
+^FFFFFFFFFFFFFFFFFFFMFFFFFFFFFFFFFFFFFF^
+^FFMMMMMMMMMMMMMMMMFMFMMMMMMMMMMMMMMMMM^
+^MMMFMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM^
+^^^^^^^^^^^^^^^^^^^^D^^^^^^^^^^^^^^^^^^^
 `)
 
 /** The Harbour Room: damask, a fire going, leather sofas, and a door at the back with nothing on it. */
@@ -2562,7 +2575,7 @@ const portoLumina: CityDef = {
         ]),
       ],
       [
-        { col: 15, row: 5, toAreaId: 'pl-casino', toCol: 10, toRow: 10, label: 'Casino' },
+        { col: 15, row: 5, toAreaId: 'pl-casino', toCol: 20, toRow: 23, label: 'Casino' },
         { col: 25, row: 5, toAreaId: 'pl-atelier', toCol: 6, toRow: 7, label: 'Atelier' },
         { col: 5, row: 5, toAreaId: 'pl-lift', toCol: 6, toRow: 7, label: 'Penthouse Lift' },
       ],
@@ -2572,17 +2585,39 @@ const portoLumina: CityDef = {
       'pl-casino',
       'Porto Lumina Casino',
       LUMINA_FLOOR,
-      { col: 10, row: 10 },
+      { col: 20, row: 23 },
       '#141020',
       [
         // Who meets you at the door.
-        { ...local('pl-coatcheck', 'Coat Check', 3, 10, ['Coat Check: Your coat. Ticket forty-one. Do not lose it; the coat will outlive us both.']), role: 'clerk' },
-        { ...local('pl-floor-manager', 'Floor Manager', 9, 10, ['Floor Manager: Good evening. The main table is to your left, the salon behind the rope. Madame asks that nobody counts their chips aloud.']), role: 'suit' },
+        { ...local('pl-coatcheck', 'Coat Check', 3, 23, ['Coat Check: Your coat. Ticket forty-one. Do not lose it; the coat will outlive us both.']), role: 'clerk' },
+        { ...local('pl-floor-manager', 'Floor Manager', 24, 23, ['Floor Manager: Good evening. The tournament is the nine tables, the desk is under the chandelier at the back, and the salon is behind the rope. Madame asks that nobody counts their chips aloud.']), role: 'suit' },
+        {
+          id: 'nadia',
+          name: 'Nadia Okonkwo',
+          col: 22,
+          row: 21,
+          color: COLORS.finale,
+          lines: [
+            'Nadia: The desk is at the back, under the chandelier. Twenty thousand to enter.',
+            'Nadia: Ten rounds, ten hands a round. Last one standing at the final table gets the seat upstairs.',
+          ],
+          action: { kind: 'flavor' },
+        },
+        {
+          id: 'lumina-tournament-desk',
+          name: 'Tournament Desk',
+          col: 20,
+          row: 3,
+          color: COLORS.dealer,
+          role: 'clerk',
+          lines: ['Registrar: The Poker Legends tournament. Twenty thousand to enter, twenty thousand in chips, ten rounds. Knocked out, and it is twenty thousand again.'],
+          action: { kind: 'table', tableId: 'lumina-tournament' },
+        },
         {
           id: 'pl-roulette',
           name: 'Roulette Table',
-          col: 9,
-          row: 8,
+          col: 34,
+          row: 9,
           color: COLORS.flavor,
           art: 'none',
           lines: ['A wheel gilded to the rim. The croupier spins it as though it were a sacrament.'],
@@ -2591,56 +2626,49 @@ const portoLumina: CityDef = {
         {
           id: 'lumina-dealer',
           name: 'Dealer',
-          col: 5,
-          row: 6,
+          col: 34,
+          row: 13,
           color: COLORS.dealer,
           lines: ['Dealer: Hundred-two hundred. Thirty thousand to sit.'],
           action: { kind: 'table', tableId: 'lumina-nosebleed' },
         },
-        {
-          id: 'nadia',
-          name: 'Nadia Okonkwo',
-          col: 15,
-          row: 5,
-          color: COLORS.finale,
-          lines: [
-            'Nadia: I know what you have been doing. Small rooms, then bigger ones.',
-            'Nadia: The final of the Legends Invitational. Six chairs, one winner, cameras on every one.',
-            'Nadia: The penthouse upstairs comes with the trophy. I have lived there four years.',
-          ],
-          action: { kind: 'table', tableId: 'lumina-finale' },
-        },
-        local('pl-barman', 'Sommelier', 5, 3, [
+        local('pl-barman', 'Sommelier', 4, 3, [
           'Sommelier: The house pours for the players at the far table. You will know when you are one.',
         ]),
-        local('pl-cashier', 'Cashier', 14, 3, [
+        local('pl-cashier', 'Cashier', 12, 3, [
           'Cashier: Plaques, not chips, above ten thousand. They are heavier. People like that.',
         ]),
+        local('pl-director', 'Tournament Director', 17, 4, [
+          'Director: Ten hands a round, then the blinds go up. Nobody asks for the clock to be stopped, and nobody gets it.',
+        ]),
+        local('pl-railbird', 'Rail Bird', 29, 23, [
+          'Rail Bird: I have watched every Invitational since the fire. Do not ask which fire.',
+        ]),
         // Old money, new money, and the people who carry its drinks.
-        local('pl-heiress', 'Heiress', 12, 5, [
+        local('pl-heiress', 'Heiress', 15, 9, [
           'Heiress: Grandmother broke the bank here in 1961. The bank has been very rude to us ever since.',
         ]),
-        local('pl-shipowner', 'Shipowner', 7, 5, [
+        local('pl-shipowner', 'Shipowner', 32, 4, [
           'Shipowner: Eleven tankers and I still cannot hit a seven on that machine. It is personal now.',
         ]),
-        local('pl-croupier', 'Croupier', 11, 9, [
+        local('pl-croupier', 'Croupier', 32, 9, [
           'Croupier: Faites vos jeux. That means hurry up, in a nicer voice.',
         ]),
         {
           id: 'pl-waiter',
           name: 'Salon Waiter',
-          col: 16,
-          row: 9,
+          col: 31,
+          row: 15,
           color: COLORS.local,
           role: 'waiter',
           lines: ['Waiter: Champagne goes past the rope. You go past the rope when Miss Okonkwo says so.'],
           action: { kind: 'flavor' },
         },
-        local('pl-debutante', 'Debutante', 2, 7, [
+        local('pl-debutante', 'Debutante', 5, 14, [
           'Debutante: Mummy said to stand by the palm and look expensive. I think I am nailing it.',
         ]),
       ],
-      [{ col: 10, row: 11, toAreaId: 'pl-street', toCol: 15, toRow: 6, label: 'Out' }],
+      [{ col: 20, row: 25, toAreaId: 'pl-street', toCol: 15, toRow: 6, label: 'Out' }],
     ),
     'pl-atelier': area(
       'pl-atelier',
@@ -2918,33 +2946,79 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'craps-table-neon', col: 14, row: 9 },
     { stampId: 'palm', col: 20, row: 9 },
   ],
-  // From the door the view is columns 3 to 17 and rows 2 down, so the bar,
-  // the progressive bank and the cage stand a step out from the wall where
-  // the view begins, and the paintings are on the wall above it.
+  // A hall the size of a ballroom: nine tables of the tournament in a grid on the
+  // royal carpet, the bar and the cages along the back wall, the salon and the wheel
+  // down the east side. The door is at the bottom, and the first thing past it is
+  // the crest underfoot.
   'pl-casino': [
-    { stampId: 'palm', col: 1, row: 2 },
     { stampId: 'painting-portrait', col: 3, row: 1 },
-    { stampId: 'painting-landscape', col: 9, row: 1 },
+    { stampId: 'painting-portrait', col: 9, row: 1 },
     { stampId: 'painting-portrait', col: 15, row: 1 },
-    { stampId: 'bar-marble', col: 3, row: 2 },
-    { stampId: 'slot-bank-gold', col: 8, row: 3 },
-    { stampId: 'cashier-cage', col: 12, row: 2 },
-    { stampId: 'pillar-marble', col: 17, row: 2 },
-    { stampId: 'palm', col: 18, row: 2 },
-    { stampId: 'poker-table-royal', col: 3, row: 6 },
-    { stampId: 'roulette', col: 8, row: 7 },
-    { stampId: 'poker-table-royal-4', col: 13, row: 5 },
-    { stampId: 'light-pool', col: 4, row: 6 },
-    { stampId: 'light-pool', col: 13, row: 5 },
-    { stampId: 'velvet-rope', col: 13, row: 9 },
-    { stampId: 'fern', col: 1, row: 5 },
-    { stampId: 'fern', col: 18, row: 5 },
+    { stampId: 'painting-portrait', col: 23, row: 1 },
+    { stampId: 'painting-portrait', col: 29, row: 1 },
+    { stampId: 'painting-portrait', col: 35, row: 1 },
+    { stampId: 'bar-marble', col: 2, row: 2 },
+    { stampId: 'cashier-cage', col: 10, row: 2 },
+    { stampId: 'cashier-cage', col: 18, row: 2 },
+    { stampId: 'slot-bank-gold', col: 28, row: 2 },
+    { stampId: 'slot-bank-gold', col: 34, row: 2 },
+    { stampId: 'poker-table-royal', col: 10, row: 5 },
+    { stampId: 'poker-table-royal', col: 17, row: 5 },
+    { stampId: 'poker-table-royal', col: 24, row: 5 },
+    { stampId: 'poker-table-royal', col: 10, row: 11 },
+    { stampId: 'poker-table-royal', col: 17, row: 11 },
+    { stampId: 'poker-table-royal', col: 24, row: 11 },
+    { stampId: 'poker-table-royal', col: 10, row: 17 },
+    { stampId: 'poker-table-royal', col: 17, row: 17 },
+    { stampId: 'poker-table-royal', col: 24, row: 17 },
+    { stampId: 'poker-table-royal', col: 32, row: 13 },
+    { stampId: 'roulette', col: 33, row: 8 },
+    { stampId: 'velvet-rope', col: 1, row: 22 },
+    { stampId: 'velvet-rope', col: 4, row: 22 },
+    { stampId: 'velvet-rope', col: 7, row: 22 },
+    { stampId: 'velvet-rope', col: 10, row: 22 },
+    { stampId: 'velvet-rope', col: 13, row: 22 },
+    { stampId: 'velvet-rope', col: 16, row: 22 },
+    { stampId: 'velvet-rope', col: 22, row: 22 },
+    { stampId: 'velvet-rope', col: 25, row: 22 },
+    { stampId: 'velvet-rope', col: 28, row: 22 },
+    { stampId: 'velvet-rope', col: 31, row: 22 },
+    { stampId: 'velvet-rope', col: 34, row: 22 },
+    { stampId: 'pillar-marble', col: 19, row: 22 },
+    { stampId: 'pillar-marble', col: 21, row: 22 },
+    { stampId: 'fern', col: 37, row: 22 },
+    { stampId: 'fern', col: 38, row: 22 },
+    { stampId: 'palm', col: 1, row: 2 },
+    { stampId: 'palm', col: 8, row: 2 },
+    { stampId: 'palm', col: 26, row: 2 },
+    { stampId: 'palm', col: 38, row: 2 },
     { stampId: 'palm', col: 1, row: 8 },
-    { stampId: 'palm', col: 18, row: 8 },
-    // Inside the door: the coat check in the corner, the crest underfoot.
-    { stampId: 'rack-suits', col: 1, row: 10 },
-    { stampId: 'coat-stand', col: 2, row: 9 },
-    { stampId: 'inlay-crest', col: 9, row: 9 },
+    { stampId: 'palm', col: 38, row: 8 },
+    { stampId: 'fern', col: 1, row: 15 },
+    { stampId: 'fern', col: 38, row: 15 },
+    { stampId: 'fern', col: 7, row: 12 },
+    { stampId: 'fern', col: 32, row: 11 },
+    { stampId: 'palm', col: 7, row: 19 },
+    { stampId: 'palm', col: 36, row: 21 },
+    { stampId: 'pillar-marble', col: 8, row: 5 },
+    { stampId: 'pillar-marble', col: 31, row: 5 },
+    { stampId: 'pillar-marble', col: 8, row: 15 },
+    { stampId: 'pillar-marble', col: 31, row: 16 },
+    { stampId: 'rack-suits', col: 1, row: 23 },
+    { stampId: 'coat-stand', col: 4, row: 24 },
+    { stampId: 'inlay-crest', col: 17, row: 23 },
+    { stampId: 'light-pool', col: 16, row: 10 },
+    { stampId: 'light-pool', col: 19, row: 3 },
+    { stampId: 'rug-red', col: 3, row: 6 },
+    { stampId: 'sofa-leather', col: 3, row: 6 },
+    { stampId: 'rug-red', col: 3, row: 9 },
+    { stampId: 'sofa-leather', col: 3, row: 9 },
+    { stampId: 'rug-red', col: 3, row: 12 },
+    { stampId: 'sofa-leather', col: 3, row: 12 },
+    { stampId: 'rug-red', col: 3, row: 15 },
+    { stampId: 'sofa-leather', col: 3, row: 15 },
+    { stampId: 'rug-red', col: 2, row: 18 },
+    { stampId: 'sofa-leather', col: 2, row: 18 },
   ],
   'ch-club': [
     { stampId: 'bookshelf-dark', col: 1, row: 1 },

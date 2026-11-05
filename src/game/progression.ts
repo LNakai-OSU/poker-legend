@@ -151,7 +151,7 @@ export function challengeLines(state: GameState): string[] {
   const status = goalStatus(state, state.cityId)
   // Porto Lumina has no boss: its challenge is the final table.
   if (!status && state.cityId !== 'portoLumina') return []
-  const lines = [status ? status.line : 'Win the Legends Invitational at the penthouse table, and the city is yours.']
+  const lines = [status ? status.line : 'Win the Poker Legends tournament, then the final table of the Invitational, and the penthouse is yours.']
   const seat = cheapestSeats()[state.cityId]
   if (seat && state.cash < seat.buyIn) {
     const here = CITIES[state.cityId]?.name ?? 'this town'
@@ -224,6 +224,16 @@ export function tableAccess(state: GameState, table: TableDef): TableAccess {
       bankrollWarning: null,
     }
   }
+  if (table.tournament && state.flags.wonTournament) {
+    return { allowed: false, reason: 'You have already won the floor. Your seat is at the Invitational.', bankrollWarning: null }
+  }
+  if (table.isFinale && !state.flags.wonTournament) {
+    return {
+      allowed: false,
+      reason: 'The Invitational seats the winner of the Poker Legends tournament. Win the tournament first.',
+      bankrollWarning: null,
+    }
+  }
   if (table.proof && state.cash < table.proof) {
     return {
       allowed: false,
@@ -243,7 +253,7 @@ export function tableAccess(state: GameState, table: TableDef): TableAccess {
   const hasLesson = state.lessonIds.includes('bankroll')
   const rollRatio = state.cash / table.buyIn
   const bankrollWarning =
-    hasLesson && rollRatio < 5
+    hasLesson && rollRatio < 5 && !table.tournament
       ? `This is ${rollRatio.toFixed(1)} buy-ins of your roll. Twenty is the usual advice.`
       : null
   return { allowed: true, reason: null, bankrollWarning }

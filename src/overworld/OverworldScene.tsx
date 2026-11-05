@@ -145,6 +145,8 @@ interface OverworldSceneProps {
   /** Door tiles: walking into one leaves this area. */
   exits?: SceneExit[]
   onExit?: (exit: SceneExit) => void
+  /** Called each time the player comes to rest on a new tile (and once on arrival): `standOn` beats. */
+  onStandOn?: (col: number, row: number) => void
   background?: string
   /** Optional persistent corner UI, e.g. a wallet readout. */
   hud?: ReactNode
@@ -214,6 +216,7 @@ export function OverworldScene({
   onCaught,
   exits = [],
   onExit,
+  onStandOn,
   areaName = '',
   theme = 'default',
   moonlit = false,
@@ -232,6 +235,12 @@ export function OverworldScene({
   const [prompt, setPrompt] = useState<{ verb: string; name: string } | null>(null)
   // Only changes once per tile stepped, so driving React from it is cheap.
   const [playerTile, setPlayerTile] = useState(playerStart)
+  // The player's tile, handed up for `standOn` beats. Held in a ref so a new callback each render does not repeat it.
+  const onStandOnRef = useRef(onStandOn)
+  onStandOnRef.current = onStandOn
+  useEffect(() => {
+    onStandOnRef.current?.(playerTile.col, playerTile.row)
+  }, [playerTile.col, playerTile.row])
   // Fixed for the life of this scene: the tile it is built with.
   const resumeAt = useRef<{ col: number; row: number } | null>(null)
   // Who is writing the position down: the scene that is on screen, not the one being replaced.

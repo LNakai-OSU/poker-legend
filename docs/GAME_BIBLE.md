@@ -571,7 +571,7 @@ Rooms keep their lamps on whatever the hour.
 | 3 | Crescent Harbor | $2,500 | Harbor Room 5/10 · Heads Up 5/10 · The Back Room 10/20 |
 | 4 | Palm Cay | $8,000 | Cay Room 10/25 · The Tourist Table 10/25 |
 | 5 | Neon Mesa | $30,000 | Mesa Main 25/50 · Heads Up 50/100 · High Roller 100/200 · The Invitational 200/400 |
-| 6 | Porto Lumina | $90,000 | Nosebleed 100/200 · The Challenge, heads up, 50/100 |
+| 6 | Porto Lumina | $90,000 | Nosebleed 100/200 · The Poker Legends Tournament ($20,000 entry) → the Invitational final |
 
 The Back Room and The Invitational are invite-only: you get in by working the
 room at a club, not by walking up.
@@ -582,8 +582,15 @@ if either stops climbing.
 **The beats.** Flat above a bakery → Marcus's home game (winner takes
 everything) → Dana walks you home, and in the morning Marcus rides the bus out
 to Silver Creek with you → the ladder → clubs and private
-invitationals → a heads-up Challenge for the penthouse, which you commit to
-before you see a card and cannot leave.
+invitationals → Porto Lumina: Nadia greets you at the foyer rope and says to win
+the **Poker Legends tournament** to earn a seat at the Invitational → the entry desk
+($20,000; ten rounds of ten hands, blinds up every round, a new player in every
+chair that is knocked out; then your table is the final table and is played to
+one winner; knocked out at any point and it is $20,000 to go again from round one)
+→ a montage of the Invitational's start, the slide down to $15,000 and the power
+cut → the men's room, Marcus's pep talk → the Invitational final table with the
+$15,000 (lose it and the back-door scene puts you straight back in at $15,000,
+until you win).
 
 **The people.** Every town has an arrival card (what its table costs, what
 bankroll moves you on) and a send-off from its face when you have it. Marcus,

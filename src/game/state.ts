@@ -435,7 +435,7 @@ export function caughtByCollectors(state: GameState): GameState {
 }
 
 /** How long Nadia makes you wait before she will put the match up again. */
-export const FINALE_REMATCH_DAYS = 7
+export const FINALE_REMATCH_DAYS = 0
 
 /**
  * Losing the heads-up match. The buy-in is already gone — it left the wallet

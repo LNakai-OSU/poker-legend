@@ -133,9 +133,9 @@ export function nextHeading(state: GameState, cityId: CityId = state.cityId): He
     if (!onward) return null
     return { hud: `the bus to ${CITIES[onward].name}`, goTo: fixtureIn(cityId, 'travel') }
   }
-  // Porto Lumina has no boss: what is next there is the final table.
+  // Porto Lumina has no boss: what is next there is the tournament, and the final table after it.
   if (!status && cityId === 'portoLumina') {
-    return { hud: 'the Legends Invitational, upstairs', goTo: fixtureIn(cityId, 'penthouse') }
+    return { hud: 'enter the Poker Legends tournament', goTo: { areaId: 'pl-casino', poiId: 'lumina-tournament-desk' } }
   }
   return null
 }

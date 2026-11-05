@@ -652,7 +652,6 @@ describe('losing is part of the story', () => {
       const beat = eventFor(EVENTS, { kind: 'talkTo', characterId: who }, lost(false))
       expect(beat?.id, `${who} has nothing to say about the lost match`).toMatch(/loss|told-you/)
     }
-    expect(eventFor(EVENTS, { kind: 'interact', poiId: 'nadia' }, lost(false))?.id).toBe('nadia-makes-you-wait')
     expect(eventFor(EVENTS, { kind: 'interact', poiId: 'nadia' }, lost(true))?.id).toBe('nadia-rematch')
     const ready = { ...lost(true), cash: 130000, completedEventIds: [...lost(true).completedEventIds, 'marcus-after-the-loss'] }
     expect(eventFor(EVENTS, { kind: 'talkTo', characterId: 'marcus' }, ready)?.id).toBe('marcus-rematch-night')

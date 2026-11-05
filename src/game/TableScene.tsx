@@ -3,6 +3,8 @@ import { TexasHoldEmTable, type HandResult } from '../engine/table'
 import { decideAiAction, estimateEquity, inferredRangePercentile } from '../engine/ai'
 import { bestHand, HAND_CATEGORY_NAMES } from '../engine/handRank'
 import { defaultRng } from '../engine/rng'
+import { isFinalTable, roundOfNextHand } from '../engine/tournament'
+import { stepTournament } from './tournamentFlow'
 import type { PlayerConfig } from '../engine/types'
 import type { OpponentDef, TableDef } from '../world/types'
 import { PokerTableView, ShowdownSummary, handTakings, madeHand, potWinnerIds, tellAlphaOf, type SeatSpeech } from './PokerTableView'
@@ -37,6 +39,8 @@ export interface SessionResult {
   biggestPot: number
   /** Only set for a finale table. */
   finaleWon?: boolean
+  /** Only set for a tournament: you are the last one standing at its final table. */
+  tournamentWon?: boolean
 }
 
 interface TableSceneProps {
@@ -141,14 +145,20 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
   // Who is actually sitting here: the table names characters, and this looks
   // each one up once for the life of the table.
   // An open game is whoever is in at this hour; fixed when you sit down.
-  const [lineup] = useState(() => lineupFor(table, state.period, state.day))
-  const seats = useMemo(() => seatsOf(table, lineup), [table, lineup])
+  // A tournament starts with its five named opponents; its `walkIns` are the pool the newcomers come from.
+  const rules = table.tournament
+  const [lineup] = useState(() => (rules ? table.opponents : lineupFor(table, state.period, state.day)))
+  // In a tournament who is sitting here changes: a knocked-out player's chair goes to somebody new.
+  const [seats, setSeats] = useState(() => seatsOf(table, lineup))
   const players = useMemo(() => buildPlayers(table, seats), [table, seats])
   /** Which of a character's personas has taken this seat, for what they say. */
   const personas = useMemo(
     () => Object.fromEntries(seats.flatMap((s) => (s.persona ? [[s.id, s.persona]] : []))),
     [seats],
   )
+  /** The blinds now: they only change in a tournament, at the start of a round. */
+  const [blinds, setBlinds] = useState({ small: table.smallBlind, big: table.bigBlind })
+  const everSeatedRef = useRef(new Set<string>(table.opponents.map((r) => (typeof r === 'string' ? r : r.character))))
   const tableRef = useRef(
     new TexasHoldEmTable(players, {
       smallBlind: table.smallBlind,
@@ -304,10 +314,17 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
 
   // A match — the final, or a town's boss — is one bet for the whole buy-in: nobody
   // reloads, there is no standing up, and it is over when one of you has every chip.
-  const isFinale = table.isFinale === true || table.bossOf !== undefined
+  const isFinale = table.isFinale === true || table.bossOf !== undefined || rules !== undefined
   const rival = seats[0]?.name ?? 'Nadia'
+  // Hands that are over: the one on the table does not count until it has finished.
+  const handsPlayed = publicState.handInProgress ? publicState.handNumber - 1 : publicState.handNumber
+  // In a tournament nobody is "beaten" until its rounds are done: before that an empty chair is refilled.
+  const inFinalTable = rules !== undefined && isFinalTable(rules, handsPlayed)
+  const roundNow = rules ? roundOfNextHand(rules, handsPlayed) : 0
   const opponentsBusted =
-    !publicState.handInProgress && publicState.players.filter((p) => p.id !== 'you').every((p) => p.stack <= 0)
+    (rules === undefined || inFinalTable) &&
+    !publicState.handInProgress &&
+    publicState.players.filter((p) => p.id !== 'you').every((p) => p.stack <= 0)
 
   // Tally results once per completed hand. Only pots actually won count: an
   // uncalled bet coming back is not a hand won and not a pot size.
@@ -365,8 +382,33 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
     }
   }
 
+  /**
+   * Between hands in a tournament: the blinds go up on the first hand of a round,
+   * the table is announced as the final one after the last, and until then a
+   * knocked-out player's chair goes to somebody new with a stack to suit the stage.
+   */
+  const tournamentBetweenHands = () => {
+    if (!rules) return
+    const step = stepTournament(engine, table, blinds.big, everSeatedRef.current, defaultRng)
+    if (step.newBlinds) {
+      setBlinds(step.newBlinds)
+      const detail = `Blinds ${step.newBlinds.small.toLocaleString()}/${step.newBlinds.big.toLocaleString()}`
+      announce(
+        step.round === rules.rounds + 1
+          ? { key: 'final-table', text: 'FINAL TABLE', detail: `Six left. ${detail}`, tone: 'tense' }
+          : { key: `round-${step.round}`, text: step.round > rules.rounds ? `Round ${step.round}` : `Round ${step.round} of ${rules.rounds}`, detail, tone: 'tense' },
+        3200,
+      )
+    }
+    for (const { outId, outName, newcomer, stack } of step.replaced) {
+      setSeats((list) => list.map((s) => (s.id === outId ? newcomer : s)))
+      note(`${outName} is out. ${newcomer.name} sits down with ${stack.toLocaleString()}.`)
+    }
+  }
+
   const dealNextHand = () => {
     rebuyOpponents()
+    tournamentBetweenHands()
     engine.startNewHand()
     setLog([])
     playSound('deal')
@@ -596,8 +638,9 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
     rerender()
   }
 
-  const leaveWith = (chips: number, finaleWon?: boolean) =>
+  const leaveWith = (chips: number, finaleWon?: boolean, tournamentWon?: boolean) =>
     onLeave({
+      tournamentWon,
       chipsCashedOut: chips,
       handsWon: handsWonRef.current,
       biggestPot: biggestPotRef.current,
@@ -661,10 +704,12 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
         ...(lessons.includes('hand-reading') ? ['Three of a kind · ~100% to win'] : []),
         ...(lessons.includes('pot-odds') ? [`Calling ${sample} into ${sample} — you need 50% to break even`] : []),
       ],
-      title: `${table.name} · $${table.smallBlind}/$${table.bigBlind}`,
+      title: rules
+        ? `${inFinalTable ? 'Final table' : `Round ${roundNow}/${rules.rounds}`} · ${blinds.small.toLocaleString()}/${blinds.big.toLocaleString()}`
+        : `${table.name} · $${table.smallBlind}/$${table.bigBlind}`,
       subtitle: `Wallet: $${state.cash.toLocaleString()}`,
     }
-  }, [table, seats.length, lessons, state.cash, touch])
+  }, [table, seats.length, lessons, state.cash, touch, roundNow, inFinalTable, blinds.big])
 
   const actingName = players.find((p) => p.id === publicState.actingPlayerId)?.name
 
@@ -710,14 +755,16 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
                 wrap
                 align="center"
                 text={
-                  table.freeroll
+                  rules
+                    ? 'The last stack slides across to you. The announcer has the name of the winner. It is yours.'
+                    : table.freeroll
                     ? 'The last stack slides across to you, and the whole rail is on its feet.'
                     : table.bossOf
                       ? `${rival} slides the last stack across the felt. The way on is open.`
                       : 'Nadia pushes her chair back, looks at you for a long moment, and offers her hand.'
                 }
               />
-              <PxButton lines={[table.freeroll ? 'Take the trophy' : table.bossOf ? 'Take the pot' : 'Take the room']} scale={P} role="raise" height={one} onClick={() => leaveWith(you.stack, true)} />
+              <PxButton lines={[rules ? 'Take your seat' : table.freeroll ? 'Take the trophy' : table.bossOf ? 'Take the pot' : 'Take the room']} scale={P} role="raise" height={one} onClick={() => (rules ? leaveWith(0, false, true) : leaveWith(you.stack, true))} />
             </>
           )}
           {ending === 'finale-lost' && (
@@ -727,7 +774,9 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
                 wrap
                 align="center"
                 text={
-                  table.freeroll
+                  rules
+                    ? 'The dealer rakes in your last chips. A floor man touches your shoulder, kindly, and you stand up.'
+                    : table.freeroll
                     ? 'The dealer rakes in your last chips. Somewhere behind you a door bangs open.'
                     : table.bossOf
                       ? `${rival} stacks your last chips without a word. The way on stays shut.`
@@ -735,7 +784,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
                 }
               />
               {!table.freeroll && (
-                <PxLine scale={P} wrap align="center" ink={STAKE_INK} text={`The $${table.buyIn.toLocaleString()} you put up is ${table.bossOf ? 'theirs' : 'hers'}. That was the bet.`} />
+                <PxLine scale={P} wrap align="center" ink={STAKE_INK} text={rules ? `The $${table.buyIn.toLocaleString()} entry is gone. It is the same again to go again, from round one.` : `The $${table.buyIn.toLocaleString()} you put up is ${table.bossOf ? 'theirs' : 'hers'}. That was the bet.`} />
               )}
               <PxButton lines={[table.freeroll ? 'Run' : 'Leave the room']} scale={P} role="plain" height={one} onClick={() => leaveWith(0, false)} />
             </>
@@ -1039,7 +1088,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
           insights={insights}
           personas={personas}
           announcement={announcement}
-          blinds={{ small: table.smallBlind, big: table.bigBlind }}
+          blinds={blinds}
           showHeld={showHeld}
           actionTags={actionTags}
           layout={layout}

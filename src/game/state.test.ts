@@ -306,7 +306,8 @@ describe('the record of losing', () => {
     const start = { ...initialState(), day: 10 }
     expect(challengeStatus(start)).toBe('unplayed')
     const lost = lostFinalChallenge(start)
-    expect(challengeStatus(lost)).toBe('lost')
+    // There is no week's wait: the table is put back straight away at the same deficit.
+    expect(challengeStatus(lost)).toBe('rematch')
     expect(countOf(lost, 'challengeLost')).toBe(1)
     expect(challengeStatus(advanceDay(lost, FINALE_REMATCH_DAYS))).toBe('rematch')
     const won = { ...lost, flags: { ...lost.flags, hasPenthouse: true } }

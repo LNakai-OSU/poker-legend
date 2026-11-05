@@ -84,7 +84,9 @@ const STORY_SEEN = [
   'wen-overdue',
   'wen-repaid',
   'wen-repaid-late',
-  'nadia-makes-you-wait',
+  'tournament-won',
+  'tournament-lost',
+  'tournament-registrar-closed',
   'nadia-rematch',
 ]
 
@@ -1877,7 +1879,12 @@ await test('every casino table has players sitting at it', async () => {
           : null
     const pairs = []
     const kinds = new Map()
-    for (const chair of chairs) {
+    // A hall bigger than the window (Lumina's) has chairs off the edge of the canvas: nothing to compare there.
+    const onScreen = (chair) => {
+      const [x, y, w, h] = box(chair, 0, 0, 32, 48)
+      return x >= 0 && y >= 0 && x + w <= 1280 && y + h <= 960
+    }
+    for (const chair of chairs.filter(onScreen)) {
       const kind = `${chair.stampId}#${chair.seat}`
       kinds.set(kind, [...(kinds.get(kind) ?? []), chair])
     }
@@ -2037,6 +2044,7 @@ await test('the final table seats you short against five' , async () => {
       cityId: 'portoLumina',
       areaId: 'pl-casino',
       cash: 200000,
+      flags: { wonPokerNight: true, wonTournament: true },
       unlockedCityIds: ['apartment', 'silverCreek', 'riverbend', 'crescentHarbor', 'palmCay', 'neonMesa', 'portoLumina'],
       completedEventIds: [...STORY_SEEN, 'nadia-names-the-match'].filter((id) => id !== 'final-table-start'),
     }),
@@ -2823,7 +2831,7 @@ await test('holding a key still walks continuously', async () => {
   await page.close()
 })
 
-await test('Nadia names the final: six chairs and one winner' , async () => {
+await test('Nadia greets you at the foyer rope and says to win the tournament' , async () => {
   const page = await newPage(
     baseSave({
       cityId: 'portoLumina',
@@ -2837,11 +2845,42 @@ await test('Nadia names the final: six chairs and one winner' , async () => {
   await page.waitForSelector('canvas')
   await page.waitForTimeout(400)
   await enterDoor(page, 'Casino')
-  await approach(page, 'Nadia Okonkwo')
+  // The only way into the hall is the gap in the rope, and Nadia is waiting on it.
+  await page.keyboard.press('ArrowUp')
+  await page.waitForTimeout(600)
+  const said = await readUntil(page, /Poker Legends tournament/)
+  assert(!/120,000 each/.test(String(said)), 'the old heads-up buy-in is still being offered')
+  await page.close()
+})
+
+await test('the tournament desk takes the entry and seats you at round one with the entry in chips' , async () => {
+  const page = await newPage(
+    baseSave({
+      cityId: 'portoLumina',
+      areaId: 'pl-casino',
+      cash: 50000,
+      period: 'evening',
+      unlockedCityIds: ['apartment', 'portoLumina'],
+      ownedItemIds: ['tuxedo'],
+      completedEventIds: [...STORY_SEEN, 'nadia-names-the-match'],
+    }),
+  )
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(400)
+  await approach(page, 'Tournament Desk')
   await page.keyboard.press('e')
   await page.waitForTimeout(400)
-  const said = await readUntil(page, /Legends Invitational/)
-  assert(!/120,000 each/.test(String(said)), 'the old heads-up buy-in is still being offered')
+  for (let i = 0; i < 6 && !(await page.locator('[data-testid="finale-accept"]').isVisible().catch(() => false)); i++) {
+    await page.keyboard.press(' ')
+    await page.waitForTimeout(200)
+  }
+  assert(/20,000/.test(await page.locator('[data-testid="finale-commitment"]').innerText()), 'the entry fee was not stated')
+  await page.locator('[data-testid="finale-accept"]').click()
+  await page.waitForSelector('[data-testid="stack-you"]')
+  assert((await page.locator('[data-testid="stack-you"]').getAttribute('data-stack')) !== null, 'no stack shown')
+  assert(/Round 1\/10/.test(await page.locator('body').innerText()), 'the table does not say it is round one')
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
   await page.close()
 })
 

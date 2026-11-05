@@ -79,7 +79,7 @@ export const SOUNDS = keysOf<SoundName>({
   cash: true,
 })
 
-export const TRIGGER_KINDS = keysOf<EventTrigger['kind']>({ talkTo: true, interact: true, enterArea: true, standOn: true, caught: true, finaleWon: true, finaleLost: true })
+export const TRIGGER_KINDS = keysOf<EventTrigger['kind']>({ talkTo: true, interact: true, enterArea: true, standOn: true, caught: true, finaleWon: true, finaleLost: true, tournamentWon: true, tournamentLost: true })
 export const CONDITION_KINDS = keysOf<EventCondition['kind']>({
   flag: true,
   period: true,
@@ -148,6 +148,8 @@ export function blankTrigger(kind: EventTrigger['kind'], ids: { character: strin
     case 'caught':
     case 'finaleWon':
     case 'finaleLost':
+    case 'tournamentWon':
+    case 'tournamentLost':
       return { kind }
   }
 }
@@ -614,6 +616,8 @@ function triggerShape(value: unknown, path: string, problems: Problems) {
     case 'caught':
     case 'finaleWon':
     case 'finaleLost':
+    case 'tournamentWon':
+    case 'tournamentLost':
       keys(value, path, ['kind'], [], problems)
       return
     default:
@@ -988,6 +992,10 @@ export function describeTrigger(trigger: EventTrigger, names: Names): string {
       return 'When you win the final table'
     case 'finaleLost':
       return 'When you lose the final table'
+    case 'tournamentWon':
+      return 'When you win the tournament'
+    case 'tournamentLost':
+      return 'When you are knocked out of the tournament'
   }
 }
 

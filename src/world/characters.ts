@@ -347,8 +347,8 @@ export const CHARACTERS: Record<string, CharacterDef> = {
           lines: ['Marcus: I am at the rail. That is the rule.'],
           schedule: [
             { period: 'afternoon', areaId: 'pl-street', col: 12, row: 6 },
-            { period: 'evening', areaId: 'pl-casino', col: 12, row: 8 },
-            { period: 'night', areaId: 'pl-casino', col: 12, row: 8 },
+            { period: 'evening', areaId: 'pl-casino', col: 13, row: 21 },
+            { period: 'night', areaId: 'pl-casino', col: 13, row: 21 },
           ],
         },
         {
@@ -478,8 +478,8 @@ export const CHARACTERS: Record<string, CharacterDef> = {
           when: [{ kind: 'chapter', cityId: 'portoLumina' }],
           lines: ['Dana: Go and say hello to her. She has waited a long time for somebody worth it.'],
           schedule: [
-            { period: 'evening', areaId: 'pl-casino', col: 16, row: 7 },
-            { period: 'night', areaId: 'pl-casino', col: 16, row: 7 },
+            { period: 'evening', areaId: 'pl-casino', col: 26, row: 21 },
+            { period: 'night', areaId: 'pl-casino', col: 26, row: 21 },
           ],
         },
         {
@@ -1121,8 +1121,8 @@ export const CHARACTERS: Record<string, CharacterDef> = {
           when: [{ kind: 'chapter', cityId: 'portoLumina' }, { kind: 'count', of: 'repaid', sponsorId: 'cass' }],
           lines: ['Cass: Watching my investment. It is a long way from the dock.'],
           schedule: [
-            { period: 'evening', areaId: 'pl-casino', col: 8, row: 8 },
-            { period: 'night', areaId: 'pl-casino', col: 8, row: 8 },
+            { period: 'evening', areaId: 'pl-casino', col: 9, row: 21 },
+            { period: 'night', areaId: 'pl-casino', col: 9, row: 21 },
           ],
         },
       ],
