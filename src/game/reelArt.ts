@@ -171,6 +171,10 @@ const SCENES: Record<ReelScene, (c: Ctx, t: number, notes?: Notification[]) => v
     rect(c, '#555555', 10, 58, 40, 3)
     rect(c, '#555555', 110, 58, 40, 3)
   },
+  // The chase down the alley is its own component (`AlleyChase`); this is only what is behind it.
+  chase(c) {
+    rect(c, '#05040a', 0, 0, REEL_W, REEL_H)
+  },
   // Out the back: brick, a bin, an emergency door standing open on the light.
   alley(c, t) {
     rect(c, '#1a1424', 0, 0, REEL_W, REEL_H)

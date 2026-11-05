@@ -139,11 +139,12 @@ export type ReelScene =
   | 'phone'
   | 'booth'
   | 'alley'
+  | 'chase'
   | 'rail'
   | 'night'
 
 /** The scripted scenes `cinematic` can play. */
-export type CinematicId = 'bad-beat' | 'ending'
+export type CinematicId = 'bad-beat' | 'ending' | 'slide'
 
 /** One thing said in a reel. `who` is a character id or a plain name, such as a commentator. */
 export interface ReelLine {
@@ -4668,8 +4669,9 @@ export const EVENTS: GameEvent[] = [
   {
     id: 'tournament-won',
     about:
-      'The floor is won and the table is announced as the final one: a montage of the buy-in, a good ' +
-      'start and the long slide down to 15,000, the lights going out; then the men\'s room, where ' +
+      'The floor is won and the table is announced as the final one: four hands of the Invitational played out on ' +
+      'the broadcast (`slide`: two good, two bad, down to 90,000), then the opening\'s own bad beat (aces against the ' +
+      'flush) down to 15,000 and the lights going out; then the corridor and the men\'s room, where ' +
       'Marcus finds you and talks you back into the chair; the broadcast comes back on and you play ' +
       'the Invitational\'s final table with the 15,000. Where the opening prologue left off.',
     trigger: { kind: 'tournamentWon' },
@@ -4688,52 +4690,21 @@ export const EVENTS: GameEvent[] = [
               { who: 'Dr. Anand', text: 'He has bought in at the Invitational on the strength of a hundred hands. I will be watching the stacks, not the story.' },
             ],
           },
+        ],
+      },
+      // The first hour of the final, hand by hand on the broadcast: two good, two bad, down to ninety thousand.
+      { kind: 'cinematic', id: 'slide' },
+      // And then the hand the game opened on: aces against the flush, the lights going, you on your feet.
+      { kind: 'cinematic', id: 'bad-beat' },
+      {
+        kind: 'reel',
+        panels: [
           {
-            scene: 'booth',
-            ticker: 'YOU 142,000 · CHIP LEADER',
+            scene: 'corridor',
+            caption: 'The back corridor. Somewhere behind you, the crew is shouting about a fuse.',
             lines: [
-              { who: 'Chip', text: 'And what a start! Kings over queens, a flush draw that gets there, and our challenger is the chip leader after twelve hands!' },
-              { who: 'Dr. Anand', text: 'It is twelve hands. I would like it on the record that I said it is twelve hands.' },
-            ],
-          },
-          {
-            scene: 'booth',
-            ticker: 'YOU 98,000',
-            lines: [
-              { who: 'Chip', text: 'The Contessa has found her spot, and the Reverend tithes himself a pot! Our challenger gives some back!' },
-              { who: 'Dr. Anand', text: 'Gives back. That is generous phrasing.' },
-            ],
-          },
-          {
-            scene: 'booth',
-            ticker: 'YOU 61,000',
-            lines: [
-              { who: 'Chip', text: 'Bernard has called three streets with ace-high and been right. It is Thursday for Bernard, folks!' },
-              { who: 'Dr. Anand', text: 'It is not. But he is correct about the cards.' },
-            ],
-          },
-          {
-            scene: 'booth',
-            ticker: 'YOU 34,000 · 17 BB',
-            lines: [
-              { who: 'Chip', text: 'Zeke is streaming this to eleven thousand people and one of them is his mum, and he has just won a pot off our challenger with a bluff!' },
-              { who: 'Dr. Anand', text: 'The mum was very proud. Seventeen big blinds, now.' },
-            ],
-          },
-          {
-            scene: 'booth',
-            ticker: 'YOU 15,000 · 7 BB · LAST OF 6',
-            lines: [
-              { who: 'Chip', text: 'And Nadia calls the all-in, and our challenger is down to fifteen thousand! Seven big blinds!' },
-              { who: 'Dr. Anand', text: 'From first to last in under an hour. There is a technical term for that. It is not a compliment.' },
-            ],
-          },
-          {
-            scene: 'booth',
-            ticker: 'TECHNICAL DIFFICULTY',
-            lines: [
-              { who: 'Chip', text: 'Wait. The lights. Folks, are the lights going? We are— we are going to a—' },
-              { who: 'Dr. Anand', text: 'The rig has tripped. Do not adjust your set.' },
+              { who: 'You', text: 'Do not run. Whatever you do, do not run. People are watching you leave.' },
+              { who: 'You', text: "A hundred thousand, and fifteen of it left, and I am walking toward the men's room like it is a plan." },
             ],
           },
           {
@@ -4924,10 +4895,12 @@ export const EVENTS: GameEvent[] = [
             ],
           },
           {
-            scene: 'alley',
-            caption:
-              'The staff door, the loading dock. The air smells of fryer oil and consequences.',
+            scene: 'chase',
             lines: [
+              {
+                who: 'You',
+                text: 'The staff door, the loading dock. The air smells of fryer oil and consequences.',
+              },
               {
                 who: 'You',
                 text:

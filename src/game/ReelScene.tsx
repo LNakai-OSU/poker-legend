@@ -7,6 +7,7 @@ import { LogoFlash } from './LogoFlash'
 import { MailTable } from './MailTable'
 import { useCrispScale } from './useCrispScale'
 import { CorridorWalk } from './CorridorWalk'
+import { AlleyChase } from './AlleyChase'
 import { REEL_H, REEL_W, drawReel } from './reelArt'
 import { TYPE, UI_FONT } from './pixel/webFont'
 
@@ -15,6 +16,9 @@ import { TYPE, UI_FONT } from './pixel/webFont'
  * is the broadcast, and its lines turned like any text box. Skippable — a
  * replayed final should not make the player sit through the road again.
  */
+/** Scenes that are components of their own and bring their own lines, rather than a still with a text box. */
+const CUSTOM_SCENES = new Set<ReelPanel['scene']>(['booth', 'corridor', 'chase', 'logo', 'mail'])
+
 export function ReelScene({
   title,
   panels,
@@ -42,7 +46,7 @@ export function ReelScene({
   // An empty panel has nothing to turn; move past it rather than stall on it.
   useEffect(() => {
     if (!panel) done()
-    else if (!line && !(panel.scene === 'booth' || panel.scene === 'corridor' || panel.scene === 'logo' || panel.scene === 'mail')) next()
+    else if (!line && !CUSTOM_SCENES.has(panel.scene)) next()
   })
 
   const nextPanel = () => {
@@ -67,7 +71,7 @@ export function ReelScene({
   }, [])
 
   if (!panel) return null
-  const custom = panel.scene === 'booth' || panel.scene === 'corridor' || panel.scene === 'logo' || panel.scene === 'mail'
+  const custom = CUSTOM_SCENES.has(panel.scene)
   if (!custom && !line) return null
   const speaker = line ? (CHARACTERS[line.who]?.name ?? line.who) : ''
   // A line written "Marcus: …" is not introduced twice.
@@ -94,6 +98,7 @@ export function ReelScene({
       {panel.scene === 'mail' && <MailTable key={at.panel} lines={panel.lines} onDone={nextPanel} />}
       {panel.scene === 'logo' && <LogoFlash key={at.panel} onDone={nextPanel} />}
       {panel.scene === 'corridor' && <CorridorWalk key={at.panel} lines={panel.lines} onDone={nextPanel} />}
+      {panel.scene === 'chase' && <AlleyChase key={at.panel} lines={panel.lines} onDone={nextPanel} />}
       {!custom && <ReelCanvas key={at.panel} scene={panel.scene} notifications={panel.notifications} scale={stillScale} />}
       {!custom && panel.ticker && (
         <div

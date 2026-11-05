@@ -30,7 +30,7 @@ const H = 292
 
 export const YOU_LOOK: AvatarLook = { skin: '#e8b890', hair: '#3a2a20', hairStyle: 'short', shirt: '#4a7a5a', accessory: 'none' }
 
-export type ShotWho = 'you' | 'contessa'
+export type ShotWho = 'you' | 'contessa' | 'zeke' | 'gaines' | 'bernard' | 'nadia'
 
 export interface ShotSeat {
   who: ShotWho
@@ -54,7 +54,7 @@ export interface Shot {
   commentary: string
 }
 
-const NAMES: Record<ShotWho, string> = { you: 'YOU', contessa: 'CONTESSA' }
+const NAMES: Record<ShotWho, string> = { you: 'YOU', contessa: 'CONTESSA', zeke: 'ZEKE', gaines: 'GAINES', bernard: 'BERNARD', nadia: 'NADIA' }
 const TAG_COLOUR: Record<string, string> = {
   'ALL IN': '#c83a30',
   RAISE: '#d8a030',
@@ -70,8 +70,8 @@ export function BroadcastShot({ shot }: { shot: Shot }) {
   const P = useCrispScale(W, H, 8, 1)
   const touch = useTouchFirst()
   const u = (n: number) => n * P
-  const look = shot.focus === 'you' ? YOU_LOOK : personalityFor('contessa').look
-  const face = portraitUrl(look, shot.expression, shot.focus === 'you' ? 'hero' : 'contessa')
+  const look = shot.focus === 'you' ? YOU_LOOK : personalityFor(shot.focus).look
+  const face = portraitUrl(look, shot.expression, shot.focus === 'you' ? 'hero' : shot.focus)
   const portraitPx = PORTRAIT_SIZE * P * 3
   const box = (x: number, y: number, w: number, h: number, extra?: CSSProperties): CSSProperties => ({
     position: 'absolute',
