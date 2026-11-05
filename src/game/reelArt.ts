@@ -1,5 +1,6 @@
 import type { ReelScene } from '../world/events'
-import { HERO_FIGURE } from '../overworld/casting'
+import { HERO_FIGURE, figureForCharacter } from '../overworld/casting'
+import { CHARACTERS } from '../world/characters'
 import { Raster } from './pixel/raster'
 import { drawText, measureText, wrapText } from './pixel/font'
 import { drawPerson, type WalkFrame } from '../overworld/characterArt'
@@ -40,6 +41,40 @@ function person(c: Ctx, x: number, y: number, skin: string, shirt: string, hair:
     rect(c, '#222', x + 5, y + 2, 1, 6)
     rect(c, '#222', x - 6, y + 8, 5, 1)
   }
+}
+
+function drawBathroomSet(c: Ctx, t: number, settled: boolean) {
+    rect(c, '#9db3ae', 0, 0, REEL_W, REEL_H)
+    for (let y = 0; y < REEL_H; y += 10) rect(c, '#8aa19c', 0, y, REEL_W, 1)
+    for (let x = 0; x < REEL_W; x += 10) rect(c, '#8aa19c', x, 0, 1, REEL_H)
+    rect(c, '#4a5a58', 0, 64, REEL_W, 26)
+    // Three mirrors over three sinks.
+    for (const sx of [14, 62, 110]) {
+      rect(c, '#6a8088', sx - 1, 14, 38, 30)
+      rect(c, '#b8c9cc', sx, 15, 36, 28)
+      rect(c, '#e8ecea', sx + 2, 46, 32, 4)
+      rect(c, '#cfd6d4', sx + 4, 50, 28, 12)
+    }
+    // The stall.
+    rect(c, '#5a3a2a', 148, 12, 12, 52)
+    // The tap running at the middle sink.
+    const drip = Math.floor(t / 90) % 4
+    rect(c, '#8ec8f0', 79, 52 + drip, 1, 3)
+    const hum = Math.floor(t / 90) % 11 === 0
+    rect(c, hum ? '#8b8b6a' : '#f4f2c8', 50, 2, 60, 3)
+    // In at the door on the right, to the middle sink, and then up to the mirror, unless you are there already.
+    const arrive = settled ? 1 : Math.min(1, t / 1800)
+    const x = 140 - arrive * (140 - 70)
+    const facing = arrive < 1 ? 'left' : 'up'
+    const frame = (arrive < 1 ? Math.floor(t / 150) % 3 : 0) as WalkFrame
+    drawPerson(c, HERO_FIGURE, facing, frame, { x: Math.round(x), y: 40 })
+    if (settled) {
+      // Marcus, in his sports jacket, from the door to your shoulder, and then standing there.
+      const marcus = figureForCharacter('marcus', CHARACTERS.marcus)
+      const come = Math.min(1, Math.max(0, (t - 500) / 1500))
+      const mx = 150 - come * 50
+      drawPerson(c, marcus, 'left', (come < 1 ? Math.floor(t / 150) % 3 : 0) as WalkFrame, { x: Math.round(mx), y: 40 })
+    }
 }
 
 const SCENES: Record<ReelScene, (c: Ctx, t: number, notes?: Notification[]) => void> = {
@@ -97,30 +132,12 @@ const SCENES: Record<ReelScene, (c: Ctx, t: number, notes?: Notification[]) => v
   // Cold tile, a row of sinks, one stall door, a fluorescent tube that hums —
   // you come in at the door and stop at the middle sink.
   bathroom(c, t) {
-    rect(c, '#9db3ae', 0, 0, REEL_W, REEL_H)
-    for (let y = 0; y < REEL_H; y += 10) rect(c, '#8aa19c', 0, y, REEL_W, 1)
-    for (let x = 0; x < REEL_W; x += 10) rect(c, '#8aa19c', x, 0, 1, REEL_H)
-    rect(c, '#4a5a58', 0, 64, REEL_W, 26)
-    // Three mirrors over three sinks.
-    for (const sx of [14, 62, 110]) {
-      rect(c, '#6a8088', sx - 1, 14, 38, 30)
-      rect(c, '#b8c9cc', sx, 15, 36, 28)
-      rect(c, '#e8ecea', sx + 2, 46, 32, 4)
-      rect(c, '#cfd6d4', sx + 4, 50, 28, 12)
-    }
-    // The stall.
-    rect(c, '#5a3a2a', 148, 12, 12, 52)
-    // The tap running at the middle sink.
-    const drip = Math.floor(t / 90) % 4
-    rect(c, '#8ec8f0', 79, 52 + drip, 1, 3)
-    const hum = Math.floor(t / 90) % 11 === 0
-    rect(c, hum ? '#8b8b6a' : '#f4f2c8', 50, 2, 60, 3)
-    // In at the door on the right, to the middle sink, and then up to the mirror.
-    const arrive = Math.min(1, t / 1800)
-    const x = 140 - arrive * (140 - 70)
-    const facing = arrive < 1 ? 'left' : 'up'
-    const frame = (arrive < 1 ? Math.floor(t / 150) % 3 : 0) as WalkFrame
-    drawPerson(c, HERO_FIGURE, facing, frame, { x: Math.round(x), y: 40 })
+    drawBathroomSet(c, t, false)
+  },
+  // The same room a moment later: you are already at the sink, and Marcus comes in at the door and
+  // walks over to you. (Cut to from the walk-in, so the walk is not played twice.)
+  sink(c, t) {
+    drawBathroomSet(c, t, true)
   },
   // The mirror, close: your own face in your own sprite, large, not having slept.
   mirror(c, t) {

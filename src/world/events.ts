@@ -140,6 +140,7 @@ export type ReelScene =
   | 'booth'
   | 'alley'
   | 'chase'
+  | 'sink'
   | 'rail'
   | 'night'
 
@@ -4717,7 +4718,8 @@ export const EVENTS: GameEvent[] = [
             ],
           },
           {
-            scene: 'bathroom',
+            // The same room, you already at the sink: not the walk in again.
+            scene: 'sink',
             caption: 'The door swings. Somebody is wearing a sports jacket to a men\'s room, and has brought a paper cup.',
             lines: [
               { who: 'marcus', text: 'Marcus: There he is. I told the usher I was your uncle. He asked which side and I said the loud side.' },
