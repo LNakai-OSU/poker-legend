@@ -531,6 +531,42 @@ to do next.
 - The editor does not show errands: they are generated from the list above, and
   `events.ts` is the only file it edits.
 
+### Street racing — `src/world/racing.ts`
+
+A **side hustle**. Poker is the only way past a boss; a race pays small, costs a
+period, and funds a car or a cushion and nothing more.
+
+- A **car** is a shop item with `car: { topSpeed, handling, grip, paint }` (each
+  out of 10). Dealers are the rooms in Auto Row, Marina Motors and Mesa Motors;
+  the **beater** ($1,200, Auto Row) is the cheapest way to start. A car's price is
+  what its repair bill comes from (`REPAIR_FRACTION`, 5%, floor $100).
+- A **part** is a shop item with `effect: { kind: 'carTune', stat, value }`, sold
+  at the garage beside each dealer. It bolts onto whatever you drive (ceiling 10)
+  and stays if you lose the car.
+- A **race** is data in `RACES`: who you race (character ids, each in a car, with a
+  `skill` 0..1), how long the road is, how busy, and either `stakes` and `pays`
+  (a cash race) or a `pinkSlip` (your car against theirs, no cash). A POI says
+  `action: { kind: 'race', raceIds: [...] }` to offer them; the one-off scene
+  is `RaceScene`, the driving is `game/race.ts`.
+- **How it plays.** Three lanes, a straight road of traffic, oil and cones. Left,
+  right and brake (A D Space, or the on-screen pads). Traffic is a wreck; oil takes
+  more from low grip; a cone is a bruise. Every car runs the same physics on the
+  same road, so a better car is faster and nothing is rubber-banded: a
+  rival is good because it sees the road, not because the game helps it.
+- **The money.** The bet leaves your wallet and the clock moves a period the moment
+  the lights go (`commitRace`), so closing the tab is no way out; a pink-slipped
+  car leaves your garage then too. First place pays `pays` times the bet; anything
+  else loses it; a wreck loses the repairs as well. Win a slip and you get the prize
+  car and yours back; lose it and yours is gone. The bus still works.
+- **Held by tests** (`racing.test.ts`, `race.test.ts`): `pays` is below the number
+  of rivals (a race between equals loses a little); the biggest cash win is at most a
+  quarter of the next town's bankroll gate; a prize car is sold nowhere
+  (it lives in the `winnings` shop that no POI points to); equals win equally; a
+  better car wins more, a better driver wins more, and a sharp driver in a worse car
+  still wins a real share.
+- *Not done:* a valet, a getaway sedan, and a collector arriving in a car are still
+  scenery and chase beats to write; nothing yet makes the story ask for a race.
+
 ### Time — `src/game/time.ts`
 
 A day has four periods: `morning`, `afternoon`, `evening`, `night`.

@@ -8,6 +8,7 @@ import { buttonStyle as menuButtonStyle, MentorScene, MenuScreen, ShopScene, Spo
 import { CaughtScene, FinaleLostScene } from './EndScenes'
 import { EndingFilm } from './EndingFilm'
 import { CrapsScene, RouletteScene, SlotsScene } from './CasinoGameScenes'
+import { RaceScene, type RaceCommit, type RaceOutcome } from './RaceScene'
 import { PenthouseScene, VenueScene } from './VenueScenes'
 import { SideNav } from './SideNav'
 import { OpenWorldMap, WorldMap } from './WorldMap'
@@ -84,6 +85,7 @@ type View =
   | { kind: 'slots' }
   | { kind: 'craps' }
   | { kind: 'roulette' }
+  | { kind: 'race'; raceIds: string[] }
   | { kind: 'venue'; venueId: string }
   | { kind: 'penthouse' }
   | { kind: 'caught' }
@@ -234,6 +236,9 @@ export function GameApp({ playtest = false }: { playtest?: boolean }) {
         break
       case 'roulette':
         setView({ kind: 'roulette' })
+        break
+      case 'race':
+        setView({ kind: 'race', raceIds: action.raceIds })
         break
       case 'venue':
         setView({ kind: 'venue', venueId: action.venueId })
@@ -416,6 +421,28 @@ export function GameApp({ playtest = false }: { playtest?: boolean }) {
       const next = { ...s, cash }
       return s.cash >= BUST_LINE && cash < BUST_LINE ? recordBust(next) : next
     })
+
+  /**
+   * The lights go: the bet leaves your wallet, a car put up on a slip leaves your
+   * garage, and the race costs a period — all before anybody has won anything, so
+   * closing the tab on a bad start gets the player nothing back.
+   */
+  const commitRace = ({ stake, slipCarId }: RaceCommit) =>
+    setState((s) => {
+      const cash = Math.max(0, s.cash - stake)
+      const next = advancePeriod(
+        { ...s, cash, ownedItemIds: slipCarId ? s.ownedItemIds.filter((id) => id !== slipCarId) : s.ownedItemIds },
+        1,
+      )
+      return s.cash >= BUST_LINE && cash < BUST_LINE ? recordBust(next) : next
+    })
+
+  /** The line: what comes back (the stake and the winnings, or minus the repairs) and any car won. */
+  const finishRace = ({ delta, carsWon }: RaceOutcome) => {
+    settleGamble(delta)
+    if (carsWon.length === 0) return
+    setState((s) => ({ ...s, ownedItemIds: [...s.ownedItemIds, ...carsWon.filter((id) => !s.ownedItemIds.includes(id))] }))
+  }
 
   const scene = (() => {
     switch (view.kind) {
@@ -655,6 +682,9 @@ export function GameApp({ playtest = false }: { playtest?: boolean }) {
 
     case 'roulette':
       return <RouletteScene state={state} onResult={settleGamble} onBack={backToCity} />
+
+    case 'race':
+      return <RaceScene state={state} raceIds={view.raceIds} onCommit={commitRace} onFinish={finishRace} onBack={backToCity} />
 
     case 'craps':
       return (

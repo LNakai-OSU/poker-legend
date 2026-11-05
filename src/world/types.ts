@@ -121,6 +121,27 @@ export type ItemEffect =
    * is what a car should buy.
    */
   | { kind: 'fastTravel'; discount: number }
+  /**
+   * A car that races but won't take you up the highway: the beater. Its stats are
+   * on `car`; the effect is the racing itself.
+   */
+  | { kind: 'racer' }
+  /**
+   * A part bolted to whatever you drive: +`value` to one of its stats, up to the
+   * ceiling of 10. Bought at a garage; it stays with you if the car is lost.
+   */
+  | { kind: 'carTune'; stat: CarStat; value: number }
+
+export type CarStat = 'topSpeed' | 'handling' | 'grip'
+
+/** How a car drives, each out of 10. See `race.ts` for what they do. */
+export interface CarStats {
+  topSpeed: number
+  handling: number
+  grip: number
+  /** The body colour on the road. */
+  paint: string
+}
 
 export interface ShopItemDef {
   id: string
@@ -128,6 +149,8 @@ export interface ShopItemDef {
   price: number
   blurb: string
   effect?: ItemEffect
+  /** Cars: how it drives. A car's `price` is also what repairs are worked out from. */
+  car?: CarStats
   /** Clothing: what the hero looks like wearing it, once they choose to. */
   wear?: { style: 'suit' | 'tux' | 'jacket' | 'hoodie'; color: string }
 }
@@ -186,6 +209,8 @@ export type PoiAction =
   | { kind: 'slots' }
   | { kind: 'craps' }
   | { kind: 'roulette' }
+  /** The street races on offer here, listed by id in `racing.ts`. */
+  | { kind: 'race'; raceIds: string[] }
   | { kind: 'venue'; venueId: string }
   | { kind: 'penthouse' }
   | { kind: 'shop'; shopId: string }

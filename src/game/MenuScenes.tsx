@@ -94,6 +94,17 @@ export function ShopScene({
                   Cuts travel costs by {Math.round(item.effect.value * 100)}%
                 </div>
               )}
+              {item.car && (
+                <div style={{ color: '#8ad4ff', fontSize: TYPE.small }}>
+                  Speed {item.car.topSpeed} · Handling {item.car.handling} · Grip {item.car.grip}
+                  {item.effect?.kind === 'fastTravel' ? ' · Saves the day on the road' : ''}
+                </div>
+              )}
+              {item.effect?.kind === 'carTune' && (
+                <div style={{ color: '#8ad4ff', fontSize: TYPE.small }}>
+                  +{item.effect.value} {item.effect.stat === 'topSpeed' ? 'speed' : item.effect.stat} on any car you drive
+                </div>
+              )}
               {item.effect?.kind === 'dressCode' && (
                 <div style={{ color: '#8ad4ff', fontSize: TYPE.small }}>Dress code level {item.effect.level}</div>
               )}
