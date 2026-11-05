@@ -1,45 +1,42 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { mulberry32 } from '../engine/rng'
+import { audio, playSound, type EngineVoice } from '../audio/audio'
 import { CHARACTERS } from '../world/characters'
 import { findItem } from '../world/content'
 import { RACES, ownedCars, repairCost, tunedStats, type RaceDef } from '../world/racing'
 import type { CarStats, ShopItemDef } from '../world/types'
-import { playSound } from '../audio/audio'
 import { MenuScreen, buttonStyle } from './MenuScenes'
+import { drawText, measureText } from './pixel/font'
+import { Raster } from './pixel/raster'
 import { TYPE, UI_FONT } from './pixel/webFont'
 import { useCrispScale } from './useCrispScale'
 import {
-  LANES,
   placeOf,
   runOut,
   settle,
   startRace,
   stepRace,
+  topSpeedOf,
   type Driver,
-  type Hazard,
-  type Input,
   type Race,
   type Racer,
   type Settlement,
 } from './race'
+import { buildTrack, outline } from './raceTrack'
+import { VIEW_H, VIEW_W, createView, drawRace, shade, type View } from './raceView'
 import type { GameState } from './state'
 
 /**
- * The street race: a straight road seen from above, three lanes, your hands on
- * left, right and brake. Everything that happens on the road is `race.ts`; this
- * is the lobby, the pictures and the keys.
+ * The street race: the road in front of you, bending and rising, with the wheel
+ * under left and right, brake, and boost. The road, the traffic and the rivals
+ * are `race.ts`; the picture is `raceView.ts`; this is the lobby, the controls,
+ * the dials and the result.
  *
  * The bet is taken, the clock moves and a pink-slipped car leaves your garage
  * the moment the lights go (`onCommit`), so closing the tab on a bad start is
  * not a way out. What is paid back comes at the line (`onFinish`).
  */
 
-const W = 200
-const H = 240
-const ROAD_L = 40
-const LANE_W = 40
-const ROAD_R = ROAD_L + LANE_W * LANES
-const ME_Y = 196
 const STEP = 1 / 60
 
 export interface RaceCommit {
@@ -49,7 +46,7 @@ export interface RaceCommit {
 }
 
 export interface RaceOutcome {
-  /** Cash back from the line: your stake and winnings, or nothing, or minus the repairs. */
+  /** Cash back from the line: the stake and winnings, minus the repairs. */
   delta: number
   /** Cars to put in your garage: the prize, and your own back if you won it. */
   carsWon: string[]
@@ -63,175 +60,126 @@ interface Active {
   car: ShopItemDef
   race: Race
   repair: number
+  period: GameState['period']
   result?: Settlement
-}
-
-const SIDES: Record<string, { grass: string; kerb: string; road: string; lamp: string }> = {
-  crescentHarbor: { grass: '#2c3e4c', kerb: '#c8d0d8', road: '#34363e', lamp: '#f4e4a8' },
-  palmCay: { grass: '#d8c890', kerb: '#f4f0e0', road: '#4a4650', lamp: '#fff2c0' },
-  neonMesa: { grass: '#1c1030', kerb: '#d848b0', road: '#26202e', lamp: '#58e0ff' },
-}
-
-const TRAFFIC_PAINT = ['#8a8a96', '#6a8a7a', '#9a7a6a', '#7a7aa0', '#a09a6a']
-
-function shade(hex: string, f: number): string {
-  const n = parseInt(hex.slice(1), 16)
-  const ch = (v: number) => Math.max(0, Math.min(255, Math.round(v * f)))
-  const r = ch((n >> 16) & 255)
-  const g = ch((n >> 8) & 255)
-  const b = ch(n & 255)
-  return `#${((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1)}`
-}
-
-function laneX(lane: number): number {
-  return ROAD_L + LANE_W * (lane + 0.5)
-}
-
-function drawCar(c: CanvasRenderingContext2D, cx: number, cy: number, paint: string, o: { braking?: boolean; wrecked?: boolean; you?: boolean } = {}) {
-  const x = Math.round(cx)
-  const y = Math.round(cy)
-  c.fillStyle = 'rgba(0,0,0,0.3)'
-  c.fillRect(x - 6, y - 11, 14, 26)
-  c.fillStyle = '#10101a'
-  c.fillRect(x - 8, y - 9, 2, 6)
-  c.fillRect(x + 6, y - 9, 2, 6)
-  c.fillRect(x - 8, y + 4, 2, 6)
-  c.fillRect(x + 6, y + 4, 2, 6)
-  c.fillRect(x - 7, y - 13, 14, 26)
-  c.fillStyle = o.wrecked ? shade(paint, 0.5) : paint
-  c.fillRect(x - 6, y - 12, 12, 24)
-  c.fillStyle = shade(paint, 1.25)
-  c.fillRect(x - 5, y - 12, 10, 5)
-  c.fillStyle = '#18243a'
-  c.fillRect(x - 5, y - 6, 10, 5)
-  c.fillStyle = shade(paint, 0.8)
-  c.fillRect(x - 5, y + 1, 10, 5)
-  c.fillStyle = '#18243a'
-  c.fillRect(x - 5, y + 6, 10, 2)
-  c.fillStyle = o.braking ? '#ff5050' : '#a02424'
-  c.fillRect(x - 6, y + 11, 3, 2)
-  c.fillRect(x + 3, y + 11, 3, 2)
-  if (o.braking) {
-    c.fillStyle = 'rgba(255,80,80,0.28)'
-    c.fillRect(x - 8, y + 13, 16, 3)
-  }
-}
-
-function drawHazard(c: CanvasRenderingContext2D, h: Hazard, y: number) {
-  const x = laneX(h.lane)
-  if (h.kind === 'traffic') {
-    drawCar(c, x, y, TRAFFIC_PAINT[h.id % TRAFFIC_PAINT.length])
-  } else if (h.kind === 'oil') {
-    c.fillStyle = '#0c0c14'
-    c.beginPath()
-    c.ellipse(x, y, 15, 9, 0, 0, Math.PI * 2)
-    c.fill()
-    c.fillStyle = 'rgba(120,90,200,0.35)'
-    c.beginPath()
-    c.ellipse(x - 3, y - 2, 8, 3, 0, 0, Math.PI * 2)
-    c.fill()
-  } else {
-    for (const dx of [-8, 0, 8]) {
-      c.fillStyle = '#10101a'
-      c.fillRect(x + dx - 4, y - 2, 8, 6)
-      c.fillStyle = '#f07828'
-      c.fillRect(x + dx - 3, y - 6, 6, 8)
-      c.fillStyle = '#f4f0e0'
-      c.fillRect(x + dx - 3, y - 3, 6, 2)
-    }
-  }
-}
-
-function drawFrame(c: CanvasRenderingContext2D, race: Race, me: Racer, cityId: string, countdown: number | null) {
-  const side = SIDES[cityId] ?? SIDES.crescentHarbor
-  const cam = me.dist
-  const yOf = (dist: number) => ME_Y - (dist - cam)
-  c.fillStyle = side.grass
-  c.fillRect(0, 0, W, H)
-  // Verge stripes and posts scroll at the road's speed, which is how speed is seen.
-  for (let k = Math.floor((cam - 60) / 24); k < Math.floor((cam + 240) / 24); k++) {
-    const y = yOf(k * 24)
-    c.fillStyle = k % 2 ? shade(side.grass, 1.12) : shade(side.grass, 0.92)
-    c.fillRect(0, y - 12, ROAD_L - 6, 12)
-    c.fillRect(ROAD_R + 6, y - 12, W - ROAD_R - 6, 12)
-  }
-  c.fillStyle = side.road
-  c.fillRect(ROAD_L, 0, ROAD_R - ROAD_L, H)
-  for (let k = Math.floor((cam - 60) / 22); k < Math.floor((cam + 240) / 22); k++) {
-    const y = yOf(k * 22)
-    c.fillStyle = k % 2 ? side.kerb : '#c43a3a'
-    c.fillRect(ROAD_L - 4, y - 11, 4, 11)
-    c.fillRect(ROAD_R, y - 11, 4, 11)
-  }
-  c.fillStyle = 'rgba(244,240,224,0.55)'
-  for (let k = Math.floor((cam - 40) / 30); k < Math.floor((cam + 240) / 30); k++) {
-    const y = yOf(k * 30)
-    for (let l = 1; l < LANES; l++) c.fillRect(ROAD_L + LANE_W * l - 1, y - 14, 2, 14)
-  }
-  for (let k = Math.floor((cam - 60) / 60); k < Math.floor((cam + 240) / 60); k++) {
-    const y = yOf(k * 60)
-    for (const lx of [ROAD_L - 14, ROAD_R + 14]) {
-      c.fillStyle = 'rgba(255,240,170,0.16)'
-      c.beginPath()
-      c.ellipse(lx, y, 12, 12, 0, 0, Math.PI * 2)
-      c.fill()
-      c.fillStyle = '#10101a'
-      c.fillRect(lx - 1, y - 1, 3, 3)
-      c.fillStyle = side.lamp
-      c.fillRect(lx, y, 1, 1)
-    }
-  }
-  // The start line and the finish.
-  for (const [dist, chequer] of [[0, false], [race.length, true]] as const) {
-    const y = yOf(dist)
-    if (y < -14 || y > H + 14) continue
-    for (let i = 0; i < (ROAD_R - ROAD_L) / 8; i++) {
-      for (let j = 0; j < 2; j++) {
-        c.fillStyle = chequer ? ((i + j) % 2 ? '#10101a' : '#f4f0e0') : 'rgba(244,240,224,0.7)'
-        if (chequer || j === 0) c.fillRect(ROAD_L + i * 8, y - 8 + j * 8, 8, 8)
-      }
-    }
-  }
-  for (const h of race.hazards) {
-    const y = yOf(h.at + h.speed * race.t)
-    if (y > -20 && y < H + 20) drawHazard(c, h, y)
-  }
-  // Furthest back first, you on top.
-  const order = [...race.racers].sort((a, b) => (a.isPlayer ? 1 : 0) - (b.isPlayer ? 1 : 0) || b.dist - a.dist)
-  for (const r of order) {
-    const y = yOf(r.dist)
-    if (y < -20 || y > H + 20) continue
-    drawCar(c, ROAD_L + LANE_W * (r.x + 0.5), y, r.paint, { wrecked: r.crashed, you: r.isPlayer })
-    if (r.crashed) {
-      c.fillStyle = 'rgba(30,30,40,0.7)'
-      for (let i = 0; i < 5; i++) {
-        const a = (race.t * 1.6 + i / 5) % 1
-        c.fillRect(Math.round(ROAD_L + LANE_W * (r.x + 0.5) - 6 + i * 3), Math.round(y - 10 - a * 24), 5, 5)
-      }
-    }
-    if (r.slide > 0) {
-      c.fillStyle = 'rgba(240,240,255,0.5)'
-      c.fillRect(Math.round(ROAD_L + LANE_W * (r.x + 0.5)) - 9, Math.round(y + 14), 18, 2)
-    }
-  }
-  if (countdown !== null) {
-    c.fillStyle = 'rgba(0,0,0,0.35)'
-    c.fillRect(0, 70, W, 60)
-    c.fillStyle = countdown > 0 ? '#f4d03c' : '#60e070'
-    c.font = 'bold 34px monospace'
-    c.textAlign = 'center'
-    c.fillText(countdown > 0 ? String(countdown) : 'GO', W / 2, 114)
-    c.textAlign = 'start'
-  }
+  /** The car's best speed and the player's damage, kept for the result screen. */
+  topKmh: number
+  damage: number
+  time: number | null
 }
 
 function ordinal(n: number): string {
   return n === 1 ? '1st' : n === 2 ? '2nd' : n === 3 ? '3rd' : `${n}th`
 }
 
+function clock(t: number | null): string {
+  if (t === null) return '--:--.-'
+  const m = Math.floor(t / 60)
+  const s = t - m * 60
+  return `${m}:${s.toFixed(1).padStart(4, '0')}`
+}
+
 function statLine(stats: CarStats): string {
   return `Speed ${stats.topSpeed} · Handling ${stats.handling} · Grip ${stats.grip}`
 }
+
+function hashOf(text: string): number {
+  let h = 2166136261
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619)
+  return h >>> 0
+}
+
+/** The road of a race, the same every time. */
+function trackOf(def: RaceDef) {
+  return buildTrack(def.length, def.track, mulberry32(hashOf(def.id)))
+}
+
+function label(v: number, words: [string, string, string, string]): string {
+  return v < 0.3 ? words[0] : v < 0.55 ? words[1] : v < 0.75 ? words[2] : words[3]
+}
+
+// --- the dials ---------------------------------------------------------------
+
+const HUD_LIGHT = '#f4f0e0'
+const HUD_DIM = '#8a8aa0'
+
+function text(h: Raster, s: string, x: number, y: number, color = HUD_LIGHT, align: 'l' | 'c' | 'r' = 'l') {
+  const w = measureText(s)
+  drawText(h, s, align === 'l' ? x : align === 'c' ? Math.round(x - w / 2) : x - w, y, color, '#0a0a14')
+}
+
+function bar(h: Raster, x: number, y: number, w: number, fill: number, color: string, back = '#10101c') {
+  h.rect(x - 1, y - 1, w + 2, 6, '#05050c')
+  h.rect(x, y, w, 4, back)
+  h.rect(x, y, Math.round(w * Math.max(0, Math.min(1, fill))), 4, color)
+  h.rect(x, y, Math.round(w * Math.max(0, Math.min(1, fill))), 1, shade(color, 1.35))
+}
+
+function drawHud(h: Raster, race: Race, me: Racer, view: View, dt: number, racing: boolean) {
+  const place = placeOf(race, me.id)
+  const kmh = Math.round(me.v * 3.6)
+  const vFrac = me.v / topSpeedOf(me.stats)
+
+  // Position and time.
+  text(h, ordinal(place), 8, 6, place === 1 ? '#ffd23c' : HUD_LIGHT)
+  text(h, `of ${race.racers.length}`, 8, 17, HUD_DIM)
+  text(h, clock(racing ? race.t : 0), VIEW_W - 8, 6, HUD_LIGHT, 'r')
+
+  // The whole road in a line, and who is where on it.
+  const bx = 82
+  const bw = VIEW_W - 164
+  h.rect(bx, 10, bw, 2, '#05050c')
+  h.rect(bx, 10, bw, 1, '#3a3a52')
+  h.rect(bx + bw, 6, 1, 9, '#f4f0e0')
+  for (const r of race.racers) {
+    const px = bx + Math.round(bw * Math.max(0, Math.min(1, r.dist / race.length)))
+    if (r !== me) h.rect(px - 1, 8, 3, 5, r.wrecked ? '#4a4a58' : r.paint)
+  }
+  const mx = bx + Math.round(bw * Math.max(0, Math.min(1, me.dist / race.length)))
+  h.rect(mx - 2, 6, 5, 9, '#f4f0e0')
+  h.rect(mx - 1, 7, 3, 7, me.paint)
+
+  // Gaps to the cars either side of you.
+  const others = race.racers.filter((r) => r !== me && !r.wrecked)
+  const ahead = others.filter((r) => r.dist > me.dist).sort((a, b) => a.dist - b.dist)[0]
+  const behind = others.filter((r) => r.dist <= me.dist).sort((a, b) => b.dist - a.dist)[0]
+  const gap = (d: number) => `${(d / Math.max(10, me.v)).toFixed(1)}s`
+  if (ahead && racing) text(h, `${ahead.name} +${gap(ahead.dist - me.dist)}`, 8, 28, '#ff9a8a')
+  if (behind && racing) text(h, `${behind.name} -${gap(me.dist - behind.dist)}`, 8, 39, '#8ad4ff')
+
+  // Speed, the way a dash shows it: the number and a row of ticks that light up.
+  text(h, String(kmh), 8, VIEW_H - 40, HUD_LIGHT)
+  text(h, 'KM/H', 8 + measureText(String(kmh)) + 4, VIEW_H - 40, HUD_DIM)
+  const ticks = 22
+  for (let i = 0; i < ticks; i++) {
+    const on = i / ticks < vFrac
+    const hot = i > ticks * 0.8
+    h.rect(8 + i * 4, VIEW_H - 28, 3, 6, on ? (hot ? '#ff5a3a' : '#f4d03c') : '#1c1c2c')
+  }
+
+  // Boost and damage.
+  const bxr = VIEW_W - 94
+  const ready = me.boost >= 0.35
+  const flash = ready && Math.floor(view.tick / 8) % 2 === 0
+  text(h, me.boosting ? 'BOOST' : ready ? 'BOOST [SHIFT]' : 'BOOST', bxr, VIEW_H - 41, me.boosting ? '#58e8ff' : flash ? '#ffffff' : HUD_DIM)
+  bar(h, bxr, VIEW_H - 31, 86, me.boost, me.boosting ? '#58e8ff' : '#2a8ad8')
+  text(h, 'DAMAGE', bxr, VIEW_H - 24, HUD_DIM)
+  bar(h, bxr, VIEW_H - 14, 86, me.damage, me.damage > 0.66 ? '#ff4a3a' : me.damage > 0.33 ? '#f0a030' : '#48c860')
+
+  // Slipstream and slide.
+  if (me.draft && racing) text(h, 'SLIPSTREAM', VIEW_W / 2, 24, '#8ad4ff', 'c')
+  else if (me.slide > 0.1 && !me.wrecked && racing) text(h, 'SLIDING', VIEW_W / 2, 24, '#ffd23c', 'c')
+
+  // What just happened.
+  const m = view.messages[view.messages.length - 1]
+  if (m) {
+    m.t -= dt
+    if (m.t > 0) text(h, m.text, VIEW_W / 2, 44, m.color, 'c')
+    else view.messages.pop()
+  }
+}
+
+// --- the scene ---------------------------------------------------------------
 
 const card: CSSProperties = {
   border: '1px solid #2e2e40', borderRadius: 8, padding: 'clamp(10px, 3vw, 16px)', marginBottom: 12,
@@ -239,6 +187,20 @@ const card: CSSProperties = {
 
 function Card({ children }: { children: ReactNode }) {
   return <div style={card}>{children}</div>
+}
+
+/** The road from above, so you know what you are getting into. */
+function TrackMap({ def }: { def: RaceDef }) {
+  const pts = useMemo(() => outline(trackOf(def)), [def])
+  const d = pts.map((p, i) => `${i ? 'L' : 'M'}${(8 + p.x * 84).toFixed(1)} ${(8 + p.y * 84).toFixed(1)}`).join(' ')
+  return (
+    <svg viewBox="0 0 100 100" width={86} height={86} aria-label={`${def.track.name} from above`} style={{ flex: 'none', background: '#0b0b14', borderRadius: 6 }}>
+      <path d={d} fill="none" stroke="#2a2a40" strokeWidth={5} strokeLinecap="round" strokeLinejoin="round" />
+      <path d={d} fill="none" stroke="#f2c14e" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      {pts[0] && <circle cx={8 + pts[0].x * 84} cy={8 + pts[0].y * 84} r={3} fill="#48e070" />}
+      {pts.length > 1 && <circle cx={8 + pts[pts.length - 1].x * 84} cy={8 + pts[pts.length - 1].y * 84} r={3} fill="#ff4a3a" />}
+    </svg>
+  )
 }
 
 export function RaceScene({
@@ -256,13 +218,13 @@ export function RaceScene({
 }) {
   const [phase, setPhase] = useState<Phase>('lobby')
   const [pickedCar, setPickedCar] = useState<string | null>(null)
-  const [hud, setHud] = useState({ place: 1, of: 1, speed: 0, left: 0, slide: false })
   const active = useRef<Active | null>(null)
   const [done, setDone] = useState<Active | null>(null)
-  const canvas = useRef<HTMLCanvasElement>(null)
-  const input = useRef({ left: false, right: false, brake: false })
+  const scene = useRef<HTMLCanvasElement>(null)
+  const hud = useRef<HTMLCanvasElement>(null)
+  const input = useRef({ left: false, right: false, brake: false, boost: false })
   const finished = useRef(false)
-  const P = useCrispScale(W, H + 60, 4)
+  const P = useCrispScale(VIEW_W, VIEW_H + 90, 4)
 
   const cars = useMemo(() => ownedCars(state.ownedItemIds), [state.ownedItemIds])
   const car = cars.find((c) => c.id === pickedCar) ?? cars[0] ?? null
@@ -279,101 +241,128 @@ export function RaceScene({
       isPlayer: false,
       skill: d.skill,
     }))
-    const race = startRace(def.length, def.traffic, [mine, ...rivals], mulberry32(Math.floor(Math.random() * 2 ** 31)))
-    active.current = { def, stake, car, race, repair: repairCost(car) }
+    const race = startRace(
+      def.length,
+      def.traffic,
+      def.track,
+      [mine, ...rivals],
+      mulberry32(Math.floor(Math.random() * 2 ** 31)),
+      mulberry32(hashOf(def.id)),
+    )
+    active.current = { def, stake, car, race, repair: repairCost(car), period: state.period, topKmh: 0, damage: 0, time: null }
     finished.current = false
-    input.current = { left: false, right: false, brake: false }
+    input.current = { left: false, right: false, brake: false, boost: false }
     onCommit({ stake, slipCarId: def.pinkSlip ? car.id : null })
     setDone(null)
-    setHud({ place: 1, of: race.racers.length, speed: 0, left: def.length, slide: false })
     setPhase('countdown')
   }
 
-  // The road.
+  // The road, the dials and the engine.
   useEffect(() => {
     if (phase !== 'countdown' && phase !== 'racing') return
     const a = active.current
-    const el = canvas.current
-    if (!a || !el) return
+    const el = scene.current
+    const hudEl = hud.current
+    if (!a || !el || !hudEl) return
     const c = el.getContext('2d')!
     c.imageSmoothingEnabled = false
     const me = a.race.racers.find((r) => r.isPlayer)!
+    const view = createView()
+    const dials = new Raster(VIEW_W, VIEW_H)
+    const voice: EngineVoice | null = audio.engine()
     let frame = 0
     let last = performance.now()
     const began = last
     let acc = 0
     let beeped = 4
     let endedAt = -1
-    let hudAt = 0
+    let wreckedAt = -1
+    let count = 0
+    let going = false
     const loop = (now: number) => {
       const dt = Math.min(0.05, (now - last) / 1000)
       last = now
-      const sinceStart = (now - began) / 1000
-      if (sinceStart < 3) {
-        const n = 3 - Math.floor(sinceStart)
-        if (n !== beeped) {
-          beeped = n
+      const since = (now - began) / 1000
+      count++
+      let countdown: number | null = null
+      if (since < 3) {
+        countdown = 3 - Math.floor(since)
+        if (countdown !== beeped) {
+          beeped = countdown
           playSound('chip')
         }
-        drawFrame(c, a.race, me, a.def.cityId, n)
       } else {
-        if (beeped !== 0) {
-          beeped = 0
+        if (!going) {
+          going = true
           playSound('deal')
           setPhase('racing')
         }
+        countdown = since < 3.7 ? 0 : null
         acc += dt
-        const key: Input = {
-          steer: input.current.left === input.current.right ? 0 : input.current.left ? -1 : 1,
+        const key = {
+          steer: (input.current.right ? 1 : 0) - (input.current.left ? 1 : 0),
           brake: input.current.brake,
+          boost: input.current.boost,
         }
         while (acc >= STEP) {
           acc -= STEP
           stepRace(a.race, STEP, key)
-          if ((me.crashed || me.finish !== null) && endedAt < 0) {
-            endedAt = a.race.t
-            playSound(me.crashed ? 'lose' : 'chip')
-          }
         }
-        drawFrame(c, a.race, me, a.def.cityId, sinceStart < 3.6 ? 0 : null)
-        if (now - hudAt > 90) {
-          hudAt = now
-          setHud({
-            place: placeOf(a.race, 'you'),
-            of: a.race.racers.length,
-            speed: Math.round(me.v),
-            left: Math.max(0, Math.round(a.race.length - me.dist)),
-            slide: me.slide > 0,
-          })
-        }
-        // A beat to see it happen, then the rest of the field finishes without you.
-        if (endedAt >= 0 && a.race.t - endedAt > 1.4 && !finished.current) {
-          finished.current = true
-          runOut(a.race)
-          const result = settle(a.race, 'you', {
-            stake: a.stake,
-            pays: a.def.pays,
-            pinkSlip: a.def.pinkSlip !== undefined,
-            repair: a.repair,
-          })
-          a.result = result
-          const slip = a.def.pinkSlip
-          // The stake went out when the lights did; this is what comes back.
-          const back = result.cash > 0 ? a.stake + result.cash : result.crashed ? -a.repair : 0
-          onFinish({
-            delta: slip ? 0 : back,
-            carsWon: slip && result.wonCar ? [slip.prizeCarId, a.car.id] : [],
-          })
-          playSound(result.place === 1 ? 'win' : 'fold')
-          setDone(a)
-          setPhase('result')
-          return
-        }
+      }
+      // Sound first, then the picture (which reads the same events and clears them).
+      for (const e of me.events) {
+        if (e.kind === 'hit' || e.kind === 'wall') voice?.impact(e.strength)
+        else if (e.kind === 'wreck') voice?.impact(1)
+        else if (e.kind === 'scrape') voice?.impact(0.2)
+        else if (e.kind === 'nearMiss') playSound('check')
+      }
+      if (me.wrecked && wreckedAt < 0) wreckedAt = since
+      voice?.set({
+        speed: Math.min(1, me.v / topSpeedOf(me.stats)),
+        throttle: me.braking || me.wrecked ? 0.1 : 1,
+        slide: me.wrecked ? 0 : me.slide,
+        boost: me.boosting,
+      })
+      drawRace(c, a.race, me, view, { period: a.period, countdown, dt, time: since, wreckedFor: wreckedAt < 0 ? 0 : since - wreckedAt })
+      if (count % 2 === 0) {
+        dials.pixels.fill(0)
+        drawHud(dials, a.race, me, view, dt * 2, going)
+        dials.paint(hudEl)
+      }
+      a.topKmh = Math.max(a.topKmh, Math.round(me.topSpeed * 3.6))
+
+      // A beat to see it happen, then the rest of the field finishes without you.
+      if ((me.wrecked || me.finish !== null) && endedAt < 0) endedAt = a.race.t
+      if (endedAt >= 0 && a.race.t - endedAt > (me.wrecked ? 2.4 : 1.8) && !finished.current) {
+        finished.current = true
+        voice?.stop()
+        runOut(a.race)
+        const result = settle(a.race, 'you', {
+          stake: a.stake,
+          pays: a.def.pays,
+          pinkSlip: a.def.pinkSlip !== undefined,
+          repair: a.repair,
+        })
+        a.result = result
+        a.damage = me.damage
+        a.time = me.finish
+        const slip = a.def.pinkSlip
+        onFinish({
+          delta: result.payout - result.repairs,
+          carsWon: slip && result.wonCar ? [slip.prizeCarId, a.car.id] : [],
+        })
+        playSound(result.place === 1 ? 'win' : 'fold')
+        setDone(a)
+        setPhase('result')
+        return
       }
       frame = requestAnimationFrame(loop)
     }
     frame = requestAnimationFrame(loop)
-    return () => cancelAnimationFrame(frame)
+    return () => {
+      cancelAnimationFrame(frame)
+      voice?.stop()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase === 'lobby' || phase === 'result'])
 
@@ -385,7 +374,8 @@ export function RaceScene({
       const k = e.key
       if (k === 'ArrowLeft' || k === 'a' || k === 'A') input.current.left = down
       else if (k === 'ArrowRight' || k === 'd' || k === 'D') input.current.right = down
-      else if (k === ' ' || k === 'ArrowDown' || k === 's' || k === 'S' || k === 'Shift') input.current.brake = down
+      else if (k === ' ' || k === 'ArrowDown' || k === 's' || k === 'S') input.current.brake = down
+      else if (k === 'Shift' || k === 'ArrowUp' || k === 'w' || k === 'W' || k === 'b' || k === 'B') input.current.boost = down
       else return
       e.preventDefault()
       e.stopPropagation()
@@ -401,7 +391,7 @@ export function RaceScene({
   }, [phase])
 
   if (phase === 'countdown' || phase === 'racing') {
-    const hold = (key: 'left' | 'right' | 'brake') => ({
+    const hold = (key: 'left' | 'right' | 'brake' | 'boost') => ({
       onPointerDown: (e: React.PointerEvent) => {
         e.preventDefault()
         input.current[key] = true
@@ -415,27 +405,32 @@ export function RaceScene({
       <div
         data-testid="race"
         style={{
-          width: '100vw', minHeight: '100vh', background: '#0b0b12', color: '#e8e8f0', fontFamily: UI_FONT,
+          width: '100vw', minHeight: '100vh', background: '#07070d', color: '#e8e8f0', fontFamily: UI_FONT,
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8,
         }}
       >
-        <div data-testid="race-hud" style={{ width: W * P, display: 'flex', justifyContent: 'space-between', fontSize: TYPE.body }}>
-          <span>{ordinal(hud.place)} of {hud.of}</span>
-          <span>{hud.slide ? 'SLIDING' : `${hud.speed * 3.6 | 0} km/h`}</span>
-          <span>{hud.left} m</span>
+        <div style={{ position: 'relative', width: VIEW_W * P, height: VIEW_H * P }}>
+          <canvas
+            ref={scene}
+            width={VIEW_W}
+            height={VIEW_H}
+            style={{ position: 'absolute', inset: 0, width: VIEW_W * P, height: VIEW_H * P, imageRendering: 'pixelated', touchAction: 'none' }}
+          />
+          <canvas
+            ref={hud}
+            data-testid="race-hud"
+            width={VIEW_W}
+            height={VIEW_H}
+            style={{ position: 'absolute', inset: 0, width: VIEW_W * P, height: VIEW_H * P, imageRendering: 'pixelated', pointerEvents: 'none' }}
+          />
         </div>
-        <canvas
-          ref={canvas}
-          width={W}
-          height={H}
-          style={{ width: W * P, height: H * P, imageRendering: 'pixelated', display: 'block', touchAction: 'none' }}
-        />
-        <div style={{ width: W * P, display: 'flex', gap: 8 }}>
+        <div style={{ width: VIEW_W * P, display: 'flex', gap: 8 }}>
           <button style={pad} aria-label="Steer left" {...hold('left')}>◀</button>
           <button style={pad} aria-label="Brake" {...hold('brake')}>Brake</button>
+          <button style={{ ...pad, background: '#2a6ab8' }} aria-label="Boost" {...hold('boost')}>Boost</button>
           <button style={pad} aria-label="Steer right" {...hold('right')}>▶</button>
         </div>
-        <div style={{ color: '#7a7a90', fontSize: TYPE.small }}>← → or A D to steer · Space to brake</div>
+        <div style={{ color: '#7a7a90', fontSize: TYPE.small }}>← → steer · Space brake · Shift boost</div>
       </div>
     )
   }
@@ -449,18 +444,31 @@ export function RaceScene({
         : `You lost the ${done.car.name}. ${done.def.winLine}`
       : r.place === 1
         ? `You won $${Math.round(done.stake * done.def.pays).toLocaleString()}. ${done.def.beatenLine}`
-        : r.crashed
-          ? `You wrecked it. The bet is gone and the repairs are $${done.repair.toLocaleString()}.`
+        : r.wrecked
+          ? 'You wrecked it. The bet is gone and the car is a bill.'
           : `${r.winner} won. Your $${done.stake.toLocaleString()} is gone.`
     return (
       <MenuScreen
-        title={r.crashed ? 'Wrecked' : `${ordinal(r.place)} of ${done.race.racers.length}`}
+        title={r.wrecked ? 'Wrecked' : `${ordinal(r.place)} of ${done.race.racers.length}`}
         subtitle={`${done.def.name} · Cash: $${state.cash.toLocaleString()}`}
         onBack={onBack}
         backLabel="Leave"
       >
         <Card>
           <div data-testid="race-result">{line}</div>
+          <div style={{ color: '#9a9ab0', fontSize: TYPE.body, marginTop: 8 }}>
+            {r.repairs > 0 ? `Repairs: $${r.repairs.toLocaleString()}. ` : 'Not a scratch on it. '}
+            Top speed {done.topKmh} km/h · Damage {Math.round(done.damage * 100)}%
+          </div>
+        </Card>
+        <Card>
+          <div style={{ color: '#f2c14e', marginBottom: 6 }}>Standings</div>
+          {r.times.map((t, i) => (
+            <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: TYPE.body, color: t.id === 'you' ? '#f4f0e0' : '#9a9ab0' }}>
+              <span>{ordinal(i + 1)} {t.name}</span>
+              <span>{t.wrecked ? 'wrecked' : clock(t.time)}</span>
+            </div>
+          ))}
         </Card>
         <button style={buttonStyle} onClick={() => { setPhase('lobby'); setPickedCar(null) }}>Back to the start line</button>
       </MenuScreen>
@@ -468,7 +476,7 @@ export function RaceScene({
   }
 
   // The start line.
-  const bestRating = car?.car ? tunedStats(car.car, state.ownedItemIds) : null
+  const rated = car?.car ? tunedStats(car.car, state.ownedItemIds) : null
   return (
     <MenuScreen title="Street races" subtitle={`Cash: $${state.cash.toLocaleString()} · a race takes a period of the day`} onBack={onBack} backLabel="Leave">
       {cars.length === 0 ? (
@@ -490,22 +498,30 @@ export function RaceScene({
               </button>
             ))}
           </div>
-          {bestRating && car && (
+          {rated && car && (
             <div style={{ color: '#9a9ab0', fontSize: TYPE.body, marginTop: 8 }}>
-              {statLine(bestRating)} · A wreck costs ${repairCost(car).toLocaleString()} to fix
+              {statLine(rated)} · A wreck costs ${repairCost(car).toLocaleString()} to fix; every scrape costs a share of it
             </div>
           )}
         </Card>
       )}
       {races.map((def) => (
         <Card key={def.id}>
-          <div style={{ color: '#f2c14e' }}>{def.name}</div>
-          <div style={{ color: '#9a9ab0', fontSize: TYPE.body, margin: '4px 0 8px' }}>{def.blurb}</div>
-          <div style={{ fontSize: TYPE.body, marginBottom: 8 }}>
-            Against {def.field.map((d) => `${CHARACTERS[d.character]?.name ?? d.character} (${findItem(d.carId)?.name})`).join(', ')}
+          <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+            <TrackMap def={def} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ color: '#f2c14e' }}>{def.name}</div>
+              <div style={{ color: '#9a9ab0', fontSize: TYPE.body, margin: '2px 0 6px' }}>
+                {def.track.name} · {(def.length / 1000).toFixed(1)} km · {label(def.track.curviness, ['Flowing', 'Twisty', 'Tight', 'Brutal'])} · {label(def.track.hills, ['Flat', 'Rolling', 'Hilly', 'Mountainous'])}
+              </div>
+              <div style={{ color: '#9a9ab0', fontSize: TYPE.body, marginBottom: 6 }}>{def.blurb}</div>
+              <div style={{ fontSize: TYPE.body }}>
+                Against {def.field.map((d) => `${CHARACTERS[d.character]?.name ?? d.character} (${findItem(d.carId)?.name})`).join(', ')}
+              </div>
+            </div>
           </div>
           {def.pinkSlip ? (
-            <div>
+            <div style={{ marginTop: 8 }}>
               <div style={{ color: '#ff9a8a', fontSize: TYPE.body, marginBottom: 8 }}>
                 You put up {car ? `your ${car.name}` : 'your car'}. Win and you drive home in the {findItem(def.pinkSlip.prizeCarId)?.name}.
                 Lose and yours is gone.
@@ -515,26 +531,26 @@ export function RaceScene({
               </button>
             </div>
           ) : (
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {def.stakes.map((stake) => {
-                const ok = car !== null && state.cash >= stake
-                return (
-                  <button
-                    key={stake}
-                    data-testid={`race-${def.id}-${stake}`}
-                    style={ok ? buttonStyle : { ...buttonStyle, opacity: 0.5 }}
-                    disabled={!ok}
-                    onClick={() => begin(def, stake)}
-                  >
-                    Bet ${stake.toLocaleString()}
-                  </button>
-                )
-              })}
-            </div>
-          )}
-          {!def.pinkSlip && (
-            <div style={{ color: '#7a7a90', fontSize: TYPE.small, marginTop: 6 }}>
-              First place pays {def.pays}× your bet. Anything else loses it, and a wreck costs the repairs on top.
+            <div style={{ marginTop: 8 }}>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {def.stakes.map((stake) => {
+                  const ok = car !== null && state.cash >= stake
+                  return (
+                    <button
+                      key={stake}
+                      data-testid={`race-${def.id}-${stake}`}
+                      style={ok ? buttonStyle : { ...buttonStyle, opacity: 0.5 }}
+                      disabled={!ok}
+                      onClick={() => begin(def, stake)}
+                    >
+                      Bet ${stake.toLocaleString()}
+                    </button>
+                  )
+                })}
+              </div>
+              <div style={{ color: '#7a7a90', fontSize: TYPE.small, marginTop: 6 }}>
+                First place pays {def.pays}× your bet. Anything else loses it, and the damage to the car is a repair bill on top.
+              </div>
             </div>
           )}
         </Card>

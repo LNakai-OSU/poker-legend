@@ -3,6 +3,9 @@ import { CITIES, SHOPS, allShopItems, findItem } from './content'
 import { CHARACTERS } from './characters'
 import { RACES, REPAIR_FLOOR, STAT_CEILING, ownedCars, racesIn, repairCost, tunedStats } from './racing'
 import { TOWN_ORDER } from '../game/state'
+import { mulberry32 } from '../engine/rng'
+import { startRace, runOut, type Driver } from '../game/race'
+import { buildTrack, outline } from '../game/raceTrack'
 
 describe('street racing', () => {
   const races = Object.values(RACES)
@@ -108,5 +111,55 @@ describe('street racing', () => {
 
   it('lists the cars you own, best first', () => {
     expect(ownedCars(['beater', 'sports-car', 'sedan', 'tailored-suit']).map((c) => c.id)).toEqual(['sports-car', 'sedan', 'beater'])
+  })
+
+  it('is driveable: on its real road the field finishes in a sane time and mostly stays on the road', () => {
+    for (const race of races) {
+      const drivers: Driver[] = race.field.map((d) => ({
+        id: d.character,
+        name: d.character,
+        stats: findItem(d.carId)!.car!,
+        isPlayer: false,
+        skill: d.skill,
+      }))
+      const times: number[] = []
+      let wrecks = 0
+      let total = 0
+      for (let seed = 1; seed <= 12; seed++) {
+        const r = startRace(race.length, race.traffic, race.track, drivers, mulberry32(seed * 31), mulberry32(7))
+        runOut(r)
+        for (const x of r.racers) {
+          total++
+          if (x.wrecked) wrecks++
+          else if (x.finish !== null) times.push(x.finish)
+        }
+      }
+      times.sort((a, b) => a - b)
+      const median = times[Math.floor(times.length / 2)]
+      expect(median, `${race.name} takes ${median}s`).toBeGreaterThan(25)
+      expect(median, `${race.name} takes ${median}s`).toBeLessThan(95)
+      expect(wrecks / total, `${race.name}: ${wrecks} of ${total} drivers wrecked`).toBeLessThan(0.3)
+    }
+  })
+
+  it('has a road you can see the shape of, and the same one every time', () => {
+    for (const race of races) {
+      const a = outline(buildTrack(race.length, race.track, mulberry32(5)))
+      expect(a.length).toBeGreaterThan(20)
+      for (const p of a) {
+        expect(p.x).toBeGreaterThanOrEqual(0)
+        expect(p.x).toBeLessThanOrEqual(1)
+        expect(p.y).toBeGreaterThanOrEqual(0)
+        expect(p.y).toBeLessThanOrEqual(1)
+      }
+      expect(race.track.curviness).toBeGreaterThan(0)
+      expect(race.track.curviness).toBeLessThanOrEqual(1)
+    }
+    // Harder roads are the ones with the better prizes.
+    const slips = races.filter((r) => r.pinkSlip)
+    for (const slip of slips) {
+      const cash = races.find((r) => !r.pinkSlip && r.cityId === slip.cityId)!
+      expect(slip.track.curviness).toBeGreaterThanOrEqual(cash.track.curviness)
+    }
   })
 })

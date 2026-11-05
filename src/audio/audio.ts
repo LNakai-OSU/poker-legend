@@ -18,6 +18,14 @@ export type SoundName =
   | 'alarm'
   | 'cash'
 
+/** The sound of a car: see `AudioEngine.engine`. */
+export interface EngineVoice {
+  /** speed 0..1 of the car's top, throttle 0..1, slide 0..1+, boost on/off. */
+  set(o: { speed: number; throttle: number; slide: number; boost: boolean }): void
+  impact(strength: number): void
+  stop(): void
+}
+
 const MUTE_KEY = 'poker-legend-muted'
 const VOLUME_KEY = 'poker-legend-volume'
 
@@ -183,6 +191,97 @@ class AudioEngine {
     env.connect(destination)
     src.start(start)
     src.stop(start + duration + 0.02)
+  }
+
+  /**
+   * A car's engine for as long as a race lasts: a sawtooth and a detuned square
+   * through a low-pass that opens with the revs, stepping through five gears so
+   * you hear each shift; tyre squeal when the car slides, wind with speed, a
+   * whoosh under boost. Returns null where there is no audio. Respects mute and
+   * volume, because it plays through the master gain like everything else.
+   */
+  engine(): EngineVoice | null {
+    const ctx = this.ensureContext()
+    if (!ctx || !this.master || !this.noiseBuffer) return null
+    if (ctx.state === 'suspended') void ctx.resume()
+    const master = this.master
+    const out = ctx.createGain()
+    out.gain.value = 0.0001
+    out.connect(master)
+    const lp = ctx.createBiquadFilter()
+    lp.type = 'lowpass'
+    lp.frequency.value = 700
+    lp.connect(out)
+    const saw = ctx.createOscillator()
+    saw.type = 'sawtooth'
+    const sq = ctx.createOscillator()
+    sq.type = 'square'
+    sq.detune.value = 14
+    const sawGain = ctx.createGain()
+    sawGain.gain.value = 0.5
+    const sqGain = ctx.createGain()
+    sqGain.gain.value = 0.22
+    saw.connect(sawGain)
+    sq.connect(sqGain)
+    sawGain.connect(lp)
+    sqGain.connect(lp)
+
+    const noiseLoop = (type: BiquadFilterType, freq: number): { gain: GainNode; filter: BiquadFilterNode; src: AudioBufferSourceNode } => {
+      const src = ctx.createBufferSource()
+      src.buffer = this.noiseBuffer
+      src.loop = true
+      const filter = ctx.createBiquadFilter()
+      filter.type = type
+      filter.frequency.value = freq
+      const gain = ctx.createGain()
+      gain.gain.value = 0.0001
+      src.connect(filter)
+      filter.connect(gain)
+      gain.connect(master)
+      return { gain, filter, src }
+    }
+    const squeal = noiseLoop('bandpass', 2300)
+    const wind = noiseLoop('lowpass', 500)
+    const whoosh = noiseLoop('bandpass', 1400)
+    for (const n of [saw, sq, squeal.src, wind.src, whoosh.src]) n.start()
+    out.gain.setTargetAtTime(0.1, ctx.currentTime, 0.2)
+
+    let stopped = false
+    return {
+      set: ({ speed, throttle, slide, boost }) => {
+        if (stopped) return
+        const t = ctx.currentTime
+        // Five gears: the revs climb through each and fall back at the shift.
+        const g = Math.min(4, Math.floor(speed * 5))
+        const rpm = 0.22 + Math.min(1, speed * 5 - g) * 0.78
+        const freq = 46 + rpm * 150 * (boost ? 1.12 : 1)
+        saw.frequency.setTargetAtTime(freq, t, 0.035)
+        sq.frequency.setTargetAtTime(freq * 0.5, t, 0.035)
+        lp.frequency.setTargetAtTime(380 + rpm * 1500 + throttle * 500, t, 0.05)
+        out.gain.setTargetAtTime(0.06 + 0.07 * throttle + 0.03 * rpm, t, 0.06)
+        squeal.gain.gain.setTargetAtTime(Math.min(0.11, slide * 0.16), t, 0.05)
+        wind.gain.gain.setTargetAtTime(0.01 + speed * speed * 0.11, t, 0.1)
+        whoosh.gain.gain.setTargetAtTime(boost ? 0.1 : 0.0001, t, 0.08)
+      },
+      impact: (strength) => {
+        if (stopped || this.muted) return
+        this.noise(ctx, master, { duration: 0.3 + strength * 0.4, gain: 0.25 + strength * 0.5, filterFreq: 500 + strength * 400 })
+        this.tone(ctx, master, { freq: 120, endFreq: 40, type: 'square', duration: 0.25, gain: 0.2 + strength * 0.2 })
+      },
+      stop: () => {
+        if (stopped) return
+        stopped = true
+        const t = ctx.currentTime
+        for (const g of [out, squeal.gain, wind.gain, whoosh.gain]) g.gain.setTargetAtTime(0.0001, t, 0.15)
+        for (const n of [saw, sq, squeal.src, wind.src, whoosh.src]) {
+          try {
+            n.stop(t + 0.7)
+          } catch {
+            // Already stopped.
+          }
+        }
+      },
+    }
   }
 
   play(name: SoundName) {

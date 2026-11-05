@@ -544,28 +544,73 @@ period, and funds a car or a cushion and nothing more.
   at the garage beside each dealer. It bolts onto whatever you drive (ceiling 10)
   and stays if you lose the car.
 - A **race** is data in `RACES`: who you race (character ids, each in a car, with a
-  `skill` 0..1), how long the road is, how busy, and either `stakes` and `pays`
-  (a cash race) or a `pinkSlip` (your car against theirs, no cash). A POI says
-  `action: { kind: 'race', raceIds: [...] }` to offer them; the one-off scene
-  is `RaceScene`, the driving is `game/race.ts`.
-- **How it plays.** Three lanes, a straight road of traffic, oil and cones. Left,
-  right and brake (A D Space, or the on-screen pads). Traffic is a wreck; oil takes
-  more from low grip; a cone is a bruise. Every car runs the same physics on the
-  same road, so a better car is faster and nothing is rubber-banded: a
-  rival is good because it sees the road, not because the game helps it.
-- **The money.** The bet leaves your wallet and the clock moves a period the moment
-  the lights go (`commitRace`), so closing the tab is no way out; a pink-slipped
-  car leaves your garage then too. First place pays `pays` times the bet; anything
-  else loses it; a wreck loses the repairs as well. Win a slip and you get the prize
-  car and yours back; lose it and yours is gone. The bus still works.
+  `skill` 0..1), a `track` (`name`, `theme` harbor/coast/strip, `curviness`,
+  `hills`), how long and how busy, and either `stakes` and `pays` (a cash race) or
+  a `pinkSlip` (your car against theirs, no cash). A POI says
+  `action: { kind: 'race', raceIds: [...] }` to offer them.
+- **The code.** `game/raceTrack.ts` builds the road (bends, hills, roadside
+  scenery) from a seed that is fixed per race, so **a circuit is the same road
+  every time and you can learn where to brake**; the traffic on it is new each
+  time. `game/race.ts` is the physics and the AI. `game/raceView.ts` is the
+  picture. `RaceScene` is the lobby (with a map of the road), the controls, the
+  dials and the result.
+
+**What the model has**, taken from what the best racers share (OutRun, Burnout,
+Hotshot Racing, the Gran Turismo / Forza end of the dial; a note on sources is at
+the bottom):
+
+- **A real road.** Bends from a gentle sweep to a hairpin, S-bends, crests and
+  dips. A bend asks for lateral grip that grows with the square of speed.
+- **Grip that gives out gradually.** Under the limit the car goes where you point
+  it. Over it the wheel goes soft (understeer), the car drifts wide and scrubs
+  speed. It is a slope, not a cliff, so you feel it going and can lift. Braking
+  hard in a bend takes grip off the rear (weight transfer). Oil takes most of it.
+- **Damage, not a switch.** A scrape costs a little, a wall or a rear-ender costs by
+  how hard it was, and enough is a wreck. **The repair bill is the damage**, even
+  on a race you win.
+- **Boost you earn.** Slipstreaming, near misses with traffic and holding a slide
+  through a bend fill a meter; spending it (Shift) is a burst of speed. It is a
+  reward for risk, not a catch-up.
+- **No rubber-banding.** Every car, yours and theirs, runs the same physics on the
+  same road. A rival is good because it brakes at the right place, takes the
+  inside line and sees the road (`skill`), never because the game helps it.
+  Contested in the genre; here it would break rule 2.
+- **Sense of speed.** The road is projected in depth (the OutRun / Daytona
+  technique), so bends curve away and a crest hides what is behind it. Posts,
+  lamps and kerbs stream past, the field of view opens with speed and boost, the
+  screen edges streak, the kerb shakes the view, and an engine (stepping through
+  five gears), tyre squeal, wind and impacts are synthesised in `audio.engine()`.
+- **Time of day.** The race is lit by the period you started it in: morning,
+  afternoon, a low orange evening, and a night with headlights, a moon and lamps
+  and neon that glow.
+
+**The money.**
+
+- The bet leaves your wallet and the clock moves a period the moment the lights go
+  (`commitRace`), so closing the tab is no way out; a pink-slipped car leaves your
+  garage then too.
+- First place returns the stake plus `pays` times it; anything else loses the
+  stake. The repairs come off either way. Win a slip and you get the prize car and
+  yours back; lose it and yours is gone. The bus still works.
 - **Held by tests** (`racing.test.ts`, `race.test.ts`): `pays` is below the number
-  of rivals (a race between equals loses a little); the biggest cash win is at most a
-  quarter of the next town's bankroll gate; a prize car is sold nowhere
-  (it lives in the `winnings` shop that no POI points to); equals win equally; a
-  better car wins more, a better driver wins more, and a sharp driver in a worse car
-  still wins a real share.
+  of rivals (a race between equals loses a little); the biggest cash win is at most
+  a quarter of the next town's bankroll gate; a prize car is sold nowhere (it lives
+  in the `winnings` shop that no POI points to); equals win equally; a better car
+  wins more, a better driver wins more, and a sharp driver in a worse car still
+  wins a real share; grip, damage and the money behave as written above; every real
+  race's field finishes in a sane time on its own road without wrecking constantly.
 - *Not done:* a valet, a getaway sedan, and a collector arriving in a car are still
-  scenery and chase beats to write; nothing yet makes the story ask for a race.
+  scenery and chase beats to write; nothing yet makes the story ask for a race;
+  there is no weather or tyre wear, and no replay.
+
+*Where this came from.* A short web survey (the sources are modest — reviews and
+design write-ups, not studies): sense of speed is built by presentation as much as
+by numbers; the best tracks have varied braking zones, camber and elevation; arcade
+racers keep weight transfer for feel and make grip generous, and a gradual grip
+falloff makes losing control readable; boost fed by drifting, drafting and near
+misses (Burnout, Hotshot Racing) is liked, while rubber-banding is the most
+criticised feature of the genre; and wagering your own car (Juiced, the Need for
+Speed pink slips) makes a race nerve-wracking, which is the point.
 
 ### Time — `src/game/time.ts`
 

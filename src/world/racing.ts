@@ -1,4 +1,5 @@
 import { allShopItems, findItem } from './content'
+import type { TrackSpec } from '../game/raceTrack'
 import type { CityId } from '../game/state'
 import type { CarStat, CarStats, ShopItemDef } from './types'
 
@@ -37,6 +38,8 @@ export interface RaceDef {
   blurb: string
   /** What the person running it says when you ask. */
   hostLines: string[]
+  /** The road: its name, its scenery, how it bends and rises. */
+  track: TrackSpec
   /** Metres to the line. */
   length: number
   /** 1 is the usual road; more is busier. */
@@ -64,6 +67,7 @@ export const RACES: Record<string, RaceDef> = {
     cityId: 'crescentHarbor',
     blurb: 'Down the waterfront and back before the harbour police wake up. Three cars.',
     hostLines: ['Racer: Three cars, one road, two minutes. Put money on yourself or don’t.'],
+    track: { name: 'Waterfront Run', theme: 'harbor', curviness: 0.35, hills: 0.2 },
     length: 1700,
     traffic: 0.9,
     field: [
@@ -81,6 +85,7 @@ export const RACES: Record<string, RaceDef> = {
     cityId: 'crescentHarbor',
     blurb: 'Otto’s coupe against yours. Pink slips on the table, no cash. Lose and it is his.',
     hostLines: ['Racer: Otto put his coupe up. You’d have to put up yours.'],
+    track: { name: 'Dockside Loop', theme: 'harbor', curviness: 0.55, hills: 0.3 },
     length: 1900,
     traffic: 1,
     field: [{ character: 'otto', carId: 'harbor-coupe', skill: 0.55 }],
@@ -96,6 +101,7 @@ export const RACES: Record<string, RaceDef> = {
     cityId: 'palmCay',
     blurb: 'The coast road in the evening sun, a four-car field and a lot of cheerful money.',
     hostLines: ['Racer: Four cars on the coast road. Sun’s going down, it’s lovely, don’t look at it.'],
+    track: { name: 'Coast Road', theme: 'coast', curviness: 0.5, hills: 0.5 },
     length: 2100,
     traffic: 1,
     field: [
@@ -114,6 +120,7 @@ export const RACES: Record<string, RaceDef> = {
     cityId: 'palmCay',
     blurb: 'Inés’s roadster for your car. She does not lose often, and she does not say it twice.',
     hostLines: ['Racer: Inés would like to race you for a car. She’s already had the paperwork drawn up.'],
+    track: { name: 'Cliffside', theme: 'coast', curviness: 0.7, hills: 0.65 },
     length: 2200,
     traffic: 1.1,
     field: [{ character: 'ines', carId: 'cay-roadster', skill: 0.68 }],
@@ -129,6 +136,7 @@ export const RACES: Record<string, RaceDef> = {
     cityId: 'neonMesa',
     blurb: 'Down the Strip with the neon in the paint, four cars, serious money.',
     hostLines: ['Racer: Strip’s shut for the night. Four cars. Don’t clip the taxi rank.'],
+    track: { name: 'The Strip', theme: 'strip', curviness: 0.45, hills: 0.2 },
     length: 2400,
     traffic: 1.2,
     field: [
@@ -147,6 +155,7 @@ export const RACES: Record<string, RaceDef> = {
     cityId: 'neonMesa',
     blurb: 'Solomon Vale’s GT against your car. He has never been seen to lose one.',
     hostLines: ['Racer: Mr. Vale has a car you’ve been looking at. He would like yours.'],
+    track: { name: 'Mesa Switchbacks', theme: 'strip', curviness: 0.8, hills: 0.55 },
     length: 2600,
     traffic: 1.25,
     field: [{ character: 'vale', carId: 'vale-gt', skill: 0.78 }],
