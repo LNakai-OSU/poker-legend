@@ -867,7 +867,7 @@ await test('broke, Marcus deals you back in at the kitchen table', async () => {
       areaId: 'marcus-house',
       period: 'evening',
       cash: 40,
-      completedEventIds: STORY_SEEN.filter((id) => id !== 'nadia-names-the-match'),
+      completedEventIds: STORY_SEEN.filter((id) => id !== 'lumina-welcome' && id !== 'nadia-names-the-match'),
     }),
   )
   await page.goto(BASE)
@@ -1339,7 +1339,7 @@ const BROKE_AT_HOME = () =>
     areaId: 'marcus-house',
     period: 'evening',
     cash: 40,
-    completedEventIds: STORY_SEEN.filter((id) => id !== 'nadia-names-the-match'),
+    completedEventIds: STORY_SEEN.filter((id) => id !== 'lumina-welcome' && id !== 'nadia-names-the-match'),
   })
 
 for (const [label, size, device] of [
@@ -2342,16 +2342,23 @@ await test('a table still works with every lesson bought', async () => {
  * and stacked them.
  */
 await test('a six-handed table seats everyone', async () => {
-  const page = await newPage(baseSave({ cityId: 'riverbend', cash: 50000 }))
-  await page.goto(BASE)
-  await page.waitForSelector('canvas')
-  await page.waitForTimeout(400)
-  await enterDoor(page, 'Riverboat')
-  await talkTo(page, 'Dealer')
-  assert(await page.locator('[data-testid="pot-value"]').isVisible(), 'never reached the table')
-
-  const seatCount = await page.locator('[data-testid^="seat-"]').count()
-  assert(seatCount === 6, `expected 6 seats on the felt, saw ${seatCount}`)
+  // An open game seats four or five others at night and fewer earlier in the day
+  // (`lineupFor`, rolled from the day and the hour), so a full table is looked
+  // for: the first night, of the first dozen, that fills every chair.
+  let page = null
+  let seatCount = 0
+  for (let day = 1; day <= 12 && seatCount !== 6; day++) {
+    if (page) await page.close()
+    page = await newPage(baseSave({ cityId: 'riverbend', cash: 50000, period: 'night', day }))
+    await page.goto(BASE)
+    await page.waitForSelector('canvas')
+    await page.waitForTimeout(400)
+    await enterDoor(page, 'Riverboat')
+    await talkTo(page, 'Dealer')
+    assert(await page.locator('[data-testid="pot-value"]').isVisible(), 'never reached the table')
+    seatCount = await page.locator('[data-testid^="seat-"]').count()
+  }
+  assert(seatCount === 6, `no night in the first twelve fills the table: the last had ${seatCount} seats on the felt`)
 
   // Checked over several hands rather than once on sit-down, because what a seat
   // holds changes hand to hand: each player's tell is a different cue each hand,
@@ -3566,9 +3573,17 @@ await test('the map editor seats the same people at the tables as the game', asy
   const inEditor = await page.evaluate(() =>
     [...document.querySelectorAll('[data-testid="seated"]')].map((el) => `${el.dataset.seat}:${el.dataset.character}`).sort(),
   )
+  // An open game seats some of its regulars by the hour (`lineupFor`), while the
+  // editor has no hour and draws the whole named line-up. So the contract is:
+  // everybody the game seats, in the chair it seats them in, is shown by the
+  // editor too (strangers exactly), and whatever the editor adds is a named
+  // regular the game left at home this hour — never a stranger or a stranger's chair.
+  const missing = inGame.filter((seat) => !inEditor.includes(seat))
+  assert(missing.length === 0, `the game seats ${missing.join(' ')} but the editor does not; the editor seats ${inEditor.join(' ')}`)
+  const extra = inEditor.filter((seat) => !inGame.includes(seat))
   assert(
-    JSON.stringify(inEditor) === JSON.stringify(inGame),
-    `the editor seats ${inEditor.join(' ')}; the game seats ${inGame.join(' ')}`,
+    extra.every((seat) => !seat.endsWith(':')),
+    `the editor adds a stranger's chair the game leaves empty: ${extra.filter((seat) => seat.endsWith(':')).join(' ')}`,
   )
   // Drawn over the tables, the size of a person.
   const box = await page.locator('[data-testid="seated"]').first().boundingBox()
