@@ -346,9 +346,11 @@ export const CHARACTERS: Record<string, CharacterDef> = {
           when: [{ kind: 'chapter', cityId: 'portoLumina' }, { kind: 'eventDone', eventId: 'lumina-welcome' }],
           lines: ['Marcus: I am at the rail. That is the rule.'],
           schedule: [
-            { period: 'afternoon', areaId: 'pl-street', col: 12, row: 6 },
-            { period: 'evening', areaId: 'pl-casino', col: 13, row: 21 },
-            { period: 'night', areaId: 'pl-casino', col: 13, row: 21 },
+            // By the desk, where he left you: at the rail, all day.
+            { period: 'morning', areaId: 'pl-casino', col: 19, row: 4 },
+            { period: 'afternoon', areaId: 'pl-casino', col: 19, row: 4 },
+            { period: 'evening', areaId: 'pl-casino', col: 19, row: 4 },
+            { period: 'night', areaId: 'pl-casino', col: 19, row: 4 },
           ],
         },
         {
@@ -478,8 +480,10 @@ export const CHARACTERS: Record<string, CharacterDef> = {
           when: [{ kind: 'chapter', cityId: 'portoLumina' }],
           lines: ['Dana: Go and say hello to her. She has waited a long time for somebody worth it.'],
           schedule: [
-            { period: 'evening', areaId: 'pl-casino', col: 26, row: 21 },
-            { period: 'night', areaId: 'pl-casino', col: 26, row: 21 },
+            { period: 'morning', areaId: 'pl-casino', col: 21, row: 4 },
+            { period: 'afternoon', areaId: 'pl-casino', col: 21, row: 4 },
+            { period: 'evening', areaId: 'pl-casino', col: 21, row: 4 },
+            { period: 'night', areaId: 'pl-casino', col: 21, row: 4 },
           ],
         },
         {
