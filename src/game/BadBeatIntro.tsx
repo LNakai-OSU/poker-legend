@@ -381,6 +381,8 @@ export function BadBeatIntro({ onDone }: { onDone: (skipped?: boolean) => void }
           opacity: phase === 'lights' || phase === 'excuse' || phase === 'walk' ? 0.94 : dark,
           transition: 'opacity 70ms steps(2)',
           pointerEvents: 'none',
+          // Above the table's own raised pieces (the blind and dealer chips sit at z 3).
+          zIndex: 4,
         }}
       />
       {(phase === 'lights' || phase === 'excuse' || phase === 'walk') && (
@@ -395,6 +397,7 @@ export function BadBeatIntro({ onDone }: { onDone: (skipped?: boolean) => void }
             background: 'linear-gradient(to top, rgba(200,40,40,0.35), transparent)',
             animation: 'hunt-pulse 1.4s ease-in-out infinite',
             pointerEvents: 'none',
+            zIndex: 4,
           }}
         />
       )}
@@ -433,7 +436,7 @@ const skipStyle: CSSProperties = {
   position: 'absolute',
   top: 12,
   right: 12,
-  zIndex: 2,
+  zIndex: 6,
   background: 'rgba(10,10,16,0.8)',
   color: '#9a9ab0',
   border: '1px solid #4a4a66',
@@ -491,7 +494,7 @@ function WalkOff({ layout }: { layout: SceneLayout }) {
       data-testid="walk-off"
       width={widthPx}
       height={heightPx}
-      style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none', imageRendering: 'pixelated', zIndex: 3 }}
+      style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none', imageRendering: 'pixelated', zIndex: 5 }}
     />
   )
 }

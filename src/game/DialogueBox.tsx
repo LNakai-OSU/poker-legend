@@ -53,6 +53,7 @@ export function DialogueBox({ speaker, lines, onFinish }: DialogueBoxProps) {
         right: 0,
         bottom: 0,
         margin: '0 auto',
+        zIndex: 10,
         maxWidth: 640,
         background: 'rgba(10, 10, 16, 0.92)',
         border: '2px solid #4a4a66',
