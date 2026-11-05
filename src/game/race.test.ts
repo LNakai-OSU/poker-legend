@@ -1,8 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import { mulberry32 } from '../engine/rng'
-import { SEG, buildTrack, curveAt, heightAt, type TrackSpec } from './raceTrack'
+import { SEG, buildTrack, cornersOf, curveAt, heightAt, nextCorner, shapeOf, type TrackSpec } from './raceTrack'
 import {
+  CAR_HALF_W,
+  CONE_HALF_W,
   NO_INPUT,
+  OIL_HALF_L,
+  OIL_HALF_W,
+  hasWayThrough,
+  reachX,
+  reachY,
+  threatOf,
   VREF,
   aiInput,
   gripOf,
@@ -88,14 +96,32 @@ describe('the road', () => {
     expect(curveAt(t, 5 * SEG)).toBe(t.segs[5].curve)
   })
 
-  it('always leaves a way through the traffic', () => {
-    for (let seed = 1; seed <= 50; seed++) {
+  it('always leaves a way through: room beside a slick, not just an empty lane', () => {
+    for (let seed = 1; seed <= 60; seed++) {
       const road = layRoad(2600, 1.25, mulberry32(seed))
       for (const h of road) {
-        const across = new Set(road.filter((o) => Math.abs(o.at - h.at) < 12).map((o) => o.lat))
-        expect(across.size, `seed ${seed}: the road is shut at ${Math.round(h.at)} m`).toBeLessThan(3)
+        const across = road.filter((o) => Math.abs(o.at - h.at) < 14)
+        expect(hasWayThrough(across), `seed ${seed}: the road is shut at ${Math.round(h.at)} m`).toBe(true)
       }
     }
+  })
+
+  it('numbers its corners and calls the next one, bent the way it turns', () => {
+    const t = buildTrack(2400, { ...SPEC, curviness: 0.9 }, mulberry32(4))
+    const corners = cornersOf(t)
+    expect(corners.length).toBeGreaterThan(3)
+    for (const c of corners) {
+      const mid = t.segs[Math.round(c.dist / SEG)].curve
+      expect(Math.sign(mid) || c.dir).toBe(c.dir)
+      expect(Math.abs(c.peak)).toBeGreaterThanOrEqual(1.4)
+    }
+    const next = nextCorner(corners, 0)!
+    expect(next.corner.n).toBe(1)
+    expect(next.away).toBeGreaterThan(0)
+    expect(nextCorner(corners, 1e6)).toBeNull()
+    const shape = shapeOf(t)
+    expect(shape.corners).toEqual(corners)
+    expect(shape.climb).toBeGreaterThanOrEqual(0)
   })
 })
 
@@ -104,7 +130,8 @@ describe('the car', () => {
     // The same car, the same bend, nobody steering: the one with less grip ends up further out.
     const out = (grip: number) => {
       const race = lab(3, [{ ...driver('a', 5, 0), stats: { topSpeed: 5, handling: 5, grip, paint: '#fff' }, isPlayer: true }])
-      for (let i = 0; i < 120; i++) stepRace(race, 1 / 60, NO_INPUT)
+      // Long enough to drift visibly, short enough that neither has reached the wall.
+      for (let i = 0; i < 40; i++) stepRace(race, 1 / 60, NO_INPUT)
       return Math.abs(race.racers[0].x)
     }
     expect(out(3)).toBeGreaterThan(out(9))
@@ -148,14 +175,16 @@ describe('the car', () => {
   it('is wrecked by enough damage and stops being driven', () => {
     const race = lab(0, [{ ...driver('a', 5, 0), isPlayer: true }])
     const me = race.racers[0]
-    // Drive into a row of stopped cars.
-    race.hazards = [60, 110, 160, 210, 260, 310].map((at, i) => ({ id: i, at, lat: 0, kind: 'traffic' as const, speed: 0 }))
+    // Already badly hurt, and into the back of a stopped car at speed.
+    me.damage = 0.85
+    race.hazards = [{ id: 1, at: 80, lat: 0, kind: 'traffic', speed: 0 }]
     me.dist = 40
-    for (let i = 0; i < 60 * 12; i++) stepRace(race, 1 / 60, { steer: 0, brake: false, boost: false })
+    me.v = 48
+    for (let i = 0; i < 60 * 3; i++) stepRace(race, 1 / 60, { steer: 0, brake: false, boost: false })
     expect(me.wrecked).toBe(true)
     expect(me.damage).toBe(1)
     const stopped = me.dist
-    for (let i = 0; i < 120; i++) stepRace(race, 1 / 60, { steer: 0, brake: false, boost: false })
+    for (let i = 0; i < 180; i++) stepRace(race, 1 / 60, { steer: 0, brake: false, boost: false })
     expect(me.v).toBeLessThan(1)
     expect(me.dist - stopped).toBeLessThan(15)
   })
@@ -295,5 +324,131 @@ describe('the money', () => {
     const lost = settle(r, 'you', { stake: 0, pays: 0, pinkSlip: true, repair: 400 })
     expect(lost.lostCar).toBe(true)
     expect(lost.cash).toBe(0)
+  })
+})
+
+describe('what is on the road', () => {
+  const me = () => ({ ...driver('a', 5, 0), isPlayer: true })
+  const withThing = (kind: 'traffic' | 'oil' | 'cone', lat: number, speed = 0) => {
+    const race = lab(0, [me()])
+    race.hazards = [{ id: 1, at: 100, lat, kind, speed }]
+    const r = race.racers[0]
+    r.dist = 60
+    r.v = 45
+    r.x = 0
+    return { race, r }
+  }
+  const run = (race: Race, seconds: number, steer = 0) => {
+    for (let i = 0; i < seconds * 60; i++) stepRace(race, 1 / 60, { steer, brake: false, boost: false })
+  }
+
+  it('is as wide as it looks: a slick catches you across its drawn width and not a hair beyond', () => {
+    // The picture draws the slick OIL_HALF_W road-halves each side of its middle, and the car
+    // CAR_HALF_W each side of its own. Touching is those two overlapping, and nothing else.
+    const caught = (offset: number) => {
+      const { race, r } = withThing('oil', 0)
+      r.x = offset
+      // Park the steering against the push: no bend, so the car stays where it was put.
+      run(race, 2)
+      return r.hitLog.oil > 0
+    }
+    expect(caught(OIL_HALF_W + CAR_HALF_W - 0.04)).toBe(true)
+    expect(caught(OIL_HALF_W + CAR_HALF_W + 0.04)).toBe(false)
+    expect(reachX('oil')).toBeCloseTo(OIL_HALF_W + CAR_HALF_W, 9)
+    expect(reachY('oil')).toBeGreaterThan(OIL_HALF_L)
+  })
+
+  it('has cones that are as wide as they look, and traffic as wide as a car', () => {
+    expect(reachX('cone')).toBeCloseTo(CONE_HALF_W + CAR_HALF_W, 9)
+    expect(reachX('traffic')).toBeCloseTo(CAR_HALF_W * 2, 9)
+  })
+
+  it('throws the car sideways on oil, and no damage', () => {
+    const { race, r } = withThing('oil', 0)
+    r.steer = 0.6
+    let skid = 0
+    for (let i = 0; i < 60 * 3 && r.hitLog.oil === 0; i++) {
+      stepRace(race, 1 / 60, { steer: 0.6, brake: false, boost: false })
+      skid = r.skid
+    }
+    expect(r.hitLog.oil).toBe(1)
+    expect(r.damage).toBe(0)
+    expect(Math.abs(skid)).toBeGreaterThan(0.3)
+  })
+
+  it('gives the wheel back faster if you ease off it than if you fight the skid', () => {
+    const settle = (steer: number) => {
+      const race = lab(0, [me()])
+      const r = race.racers[0]
+      r.skid = 1
+      r.steer = steer
+      for (let i = 0; i < 36; i++) stepRace(race, 1 / 60, { steer, brake: false, boost: false })
+      return Math.abs(r.skid)
+    }
+    expect(settle(0)).toBeLessThan(settle(0.9))
+  })
+
+  it('leaves you behind a car you rear-end rather than inside it, and shoves you aside', () => {
+    const { race, r } = withThing('traffic', 0, 22)
+    run(race, 2.6)
+    const traffic = race.hazards[0]
+    expect(r.damage).toBeGreaterThan(0.1)
+    expect(r.hitLog.traffic).toBe(1)
+    // It is not overlapping the car it hit: either behind it, or off to one side.
+    const behind = traffic.at + traffic.speed * race.t - r.dist >= 4.5 - 0.5
+    const beside = Math.abs(r.x - traffic.lat) > CAR_HALF_W * 2
+    expect(behind || beside).toBe(true)
+    expect(r.lastHit?.id).toBe(1)
+  })
+
+  it('says what hit you and what it cost', () => {
+    const { race, r } = withThing('traffic', 0, 22)
+    const seen: string[] = []
+    for (let i = 0; i < 180; i++) {
+      stepRace(race, 1 / 60, NO_INPUT)
+      for (const e of r.events.splice(0)) if (e.kind === 'hit') seen.push(`${e.cause}:${e.damage > 0}`)
+    }
+    expect(seen).toEqual(['traffic:true'])
+    expect(r.damageBy.traffic).toBeCloseTo(r.damage, 9)
+    expect(r.hitLog.wall).toBe(0)
+  })
+
+  it('warns of what is ahead in your path, and in time to do something about it', () => {
+    const { race, r } = withThing('traffic', 0, 22)
+    r.dist = 0
+    r.v = 45
+    // Far off: nothing to say.
+    race.hazards[0].at = 400
+    expect(threatOf(race, r)).toBeNull()
+    // Closing: first a caution, then danger.
+    race.hazards[0].at = 70
+    expect(threatOf(race, r)?.level).toBe('caution')
+    race.hazards[0].at = 30
+    const close = threatOf(race, r)
+    expect(close?.level).toBe('danger')
+    expect(close?.kind).toBe('traffic')
+    expect(close!.ttc).toBeGreaterThan(0)
+    // Not in your lane: nothing to worry about.
+    race.hazards[0].lat = 0.95
+    expect(threatOf(race, r)).toBeNull()
+    // And oil is a caution before it is a danger.
+    race.hazards[0] = { id: 2, at: 90, lat: 0, kind: 'oil', speed: 0 }
+    expect(threatOf(race, r)?.kind).toBe('oil')
+  })
+
+  it('tallies the cones, the walls and the cars separately', () => {
+    const race = lab(0, [me()])
+    race.hazards = [{ id: 1, at: 80, lat: 0, kind: 'cone', speed: 0 }]
+    const r = race.racers[0]
+    r.dist = 50
+    r.x = 0
+    run(race, 1.5)
+    expect(r.hitLog.cone).toBe(1)
+    expect(r.damageBy.cone).toBeGreaterThan(0)
+    expect(r.hitLog.traffic).toBe(0)
+    r.x = 1.7
+    run(race, 0.2)
+    expect(r.hitLog.wall).toBeGreaterThan(0)
+    expect(r.damageBy.wall).toBeGreaterThan(0)
   })
 })

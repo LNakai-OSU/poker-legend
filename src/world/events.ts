@@ -4923,16 +4923,23 @@ export const EVENTS: GameEvent[] = [
     id: 'final-won',
     about:
       'The last chip is yours. The ending film plays (the empty stage, the settlement, the ' +
-      'petition, the credits, a missed call), then Dana says the one line after it, back on ' +
-      'the street, and open-ended play begins. Playable on demand from the playtest panel.',
+      'petition, the credits, a missed call), then you come to in the penthouse, Dana rings with the one line after it, and ' +
+      'open-ended play begins. Playable on demand from the playtest panel.',
     trigger: { kind: 'finaleWon' },
     actions: [
+      // The penthouse is the prize, however the film is reached (the playtest panel plays it on demand).
+      { kind: 'setFlag', flag: 'hasPenthouse' },
+      { kind: 'setFlag', flag: 'beatFinalRival' },
       { kind: 'fade', to: 'out' },
       { kind: 'cinematic', id: 'ending' },
+      // After the credits you are home: forty-one floors up, by the lift.
+      { kind: 'teleport', areaId: 'pl-penthouse', col: 12, row: 3 },
+      { kind: 'fade', to: 'in' },
       {
         kind: 'dialogue',
         speaker: 'dana',
         lines: [
+          'The phone buzzes on the glass table. It is Dana.',
           'Dana: I put it in the book as a win. It is the only column I have.',
           'Dana: Marcus called me. He did not ask where you were. He asked if you were eating.',
           'Dana: Call him back. I am not going to say it twice.',

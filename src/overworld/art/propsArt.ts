@@ -276,6 +276,132 @@ const fishTank: StampArt = {
 }
 
 // ---------------------------------------------------------------------------
+// The penthouse's other floors
+// ---------------------------------------------------------------------------
+
+/** A treadmill: the belt runs, a console on a post at the back. */
+const treadmill: StampArt = {
+  frames: 2,
+  bleed: { top: 6 },
+  standsUp: 2,
+  draw: (px, c) => {
+    shadow(px, 1, 13, 14, 3, 0.3)
+    px(2, 5, 12, 8, '#22222a')
+    px(2, 5, 12, 1, '#3a3a46')
+    for (let i = 0; i < 4; i++) px(3 + ((i * 3 + c.frame * 2) % 11), 7, 1, 4, '#4a4a58')
+    px(1, 11, 14, 2, '#14141a')
+    px(2, -2, 2, 8, '#8a929c')
+    px(12, -2, 2, 8, '#8a929c')
+    px(1, -5, 14, 5, '#1a1a22')
+    px(2, -4, 12, 2, '#4fe8ff')
+    px(2, -1, 5, 1, '#ff4a5a')
+  },
+}
+
+/** A bench with a barbell racked over it and a plate on each end. */
+const weightBench: StampArt = {
+  bleed: { top: 6 },
+  standsUp: 2,
+  draw: (px, c) => {
+    shadow(px, 2, 13, c.w - 4, 3, 0.3)
+    px(6, 6, c.w - 12, 4, '#14141a')
+    px(7, 6, c.w - 14, 1, '#3a3a46')
+    px(8, 10, 2, 4, '#5a5a66')
+    px(c.w - 10, 10, 2, 4, '#5a5a66')
+    px(4, -3, c.w - 8, 2, '#c8ccd4')
+    for (const x of [2, c.w - 6]) {
+      px(x, -7, 4, 10, '#14141a')
+      px(x + 1, -6, 2, 8, '#c8402f')
+    }
+    px(5, -1, 2, 7, '#5a5a66')
+    px(c.w - 7, -1, 2, 7, '#5a5a66')
+  },
+}
+
+/** Two tiers of dumbbells in a steel rack, in order of size. */
+const weightRack: StampArt = {
+  bleed: { top: 4 },
+  standsUp: 1,
+  draw: (px, c) => {
+    shadow(px, 1, 13, c.w - 2, 3, 0.3)
+    px(1, 0, c.w - 2, 14, '#4a4e58')
+    px(2, 1, c.w - 4, 5, '#22242a')
+    px(2, 8, c.w - 4, 5, '#22242a')
+    for (let i = 0; i < 5; i++) {
+      const h = 2 + i % 3
+      px(3 + i * 5, 2, 4, h, '#14141a')
+      px(3 + i * 5, 3, 4, 1, '#8a929c')
+      px(3 + i * 5, 9 + (2 - h % 3), 4, 3, '#14141a')
+      px(4 + i * 5, 10, 2, 1, '#c8402f')
+    }
+    px(1, 0, c.w - 2, 1, '#8a929c')
+  },
+}
+
+/** A heavy bag on a chain, still swinging a little. */
+const punchingBag: StampArt = {
+  frames: 2,
+  bleed: { top: 14 },
+  standsUp: 4,
+  draw: (px, c) => {
+    shadow(px, 3, 13, 10, 3, 0.3)
+    const sway = c.frame
+    px(7, -14, 2, 4, '#8a929c')
+    px(7 + sway, -10, 1, 4, '#8a929c')
+    px(4 + sway, -6, 8, 18, '#a8281f')
+    px(4 + sway, -6, 8, 2, '#7a1a14')
+    px(5 + sway, -4, 2, 14, '#d8584a')
+    px(4 + sway, 4, 8, 1, '#14141a')
+  },
+}
+
+/** A white lounger with a rolled towel, long enough for two tiles. */
+const lounger: StampArt = {
+  bleed: { top: 2 },
+  draw: (px, c) => {
+    shadow(px, 1, 12, c.w - 2, 3, 0.25)
+    px(2, 5, c.w - 4, 7, '#e8ece8')
+    px(2, 5, c.w - 4, 1, '#ffffff')
+    px(2, 11, c.w - 4, 1, '#b8c0b8')
+    px(2, 1, 8, 6, '#d8ddd8')
+    px(2, 1, 8, 1, '#ffffff')
+    px(c.w - 12, 6, 8, 5, '#2fa4a0')
+    px(c.w - 12, 6, 8, 1, '#6ad4d0')
+    px(3, 12, 2, 3, '#8a929c')
+    px(c.w - 5, 12, 2, 3, '#8a929c')
+  },
+}
+
+/** A study desk: two monitors with a chart each, a lamp, a notepad and a cold coffee. */
+const deskStudy: StampArt = {
+  frames: 2,
+  bleed: { top: 12 },
+  standsUp: 3,
+  draw: (px, c) => {
+    shadow(px, 1, 13, c.w - 2, 3, 0.3)
+    px(1, 4, c.w - 2, 9, '#4a2e1a')
+    px(1, 4, c.w - 2, 2, '#7a5234')
+    px(2, 13, 2, 2, '#2a1a10')
+    px(c.w - 4, 13, 2, 2, '#2a1a10')
+    for (const x of [5, 21]) {
+      px(x, -8, 14, 11, '#14141a')
+      glow('neon', () => px(x + 1, -7, 12, 9, '#14263a'))
+      for (let i = 0; i < 6; i++) {
+        const h = 2 + ((i * 5 + (x > 10 ? 3 : 0) + c.frame * (i % 2)) % 6)
+        px(x + 2 + i * 2, 1 - h, 1, h, i % 2 ? '#3ac87a' : '#c8402f')
+      }
+      px(x + 6, 3, 2, 2, '#5a5a66')
+    }
+    px(c.w - 9, 1, 3, 3, '#e8e4d8')
+    px(c.w - 9, 1, 3, 1, '#8a5a2a')
+    px(3, 6, 6, 5, '#f0ece0')
+    px(4, 7, 4, 1, '#8a8a98')
+    px(4, 9, 3, 1, '#8a8a98')
+    px(c.w / 2 - 1, 8, 2, 2, '#c9a14a')
+  },
+}
+
+// ---------------------------------------------------------------------------
 // Out of town
 // ---------------------------------------------------------------------------
 //
@@ -584,6 +710,12 @@ export const PROPS_ART: Record<string, StampArt> = {
   'coat-stand': coatStand,
   'tool-chest': toolChest,
   'fish-tank': fishTank,
+  treadmill,
+  'weight-bench': weightBench,
+  'weight-rack': weightRack,
+  'punching-bag': punchingBag,
+  lounger,
+  'desk-study': deskStudy,
   'poster-car': poster('car'),
   'poster-boat': poster('boat'),
   calendar,

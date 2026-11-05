@@ -713,7 +713,7 @@ export function GameApp({ playtest = false }: { playtest?: boolean }) {
       )
 
     case 'penthouse':
-      return <PenthouseScene state={state} onBack={backToCity} />
+      return <PenthouseScene state={state} onBack={backToCity} onGoTo={goTo} />
 
     case 'caught':
       return <CaughtScene sponsorId={caughtBy} onRestart={backToCity} />

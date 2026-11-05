@@ -5,7 +5,7 @@ import { RACES, REPAIR_FLOOR, STAT_CEILING, ownedCars, racesIn, repairCost, tune
 import { TOWN_ORDER } from '../game/state'
 import { mulberry32 } from '../engine/rng'
 import { startRace, runOut, type Driver } from '../game/race'
-import { buildTrack, outline } from '../game/raceTrack'
+import { buildTrack, shapeOf } from '../game/raceTrack'
 
 describe('street racing', () => {
   const races = Object.values(RACES)
@@ -142,16 +142,31 @@ describe('street racing', () => {
     }
   })
 
-  it('has a road you can see the shape of, and the same one every time', () => {
+  it('has a road you can see the true shape of, with its corners numbered', () => {
     for (const race of races) {
-      const a = outline(buildTrack(race.length, race.track, mulberry32(5)))
-      expect(a.length).toBeGreaterThan(20)
-      for (const p of a) {
-        expect(p.x).toBeGreaterThanOrEqual(0)
-        expect(p.x).toBeLessThanOrEqual(1)
-        expect(p.y).toBeGreaterThanOrEqual(0)
-        expect(p.y).toBeLessThanOrEqual(1)
+      const shape = shapeOf(buildTrack(race.length, race.track, mulberry32(5)))
+      expect(shape.points.length).toBeGreaterThan(100)
+      // Fitted to its own proportions, longest side 1: not squashed into a square.
+      expect(Math.max(shape.w, shape.h)).toBeCloseTo(1, 5)
+      for (const p of shape.points) {
+        expect(p.x).toBeGreaterThanOrEqual(-1e-9)
+        expect(p.x).toBeLessThanOrEqual(shape.w + 1e-9)
+        expect(p.y).toBeGreaterThanOrEqual(-1e-9)
+        expect(p.y).toBeLessThanOrEqual(shape.h + 1e-9)
       }
+      // Turned so the road runs along the page from the line to the finish.
+      const first = shape.points[0]
+      const last = shape.points[shape.points.length - 1]
+      expect(Math.abs(last.y - first.y)).toBeLessThan(Math.abs(last.x - first.x) * 0.05 + 1e-6)
+      expect(last.x).toBeGreaterThan(first.x)
+      // Corners: in driving order, numbered from 1, along the road.
+      expect(shape.corners.length, `${race.name} has no corners`).toBeGreaterThan(1)
+      shape.corners.forEach((c, i) => {
+        expect(c.n).toBe(i + 1)
+        expect(c.dist).toBeGreaterThan(0)
+        expect(c.dist).toBeLessThan(race.length + 40)
+        if (i) expect(c.dist).toBeGreaterThan(shape.corners[i - 1].dist)
+      })
       expect(race.track.curviness).toBeGreaterThan(0)
       expect(race.track.curviness).toBeLessThanOrEqual(1)
     }

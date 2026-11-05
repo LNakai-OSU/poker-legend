@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { STAMPS } from './stamps'
+import { PENTHOUSE_FLOORS } from './cities'
 import {
   CITIES,
   CITY_ORDER,
@@ -226,6 +227,8 @@ describe('city content', () => {
         }
       }
       for (const area of allAreas(city)) {
+        // The tower's upper floors have no door: the lift is the way in (`PENTHOUSE_FLOORS`).
+        if (PENTHOUSE_FLOORS.some((f) => f.areaId === area.id)) continue
         expect(seen.has(area.id), `${city.name}: ${area.name} is cut off from the entrance`).toBe(true)
       }
     }

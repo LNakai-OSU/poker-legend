@@ -7,22 +7,25 @@ import { RACES, ownedCars, repairCost, tunedStats, type RaceDef } from '../world
 import type { CarStats, ShopItemDef } from '../world/types'
 import { MenuScreen, buttonStyle } from './MenuScenes'
 import { drawText, measureText } from './pixel/font'
-import { Raster } from './pixel/raster'
+import { Raster, pack } from './pixel/raster'
 import { TYPE, UI_FONT } from './pixel/webFont'
 import { useCrispScale } from './useCrispScale'
 import {
+  emptyTally,
   placeOf,
   runOut,
   settle,
   startRace,
   stepRace,
+  threatOf,
   topSpeedOf,
   type Driver,
   type Race,
   type Racer,
   type Settlement,
+  type Tally,
 } from './race'
-import { buildTrack, outline } from './raceTrack'
+import { buildTrack, nextCorner, shapeOf, type Severity, type TrackShape } from './raceTrack'
 import { VIEW_H, VIEW_W, createView, drawRace, shade, type View } from './raceView'
 import type { GameState } from './state'
 
@@ -66,6 +69,11 @@ interface Active {
   topKmh: number
   damage: number
   time: number | null
+  /** The road from above, for the minimap and the corner calls. */
+  shape: TrackShape
+  /** What hurt the car, and how much of it each cost. */
+  log: Tally
+  dmgBy: Tally
 }
 
 function ordinal(n: number): string {
@@ -115,7 +123,65 @@ function bar(h: Raster, x: number, y: number, w: number, fill: number, color: st
   h.rect(x, y, Math.round(w * Math.max(0, Math.min(1, fill))), 1, shade(color, 1.35))
 }
 
-function drawHud(h: Raster, race: Race, me: Racer, view: View, dt: number, racing: boolean) {
+const SEVERITY = [
+  { word: '', color: '#8ad48a' },
+  { word: 'TIGHT ', color: '#ffc83a' },
+  { word: 'HAIRPIN ', color: '#ff5a4a' },
+] as const
+
+const THREAT_WORDS: Record<string, string> = {
+  traffic: 'TRAFFIC',
+  car: 'CAR',
+  wreck: 'WRECK',
+  oil: 'OIL',
+  cone: 'CONES',
+}
+
+function line(h: Raster, x0: number, y0: number, x1: number, y1: number, ink: string) {
+  const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1)
+  for (let i = 0; i <= n; i++) h.set(Math.round(x0 + ((x1 - x0) * i) / n), Math.round(y0 + ((y1 - y0) * i) / n), ink)
+}
+
+/** The road from above in the corner, with the corners marked and every car on it. */
+function drawMinimap(h: Raster, a: Active, me: Racer) {
+  const { shape, race } = a
+  const bw = 86
+  const bh = 44
+  const x0 = VIEW_W - bw - 6
+  const y0 = 18
+  h.rect(x0 - 3, y0 - 3, bw + 6, bh + 6, pack('#05050c', 170))
+  const scale = Math.min(bw / Math.max(shape.w, 0.01), bh / Math.max(shape.h, 0.01))
+  const ox = x0 + (bw - shape.w * scale) / 2
+  const oy = y0 + (bh - shape.h * scale) / 2
+  const at = (i: number) => ({ x: ox + shape.points[i].x * scale, y: oy + shape.points[i].y * scale })
+  for (let i = 1; i < shape.points.length; i++) {
+    const p = at(i - 1)
+    const q = at(i)
+    line(h, p.x, p.y, q.x, q.y, shape.points[i].dist < me.dist ? '#f2c14e' : '#6a6a88')
+  }
+  for (const c of shape.corners) {
+    const i = Math.min(shape.points.length - 1, Math.round(c.dist / (race.length / (shape.points.length - 1))))
+    const p = at(i)
+    h.rect(Math.round(p.x) - 1, Math.round(p.y) - 1, 3, 3, SEVERITY[c.severity].color)
+  }
+  const dot = (r: Racer, big: boolean) => {
+    const i = Math.max(0, Math.min(shape.points.length - 1, Math.round((r.dist / race.length) * (shape.points.length - 1))))
+    const p = at(i)
+    const x = Math.round(p.x)
+    const y = Math.round(p.y)
+    if (big) {
+      h.rect(x - 2, y - 2, 5, 5, '#f4f0e0')
+      h.rect(x - 1, y - 1, 3, 3, r.paint)
+    } else {
+      h.rect(x - 1, y - 1, 3, 3, r.wrecked ? '#4a4a58' : r.paint)
+    }
+  }
+  for (const r of race.racers) if (r !== me) dot(r, false)
+  dot(me, true)
+}
+
+function drawHud(h: Raster, a: Active, me: Racer, view: View, dt: number, racing: boolean) {
+  const race = a.race
   const place = placeOf(race, me.id)
   const kmh = Math.round(me.v * 3.6)
   const vFrac = me.v / topSpeedOf(me.stats)
@@ -166,6 +232,39 @@ function drawHud(h: Raster, race: Race, me: Racer, view: View, dt: number, racin
   text(h, 'DAMAGE', bxr, VIEW_H - 24, HUD_DIM)
   bar(h, bxr, VIEW_H - 14, 86, me.damage, me.damage > 0.66 ? '#ff4a3a' : me.damage > 0.33 ? '#f0a030' : '#48c860')
 
+  drawMinimap(h, a, me)
+
+  // The next corner, called as a rally co-driver would: how bad and how far.
+  if (racing && !me.wrecked && me.finish === null) {
+    const next = nextCorner(a.shape.corners, me.dist)
+    if (next && next.away < 360) {
+      const c = next.corner
+      const sev = SEVERITY[c.severity as Severity]
+      const label = `${sev.word}${c.dir > 0 ? 'RIGHT' : 'LEFT'} ${Math.round(next.away / 10) * 10}m`
+      const w = measureText(label)
+      const cx = Math.round(VIEW_W / 2 - 4)
+      text(h, label, cx, 34, sev.color, 'c')
+      // An arrow bent the way it turns.
+      const ax = c.dir > 0 ? cx + w / 2 + 6 : cx - w / 2 - 12
+      for (let r = 0; r < 4; r++) h.rect(c.dir > 0 ? ax + r : ax + 5 - r, 33 + r, 1, 7 - r * 2, sev.color)
+    }
+  }
+
+  // What is about to hit you, with the time you have.
+  const threat = racing ? threatOf(race, me) : null
+  if (threat) {
+    const what = THREAT_WORDS[threat.kind] ?? 'OBSTACLE'
+    const danger = threat.level === 'danger'
+    const blink = Math.floor(view.tick / 6) % 2 === 0
+    if (danger && (threat.kind === 'traffic' || threat.kind === 'car' || threat.kind === 'wreck')) {
+      text(h, `BRAKE! ${what} AHEAD`, VIEW_W / 2, 56, blink ? '#ff5a4a' : '#ffd0c8', 'c')
+    } else if (danger) {
+      text(h, `${what} - STEER AWAY`, VIEW_W / 2, 56, blink ? '#ffc83a' : '#fff0c0', 'c')
+    } else {
+      text(h, `${what} AHEAD`, VIEW_W / 2, 56, '#ffc83a', 'c')
+    }
+  }
+
   // Slipstream and slide.
   if (me.draft && racing) text(h, 'SLIPSTREAM', VIEW_W / 2, 24, '#8ad4ff', 'c')
   else if (me.slide > 0.1 && !me.wrecked && racing) text(h, 'SLIDING', VIEW_W / 2, 24, '#ffd23c', 'c')
@@ -189,17 +288,76 @@ function Card({ children }: { children: ReactNode }) {
   return <div style={card}>{children}</div>
 }
 
-/** The road from above, so you know what you are getting into. */
+const SEV_COLOR = ['#8ad48a', '#ffc83a', '#ff5a4a']
+const SEV_NAME = ['bend', 'tight corner', 'hairpin']
+
+/**
+ * The road from above, as it really runs, with its corners numbered in driving
+ * order and coloured by how hard they are, and the climb underneath: what a
+ * driver walks the course for before a race.
+ */
 function TrackMap({ def }: { def: RaceDef }) {
-  const pts = useMemo(() => outline(trackOf(def)), [def])
-  const d = pts.map((p, i) => `${i ? 'L' : 'M'}${(8 + p.x * 84).toFixed(1)} ${(8 + p.y * 84).toFixed(1)}`).join(' ')
+  const shape = useMemo(() => shapeOf(trackOf(def)), [def])
+  const W = 320
+  const pad = 16
+  const maxH = 150
+  const scale = Math.min((W - 2 * pad) / Math.max(shape.w, 0.01), (maxH - 2 * pad) / Math.max(shape.h, 0.01))
+  const mapW = shape.w * scale
+  const mapH = shape.h * scale
+  const ox = (W - mapW) / 2
+  const oy = pad
+  const at = (i: number) => ({ x: ox + shape.points[i].x * scale, y: oy + shape.points[i].y * scale })
+  const d = shape.points.map((_, i) => `${i ? 'L' : 'M'}${at(i).x.toFixed(1)} ${at(i).y.toFixed(1)}`).join(' ')
+  const per = def.length / (shape.points.length - 1)
+  const total = oy + mapH + pad
+  // The profile.
+  const profH = 30
+  const lo = Math.min(...shape.heights)
+  const range = Math.max(4, shape.relief)
+  const hx = (i: number) => pad + (i / (shape.heights.length - 1)) * (W - 2 * pad)
+  const hy = (v: number) => total + profH - 4 - ((v - lo) / range) * (profH - 10)
+  const area = `M${hx(0)} ${total + profH - 2} ${shape.heights.map((v, i) => `L${hx(i).toFixed(1)} ${hy(v).toFixed(1)}`).join(' ')} L${hx(shape.heights.length - 1)} ${total + profH - 2} Z`
+  const hairpins = shape.corners.filter((c) => c.severity === 2).length
   return (
-    <svg viewBox="0 0 100 100" width={86} height={86} aria-label={`${def.track.name} from above`} style={{ flex: 'none', background: '#0b0b14', borderRadius: 6 }}>
-      <path d={d} fill="none" stroke="#2a2a40" strokeWidth={5} strokeLinecap="round" strokeLinejoin="round" />
-      <path d={d} fill="none" stroke="#f2c14e" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      {pts[0] && <circle cx={8 + pts[0].x * 84} cy={8 + pts[0].y * 84} r={3} fill="#48e070" />}
-      {pts.length > 1 && <circle cx={8 + pts[pts.length - 1].x * 84} cy={8 + pts[pts.length - 1].y * 84} r={3} fill="#ff4a3a" />}
-    </svg>
+    <div>
+      <svg viewBox={`0 0 ${W} ${total + profH + 4}`} width="100%" style={{ maxWidth: 360, display: 'block', background: '#0b0b14', borderRadius: 6 }} aria-label={`${def.track.name} from above`}>
+        <path d={d} fill="none" stroke="#1c1c2c" strokeWidth={9} strokeLinecap="round" strokeLinejoin="round" />
+        <path d={d} fill="none" stroke="#4a4a68" strokeWidth={5} strokeLinecap="round" strokeLinejoin="round" />
+        <path d={d} fill="none" stroke="#f2c14e" strokeWidth={1.4} strokeDasharray="5 4" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx={at(0).x} cy={at(0).y} r={5} fill="#48e070" />
+        <text x={at(0).x} y={at(0).y - 9} fontSize={8} fill="#48e070" textAnchor="middle">START</text>
+        {(() => {
+          const end = at(shape.points.length - 1)
+          return (
+            <g>
+              <rect x={end.x - 5} y={end.y - 5} width={10} height={10} fill="#f4f0e0" />
+              <rect x={end.x - 5} y={end.y - 5} width={5} height={5} fill="#10101a" />
+              <rect x={end.x} y={end.y} width={5} height={5} fill="#10101a" />
+              <text x={end.x} y={end.y - 9} fontSize={8} fill="#f4f0e0" textAnchor="middle">FINISH</text>
+            </g>
+          )
+        })()}
+        {shape.corners.map((c) => {
+          const p = at(Math.min(shape.points.length - 1, Math.round(c.dist / per)))
+          return (
+            <g key={c.n}>
+              <circle cx={p.x} cy={p.y} r={6.5} fill={SEV_COLOR[c.severity]} stroke="#0b0b14" strokeWidth={1.5} />
+              <text x={p.x} y={p.y + 3} fontSize={8.5} fontWeight="bold" fill="#10101a" textAnchor="middle">{c.n}</text>
+            </g>
+          )
+        })}
+        <path d={area} fill="#3a4a6a" opacity={0.7} />
+        {shape.corners.map((c) => (
+          <rect key={c.n} x={hx(Math.round(c.dist / per)) - 1} y={total + profH - 3} width={2} height={3} fill={SEV_COLOR[c.severity]} />
+        ))}
+        <text x={pad} y={total + 8} fontSize={7.5} fill="#8a8aa0">Elevation</text>
+      </svg>
+      <div style={{ color: '#9a9ab0', fontSize: TYPE.small, marginTop: 4 }}>
+        {shape.corners.length} corners{hairpins ? ` (${hairpins} hairpin${hairpins > 1 ? 's' : ''})` : ''} · {Math.round(shape.climb)} m of climbing ·{' '}
+        <span style={{ color: SEV_COLOR[0] }}>● bend</span> <span style={{ color: SEV_COLOR[1] }}>● tight</span> <span style={{ color: SEV_COLOR[2] }}>● hairpin</span>
+        {shape.corners.some((c) => c.severity === 2) ? ` · ${SEV_NAME[2]} at ${shape.corners.filter((c) => c.severity === 2).map((c) => `T${c.n}`).join(', ')}: brake early` : ''}
+      </div>
+    </div>
   )
 }
 
@@ -249,7 +407,10 @@ export function RaceScene({
       mulberry32(Math.floor(Math.random() * 2 ** 31)),
       mulberry32(hashOf(def.id)),
     )
-    active.current = { def, stake, car, race, repair: repairCost(car), period: state.period, topKmh: 0, damage: 0, time: null }
+    active.current = {
+      def, stake, car, race, repair: repairCost(car), period: state.period, topKmh: 0, damage: 0, time: null,
+      shape: shapeOf(race.track), log: emptyTally(), dmgBy: emptyTally(),
+    }
     finished.current = false
     input.current = { left: false, right: false, brake: false, boost: false }
     onCommit({ stake, slipCarId: def.pinkSlip ? car.id : null })
@@ -320,13 +481,13 @@ export function RaceScene({
       voice?.set({
         speed: Math.min(1, me.v / topSpeedOf(me.stats)),
         throttle: me.braking || me.wrecked ? 0.1 : 1,
-        slide: me.wrecked ? 0 : me.slide,
+        slide: me.wrecked ? 0 : Math.max(me.slide, Math.abs(me.skid) * 0.5, me.oil > 0 ? 0.6 : 0),
         boost: me.boosting,
       })
       drawRace(c, a.race, me, view, { period: a.period, countdown, dt, time: since, wreckedFor: wreckedAt < 0 ? 0 : since - wreckedAt })
       if (count % 2 === 0) {
         dials.pixels.fill(0)
-        drawHud(dials, a.race, me, view, dt * 2, going)
+        drawHud(dials, a, me, view, dt * 2, going)
         dials.paint(hudEl)
       }
       a.topKmh = Math.max(a.topKmh, Math.round(me.topSpeed * 3.6))
@@ -345,6 +506,8 @@ export function RaceScene({
         })
         a.result = result
         a.damage = me.damage
+        a.log = { ...me.hitLog }
+        a.dmgBy = { ...me.damageBy }
         a.time = me.finish
         const slip = a.def.pinkSlip
         onFinish({
@@ -460,6 +623,21 @@ export function RaceScene({
             {r.repairs > 0 ? `Repairs: $${r.repairs.toLocaleString()}. ` : 'Not a scratch on it. '}
             Top speed {done.topKmh} km/h · Damage {Math.round(done.damage * 100)}%
           </div>
+          {(() => {
+            const names: Record<keyof Tally, string> = { traffic: 'Rear-ended traffic', car: 'Contact with a car', wreck: 'Hit a wreck', wall: 'The wall', cone: 'Cones', oil: 'Oil (a skid, no damage)' }
+            const rows = (Object.keys(names) as Array<keyof Tally>).filter((k) => done.log[k] > 0)
+            return rows.length === 0 ? null : (
+              <div style={{ fontSize: TYPE.body, marginTop: 10 }}>
+                <div style={{ color: '#f2c14e', marginBottom: 4 }}>What hurt the car</div>
+                {rows.map((k) => (
+                  <div key={k} style={{ display: 'flex', justifyContent: 'space-between', color: '#c8c8d8' }}>
+                    <span>{names[k]} ×{done.log[k]}</span>
+                    <span>{k === 'oil' ? 'slid' : `${Math.round(done.dmgBy[k] * 100)}% of the car`}</span>
+                  </div>
+                ))}
+              </div>
+            )
+          })()}
         </Card>
         <Card>
           <div style={{ color: '#f2c14e', marginBottom: 6 }}>Standings</div>
@@ -507,18 +685,16 @@ export function RaceScene({
       )}
       {races.map((def) => (
         <Card key={def.id}>
-          <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-            <TrackMap def={def} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ color: '#f2c14e' }}>{def.name}</div>
-              <div style={{ color: '#9a9ab0', fontSize: TYPE.body, margin: '2px 0 6px' }}>
-                {def.track.name} · {(def.length / 1000).toFixed(1)} km · {label(def.track.curviness, ['Flowing', 'Twisty', 'Tight', 'Brutal'])} · {label(def.track.hills, ['Flat', 'Rolling', 'Hilly', 'Mountainous'])}
-              </div>
-              <div style={{ color: '#9a9ab0', fontSize: TYPE.body, marginBottom: 6 }}>{def.blurb}</div>
-              <div style={{ fontSize: TYPE.body }}>
-                Against {def.field.map((d) => `${CHARACTERS[d.character]?.name ?? d.character} (${findItem(d.carId)?.name})`).join(', ')}
-              </div>
+          <div>
+            <div style={{ color: '#f2c14e' }}>{def.name}</div>
+            <div style={{ color: '#9a9ab0', fontSize: TYPE.body, margin: '2px 0 6px' }}>
+              {def.track.name} · {(def.length / 1000).toFixed(1)} km · {label(def.track.curviness, ['Flowing', 'Twisty', 'Tight', 'Brutal'])} · {label(def.track.hills, ['Flat', 'Rolling', 'Hilly', 'Mountainous'])}
             </div>
+            <div style={{ color: '#9a9ab0', fontSize: TYPE.body, marginBottom: 6 }}>{def.blurb}</div>
+            <div style={{ fontSize: TYPE.body, marginBottom: 10 }}>
+              Against {def.field.map((d) => `${CHARACTERS[d.character]?.name ?? d.character} (${findItem(d.carId)?.name})`).join(', ')}
+            </div>
+            <TrackMap def={def} />
           </div>
           {def.pinkSlip ? (
             <div style={{ marginTop: 8 }}>

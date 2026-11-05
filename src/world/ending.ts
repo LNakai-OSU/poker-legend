@@ -3,8 +3,8 @@
  * summary card. It is the whole of what follows the win, and it is a bummer on
  * purpose: you got the thing, and it cost the rest.
  *
- * Nine shots, drawn by `game/EndingFilm.tsx` — the stage after the last hand,
- * the walk through the penthouse, the photo on the desk, the divorce papers,
+ * Ten shots, drawn by `game/EndingFilm.tsx` — the stage after the last hand,
+ * the montage of the rise and the vices it fed, the walk through the penthouse, the photo on the desk, the divorce papers,
  * the settlement statement, the phone, the window, the credits, and one more
  * thing after them. What is said, written and sent in them is here.
  *
@@ -41,6 +41,8 @@ export interface EndingCredit {
 export interface EndingFilm {
   /** The stage, the moment the last chip goes across. */
   stage: EndingLine[]
+  /** The montage between the stage and the penthouse: the win, her, the money, the things, the nights, the fall. One line per panel. */
+  montage: EndingLine[]
   /** The walk in. `stops` are the places along the room, in art pixels from the door, where a line holds you. */
   walk: { stops: { at: number; line: EndingLine }[] }
   photo: EndingLine[]
@@ -81,11 +83,21 @@ export interface EndingFilm {
 export const ENDING_FILM: EndingFilm = {
   stage: [
     { text: 'The river is a blank. Nadia turns her cards over, and that is the end of it.' },
-    { text: 'Confetti. Ten seconds of a whole room on its feet, and every one of them cheering for the screen.' },
+    { text: 'Confetti. Ten seconds of a whole room on its feet. Marcus has both arms up. Dana, who never raises her voice, is shouting. Every one of them is cheering for the screen.' },
     { who: 'Chip', text: 'I HAVE NEVER SEEN ANYTHING LIKE IT IN MY LIFE! Dr. Anand has stopped doing the maths and is just holding the desk.' },
     { who: 'Nadia', text: "Don't make that face. I wore that chair for six years. Wait until you see how quiet the lift is." },
     { text: 'The cameras follow her out. The feed cuts to an advert for a bank. You are still standing at the table.' },
     { text: 'Somebody is already sweeping the confetti. Nobody on the rail came over the ropes.' },
+  ],
+  montage: [
+    { text: 'You lift the trophy. It is heavier than it looks, and for one night nobody in the building is lying about what you are.' },
+    { text: 'That autumn you meet her. She says you tilt your head when you bluff. You marry her anyway.' },
+    { text: 'The money arrives as a number you have to say twice. Then the sponsors send flowers, and then contracts.' },
+    { text: 'A car with no roof. A boat. A house on the hill, and a watch that cost more than the flat above the bakery.' },
+    { text: 'Then the nights. Somebody is always pouring. You stop counting whose name is on the bottle, and then whose is on the bill.' },
+    { text: 'Four in the morning, at any table that will take your money. The phone lights up on the felt. You turn it over.' },
+    { text: 'A dinner for two, kept warm until it was not. She leaves the candle lit. You were three tables from home.' },
+    { text: 'Dawn finds you where you stopped. One stack of chips is still perfectly neat. It is the last tidy thing you own.' },
   ],
   walk: {
     stops: [

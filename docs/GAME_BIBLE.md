@@ -326,17 +326,22 @@ skips the whole film: the reels, scenes and pauses straight after it. What follo
 the film still happens.
 
 **The ending film.** Winning the heads-up match plays `EndingFilm` (`game/EndingFilm.tsx`) before
-the summary card, drawn like the opening, and it is a bummer on purpose: sour success. Nine
-shots: the stage after the last hand (confetti on nobody, Nadia walking out, the feed cutting
-to an advert), the walk through the penthouse and its walls of medals, the photo on the desk, the
+the summary card, drawn like the opening, and it is a bummer on purpose: sour success. Ten
+shots: the stage after the last hand (Marcus, Dana and the stands cheering the screen, confetti on
+nobody, Nadia walking out, the feed cutting to an advert), a montage of the rise and the vices it
+fed (the win, her, the money, the things, the nights, the missed calls, dawn), the walk through the penthouse and its walls of medals, the photo on the desk, the
 divorce papers, the settlement statement (the prize, less tax, backers, counsel, and half of what
 is left frozen by the petition), Marcus's unanswered thread, the window at night ("I've made
 it..."), the credits over the skyline, and after them Marcus's call at first light, unanswered.
 What is said and written in it is data in `world/ending.ts`; the sets are `game/endingArt.ts` and
 the shot functions in `EndingFilm.tsx`. Every line waits for a press; only the credits scroll
 themselves (a press speeds them). It is the `ending` cinematic of the `final-won` event, which the
-playtest panel can play on demand from its Scenes list; Dana's one line follows it, and nothing
-cheerful does. The broadcast scenes before and after the final use the `booth` set, not the old
+playtest panel can play on demand from its Scenes list; The player then wakes in
+their penthouse (`pl-penthouse`) and Dana rings with one line, and nothing cheerful follows. The
+tower is four walkable floors with no door but the lift: `pl-penthouse` (41), `pl-pool` (40),
+`pl-gym` (39) and `pl-workroom` (38), listed in `PENTHOUSE_FLOORS`. The `penthouse` POI action
+(the lobby attendant, and a `Lift` panel on every floor) is the lift menu; only the owner is
+taken above the lobby, and the lobby's street door is the way out. The broadcast scenes before and after the final use the `booth` set, not the old
 `studio` rectangles.
 
 **People moving.** `moveNpc` walks somebody to a tile — or `to: 'player'`, the
@@ -575,6 +580,30 @@ the bottom):
   same road. A rival is good because it brakes at the right place, takes the
   inside line and sees the road (`skill`), never because the game helps it.
   Contested in the genre; here it would break rule 2.
+- **Hazards you can read, and a hit that says why.** Everything on the road has one
+  size, in `race.ts` (`OIL_HALF_W`, `CONE_HALF_W`, `CAR_HALF_W` and the lengths),
+  and **the hit test and the picture both read it**: a slick is as wide and long
+  on the road as the part of it that takes your grip, and a car's sides are where
+  they look. A road is laid with room *beside* a slick, not just an empty lane. A
+  hit is `hurt(...)` under a cause (traffic, car, wreck, wall, cone, oil), so the
+  screen says what it was and what it cost ("REAR-ENDED TRAFFIC -31%"), the car
+  shows its damage (scuffs, dents, a cracked screen, smoke) and the result lists
+  what hurt it.
+- **Warning in time.** `threatOf` finds the thing in your path you are closing on
+  and how long you have. The HUD calls it ("BRAKE! TRAFFIC AHEAD", "OIL AHEAD") and
+  the road rings it in the world. Oil and cones also have **warning signs** at the
+  road edge about 70 m before them, because a flat stain is a pixel tall from far
+  off. The camera is narrow and raised so what is ahead is big enough to read.
+- **Oil is a skid, not a switch.** It takes most of your grip and throws the car
+  sideways the way you were already steering; the skid dies faster if you **ease
+  off the wheel** than if you fight it, and the screen says so. A hit shoves you
+  sideways (never a teleport) and leaves you behind the car you hit, not inside it.
+- **The road is on the map in its true shape.** The lobby draws each road from above
+  from the same geometry the sim drives (a hairpin is a hairpin), turned to run
+  left to right, fitted to its own proportions, with corners numbered and coloured
+  (bend, tight, hairpin), start and finish, and an elevation profile. In the race a
+  minimap shows the same shape with every car on it, and the next corner is called
+  ("TIGHT RIGHT 140m").
 - **Sense of speed.** The road is projected in depth (the OutRun / Daytona
   technique), so bends curve away and a crest hides what is behind it. Posts,
   lamps and kerbs stream past, the field of view opens with speed and boost, the

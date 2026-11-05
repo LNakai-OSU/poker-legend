@@ -25,6 +25,10 @@ import type { GameState } from './state'
 
 const STAKES = [10, 50, 200, 1000]
 const WHEEL = 104
+/** The enlarged, numbered wheel that fills the screen while the ball is in play. */
+const BIG = 300
+/** How long it stays up after the ball settles. */
+const HOLD_MS = 1300
 /** How long the ball is in play. */
 const SPIN_MS = 4600
 const POCKETS = WHEEL_ORDER.length
@@ -125,6 +129,8 @@ const CELLS = cells()
  */
 function Wheel({ P, spin, onLanded }: { P: number; spin: { id: number; number: number } | null; onLanded: (n: number) => void }) {
   const ref = useRef<HTMLCanvasElement>(null)
+  const bigRef = useRef<HTMLCanvasElement>(null)
+  const [overlay, setOverlay] = useState<'off' | 'spinning' | 'settled'>('off')
   const turns = useRef(0.13)
   const landed = useRef(onLanded)
   landed.current = onLanded
@@ -133,6 +139,8 @@ function Wheel({ P, spin, onLanded }: { P: number; spin: { id: number; number: n
     const canvas = ref.current
     if (!canvas) return
     let raf = 0
+    let hold = 0
+    if (spin) setOverlay('spinning')
     let last = performance.now()
     const started = spin ? last : 0
     const speed = spin ? 0.12 : 0.025
@@ -155,14 +163,24 @@ function Wheel({ P, spin, onLanded }: { P: number; spin: { id: number; number: n
         if (p >= 1 && !done) {
           done = true
           landed.current(spin.number)
+          setOverlay('settled')
+          hold = window.setTimeout(() => setOverlay('off'), HOLD_MS)
         }
       }
       paintWheel(r, WHEEL, turns.current, ball)
       r.paint(canvas)
+      if (bigRef.current) {
+        const big = new Raster(BIG, BIG)
+        paintWheel(big, BIG, turns.current, ball, turns.current, true)
+        big.paint(bigRef.current)
+      }
       raf = requestAnimationFrame(frame)
     }
     raf = requestAnimationFrame(frame)
-    return () => cancelAnimationFrame(raf)
+    return () => {
+      cancelAnimationFrame(raf)
+      window.clearTimeout(hold)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spin?.id])
 
@@ -170,6 +188,30 @@ function Wheel({ P, spin, onLanded }: { P: number; spin: { id: number; number: n
     <div data-testid="roulette-wheel" style={{ width: WHEEL * P, height: WHEEL * P, position: 'relative' }}>
       <div style={{ position: 'absolute', left: 6 * P, right: 6 * P, bottom: -3 * P, height: 8 * P, background: '#000', opacity: 0.4, borderRadius: '50%' }} />
       <canvas ref={ref} aria-hidden="true" width={WHEEL} height={WHEEL} style={{ position: 'absolute', inset: 0, width: WHEEL * P, height: WHEEL * P, imageRendering: 'pixelated' }} />
+      {overlay !== 'off' && (
+        <div
+          data-testid="roulette-wheel-big"
+          onClick={() => overlay === 'settled' && setOverlay('off')}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 50,
+            background: 'rgba(8, 6, 12, 0.88)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            pointerEvents: overlay === 'settled' ? 'auto' : 'none',
+          }}
+        >
+          <canvas
+            ref={bigRef}
+            aria-hidden="true"
+            width={BIG}
+            height={BIG}
+            style={{ width: 'min(92vw, 92vh)', height: 'min(92vw, 92vh)', imageRendering: 'pixelated' }}
+          />
+        </div>
+      )}
     </div>
   )
 }

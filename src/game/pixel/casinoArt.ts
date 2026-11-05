@@ -452,7 +452,7 @@ export interface BallState {
  * the ball's track, the numbered pockets turning, the cone and the hub. The
  * rotation is therefore exact at every angle, with no jagged turned bitmap.
  */
-export function paintWheel(r: Raster, size: number, turns: number, ball: BallState | null, hubSpin = turns): void {
+export function paintWheel(r: Raster, size: number, turns: number, ball: BallState | null, hubSpin = turns, labels = false): void {
   const R = size / 2
   const cx = R
   const cy = R
@@ -508,6 +508,15 @@ export function paintWheel(r: Raster, size: number, turns: number, ball: BallSta
     const handle = along < 1.1 && d > 1
     return handle ? '#f4e8c0' : d < 2 ? '#fff6d0' : shade('#d8b048', 0.7 + light * 0.5)
   })
+  if (labels) {
+    // Numbers upright in each pocket, riding round with the wheel.
+    const at = R * 0.62
+    WHEEL_ORDER.forEach((num, i) => {
+      const ang = (turns + (i + 0.5) / n) * TAU
+      const text = String(num)
+      drawText(r, text, Math.round(cx + Math.sin(ang) * at - measureText(text) / 2), Math.round(cy - Math.cos(ang) * at - 4), '#ffffff')
+    })
+  }
   if (ball) {
     const radius = R * (0.86 - 0.28 * ball.drop)
     const bx = cx + Math.sin(ball.angle) * radius

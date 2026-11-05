@@ -243,6 +243,28 @@ export function PlaytestPanel({
           })}
         </div>
 
+        {section('The final: mark it won (and the penthouse yours) without playing it, or undo')}
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {(() => {
+            const won = !!state.flags.beatFinalRival && !!state.flags.hasPenthouse
+            return (
+              <button
+                type="button"
+                data-testid="final-mark-won"
+                style={{ ...button, borderColor: won ? '#4a4a66' : GOLD, color: won ? DIM : GOLD }}
+                onClick={() =>
+                  setState((s) => ({
+                    ...s,
+                    flags: { ...s.flags, beatFinalRival: !won, hasPenthouse: !won },
+                  }))
+                }
+              >
+                {won ? 'Unmark final won + penthouse' : 'Mark final won + penthouse'}
+              </button>
+            )
+          })()}
+        </div>
+
         {section(`Scenes (${events.length} of ${EVENTS.length}): play one now`)}
         <input
           aria-label="Filter scenes"

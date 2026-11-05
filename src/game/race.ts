@@ -29,12 +29,26 @@ import { SEG, buildTrack, curveAt, slopeAt, type Track, type TrackSpec } from '.
  */
 
 export const CAR_LENGTH = 4.5
+/**
+ * What things measure, in the units the view draws them in. The sim and the
+ * picture both read these, so what you can see touching is what touches: a slick
+ * is as wide on the road as it looks, and a car's sides are where they seem to be.
+ */
+export const CAR_HALF_W = 0.23
+/** Road halves across: the half-width of each thing's footprint. */
+export const OIL_HALF_W = 0.55
+export const CONE_HALF_W = 0.3
+/** Metres along the road: half the length of each thing's footprint. */
+export const OIL_HALF_L = 5.5
+export const CONE_HALF_L = 0.7
 /** How close across the road two cars must be to touch. */
-const HIT_X = 0.42
+const HIT_X = CAR_HALF_W * 2
 /** The speed a car's demand on its tyres is measured against. */
 export const VREF = 50
 const WALL = 1.5
 const LANES = [-0.6, 0, 0.6]
+/** Where an AI will put its car: the lanes, and the two lines out by the edges, to get round a slick. */
+const LINES = [-0.85, -0.6, 0, 0.6, 0.85]
 
 export type HazardKind = 'traffic' | 'oil' | 'cone'
 
@@ -48,13 +62,20 @@ export interface Hazard {
   speed: number
 }
 
+/** What hurt, or what happened, so the screen can say so. */
+export type Cause = 'traffic' | 'car' | 'wreck' | 'wall' | 'cone' | 'oil'
+
 export type RaceEvent =
-  | { kind: 'hit'; strength: number }
-  | { kind: 'wall'; strength: number }
-  | { kind: 'scrape' }
+  | { kind: 'hit'; cause: 'traffic' | 'car' | 'wreck'; strength: number; damage: number; id: number | string }
+  | { kind: 'wall'; strength: number; damage: number }
+  | { kind: 'scrape'; damage: number; id: number }
   | { kind: 'nearMiss' }
-  | { kind: 'oil' }
+  | { kind: 'oil'; id: number }
   | { kind: 'wreck' }
+
+/** How often each thing got you, and how much of the car it took. */
+export type Tally = Record<Cause, number>
+export const emptyTally = (): Tally => ({ traffic: 0, car: 0, wreck: 0, wall: 0, cone: 0, oil: 0 })
 
 export interface Racer {
   id: string
@@ -82,6 +103,13 @@ export interface Racer {
   /** Seconds left on oil, and seconds left spinning out. */
   oil: number
   spin: number
+  /** Sideways speed from a shove or a slick, in road halves a second; it dies away. */
+  skid: number
+  /** What has hurt this car, how many times and how much. */
+  hitLog: Tally
+  damageBy: Tally
+  /** The last thing hit and when (race time), so the view can mark it. */
+  lastHit: { id: number | string; t: number } | null
   /** Whether it is in somebody's slipstream right now. */
   draft: boolean
   /** Hits and near misses, for the pictures and the audio: pushed by the sim and cleared by whoever reads them. */
@@ -162,20 +190,44 @@ function shuffle<T>(items: T[], rng: Rng): T[] {
   return out
 }
 
+/** How far across the road a car's middle has to be from a thing's middle to touch it. */
+export function reachX(kind: HazardKind): number {
+  return kind === 'traffic' ? HIT_X : kind === 'oil' ? OIL_HALF_W + CAR_HALF_W : CONE_HALF_W + CAR_HALF_W
+}
+
+/** Where along the road a thing touches, from its middle, for a car this long. */
+export function reachY(kind: HazardKind): number {
+  return kind === 'traffic' ? CAR_LENGTH : kind === 'oil' ? OIL_HALF_L + CAR_LENGTH / 2 : CONE_HALF_L + CAR_LENGTH / 2
+}
+
+/** The widest a car's middle can be put without leaving the tarmac. */
+const KEEP = 0.85
+
+/** Whether there is anywhere across the road to put a car's middle that touches none of these. */
+export function hasWayThrough(things: Array<{ kind: HazardKind; lat: number }>): boolean {
+  for (let x = -KEEP; x <= KEEP + 1e-9; x += 0.05) {
+    if (things.every((t) => Math.abs(x - t.lat) > reachX(t.kind))) return true
+  }
+  return false
+}
+
 /** Traffic, oil and cones, laid down from a seed: the same for every car. */
 export function layRoad(length: number, traffic: number, rng: Rng): Hazard[] {
   const out: Hazard[] = []
   let at = 170
   let id = 0
   while (at < length - 130) {
-    // One or two things across the road, never all three lanes: there is always a way through.
+    // One or two things across the road, and always a way through them: a slick is as wide as it looks,
+    // so there has to be room beside it, not just an empty lane.
     const count = rng() < 0.35 ? 2 : 1
-    const lanes = shuffle(LANES, rng).slice(0, count)
-    for (const lat of lanes) {
+    const cluster: Hazard[] = []
+    for (const lat of shuffle(LANES, rng).slice(0, count)) {
       const roll = rng()
       const kind: HazardKind = roll < 0.6 ? 'traffic' : roll < 0.82 ? 'oil' : 'cone'
-      out.push({ id: id++, at: at + (rng() - 0.5) * 10, lat, kind, speed: kind === 'traffic' ? 20 + rng() * 8 : 0 })
+      const next: Hazard = { id: id++, at: at + (rng() - 0.5) * 10, lat, kind, speed: kind === 'traffic' ? 20 + rng() * 8 : 0 }
+      if (hasWayThrough([...cluster, next])) cluster.push(next)
     }
+    out.push(...cluster)
     at += (92 + rng() * 70) / traffic
   }
   return out
@@ -206,6 +258,10 @@ export function startRace(length: number, traffic: number, spec: TrackSpec, driv
     boosting: false,
     oil: 0,
     spin: 0,
+    skid: 0,
+    hitLog: emptyTally(),
+    damageBy: emptyTally(),
+    lastHit: null,
     draft: false,
     events: [],
     topSpeed: 0,
@@ -238,12 +294,18 @@ function demandOf(r: Racer, c: number): number {
   return (Math.abs(c) * vr * vr) / cap
 }
 
-function hurt(r: Racer, amount: number) {
+/** Takes `amount` off the car, on the books under `cause`; returns what it actually cost. */
+function hurt(r: Racer, amount: number, cause: Cause): number {
+  const before = r.damage
   r.damage = Math.min(1, r.damage + amount)
+  const cost = r.damage - before
+  r.hitLog[cause]++
+  r.damageBy[cause] += cost
   if (r.damage >= 1 && !r.wrecked) {
     r.wrecked = true
     r.events.push({ kind: 'wreck' })
   }
+  return cost
 }
 
 function drive(race: Race, r: Racer, input: Input, dt: number) {
@@ -291,14 +353,16 @@ function drive(race: Race, r: Racer, input: Input, dt: number) {
   const spinning = r.spin > 0
   if (spinning) r.spin -= dt
   // Past the limit the wheel goes soft.
-  const auth = (1 / (1 + Math.max(0, demand - 1) * 2.5)) * (spinning ? 0.15 : 1) * (r.oil > 0 ? 0.5 : 1)
+  const auth = (1 / (1 + Math.max(0, demand - 1) * 2.5)) * (spinning ? 0.15 : 1) * (r.oil > 0 ? 0.3 : 1)
   const steering = r.steer * steerGainOf(stats) * vr * auth
   let push = c * vr * vr * PUSH * (MID_GRIP / (gripOf(stats) * (r.oil > 0 ? 0.42 : 1)))
   if (demand > 1) {
     push *= 1 + (demand - 1) * 1.2
     r.v = Math.max(MIN_SPEED, r.v - (demand - 1) * 16 * vr * dt)
   }
-  r.x += (steering - push) * dt
+  r.x += (steering - push + r.skid) * dt
+  // A skid dies away faster if you ease off the wheel than if you fight it.
+  r.skid *= Math.exp(-dt / (Math.abs(r.steer) < 0.25 ? 0.35 : 0.8))
   if (r.oil > 0) r.oil -= dt
   if (r.wallT > 0) r.wallT -= dt
 
@@ -311,10 +375,12 @@ function drive(race: Race, r: Racer, input: Input, dt: number) {
     r.x = Math.sign(r.x) * WALL
     if (r.wallT <= 0) {
       const strength = Math.min(1, r.v / vmax)
-      hurt(r, 0.04 + 0.4 * strength * strength)
+      const damage = hurt(r, 0.04 + 0.4 * strength * strength, 'wall')
       r.v *= 0.6
       r.wallT = 0.45
-      r.events.push({ kind: 'wall', strength })
+      // It throws you back off the wall.
+      r.skid = -Math.sign(r.x) * (0.5 + 1.3 * strength)
+      r.events.push({ kind: 'wall', strength, damage })
     } else {
       r.v *= 1 - 1.5 * dt
     }
@@ -329,7 +395,8 @@ function drive(race: Race, r: Racer, input: Input, dt: number) {
 /** Everything on the road that is not a car under glass. */
 function hits(race: Race, r: Racer, vmax: number) {
   for (const h of race.hazards) {
-    const gap = hazardAt(h, race.t) - r.dist
+    const pos = hazardAt(h, race.t)
+    const gap = pos - r.dist
     const lateral = Math.abs(r.x - h.lat)
     if (h.kind === 'traffic' && !r.passed.includes(h.id) && gap < -CAR_LENGTH && gap > -CAR_LENGTH - 2.5 && !r.struck.includes(h.id)) {
       // Slipped by with a car-width to spare is a near miss: skilled, and worth a little.
@@ -340,39 +407,53 @@ function hits(race: Race, r: Racer, vmax: number) {
       }
     }
     if (r.struck.includes(h.id)) continue
-    if (Math.abs(gap) > CAR_LENGTH || lateral > HIT_X) continue
+    // Each thing touches over its own footprint, the one it is drawn with.
+    if (Math.abs(gap) > reachY(h.kind) || lateral > reachX(h.kind)) continue
     r.struck.push(h.id)
+    r.lastHit = { id: h.id, t: race.t }
     if (h.kind === 'traffic') {
       const rel = Math.max(0, r.v - h.speed)
       const overlap = 1 - lateral / HIT_X
       const strength = Math.min(1, rel / vmax)
-      hurt(r, (0.06 + 0.95 * strength) * (0.35 + 0.65 * overlap))
-      r.v = Math.max(MIN_SPEED, Math.min(r.v, h.speed + rel * 0.35))
-      r.x += (r.x >= h.lat ? 1 : -1) * 0.25
-      r.spin = 0.35 + 0.5 * strength
-      r.events.push({ kind: 'hit', strength })
+      const damage = hurt(r, (0.06 + 0.95 * strength) * (0.35 + 0.65 * overlap), 'traffic')
+      // Rear-ended it: you stop being inside it. You end up behind it, slowed to about its speed.
+      if (overlap > 0.5 && gap > 0) {
+        r.dist = Math.min(r.dist, pos - CAR_LENGTH + 0.2)
+        r.v = Math.max(MIN_SPEED, Math.min(r.v, h.speed * 0.95))
+      } else {
+        r.v = Math.max(MIN_SPEED, Math.min(r.v, h.speed + rel * 0.4))
+      }
+      // And it shoves you off to the side you were already further toward.
+      r.skid += (r.x >= h.lat ? 1 : -1) * (0.7 + 1.5 * strength)
+      r.spin = 0.3 + 0.5 * strength
+      r.events.push({ kind: 'hit', cause: 'traffic', strength, damage, id: h.id })
     } else if (h.kind === 'oil') {
+      // Oil takes the grip away; the car goes on in the direction it was already moving.
       r.oil = 1.3
-      r.events.push({ kind: 'oil' })
+      r.hitLog.oil++
+      r.skid += Math.sign(r.steer || (race.rng() < 0.5 ? -1 : 1)) * (0.5 + 0.5 * Math.min(1, r.v / vmax))
+      r.events.push({ kind: 'oil', id: h.id })
     } else {
-      hurt(r, 0.035)
+      const damage = hurt(r, 0.035, 'cone')
       r.v *= 0.93
-      r.events.push({ kind: 'scrape' })
+      r.events.push({ kind: 'scrape', damage, id: h.id })
     }
   }
 }
 
 /** The cars touch: the rear one backs off and both are shoved apart. */
-function contact(a: Racer, b: Racer, dt: number) {
+function contact(a: Racer, b: Racer, dt: number, t: number) {
   const gap = a.dist - b.dist
   if (Math.abs(gap) > CAR_LENGTH || Math.abs(a.x - b.x) > HIT_X) return
   const [front, rear] = gap >= 0 ? [a, b] : [b, a]
   if (!rear.wrecked) {
     const rel = Math.max(0, rear.v - front.v)
     if (rel > 3) {
-      hurt(rear, 0.02 + 0.4 * (rel / VREF))
-      if (!front.wrecked) hurt(front, 0.01 + 0.15 * (rel / VREF))
-      rear.events.push({ kind: 'hit', strength: Math.min(1, rel / 30) })
+      const cause = front.wrecked ? 'wreck' : 'car'
+      const damage = hurt(rear, 0.02 + 0.4 * (rel / VREF), cause)
+      if (!front.wrecked) hurt(front, 0.01 + 0.15 * (rel / VREF), 'car')
+      rear.lastHit = { id: front.id, t }
+      rear.events.push({ kind: 'hit', cause, strength: Math.min(1, rel / 30), damage, id: front.id })
     }
     rear.v = Math.max(MIN_SPEED, Math.min(rear.v, front.v * 0.97))
   }
@@ -404,6 +485,8 @@ interface Ahead {
   lat: number
   speed: number
   weight: number
+  /** How far across the road from its middle it touches. */
+  reach: number
 }
 
 function whatIsAhead(race: Race, r: Racer, look: number): Ahead[] {
@@ -417,13 +500,13 @@ function whatIsAhead(race: Race, r: Racer, look: number): Ahead[] {
       if (race.rng() > NOTICE_BASE + (1 - NOTICE_BASE) * r.skill) r.seen.push(-h.id - 1)
     }
     if (r.seen.includes(-h.id - 1)) continue
-    out.push({ gap, lat: h.lat, speed: h.speed, weight: h.kind === 'traffic' ? 1 : h.kind === 'oil' ? 0.55 : 0.3 })
+    out.push({ gap, lat: h.lat, speed: h.speed, weight: h.kind === 'traffic' ? 1 : h.kind === 'oil' ? 0.55 : 0.3, reach: reachX(h.kind) })
   }
   for (const o of race.racers) {
     if (o === r) continue
     const gap = o.dist - r.dist
     if (gap < -CAR_LENGTH || gap > look) continue
-    out.push({ gap, lat: o.x, speed: o.wrecked ? 0 : o.v, weight: o.wrecked ? 1 : 0.8 })
+    out.push({ gap, lat: o.x, speed: o.wrecked ? 0 : o.v, weight: o.wrecked ? 1 : 0.8, reach: HIT_X })
   }
   return out
 }
@@ -440,10 +523,10 @@ export function aiInput(race: Race, r: Racer): Input {
     const line = Math.max(-0.62, Math.min(0.62, aheadC * 0.2))
     let best = line
     let bestScore = -Infinity
-    for (const lane of [...LANES, line]) {
+    for (const lane of [...LINES, line]) {
       let clear = look
       for (const t of things) {
-        if (Math.abs(t.lat - lane) > 0.46) continue
+        if (Math.abs(t.lat - lane) > t.reach) continue
         clear = Math.min(clear, Math.max(0, t.gap) / t.weight)
       }
       const score = clear - 16 * Math.abs(lane - line) - 6 * Math.abs(lane - r.x)
@@ -478,13 +561,53 @@ export function aiInput(race: Race, r: Racer): Input {
   if (demandOf(r, c) > 1.2) brake = true
   // And for the traffic it cannot get round.
   for (const t of things) {
-    if (Math.abs(t.lat - r.x) > 0.5 || t.weight < 0.7) continue
+    if (Math.abs(t.lat - r.x) > t.reach + 0.04 || t.weight < 0.7) continue
     const closing = r.v - t.speed
-    if (closing > 0 && t.gap > 0 && t.gap < closing * 0.55 + 5 && Math.abs(r.target - t.lat) < 0.46) brake = true
+    if (closing > 0 && t.gap > 0 && t.gap < closing * 0.55 + 5 && Math.abs(r.target - t.lat) < t.reach) brake = true
   }
   const straight = Math.abs(c) < 1.2 && Math.abs(curveAt(race.track, r.dist + look * 0.6)) < 1.5
   const boost = (r.boost > 0.4 || (r.boosting && r.boost > 0.02)) && straight && !brake
   return { steer: Math.max(-1, Math.min(1, steer)), brake, boost }
+}
+
+// --- warning ------------------------------------------------------------------
+
+export interface Threat {
+  kind: HazardKind | 'car' | 'wreck'
+  id: number | string
+  /** Metres to it and seconds until you reach it at the speed you are closing. */
+  gap: number
+  ttc: number
+  level: 'caution' | 'danger'
+}
+
+/**
+ * The thing on the road you are about to meet, if there is one: the nearest object
+ * in your path that you are closing on, how long you have, and how worried to be.
+ * The screen uses this to warn you (and to ring the thing in the road), so that
+ * a hit is never out of nowhere. Nothing here changes the race.
+ */
+export function threatOf(race: Race, r: Racer): Threat | null {
+  if (r.wrecked || r.finish !== null) return null
+  let best: Threat | null = null
+  const consider = (kind: Threat['kind'], id: number | string, gap: number, lat: number, speed: number, reach: number, long: number) => {
+    if (gap <= 0 || gap > 150 || Math.abs(r.x - lat) > reach + 0.1) return
+    const closing = r.v - speed
+    if (closing < 1) return
+    const ttc = Math.max(0, gap - long) / closing
+    const soft = kind === 'oil' || kind === 'cone'
+    const level = ttc < (soft ? 0.9 : 1.5) ? 'danger' : ttc < (soft ? 2.4 : 3.2) ? 'caution' : null
+    if (level && (!best || ttc < best.ttc)) best = { kind, id, gap, ttc, level }
+  }
+  for (const h of race.hazards) {
+    if (r.struck.includes(h.id)) continue
+    consider(h.kind, h.id, hazardAt(h, race.t) - r.dist - reachY(h.kind) / 2, h.lat, h.speed, reachX(h.kind), 0)
+  }
+  for (const o of race.racers) {
+    if (o === r) continue
+    consider(o.wrecked ? 'wreck' : 'car', o.id, o.dist - r.dist - CAR_LENGTH, o.x, o.wrecked ? 0 : o.v, HIT_X, 0)
+  }
+  return best
 }
 
 // --- the race ----------------------------------------------------------------
@@ -495,7 +618,7 @@ export function stepRace(race: Race, dt: number, input: Input) {
   draftWho(race)
   for (const r of race.racers) drive(race, r, r.isPlayer ? input : aiInput(race, r), dt)
   for (let i = 0; i < race.racers.length; i++) {
-    for (let j = i + 1; j < race.racers.length; j++) contact(race.racers[i], race.racers[j], dt)
+    for (let j = i + 1; j < race.racers.length; j++) contact(race.racers[i], race.racers[j], dt, race.t)
   }
 }
 

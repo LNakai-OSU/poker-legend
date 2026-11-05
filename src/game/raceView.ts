@@ -1,6 +1,16 @@
 import type { TimePeriod } from './time'
 import { KAPPA, ROAD_HALF, SEG, heightAt, curveAt, type DecoKind, type Theme } from './raceTrack'
-import { hazardAt, topSpeedOf, type Race, type Racer } from './race'
+import {
+  CONE_HALF_W,
+  OIL_HALF_L,
+  OIL_HALF_W,
+  hazardAt,
+  threatOf,
+  topSpeedOf,
+  type Race,
+  type Racer,
+  type Threat,
+} from './race'
 
 /**
  * The picture of a race, drawn the way the best arcade racers do: the road is
@@ -21,8 +31,8 @@ const HORIZON = 78
 const RS = 1.5
 const SLICES = 200
 /** How far ahead of the camera the player's car is. */
-const PLAYER_Z = 7
-const CAM_H = ROAD_HALF * 0.5
+const PLAYER_Z = 9
+const CAM_H = ROAD_HALF * 0.62
 
 // --- light ------------------------------------------------------------------
 
@@ -104,17 +114,17 @@ const TINTS = ['#e0503c', '#3c8ae0', '#e0b83c', '#48b868']
 const NEONS = ['#ff3cb8', '#38e8ff', '#ffd23c', '#7a5cff']
 
 /** A car seen from behind: the one picture used for traffic and rivals both. */
-function carRear(paint: string, o: { braking?: boolean; wrecked?: boolean; lean?: number; big?: boolean } = {}): Sprite {
+function carRear(paint: string, o: { braking?: boolean; wrecked?: boolean; lean?: number; big?: boolean; dent?: number } = {}): Sprite {
   const w = o.big ? 44 : 26
   const h = o.big ? 26 : 15
-  const key = `car:${paint}:${o.braking ? 'b' : ''}${o.wrecked ? 'w' : ''}:${o.lean ?? 0}:${o.big ? 'L' : 'S'}`
+  const key = `car:${paint}:${o.braking ? 'b' : ''}${o.wrecked ? 'w' : ''}:${o.lean ?? 0}:${o.big ? 'L' : 'S'}:${o.dent ?? 0}`
   return sprite(key, w, h, 2.1, (2.1 * h) / w, (c) => {
     const k = o.big ? 1.7 : 1
     const R = (x: number, y: number, ww: number, hh: number, col: string) => {
       c.fillStyle = col
       c.fillRect(Math.round(x * k), Math.round(y * k), Math.max(1, Math.round(ww * k)), Math.max(1, Math.round(hh * k)))
     }
-    const body = o.wrecked ? shade(paint, 0.45) : paint
+    const body = o.wrecked ? shade(paint, 0.45) : shade(paint, 1 - 0.1 * (o.dent ?? 0))
     const lean = o.lean ?? 0
     // Shadow and tyres.
     R(1, 12, 24, 3, 'rgba(0,0,0,0.38)')
@@ -143,7 +153,24 @@ function carRear(paint: string, o: { braking?: boolean; wrecked?: boolean; lean?
     // Plate and bumper.
     R(10 + lean * 0.3, 9, 6, 2, '#e8e8d8')
     R(3 + lean * 0.3, 11, 20, 1, shade(body, 0.5))
-  })
+    // What it has been through: a scuff, a dent, a smashed lamp and a cracked screen.
+    const dent = o.dent ?? 0
+    if (dent >= 1) {
+      R(14, 6, 5, 1, shade(body, 0.45))
+      R(5, 10, 3, 1, '#d8d8d0')
+    }
+    if (dent >= 2) {
+      R(18, 7, 5, 2, '#3a1414')
+      R(8, 2, 1, 3, '#a8c0e0')
+      R(9, 4, 3, 1, '#a8c0e0')
+      R(11, 7, 3, 2, shade(body, 0.4))
+    }
+    if (dent >= 3) {
+      R(3, 7, 5, 2, '#220c0c')
+      R(13, 1, 1, 4, '#a8c0e0')
+      R(4, 5, 6, 3, shade(body, 0.35))
+      R(15, 9, 7, 2, '#18181e')
+    }  })
 }
 
 /** A roadside thing, drawn once per tint. */
@@ -276,28 +303,60 @@ function decoSprite(kind: DecoKind, tint: number): Sprite {
   }
 }
 
-const OIL = sprite('oil', 44, 14, 6, 1.7, (c) => {
-  c.fillStyle = '#090912'
-  c.beginPath()
-  c.ellipse(22, 7, 21, 6, 0, 0, Math.PI * 2)
-  c.fill()
-  c.fillStyle = 'rgba(130,100,220,0.45)'
-  c.beginPath()
-  c.ellipse(17, 5, 10, 2.5, 0, 0, Math.PI * 2)
-  c.fill()
-  c.fillStyle = 'rgba(80,200,200,0.3)'
-  c.fillRect(26, 7, 8, 2)
-})
-
-const CONES = sprite('cones', 36, 16, 2.4, 1.1, (c) => {
-  for (const dx of [2, 13, 24]) {
+/** A triangular warning sign on a post, with a picture of what is ahead: an oil drop or a cone. */
+function warningSign(what: 'oil' | 'cone'): Sprite {
+  return sprite(`sign:${what}`, 22, 34, 1.8, 2.8, (c) => {
     c.fillStyle = '#10101a'
-    c.fillRect(dx, 12, 10, 4)
-    c.fillStyle = '#f07828'
-    c.fillRect(dx + 2, 1, 6, 12)
-    c.fillStyle = '#f4f0e0'
-    c.fillRect(dx + 2, 5, 6, 2)
-  }
+    c.fillRect(10, 17, 2, 17)
+    // The triangle: a red border round a yellow face.
+    for (let y = 0; y < 18; y++) {
+      const half = Math.round(1 + (y * 10) / 17)
+      c.fillStyle = '#d83a2a'
+      c.fillRect(11 - half - 1, y, half * 2 + 2, 1)
+      if (y > 1 && y < 16) {
+        c.fillStyle = '#ffd23c'
+        c.fillRect(11 - half + 1, y, Math.max(0, half * 2 - 1), 1)
+      }
+    }
+    c.fillStyle = '#10101a'
+    if (what === 'oil') {
+      // A drop.
+      c.fillRect(10, 5, 2, 2)
+      c.fillRect(9, 7, 4, 3)
+      c.fillRect(8, 10, 6, 3)
+      c.fillRect(9, 13, 4, 1)
+    } else {
+      // A cone.
+      c.fillRect(10, 5, 2, 2)
+      c.fillRect(9, 7, 4, 3)
+      c.fillRect(8, 10, 6, 2)
+      c.fillRect(7, 13, 8, 1)
+    }
+  })
+}
+
+/** One traffic cone, standing and knocked over. */
+const CONE = sprite('cone', 10, 15, 0.5, 0.75, (c) => {
+  c.fillStyle = '#10101a'
+  c.fillRect(0, 12, 10, 3)
+  c.fillStyle = '#f07828'
+  c.fillRect(2, 1, 6, 12)
+  c.fillStyle = '#ff9a48'
+  c.fillRect(2, 1, 2, 11)
+  c.fillStyle = '#f4f0e0'
+  c.fillRect(2, 5, 6, 2)
+  c.fillStyle = '#10101a'
+  c.fillRect(4, 0, 2, 1)
+})
+const CONE_DOWN = sprite('cone-down', 16, 9, 0.8, 0.45, (c) => {
+  c.fillStyle = 'rgba(0,0,0,0.35)'
+  c.fillRect(0, 7, 16, 2)
+  c.fillStyle = '#f07828'
+  c.fillRect(1, 2, 12, 5)
+  c.fillStyle = '#f4f0e0'
+  c.fillRect(5, 2, 2, 5)
+  c.fillStyle = '#10101a'
+  c.fillRect(12, 1, 3, 7)
 })
 
 // --- backdrop ----------------------------------------------------------------
@@ -385,7 +444,7 @@ export interface View {
 }
 
 export function createView(): View {
-  return { particles: [], shake: 0, flash: { color: '#ffffff', a: 0 }, skyX: 0, spin: 0, fov: 88, messages: [], lastY: 0, tick: 0 }
+  return { particles: [], shake: 0, flash: { color: '#ffffff', a: 0 }, skyX: 0, spin: 0, fov: 64, messages: [], lastY: 0, tick: 0 }
 }
 
 // --- the frame ---------------------------------------------------------------
@@ -425,7 +484,8 @@ export function drawRace(c: CanvasRenderingContext2D, race: Race, me: Racer, vie
   view.tick++
 
   // Speed opens the view; boost opens it more.
-  const fovWant = 86 + 16 * Math.min(1, vFrac) + (me.boosting ? 9 : 0)
+  // A narrow view, so what is on the road is big enough to read in time to do something about it.
+  const fovWant = 64 + 12 * Math.min(1, vFrac) + (me.boosting ? 8 : 0)
   view.fov += (fovWant - view.fov) * Math.min(1, 5 * o.dt)
   const depth = 1 / Math.tan((view.fov * Math.PI) / 360)
   const k = VIEW_W / 2
@@ -564,40 +624,113 @@ export function drawRace(c: CanvasRenderingContext2D, race: Race, me: Racer, vie
     run: () => void
   }
   const drawn: Draw[] = []
-  const place = (dist: number, lateralM: number, s: Sprite, opts: { alpha?: number; glow?: string } = {}) => {
+  const ground: Draw[] = []
+  const threat = threatOf(race, me)
+  const MAXZ = SLICES * RS - RS
+
+  /** Where a point on the road is on the screen, or null if it is behind the camera or beyond sight. */
+  const at = (dist: number, lateralM: number) => {
     const z = dist - baseDist
-    if (z < 1.2 || z > SLICES * RS - RS) return
+    if (z < 1.2 || z > MAXZ) return null
     const n = Math.min(SLICES - 2, Math.floor(z / RS))
     const a = slices[n]
     const b = slices[n + 1]
-    if (!a || !b) return
+    if (!a || !b) return null
     const f = Math.max(0, Math.min(1, (z - n * RS) / RS))
-    const ox = a.x + (b.x - a.x) * f
-    const oy = a.y + (b.y - a.y) * f
-    const p = project(ox + lateralM - playerXm, oy, z, depth, k)
-    const w = Math.max(1, s.wM * p.scale * k)
-    const h = Math.max(1, s.hM * p.scale * k)
-    const left = Math.round(p.x - w / 2)
-    const top = Math.round(p.y - h)
-    if (left > VIEW_W || left + w < 0) return
-    const clipY = a.clip
-    drawn.push({
+    const p = project(a.x + (b.x - a.x) * f + lateralM - playerXm, a.y + (b.y - a.y) * f, z, depth, k)
+    return { x: p.x, y: p.y, scale: p.scale, clip: a.clip, z }
+  }
+  /** Far things come in out of the haze instead of popping in. */
+  const fade = (z: number) => (z > MAXZ - 55 ? Math.max(0, (MAXZ - z) / 55) : 1)
+
+  /** The outline of a flat shape lying on the road: its middle, its half sizes in metres, and how much of it. */
+  const flat = (dist: number, latM: number, halfW: number, halfL: number, scale = 1, dx = 0, dy = 0) => {
+    const pts: Array<[number, number]> = []
+    for (let i = 0; i < 20; i++) {
+      const a = (i / 20) * Math.PI * 2
+      const q = at(dist + dy + Math.sin(a) * halfL * scale, latM + dx + Math.cos(a) * halfW * scale)
+      if (!q) return null
+      pts.push([q.x, q.y])
+    }
+    return pts
+  }
+  const fill = (pts: Array<[number, number]>, style: string) => {
+    c.fillStyle = style
+    c.beginPath()
+    pts.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y)))
+    c.closePath()
+    c.fill()
+  }
+  const onGround = (dist: number, latM: number, z: number, paint: (clipY: number) => void) => {
+    const q = at(dist, latM)
+    if (!q) return
+    ground.push({
       z,
       run: () => {
-        const vis = Math.min(h, clipY - top)
+        c.save()
+        c.beginPath()
+        c.rect(0, 0, VIEW_W, q.clip)
+        c.clip()
+        c.globalAlpha = fade(z)
+        paint(q.clip)
+        c.restore()
+      },
+    })
+  }
+
+  /** The brackets round a thing you are about to hit, or have just hit, and what they say about it. */
+  const ring = (left: number, top: number, w: number, h: number, mark: 'danger' | 'caution' | 'hit') => {
+    const pulse = 0.55 + 0.45 * Math.sin(view.tick * 0.45)
+    c.fillStyle = mark === 'danger' ? `rgba(255,70,50,${0.55 + pulse * 0.45})` : mark === 'hit' ? 'rgba(255,255,255,0.95)' : 'rgba(255,205,60,0.85)'
+    const x0 = left - 3
+    const y0 = top - 3
+    const ww = Math.round(w) + 6
+    const hh = Math.round(h) + 6
+    const L = Math.max(3, Math.round(ww * 0.24))
+    c.fillRect(x0, y0, L, 1)
+    c.fillRect(x0, y0, 1, L)
+    c.fillRect(x0 + ww - L, y0, L, 1)
+    c.fillRect(x0 + ww - 1, y0, 1, L)
+    c.fillRect(x0, y0 + hh - 1, L, 1)
+    c.fillRect(x0, y0 + hh - L, 1, L)
+    c.fillRect(x0 + ww - L, y0 + hh - 1, L, 1)
+    c.fillRect(x0 + ww - 1, y0 + hh - L, 1, L)
+    if (mark === 'danger') {
+      // A warning triangle over it.
+      const cx = Math.round(x0 + ww / 2)
+      for (let r = 0; r < 5; r++) c.fillRect(cx - r, y0 - 8 + r, 1 + r * 2, 1)
+      c.fillStyle = '#10101a'
+      c.fillRect(cx, y0 - 7, 1, 2)
+      c.fillRect(cx, y0 - 4, 1, 1)
+    }
+  }
+
+  const place = (dist: number, lateralM: number, s: Sprite, opts: { alpha?: number; glow?: string; mark?: 'danger' | 'caution' | 'hit' } = {}) => {
+    const q = at(dist, lateralM)
+    if (!q) return
+    const w = Math.max(1, s.wM * q.scale * k)
+    const h = Math.max(1, s.hM * q.scale * k)
+    const left = Math.round(q.x - w / 2)
+    const top = Math.round(q.y - h)
+    if (left > VIEW_W || left + w < 0) return
+    drawn.push({
+      z: q.z,
+      run: () => {
+        const vis = Math.min(h, q.clip - top)
         if (vis <= 0) return
         const srcH = (vis / h) * s.img.height
-        if (opts.alpha !== undefined) c.globalAlpha = opts.alpha
+        c.globalAlpha = (opts.alpha ?? 1) * fade(q.z)
         c.drawImage(s.img, 0, 0, s.img.width, srcH, left, top, Math.round(w), Math.max(1, Math.round(vis)))
         c.globalAlpha = 1
         if (opts.glow && light.night) {
           c.globalCompositeOperation = 'lighter'
           c.fillStyle = opts.glow
           c.beginPath()
-          c.arc(p.x, top + h * 0.12, Math.max(2, w * 1.2), 0, Math.PI * 2)
+          c.arc(q.x, top + h * 0.12, Math.max(2, w * 1.2), 0, Math.PI * 2)
           c.fill()
           c.globalCompositeOperation = 'source-over'
         }
+        if (opts.mark && q.z < 150) ring(left, top, w, h, opts.mark)
       },
     })
   }
@@ -611,16 +744,77 @@ export function drawRace(c: CanvasRenderingContext2D, race: Race, me: Racer, vie
       place(j * SEG, lateral, s, { glow: d.kind === 'lamp' ? 'rgba(255,230,150,0.22)' : d.kind === 'neon' ? 'rgba(255,80,200,0.2)' : undefined })
     }
   }
+  const markOf = (kind: Threat['kind'], id: number | string) => {
+    if (me.lastHit && me.lastHit.id === id && race.t - me.lastHit.t < 0.8) return 'hit' as const
+    return threat && threat.kind === kind && threat.id === id ? threat.level : undefined
+  }
+  const carShadow = (dist: number, latM: number) =>
+    onGround(dist, latM, dist - baseDist + 0.1, () => {
+      const sh = flat(dist, latM, 1.15, 2.5)
+      if (sh) fill(sh, 'rgba(0,0,0,0.36)')
+    })
   for (const h of race.hazards) {
-    const at = hazardAt(h, race.t)
-    if (h.kind === 'traffic') place(at, h.lat * ROAD_HALF, carRear(['#7a8a9a', '#8a7a6a', '#6a8a7a', '#9a8aa0', '#a09a68'][h.id % 5]))
-    else if (h.kind === 'oil') place(at, h.lat * ROAD_HALF, OIL)
-    else place(at, h.lat * ROAD_HALF, CONES)
+    const pos = hazardAt(h, race.t)
+    if (h.kind === 'traffic') {
+      carShadow(pos, h.lat * ROAD_HALF)
+      place(pos, h.lat * ROAD_HALF, carRear(['#7a8a9a', '#8a7a6a', '#6a8a7a', '#9a8aa0', '#a09a68'][h.id % 5]), { mark: markOf('traffic', h.id) })
+    } else if (h.kind === 'oil') {
+      // A sign each side of the road well before it, because a flat stain is a pixel tall from far off.
+      for (const side of [-1, 1]) place(pos - 72, side * ROAD_HALF * 1.32, warningSign('oil'))
+      // A stain lying on the road, as wide and as long as the part of it that takes your grip.
+      const latM = h.lat * ROAD_HALF
+      const halfW = OIL_HALF_W * ROAD_HALF
+      onGround(pos, latM, pos - baseDist, () => {
+        const edge = flat(pos, latM, halfW, OIL_HALF_L, 1.14)
+        const base = flat(pos, latM, halfW, OIL_HALF_L)
+        if (!edge || !base) return
+        fill(edge, 'rgba(6,6,14,0.34)')
+        fill(base, 'rgba(6,6,14,0.93)')
+        const wob = Math.sin(view.tick * 0.06)
+        const sheens: Array<[string, number, number]> = [['rgba(150,90,255,0.34)', 0.78, 0.4], ['rgba(60,210,200,0.3)', 0.58, -0.3], ['rgba(255,90,200,0.24)', 0.38, 0.2]]
+        for (const [col, sc, off] of sheens) {
+          const sh = flat(pos, latM, halfW, OIL_HALF_L, sc, wob * off * halfW * 0.35, off * OIL_HALF_L * 0.3)
+          if (sh) fill(sh, col)
+        }
+        // The sky in it, a pale band along the far edge: what makes a dark stain read as wet.
+        const sky = flat(pos, latM, halfW * 0.8, OIL_HALF_L * 0.34, 1, 0, OIL_HALF_L * 0.42)
+        if (sky) fill(sky, 'rgba(190,212,255,0.4)')
+        const spec = flat(pos, latM, halfW, OIL_HALF_L, 0.16, -halfW * 0.34, -OIL_HALF_L * 0.34)
+        if (spec) fill(spec, 'rgba(255,255,255,0.5)')
+        const mark = markOf('oil', h.id)
+        if (mark && mark !== 'hit') {
+          const big = flat(pos, latM, halfW, OIL_HALF_L, 1.28)
+          if (big) {
+            c.strokeStyle = mark === 'danger' ? 'rgba(255,70,50,0.9)' : 'rgba(255,205,60,0.85)'
+            c.lineWidth = 1
+            c.setLineDash([3, 3])
+            c.beginPath()
+            big.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y)))
+            c.closePath()
+            c.stroke()
+            c.setLineDash([])
+          }
+        }
+      })
+    } else {
+      for (const side of [-1, 1]) place(pos - 62, side * ROAD_HALF * 1.32, warningSign('cone'))
+      // Three cones across the lane, each a cone. Hit them and they are knocked over and flung aside.
+      const knocked = me.struck.includes(h.id)
+      for (let i = 0; i < 3; i++) {
+        const side = i - 1
+        const lat = h.lat * ROAD_HALF + side * CONE_HALF_W * ROAD_HALF * 0.66 + (knocked ? side * 2.4 : 0)
+        const dist = pos + (i === 1 ? -0.4 : 0.35) + (knocked ? 1.6 + i * 0.8 : 0)
+        place(dist, lat, knocked ? CONE_DOWN : CONE, { mark: i === 1 ? markOf('cone', h.id) : undefined })
+      }
+    }
   }
   for (const r of race.racers) {
     if (r === me) continue
-    place(r.dist, r.x * ROAD_HALF, carRear(r.paint, { braking: r.braking, wrecked: r.wrecked }))
+    carShadow(r.dist, r.x * ROAD_HALF)
+    place(r.dist, r.x * ROAD_HALF, carRear(r.paint, { braking: r.braking, wrecked: r.wrecked }), { mark: markOf(r.wrecked ? 'wreck' : 'car', r.id) })
   }
+  ground.sort((a, b) => b.z - a.z)
+  for (const d of ground) d.run()
   drawn.sort((a, b) => b.z - a.z)
   for (const d of drawn) d.run()
 
@@ -746,7 +940,8 @@ function drawPlayer(
 ) {
   const w = 2.1 * (depth / PLAYER_Z) * k
   const lean = me.steer > 0.25 ? 3 : me.steer < -0.25 ? -3 : 0
-  const s = carRear(me.paint, { braking: me.braking, wrecked: me.wrecked, lean, big: true })
+  const dent = me.damage < 0.2 ? 0 : me.damage < 0.45 ? 1 : me.damage < 0.7 ? 2 : 3
+  const s = carRear(me.paint, { braking: me.braking, wrecked: me.wrecked, lean, big: true, dent })
   const bob = me.v > 5 && !me.wrecked ? Math.sin(o.time * 38) * (0.4 + me.slide * 1.2) : 0
   const px = VIEW_W / 2 + me.steer * 4 + (me.slide > 0 ? Math.sin(o.time * 50) * me.slide : 0)
   const py = here.sy ? Math.min(VIEW_H - 4, here.sy + 6) : VIEW_H - 14
@@ -771,7 +966,15 @@ function drawPlayer(
     c.rotate(view.spin * Math.min(1, o.wreckedFor * 1.4))
     c.drawImage(s.img, -w / 2, -h / 2, w, h)
   } else {
-    c.drawImage(s.img, Math.round(px - w / 2), Math.round(py - h + bob), Math.round(w), Math.round(h))
+    // A car in a skid points where it is sliding from: the nose swings the way it is being thrown.
+    const yaw = Math.max(-0.4, Math.min(0.4, me.skid * 0.22 + (me.oil > 0 ? Math.sin(o.time * 22) * 0.08 : 0)))
+    if (Math.abs(yaw) > 0.01) {
+      c.translate(px, py - h * 0.3 + bob)
+      c.rotate(yaw)
+      c.drawImage(s.img, -w / 2, -h * 0.7, Math.round(w), Math.round(h))
+    } else {
+      c.drawImage(s.img, Math.round(px - w / 2), Math.round(py - h + bob), Math.round(w), Math.round(h))
+    }
   }
   c.restore()
   if (light.night && me.braking && !me.wrecked) {
@@ -784,12 +987,17 @@ function drawPlayer(
   // Particles from the tyres and the body.
   const wheelY = py - 2
   if (!me.wrecked && me.v > 12) {
-    if (me.slide > 0.1 || Math.abs(me.x) > 1.04) {
+    if (me.slide > 0.1 || Math.abs(me.x) > 1.04 || me.oil > 0 || Math.abs(me.skid) > 0.4) {
       const col = Math.abs(me.x) > 1.04 ? '#9a8a60' : 'rgba(230,230,240,0.8)'
       for (const sx of [-0.4, 0.4]) {
         if (Math.random() < 0.7) view.particles.push({ x: px + sx * w, y: wheelY, vx: (Math.random() - 0.5) * 20 + sx * 30, vy: -10 - Math.random() * 16, life: 0.5, max: 0.5, color: col, size: 2 + Math.random() * 3 })
       }
     }
+  }
+  if (!me.wrecked && me.damage > 0.45 && Math.random() < 0.25 + me.damage * 0.4) {
+    // A hurt car smokes from under the bonnet, and the worse it is the blacker.
+    const black = me.damage > 0.7
+    view.particles.push({ x: px + (Math.random() - 0.5) * w * 0.3, y: py - h * 0.75, vx: (Math.random() - 0.5) * 8, vy: -16 - Math.random() * 14, life: 0.8, max: 0.8, color: black ? 'rgba(20,20,26,0.75)' : 'rgba(200,200,210,0.6)', size: 2 + Math.random() * 3 })
   }
   if (me.wrecked && Math.random() < 0.6) {
     view.particles.push({ x: px + (Math.random() - 0.5) * w, y: py - h * 0.5, vx: (Math.random() - 0.5) * 18, vy: -30 - Math.random() * 20, life: 0.9, max: 0.9, color: 'rgba(60,60,70,0.7)', size: 3 + Math.random() * 4 })
@@ -819,28 +1027,33 @@ function updateParticles(c: CanvasRenderingContext2D, view: View, dt: number) {
 
 /** Turns what the sim noted this tick into shakes, flashes, sparks and words. */
 function readEvents(race: Race, me: Racer, view: View) {
+  const pct = (d: number) => `-${Math.max(1, Math.round(d * 100))}%`
+  const say = (text: string, t: number, color: string) => view.messages.push({ text, t, color })
   for (const e of me.events) {
     if (e.kind === 'hit') {
       view.shake = Math.max(view.shake, 3 + e.strength * 7)
-      view.flash = { color: '#ffffff', a: 0.35 + e.strength * 0.4 }
-      view.messages.push({ text: e.strength > 0.5 ? 'CRASH' : 'HIT', t: 1, color: '#ff6a5a' })
+      view.flash = { color: '#ffffff', a: 0.3 + e.strength * 0.4 }
+      const what = e.cause === 'traffic' ? 'REAR-ENDED TRAFFIC' : e.cause === 'wreck' ? 'HIT A WRECK' : 'CONTACT'
+      say(`${what} ${pct(e.damage)}`, 1.6, '#ff6a5a')
       burst(view, '#ffd860', 14)
     } else if (e.kind === 'wall') {
       view.shake = Math.max(view.shake, 2 + e.strength * 6)
       view.flash = { color: '#ffd860', a: 0.2 }
-      view.messages.push({ text: 'WALL', t: 0.8, color: '#ffb040' })
+      say(`HIT THE WALL ${pct(e.damage)}`, 1.4, '#ffb040')
       burst(view, '#ffe888', 18)
     } else if (e.kind === 'scrape') {
       view.shake = Math.max(view.shake, 1.5)
+      say(`KNOCKED A CONE ${pct(e.damage)}`, 1.1, '#f09040')
       burst(view, '#f09040', 5)
     } else if (e.kind === 'nearMiss') {
-      view.messages.push({ text: 'NEAR MISS', t: 0.9, color: '#58e8ff' })
+      say('NEAR MISS +BOOST', 0.9, '#58e8ff')
     } else if (e.kind === 'oil') {
-      view.messages.push({ text: 'OIL', t: 0.8, color: '#b090ff' })
+      view.shake = Math.max(view.shake, 1)
+      say('OIL! EASE OFF THE WHEEL', 1.6, '#c0a0ff')
     } else if (e.kind === 'wreck') {
       view.shake = 9
       view.flash = { color: '#ff3a30', a: 0.6 }
-      view.messages.push({ text: 'WRECKED', t: 2, color: '#ff4a3a' })
+      say('WRECKED', 2, '#ff4a3a')
       burst(view, '#ffb030', 30)
     }
   }

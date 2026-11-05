@@ -173,29 +173,132 @@ export function slopeAt(track: Track, dist: number): number {
   return (heightAt(track, dist + 4) - heightAt(track, dist - 4)) / 8
 }
 
+/** How sharp a corner is: a sweep you can take flat, a tight one you must lift for, a hairpin you must brake for. */
+export type Severity = 0 | 1 | 2
+
+export interface Corner {
+  /** 1-based, in driving order: T1, T2... */
+  n: number
+  /** Metres from the line to the middle of the corner, and how long it runs. */
+  dist: number
+  length: number
+  /** -1 left, 1 right. */
+  dir: -1 | 1
+  /** The strongest bend in it, as `Seg.curve`. */
+  peak: number
+  severity: Severity
+}
+
+export interface TrackShape {
+  /** The road from above, one point a segment, fitted into a box whose longer side is 1. */
+  points: Array<{ x: number; y: number; dist: number }>
+  /** The box: `w` and `h`, the longer of which is 1. The map is drawn at this aspect, not squashed square. */
+  w: number
+  h: number
+  corners: Corner[]
+  /** The height at each point, in metres, for the profile under the map. */
+  heights: number[]
+  /** Metres climbed in all, and the highest point over the lowest. */
+  climb: number
+  relief: number
+}
+
+/** A bend stronger than this is a corner rather than the road wandering. */
+const CORNER_MIN = 1.4
+
+export function severityOf(peak: number): Severity {
+  const p = Math.abs(peak)
+  return p >= 4.2 ? 2 : p >= 2.6 ? 1 : 0
+}
+
+/** The corners of a track, in order. */
+export function cornersOf(track: Track): Corner[] {
+  const out: Corner[] = []
+  const segs = track.segs
+  const end = Math.ceil(track.length / SEG)
+  let i = 0
+  while (i < end) {
+    if (Math.abs(segs[i].curve) < CORNER_MIN) {
+      i++
+      continue
+    }
+    // A corner runs on while the bend holds, and through a short gap in it.
+    const start = i
+    let last = i
+    let peak = segs[i].curve
+    while (i < end && (Math.abs(segs[i].curve) >= CORNER_MIN || i - last <= 2)) {
+      if (Math.abs(segs[i].curve) >= CORNER_MIN) {
+        last = i
+        if (Math.abs(segs[i].curve) > Math.abs(peak)) peak = segs[i].curve
+      }
+      i++
+    }
+    if (last - start + 1 < 4) continue
+    out.push({
+      n: out.length + 1,
+      dist: ((start + last + 1) / 2) * SEG,
+      length: (last - start + 1) * SEG,
+      dir: peak > 0 ? 1 : -1,
+      peak,
+      severity: severityOf(peak),
+    })
+  }
+  return out
+}
+
 /**
- * The shape of the road from above, as points from 0..1 on both axes: what the
- * lobby draws so you know what you are getting into.
+ * The road from above, as it really runs: the heading turns by the bend over each
+ * segment's length (`KAPPA`), so a hairpin is drawn as a hairpin. Turned so the
+ * road runs left to right between the line and the finish, and fitted to its
+ * own proportions rather than into a square, so a long road is a long picture.
  */
-export function outline(track: Track, steps = 90): Array<{ x: number; y: number }> {
-  const pts: Array<{ x: number; y: number }> = []
-  let heading = -Math.PI / 2
+export function shapeOf(track: Track): TrackShape {
+  const end = Math.min(track.segs.length, Math.ceil(track.length / SEG) + 1)
+  let heading = 0
   let x = 0
   let y = 0
-  const per = Math.max(1, Math.floor(track.segs.length / steps))
-  for (let i = 0; i < track.segs.length; i += per) {
-    // Bend is 1/m; the same constant the sim and the view use (see `KAPPA`).
-    heading += track.segs[i].curve * KAPPA * SEG * per
-    x += Math.cos(heading) * per
-    y += Math.sin(heading) * per
-    pts.push({ x, y })
+  const raw: Array<{ x: number; y: number; dist: number }> = [{ x, y, dist: 0 }]
+  for (let i = 0; i < end; i++) {
+    heading += track.segs[i].curve * KAPPA * SEG
+    x += Math.cos(heading) * SEG
+    y += Math.sin(heading) * SEG
+    raw.push({ x, y, dist: (i + 1) * SEG })
   }
-  const xs = pts.map((p) => p.x)
-  const ys = pts.map((p) => p.y)
+  // Turn it so the start-to-finish chord points along +x.
+  const last = raw[raw.length - 1]
+  const angle = -Math.atan2(last.y - raw[0].y, last.x - raw[0].x)
+  const cos = Math.cos(angle)
+  const sin = Math.sin(angle)
+  const turned = raw.map((p) => ({ x: p.x * cos - p.y * sin, y: p.x * sin + p.y * cos, dist: p.dist }))
+  const xs = turned.map((p) => p.x)
+  const ys = turned.map((p) => p.y)
   const minX = Math.min(...xs)
   const minY = Math.min(...ys)
-  const span = Math.max(Math.max(...xs) - minX, Math.max(...ys) - minY, 1)
-  return pts.map((p) => ({ x: (p.x - minX) / span, y: (p.y - minY) / span }))
+  const spanX = Math.max(...xs) - minX
+  const spanY = Math.max(...ys) - minY
+  const span = Math.max(spanX, spanY, 1)
+  const heights = turned.map((p) => heightAt(track, p.dist))
+  let climb = 0
+  for (let i = 1; i < heights.length; i++) climb += Math.max(0, heights[i] - heights[i - 1])
+  return {
+    points: turned.map((p) => ({ x: (p.x - minX) / span, y: (p.y - minY) / span, dist: p.dist })),
+    w: spanX / span,
+    h: spanY / span,
+    corners: cornersOf(track),
+    heights,
+    climb,
+    relief: Math.max(...heights) - Math.min(...heights),
+  }
+}
+
+/** The next corner ahead of a point on the road, and how far off it is. */
+export function nextCorner(corners: Corner[], dist: number): { corner: Corner; away: number } | null {
+  for (const c of corners) {
+    // Counts from where the bend starts, not its middle, so the warning is for the turn-in.
+    const startsAt = c.dist - c.length / 2
+    if (c.dist + c.length / 2 > dist) return { corner: c, away: Math.max(0, startsAt - dist) }
+  }
+  return null
 }
 
 /** Curvature in 1/m for a bend of 1: radius about 435 m, so a 5 is a 90 m hairpin. */

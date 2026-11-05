@@ -683,6 +683,66 @@ const PENTHOUSE_LOBBY = parseMap(`
 ^^^^^^D^^^^^^^
 `)
 
+/** Floor 41, yours: parquet, the fire lit, the glass wall onto the harbour, a bed nobody makes. */
+const PENTHOUSE_MAIN = parseMap(`
+^^^^^^^^^^^^^^^^
+^FFmmmFFFmmmmmm^
+^FFHHHFFFHHHHHH^
+^HHHHHHHHHHHHHH^
+^HHHFHHHFHHHHHH^
+^HHHHHHHHHHFFFH^
+^HHHHFFFHHHHHHH^
+^FFFHHHHHHHHHFH^
+^FFHHHHFFHHHHHF^
+^HHHHHHHHHHHHHF^
+^^^^^^^^^^^^^^^^
+`)
+
+/** The gym: concrete, a row of treadmills, benches under the racks, a heavy bag. */
+const PENTHOUSE_GYM = parseMap(`
+^^^^^^^^^^^^^^^^
+^pppppppppppppp^
+^FFFeeFFeeeeeee^
+^eeeeeeeeeeeeee^
+^eFFeeeeeFFeeFe^
+^eeeeeeeeeeeeee^
+^eFFeeeeeeeeeFe^
+^eeeeeeeeeeeeee^
+^FeeeeeeeeeeeFe^
+^eeeeeeeeeeeeee^
+^^^^^^^^^^^^^^^^
+`)
+
+/** The pool, forty floors up: a long blue rectangle in white tile, loungers down the far side. */
+const PENTHOUSE_POOL = parseMap(`
+^^^^^^^^^^^^^^^^
+^tttttttttttttt^
+^FFQQQQQQQQQQFF^
+^QQQQQQQQQQQQFF^
+^QQ~~~~~~~~~QQQ^
+^QQ~~~~~~~~~QQQ^
+^QQ~~~~~~~~~QQQ^
+^QQ~~~~~~~~~QQQ^
+^QFFQQFFQQFFQQQ^
+^FQQQQQQQQQQQFQ^
+^^^^^^^^^^^^^^^^
+`)
+
+/** The workroom: a wall of books, two desks of charts, and a sofa to lose an argument on. */
+const PENTHOUSE_WORK = parseMap(`
+^^^^^^^^^^^^^^^^
+^FFFFwwwwwwwwww^
+^FFFF&&&&&&&&&&^
+^&&&&&&&&&&&&&&^
+^&&&&&FFF&FFF&&^
+^&&&&&&&&&&&&&&^
+^&FF&&&&&&&&&&&^
+^&&&&&&&&&&&&&&^
+^&&&&&&&FFF&&F&^
+^F&&&&&&&&&&&&F^
+^^^^^^^^^^^^^^^^
+`)
+
 /** Your one room: a kitchenette, a window onto a brick wall, a bed, a table with a note on it. */
 const APARTMENT_ROOM = parseMap(`
 ^^^^^^^^^^^^^^^
@@ -846,6 +906,19 @@ function walker(
 ): PoiDef {
   const [[col, row], ...turns] = route
   return { ...local(id, name, col, row, lines, ...altLines), patrol: turns.map(([c, r]) => ({ col: c, row: r })), hours }
+}
+
+function liftPanel(id: string, col: number, row: number): PoiDef {
+  return {
+    id,
+    name: 'Lift',
+    col,
+    row,
+    color: COLORS.finale,
+    art: 'none',
+    lines: ['Brass buttons: L, 38, 39, 40, 41.'],
+    action: { kind: 'penthouse' },
+  }
 }
 
 /**
@@ -2775,14 +2848,88 @@ const portoLumina: CityDef = {
           lines: ['The attendant watches the lift, then you, and waits.'],
           action: { kind: 'penthouse' },
         },
+        liftPanel('pl-lobby-lift', 6, 2),
         local('pl-concierge', 'Concierge', 3, 2, [
           'Concierge: The lift goes to one floor. The floor belongs to one person.',
         ]),
       ],
       [{ col: 6, row: 8, toAreaId: 'pl-street', toCol: 5, toRow: 6, label: 'Out' }],
     ),
+    // The floors above the lobby. You reach them by the lift, not on foot: `PENTHOUSE_FLOORS`.
+    'pl-penthouse': area(
+      'pl-penthouse',
+      'Your Penthouse',
+      PENTHOUSE_MAIN,
+      { col: 12, row: 3 },
+      '#141020',
+      [
+        liftPanel('pl-pent-lift', 12, 2),
+        local('pl-pent-housekeeper', 'Housekeeper', 9, 8, [
+          'Housekeeper: I laid out the blue suit. You wore it to the Invitational. I thought you would want to be reminded.',
+        ], ['Housekeeper: Nobody has slept in the bed in a week. I change it anyway. It seems rude not to.']),
+        thing('pl-pent-fire', 'Fireplace', 7, 2, ['Marble, a mirror over it, the fire lit by somebody who is not you.']),
+        thing('pl-pent-tank', 'Fish Tank', 7, 8, ['Two fish going round. They have outlived three of your sponsors.']),
+      ],
+      [],
+    ),
+    'pl-gym': area(
+      'pl-gym',
+      'Floor 39: Gym',
+      PENTHOUSE_GYM,
+      { col: 12, row: 3 },
+      '#141020',
+      [
+        liftPanel('pl-gym-lift', 12, 2),
+        local('pl-gym-trainer', 'Personal Trainer', 7, 6, [
+          'Trainer: Poker is eight hours of sitting. Your back is a pawn shop. We start with the back.',
+        ], ['Trainer: Resting heart rate tells me more about your tells than the cameras do.']),
+        thing('pl-gym-bag', 'Heavy Bag', 13, 4, ['It has your sponsor\'s logo on it. It has been hit a great deal.']),
+      ],
+      [],
+    ),
+    'pl-pool': area(
+      'pl-pool',
+      'Floor 40: Pool',
+      PENTHOUSE_POOL,
+      { col: 12, row: 3 },
+      '#141020',
+      [
+        liftPanel('pl-pool-lift', 12, 2),
+        local('pl-pool-lifeguard', 'Lifeguard', 13, 5, [
+          'Lifeguard: Forty floors up, and I am still required to watch. If you drown, it will be the most expensive thing that ever happened here.',
+        ]),
+        thing('pl-pool-water', 'Pool', 3, 4, ['Blue, still, and lit from underneath. The harbour is on the other side of the glass, a smaller blue.']),
+      ],
+      [],
+    ),
+    'pl-workroom': area(
+      'pl-workroom',
+      'Floor 38: Workroom',
+      PENTHOUSE_WORK,
+      { col: 12, row: 3 },
+      '#141020',
+      [
+        liftPanel('pl-work-lift', 12, 2),
+        thing('pl-work-charts', 'Charts', 7, 4, ['Every hand you have played since the apartment, in a column: green when you were right, red when you got lucky.']),
+        thing('pl-work-shelf', 'Bookshelf', 2, 2, ['Three books on probability, two on psychology, and one on marriage, still in its wrapper.']),
+      ],
+      [],
+    ),
   },
 }
+
+/**
+ * The tower's floors, bottom to top, for the lift. Only the owner of the
+ * penthouse is taken above the lobby, and a floor has no door of its own: the
+ * lift is the one way in and the one way out.
+ */
+export const PENTHOUSE_FLOORS = [
+  { areaId: 'pl-lift', label: 'L', name: 'Lobby' },
+  { areaId: 'pl-workroom', label: '38', name: 'Workroom' },
+  { areaId: 'pl-gym', label: '39', name: 'Gym' },
+  { areaId: 'pl-pool', label: '40', name: 'Pool' },
+  { areaId: 'pl-penthouse', label: '41', name: 'Your Penthouse' },
+] as const
 
 export const CITIES: Record<string, CityDef> = {
   apartment: apartmentCity,
@@ -3317,6 +3464,69 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'mannequin-navy', col: 3, row: 3 },
     { stampId: 'side-table', col: 4, row: 7 },
     { stampId: 'plant-tall', col: 8, row: 7 },
+  ],
+  'pl-penthouse': [
+    { stampId: 'bookshelf-dark', col: 1, row: 1 },
+    { stampId: 'window-night', col: 3, row: 1 },
+    { stampId: 'fireplace', col: 6, row: 1 },
+    { stampId: 'painting-abstract', col: 9, row: 1 },
+    { stampId: 'lift-doors', col: 12, row: 1 },
+    { stampId: 'rug-blue', col: 5, row: 4 },
+    { stampId: 'armchair', col: 4, row: 4 },
+    { stampId: 'armchair', col: 8, row: 4 },
+    { stampId: 'sofa-leather', col: 5, row: 6 },
+    { stampId: 'card-table', col: 10, row: 4 },
+    { stampId: 'bed-double', col: 1, row: 7 },
+    { stampId: 'side-table', col: 3, row: 7 },
+    { stampId: 'fish-tank', col: 7, row: 8 },
+    { stampId: 'plant-tall', col: 13, row: 7 },
+    { stampId: 'palm', col: 14, row: 8 },
+  ],
+  'pl-gym': [
+    { stampId: 'window-sky', col: 3, row: 1 },
+    { stampId: 'window-sky', col: 7, row: 1 },
+    { stampId: 'lift-doors', col: 12, row: 1 },
+    { stampId: 'treadmill', col: 1, row: 2 },
+    { stampId: 'treadmill', col: 2, row: 2 },
+    { stampId: 'treadmill', col: 3, row: 2 },
+    { stampId: 'weight-rack', col: 6, row: 2 },
+    { stampId: 'weight-bench', col: 2, row: 4 },
+    { stampId: 'weight-bench', col: 9, row: 4 },
+    { stampId: 'punching-bag', col: 13, row: 4 },
+    { stampId: 'rug-green', col: 5, row: 4 },
+    { stampId: 'weight-bench', col: 2, row: 6 },
+    { stampId: 'punching-bag', col: 13, row: 6 },
+    { stampId: 'rug-green', col: 5, row: 7 },
+    { stampId: 'rug-green', col: 10, row: 7 },
+    { stampId: 'water-cooler', col: 1, row: 8 },
+    { stampId: 'plant-tall', col: 13, row: 8 },
+  ],
+  'pl-pool': [
+    { stampId: 'window-sky', col: 3, row: 1 },
+    { stampId: 'window-sky', col: 5, row: 1 },
+    { stampId: 'lift-doors', col: 12, row: 1 },
+    { stampId: 'lounger', col: 1, row: 2 },
+    { stampId: 'cooler', col: 13, row: 2 },
+    { stampId: 'lounger', col: 2, row: 8 },
+    { stampId: 'lounger', col: 6, row: 8 },
+    { stampId: 'lounger', col: 10, row: 8 },
+    { stampId: 'plant-tall', col: 1, row: 9 },
+    { stampId: 'plant-tall', col: 13, row: 9 },
+  ],
+  'pl-workroom': [
+    { stampId: 'bookshelf-dark', col: 1, row: 1 },
+    { stampId: 'bookshelf', col: 3, row: 1 },
+    { stampId: 'window-night', col: 6, row: 1 },
+    { stampId: 'clock', col: 9, row: 1 },
+    { stampId: 'lift-doors', col: 12, row: 1 },
+    { stampId: 'desk-study', col: 6, row: 4 },
+    { stampId: 'desk-study', col: 10, row: 4 },
+    { stampId: 'table-chairs', col: 2, row: 6 },
+    { stampId: 'rug-red', col: 7, row: 6 },
+    { stampId: 'sofa-leather', col: 8, row: 8 },
+    { stampId: 'floor-lamp', col: 13, row: 8 },
+    { stampId: 'plant-tall', col: 1, row: 9 },
+    { stampId: 'plant-tall', col: 14, row: 9 },
   ],
   'pl-lift': [
     { stampId: 'palm', col: 1, row: 1 },

@@ -25,7 +25,7 @@ describe('the ending film', () => {
   })
 
   it('has something to say in every shot', () => {
-    for (const lines of [ENDING_FILM.stage, ENDING_FILM.photo, ENDING_FILM.papers.lines, ENDING_FILM.ledger.lines, ENDING_FILM.window, ENDING_FILM.after.lines]) {
+    for (const lines of [ENDING_FILM.stage, ENDING_FILM.montage,ENDING_FILM.photo, ENDING_FILM.papers.lines, ENDING_FILM.ledger.lines, ENDING_FILM.window, ENDING_FILM.after.lines]) {
       expect(lines.length).toBeGreaterThan(0)
       for (const l of lines) expect(l.text.trim()).not.toBe('')
     }

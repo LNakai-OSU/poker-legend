@@ -48,7 +48,7 @@ import {
  * walking and the light move by themselves.
  */
 
-export type EndingShot = 'stage' | 'walk' | 'photo' | 'papers' | 'ledger' | 'phone' | 'window' | 'credits' | 'after'
+export type EndingShot = 'stage' | 'montage' | 'walk' | 'photo' | 'papers' | 'ledger' | 'phone' | 'window' | 'credits' | 'after'
 
 const GOLD = '#c9a14a'
 const THEME = TABLE_THEMES.finale
@@ -593,24 +593,171 @@ const money = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`
 let nadia: Figure | null = null
 let sweeper: Figure | null = null
 
+// ---------------------------------------------------------------------------
+// Cards, chips and the stands.
+// ---------------------------------------------------------------------------
+
+const PIPS = [
+  ['01010', '11111', '11111', '01110', '00100'], // heart
+  ['00100', '01110', '11111', '01110', '00100'], // diamond
+  ['00100', '01110', '11111', '11111', '00100'], // spade
+  ['01110', '01110', '11111', '11111', '00100'], // club
+]
+const SUIT_RED = [true, true, false, false]
+
+/** A card face up (suit 0 heart, 1 diamond, 2 spade, 3 club) or, with suit -1, face down. */
+function card(c: Ctx, x: number, y: number, rank: string, suit: number) {
+  fillRect(c, 'rgba(0,0,0,0.35)', x + 1, y + 1, 11, 15)
+  fillRect(c, '#14141c', x, y, 11, 15)
+  if (suit < 0) {
+    fillRect(c, '#a8281f', x + 1, y + 1, 9, 13)
+    for (let i = 0; i < 6; i++) fillRect(c, i % 2 ? '#d8584a' : '#7a1a14', x + 2, y + 2 + i * 2, 7, 1)
+    return
+  }
+  fillRect(c, '#f0ece0', x + 1, y + 1, 9, 13)
+  const col = SUIT_RED[suit] ? '#c8402f' : '#14141c'
+  label(c, rank, x + 3, y + 2, col)
+  PIPS[suit].forEach((row, py) => {
+    for (let px = 0; px < 5; px++) if (row[px] === '1') fillRect(c, col, x + 3 + px, y + 8 + py, 1, 1)
+  })
+}
+
+/** A stack of chips standing on the felt: dark edge, coloured body, a pale stripe, a shadow. */
+function chips(c: Ctx, x: number, baseY: number, n: number, color: string) {
+  fillRect(c, 'rgba(0,0,0,0.35)', x + 1, baseY + 2, 12, 2)
+  for (let i = 0; i < n; i++) {
+    const y = baseY - i * 2
+    fillRect(c, '#0a0a10', x, y, 12, 3)
+    fillRect(c, color, x + 1, y, 10, 2)
+    fillRect(c, '#e8e4d8', x + 2, y, 2, 1)
+    fillRect(c, '#e8e4d8', x + 8, y, 2, 1)
+  }
+}
+
+const FANS = ['gus', 'pearl', 'omar', 'bette', 'teo', 'junie', 'ray', 'deb', 'mack', 'rosa', 'lorna', 'cass', 'hollis', 'lou', 'odette', 'ines', 'otto', 'saul', 'priya', 'august', 'xue', 'fong', 'walt', 'dottie', 'maud', 'ilse']
+let fans: Figure[] | null = null
+/** Marcus and Dana first, then the faces you met on the way up, then strangers. */
+function crowdFigures(): Figure[] {
+  if (fans) return fans
+  const ids = ['marcus', 'dana', ...FANS.filter((id) => CHARACTERS[id])]
+  fans = Array.from({ length: 32 }, (_, i) => {
+    const id = ids[i]
+    return id && CHARACTERS[id] ? figureForCharacter(id, CHARACTERS[id]) : { role: 'local' as const, look: lookFromId(`fan-${i}`, '', 'local') }
+  })
+  return fans
+}
+
+/** Tiered stands either side of the screen. Everyone is up and shouting until the cheer dies, then seated, then gone. */
+function drawStands(c: Ctx, t: number, k: number) {
+  const keep = [32, 32, 30, 24, 4, 0][k]
+  const cast = crowdFigures()
+  const dim = Math.max(0.35, 1 - k * 0.14)
+  for (let r = 0; r < 4; r++) {
+    const top = 10 + r * 22
+    for (const side of [0, 1]) {
+      const x0 = side ? 262 : 0
+      // The tier it sits on.
+      fillRect(c, '#181430', x0, top + 15, 58, 22)
+      fillRect(c, '#2e2858', x0, top + 15, 58, 1)
+      fillRect(c, '#0e0c20', x0, top + 21, 58, 1)
+      for (let j = 0; j < 4; j++) {
+        const i = (3 - r) * 8 + side * 4 + j
+        if (i >= keep) continue
+        const x = side ? 262 + j * 14 : 44 - j * 14
+        const up = k < 2
+        const bounce = up ? Math.abs(Math.sin(t / 170 + i * 1.7)) * 3 : 0
+        const y = Math.round(top - bounce)
+        const f = cast[i]
+        drawPerson(c, f, 'down', 0, { x, y, scale: 1 })
+        if (up) {
+          // Both arms over the head, one a beat behind the other.
+          const sk = f.look.skin
+          const sh = f.look.shirt
+          const lag = Math.floor(t / 150 + i) % 2
+          fillRect(c, '#05040a', x - 1, y - 8 - lag * 2, 5, 15)
+          fillRect(c, '#05040a', x + 12, y - 8 - (1 - lag) * 2, 5, 15)
+          fillRect(c, sk, x, y - 7 - lag * 2, 3, 6)
+          fillRect(c, sh, x, y - 1 - lag * 2, 3, 7)
+          fillRect(c, sk, x + 13, y - 7 - (1 - lag) * 2, 3, 6)
+          fillRect(c, sh, x + 13, y - 1 - (1 - lag) * 2, 3, 7)
+        } else if (k < 4 && i % 3 === 0) {
+          // Clapping slowly, hands together at the chest.
+          const clap = Math.floor(t / 400 + i) % 2
+          fillRect(c, f.look.skin, x + 6 - clap, y + 12, 4 + clap * 2, 2)
+        }
+        // The rail in front of them covers the legs.
+        fillRect(c, '#181430', x - 1, y + 15, 18, 7)
+      }
+      c.fillStyle = `rgba(0,0,10,${1 - dim})`
+      c.fillRect(x0, top - 6, 58, 28)
+    }
+  }
+  // A banner across each block.
+  for (const x0 of [0, 262]) {
+    fillRect(c, '#241e48', x0, 98, 58, 3)
+    fillRect(c, '#c9a14a', x0, 98, 58, 1)
+  }
+}
+
 function drawStageShot(c: Ctx, t: number, beat: number, since: number) {
   const k = Math.min(beat, 5)
   fillRect(c, '#06050c', 0, 0, VIEW_W, VIEW_H)
-  // The big screen over the table: the winner, then an advert.
-  fillRect(c, '#2a2a5a', 62, 12, 196, 56)
+  // The big screen over the table: the winner, then an advert. It lights the stage.
+  glow(c, 160, 84, 130, k < 4 ? '120,150,255' : '90,130,200', 0.13 * Math.max(0.4, 1 - k * 0.1))
+  fillRect(c, '#05050c', 59, 9, 202, 62)
+  fillRect(c, '#2e2e58', 60, 10, 200, 60)
+  fillRect(c, '#46467a', 60, 10, 200, 1)
+  fillRect(c, '#1c1c38', 62, 12, 196, 56)
   fillRect(c, '#0b0d22', 64, 14, 192, 52)
+  fillRect(c, '#7a7aa8', 157, 69, 6, 2)
+  c.save()
+  c.beginPath()
+  c.rect(64, 14, 192, 52)
+  c.clip()
   if (k < 4) {
-    label(c, 'LEGENDS INVITATIONAL', 160, 20, '#c9a14a', 'centre')
-    fillRect(c, '#c9a14a', 80, 31, 160, 1)
-    label(c, 'WINNER', 160, 38, '#e8e4d8', 'centre')
-    label(c, money(750000), 160, 50, '#f2d27a', 'centre')
-    if (Math.floor(t / 500) % 2) label(c, '● LIVE', 72, 18, '#e0402f')
+    fillRect(c, '#1a1c48', 64, 14, 192, 52)
+    fillRect(c, '#241f5a', 64, 14, 192, 16)
+    label(c, 'LEGENDS INVITATIONAL', 160, 18, '#c9a14a', 'centre')
+    fillRect(c, '#c9a14a', 80, 28, 160, 1)
+    // The winner, in close-up, with the trophy.
+    fillRect(c, '#2a2e6a', 72, 32, 40, 26)
+    fillRect(c, '#c9a14a', 72, 32, 40, 1)
+    fillRect(c, '#c9a14a', 72, 57, 40, 1)
+    c.save()
+    c.beginPath()
+    c.rect(73, 33, 38, 24)
+    c.clip()
+    drawPerson(c, HERO_FIGURE, 'down', 0, { x: 84, y: 30, scale: 1 })
+    c.restore()
+    label(c, 'WINNER', 190, 34, '#e8e4d8', 'centre')
+    label(c, money(750000), 190, 45, '#f2d27a', 'centre')
+    if (Math.floor(t / 500) % 2) {
+      fillRect(c, '#e0402f', 68, 17, 22, 9)
+      label(c, 'LIVE', 71, 18, '#ffffff')
+    }
+    // The ticker.
+    fillRect(c, '#c9a14a', 64, 58, 192, 8)
+    const tape = 'HEADS-UP FINAL  *  750,000 TO FIRST  *  THE CROWD IS ON ITS FEET  *  '
+    const tx = -((t / 28) % measureText(tape))
+    for (let i = 0; i < 3; i++) label(c, tape, 64 + tx + i * measureText(tape), 59, '#1a1428')
   } else {
     fillRect(c, '#14305a', 64, 14, 192, 52)
     fillRect(c, '#e8e4d8', 148, 26, 24, 14)
+    fillRect(c, '#14305a', 152, 30, 16, 2)
     label(c, 'FIRST FEDERAL', 160, 46, '#e8e4d8', 'centre')
     label(c, 'BACK AFTER THESE MESSAGES', 160, 56, '#8aa0c8', 'centre')
   }
+  // Scanlines, and a sheen across the glass.
+  for (let y = 14; y < 66; y += 2) fillRect(c, 'rgba(0,0,0,0.18)', 64, y, 192, 1)
+  c.fillStyle = 'rgba(255,255,255,0.05)'
+  c.beginPath()
+  c.moveTo(64, 14)
+  c.lineTo(110, 14)
+  c.lineTo(80, 66)
+  c.lineTo(64, 66)
+  c.fill()
+  c.restore()
+  drawStands(c, t, k)
   // The truss, and the lamps hanging from it; they come down as the room empties.
   fillRect(c, '#14122a', 0, 0, VIEW_W, 8)
   const lit = Math.max(0.25, 1 - k * 0.17)
@@ -630,34 +777,59 @@ function drawStageShot(c: Ctx, t: number, beat: number, since: number) {
   // The stage.
   fillRect(c, '#120e1c', 0, 100, VIEW_W, 80)
   for (let y = 104; y < 150; y += 8) fillRect(c, '#1a1426', 0, y, VIEW_W, 1)
-  // The table: rail, felt, the last hand where it was left.
-  c.fillStyle = '#3a2412'
+  // The table: wood rail, padded leather, felt with its betting line, and the last hand.
+  c.fillStyle = 'rgba(0,0,0,0.5)'
   c.beginPath()
-  c.ellipse(160, 130, 80, 20, 0, 0, Math.PI * 2)
+  c.ellipse(160, 150, 100, 12, 0, 0, Math.PI * 2)
+  c.fill()
+  fillRect(c, '#1c0f07', 66, 134, 188, 12)
+  fillRect(c, '#2e1a0c', 66, 134, 188, 2)
+  for (const x of [84, 150, 216]) fillRect(c, '#140b05', x, 140, 3, 6)
+  c.fillStyle = '#2e1a0c'
+  c.beginPath()
+  c.ellipse(160, 130, 96, 23, 0, 0, Math.PI * 2)
+  c.fill()
+  c.fillStyle = '#6a4224'
+  c.beginPath()
+  c.ellipse(160, 128, 94, 21, 0, 0, Math.PI * 2)
+  c.fill()
+  c.fillStyle = '#2e1a0c'
+  c.beginPath()
+  c.ellipse(160, 129, 90, 19, 0, 0, Math.PI * 2)
+  c.fill()
+  c.fillStyle = '#1a1a26'
+  c.beginPath()
+  c.ellipse(160, 129, 86, 17, 0, 0, Math.PI * 2)
   c.fill()
   c.fillStyle = '#0f5a34'
   c.beginPath()
-  c.ellipse(160, 129, 74, 16, 0, 0, Math.PI * 2)
+  c.ellipse(160, 129, 82, 15, 0, 0, Math.PI * 2)
   c.fill()
-  c.fillStyle = 'rgba(255,255,255,0.08)'
+  c.fillStyle = '#146e40'
   c.beginPath()
-  c.ellipse(160, 126, 60, 10, 0, 0, Math.PI * 2)
+  c.ellipse(160, 126, 66, 10, 0, 0, Math.PI * 2)
   c.fill()
-  const board = [['9', '#c8402f'], ['5', '#14141c'], ['2', '#c8402f'], ['J', '#14141c'], ['7', '#c8402f']]
-  board.forEach(([r, col], i) => {
-    fillRect(c, '#e8e4d8', 130 + i * 13, 122, 10, 13)
-    label(c, r, 132 + i * 13, 126, col)
-  })
-  // Her two, turned over; and the stack that was hers, pushed to the middle.
-  fillRect(c, '#e8e4d8', 196, 136, 9, 11)
-  fillRect(c, '#e8e4d8', 207, 136, 9, 11)
-  label(c, 'K', 198, 139, '#c8402f')
-  label(c, 'Q', 209, 139, '#c8402f')
-  for (let i = 0; i < 6; i++) {
-    fillRect(c, i % 2 ? '#c8402f' : '#2a4aa8', 96, 140 - i * 2, 12, 2)
-    fillRect(c, '#e8e4d8', 96, 140 - i * 2, 12, 1)
-  }
-  for (let i = 0; i < 9; i++) fillRect(c, i % 3 ? '#f2c14e' : '#2a4aa8', 112, 142 - i * 2, 12, 2)
+  c.strokeStyle = '#2f9a62'
+  c.lineWidth = 1
+  c.beginPath()
+  c.ellipse(160, 129.5, 56, 11, 0, 0, Math.PI * 2)
+  c.stroke()
+  label(c, 'LEGENDS', 160, 133, '#2a8a56', 'centre')
+  const board = [['9', 0], ['5', 1], ['2', 2], ['J', 3], ['7', 0]] as const
+  board.forEach(([r, s], i) => card(c, 127 + i * 14, 116, r, s))
+  // Her two, turned over; yours, still face down.
+  card(c, 204, 128, 'K', 0)
+  card(c, 214, 129, 'Q', 0)
+  card(c, 98, 130, '', -1)
+  card(c, 106, 131, '', -1)
+  // The stack that was hers, pushed to the middle; and the one that was yours.
+  chips(c, 116, 146, 4, '#c8402f')
+  chips(c, 129, 147, 3, '#2a4aa8')
+  chips(c, 142, 146, 5, '#f2c14e')
+  chips(c, 176, 147, 4, '#3ac87a')
+  chips(c, 189, 146, 5, '#14141c')
+  fillRect(c, '#e8e4d8', 158, 140, 7, 4)
+  label(c, 'D', 160, 139, '#14141c')
   // You, at your end of it. Her, till she goes.
   const hero = (x: number) => {
     c.fillStyle = 'rgba(0,0,0,0.45)'
@@ -729,6 +901,367 @@ function drawStageShot(c: Ctx, t: number, beat: number, since: number) {
   c.fillRect(0, 0, VIEW_W, VIEW_H)
   dust(c, t, 18, 10, 120, '255,236,190')
   vignette(c, 0.55)
+}
+
+// ---------------------------------------------------------------------------
+// The montage: the rise, and what the rise was made of.
+// ---------------------------------------------------------------------------
+
+const WIFE: Figure = { role: 'local', look: { skin: '#f0c8a0', hair: '#2a1410', hairStyle: 'bob', shirt: '#b8283f', accessory: 'none' } }
+
+function bottle(c: Ctx, x: number, y: number, color: string, h = 16) {
+  fillRect(c, '#05050a', x - 1, y - h, 6, h)
+  fillRect(c, color, x, y - h + 1, 4, h - 2)
+  fillRect(c, color, x + 1, y - h - 5, 2, 5)
+  fillRect(c, '#05050a', x + 1, y - h - 6, 2, 1)
+  fillRect(c, 'rgba(255,255,255,0.35)', x + 1, y - h + 3, 1, h - 7)
+}
+
+function bill(c: Ctx, x: number, y: number, tilt: number) {
+  fillRect(c, '#1f5a34', x, y, 9, 5)
+  fillRect(c, '#3a9a5a', x + 1, y + 1, 7, 3)
+  fillRect(c, '#d8f0c0', x + 4 - tilt, y + 2, 1, 1)
+}
+
+function sparkle(c: Ctx, x: number, y: number, a: number) {
+  c.fillStyle = `rgba(255,248,210,${a})`
+  c.fillRect(x - 3, y, 7, 1)
+  c.fillRect(x, y - 3, 1, 7)
+  c.fillRect(x - 1, y - 1, 3, 3)
+}
+
+function drawMontageShot(c: Ctx, t: number, beat: number, since: number) {
+  const ease = Math.min(1, since / 1800)
+  switch (Math.min(beat, 7)) {
+    case 0: {
+      // The win: a spotlit stage, the trophy over your head, flashbulbs.
+      fillRect(c, '#07060e', 0, 0, VIEW_W, VIEW_H)
+      c.fillStyle = 'rgba(255,230,160,0.16)'
+      c.beginPath()
+      c.moveTo(150, 0)
+      c.lineTo(170, 0)
+      c.lineTo(240, 150)
+      c.lineTo(80, 150)
+      c.fill()
+      fillRect(c, '#1a1426', 0, 140, VIEW_W, 40)
+      for (let y = 144; y < 180; y += 8) fillRect(c, '#241c34', 0, y, VIEW_W, 1)
+      for (let i = 0; i < 40; i++) fillRect(c, '#0a0914', (i * 37) % 330 - 6, 150 + (i % 5) * 7, 10, 24)
+      const lift = Math.sin(Math.min(1, since / 700) * Math.PI / 2)
+      const hx = 144
+      c.fillStyle = 'rgba(0,0,0,0.45)'
+      c.beginPath()
+      c.ellipse(hx + 24, 150, 22, 4, 0, 0, Math.PI * 2)
+      c.fill()
+      drawPerson(c, HERO_FIGURE, 'down', 0, { x: hx, y: 78, scale: 3 })
+      // Both arms up, and the cup in them.
+      const handY = 106 - lift * 44
+      for (const ax of [hx + 3, hx + 39]) {
+        fillRect(c, HERO_FIGURE.look.shirt, ax, handY + 8, 6, 108 - handY - 8)
+        fillRect(c, HERO_FIGURE.look.skin, ax, handY, 6, 8)
+      }
+      const ty = 34 - lift * 6 + (1 - lift) * 20
+      fillRect(c, '#8a6a22', hx + 18, ty + 28, 12, 4)
+      fillRect(c, '#c9a14a', hx + 21, ty + 18, 6, 10)
+      fillRect(c, '#f2d27a', hx + 12, ty, 24, 18)
+      fillRect(c, '#c9a14a', hx + 12, ty + 12, 24, 6)
+      fillRect(c, '#c9a14a', hx + 8, ty + 2, 4, 8)
+      fillRect(c, '#c9a14a', hx + 36, ty + 2, 4, 8)
+      fillRect(c, '#fff4c8', hx + 15, ty + 2, 3, 10)
+      sparkle(c, hx + 24, ty + 6, 0.6 + 0.4 * Math.sin(t / 120))
+      for (let i = 0; i < 6; i++) {
+        const on = Math.floor(t / 90 + i * 3) % 11 === 0
+        if (on) {
+          c.fillStyle = 'rgba(255,255,255,0.28)'
+          c.fillRect(0, 0, VIEW_W, VIEW_H)
+          sparkle(c, 20 + i * 52, 140 + (i % 2) * 14, 1)
+        }
+      }
+      for (let i = 0; i < 90; i++) {
+        const x = noise(i, 1, 9) * VIEW_W + Math.sin(t / 600 + i) * 8
+        const y = (t / (14 + (i % 6) * 5) + noise(i, 2, 9) * VIEW_H * 2) % VIEW_H
+        fillRect(c, CONFETTI[i % 5], x, y, 2, i % 3 ? 1 : 2)
+      }
+      label(c, 'CHAMPION', 160, 14, '#f2d27a', 'centre')
+      break
+    }
+    case 1: {
+      // Dusk, and a street of string lights. She walks up to you.
+      const sky = ['#3a2a5a', '#6a3a6a', '#a8506a', '#e0785a', '#f2a65a', '#f8d490']
+      sky.forEach((col, i) => fillRect(c, col, 0, i * 18, VIEW_W, 19))
+      for (let i = 0; i < 16; i++) {
+        const bh = 40 + Math.floor(noise(i, 3, 61) * 50)
+        fillRect(c, '#2e2038', i * 21 - 4, 130 - bh, 20, bh)
+        for (let wy = 130 - bh + 5; wy < 124; wy += 9) for (let wx = i * 21; wx < i * 21 + 14; wx += 6) fillRect(c, noise(wx, wy, 62) > 0.4 ? '#f8d070' : '#5a4258', wx, wy, 3, 4)
+      }
+      fillRect(c, '#241a2e', 0, 130, VIEW_W, 50)
+      fillRect(c, '#3a2c44', 0, 130, VIEW_W, 2)
+      for (let x = 0; x < VIEW_W; x += 8) {
+        const y = 22 + Math.round(Math.sin(x / 19) * 6)
+        fillRect(c, '#1a1020', x, y, 8, 1)
+        glow(c, x + 4, y + 3, 7, '255,232,160', 0.35)
+        fillRect(c, '#fff6c8', x + 3, y + 2, 2, 2)
+      }
+      const walk = Math.min(1, since / 3000)
+      const wx = 250 - walk * 82
+      const frame = (Math.floor(t / 170) % 3) as WalkFrame
+      c.fillStyle = 'rgba(0,0,0,0.4)'
+      c.beginPath()
+      c.ellipse(96 + 24, 168, 22, 4, 0, 0, Math.PI * 2)
+      c.ellipse(wx + 24, 168, 22, 4, 0, 0, Math.PI * 2)
+      c.fill()
+      drawPerson(c, HERO_FIGURE, 'right', 0, { x: 96, y: 96, scale: 3 })
+      drawPerson(c, WIFE, 'left', walk < 1 ? frame : 0, { x: wx, y: 96, scale: 3 })
+      if (walk >= 1) {
+        for (let i = 0; i < 4; i++) {
+          const hy = 90 - ((t / 40 + i * 22) % 70)
+          fillRect(c, '#e8506a', 148 + i * 9 + Math.sin(t / 300 + i) * 4, hy, 3, 3)
+          fillRect(c, '#e8506a', 150 + i * 9 + Math.sin(t / 300 + i) * 4, hy, 3, 3)
+          fillRect(c, '#e8506a', 149 + i * 9 + Math.sin(t / 300 + i) * 4, hy + 3, 3, 1)
+        }
+      }
+      break
+    }
+    case 2: {
+      // The money arrives.
+      fillRect(c, '#06140c', 0, 0, VIEW_W, VIEW_H)
+      glow(c, 160, 90, 150, '60,200,110', 0.14)
+      for (let i = 0; i < 70; i++) {
+        const x = noise(i, 1, 21) * 300 + Math.sin(t / 500 + i) * 6
+        const y = (t / (10 + (i % 5) * 4) + noise(i, 2, 21) * 400) % 200 - 10
+        bill(c, x, y, i % 2)
+      }
+      for (const [bx, n] of [[16, 7], [250, 9]] as const) {
+        for (let i = 0; i < n; i++) {
+          fillRect(c, '#0f3a20', bx, 168 - i * 8, 54, 8)
+          fillRect(c, '#2a7a46', bx + 1, 169 - i * 8, 52, 5)
+          fillRect(c, '#c9a14a', bx + 24, 168 - i * 8, 6, 8)
+        }
+      }
+      const amount = Math.round(750000 * Math.min(1, since / 2400))
+      fillRect(c, '#05100a', 90, 66, 140, 40)
+      fillRect(c, '#c9a14a', 90, 66, 140, 1)
+      fillRect(c, '#c9a14a', 90, 105, 140, 1)
+      label(c, 'FIRST PRIZE', 160, 74, '#8ad0a0', 'centre')
+      label(c, money(amount), 160, 90, '#f2d27a', 'centre')
+      break
+    }
+    case 3: {
+      // The nice things: a car with no roof, a boat, a house on the hill, a watch.
+      const sky = ['#6ab0ec', '#8cc4f2', '#b0d8f6', '#d4ecfa']
+      sky.forEach((col, i) => fillRect(c, col, 0, i * 24, VIEW_W, 25))
+      fillRect(c, '#fff4c8', 270, 16, 20, 20)
+      fillRect(c, '#2e78c0', 0, 92, VIEW_W, 28)
+      for (let x = 0; x < VIEW_W; x += 12) fillRect(c, '#6aa8e0', x + ((t / 120) % 12), 100 + (x % 3) * 6, 5, 1)
+      // The yacht.
+      const bx = 40 + ((t / 90) % 40)
+      fillRect(c, '#f0ece0', bx, 80, 48, 10)
+      fillRect(c, '#c8402f', bx, 88, 48, 3)
+      fillRect(c, '#f0ece0', bx + 14, 72, 22, 8)
+      fillRect(c, '#2a4aa8', bx + 16, 74, 18, 3)
+      // The house on the hill.
+      c.fillStyle = '#4a8a4a'
+      c.beginPath()
+      c.moveTo(180, 120)
+      c.lineTo(250, 60)
+      c.lineTo(320, 120)
+      c.fill()
+      fillRect(c, '#f0ece0', 230, 54, 40, 22)
+      fillRect(c, '#c9a14a', 226, 50, 48, 4)
+      for (let i = 0; i < 4; i++) fillRect(c, '#4a78b8', 234 + i * 9, 60, 6, 10)
+      // The road, and the car.
+      fillRect(c, '#34343e', 0, 120, VIEW_W, 60)
+      fillRect(c, '#f2c14e', 0, 148, VIEW_W, 2)
+      for (let x = -((t / 8) % 40); x < VIEW_W; x += 40) fillRect(c, '#d8d8e0', x, 148, 20, 1)
+      const cx = -90 + ((since / 6) % 440)
+      fillRect(c, 'rgba(0,0,0,0.35)', cx + 4, 160, 82, 5)
+      fillRect(c, '#c8281f', cx, 138, 86, 16)
+      fillRect(c, '#e8483a', cx, 138, 86, 3)
+      fillRect(c, '#c8281f', cx + 22, 128, 38, 10)
+      fillRect(c, '#9ad4f4', cx + 26, 130, 12, 7)
+      fillRect(c, '#14141c', cx, 150, 86, 4)
+      for (const wx of [cx + 10, cx + 62]) {
+        fillRect(c, '#0a0a10', wx, 148, 16, 12)
+        fillRect(c, '#c8c8d0', wx + 5, 152, 6, 5)
+      }
+      drawPerson(c, HERO_FIGURE, 'right', 0, { x: cx + 28, y: 115, scale: 1 })
+      drawPerson(c, WIFE, 'right', 0, { x: cx + 44, y: 115, scale: 1 })
+      fillRect(c, '#c8281f', cx + 26, 134, 34, 8)
+      // The price tags.
+      const tags = [['THE HOUSE', 230, 40], ['THE BOAT', 62, 58], ['THE CAR', 100, 120], ['THE WATCH', 230, 150]] as const
+      tags.forEach(([txt, x, y], i) => {
+        if (since < 500 + i * 650) return
+        fillRect(c, '#05040a', x - 28, y - 3, 56, 11)
+        fillRect(c, '#c9a14a', x - 28, y - 3, 56, 1)
+        label(c, txt, x, y, '#f2d27a', 'centre')
+      })
+      // A watch, at the corner.
+      if (since > 500 + 3 * 650) {
+        fillRect(c, '#0a0a10', 276, 132, 10, 6)
+        fillRect(c, '#c9a14a', 272, 138, 18, 18)
+        fillRect(c, '#f0ece0', 275, 141, 12, 12)
+        fillRect(c, '#14141c', 281, 143, 1, 5)
+        fillRect(c, '#14141c', 281, 147, 4, 1)
+        sparkle(c, 290, 138, 0.5 + 0.5 * Math.sin(t / 150))
+      }
+      break
+    }
+    case 4: {
+      // The nights: neon, a table of bottles, you in the middle of it.
+      fillRect(c, '#080410', 0, 0, VIEW_W, VIEW_H)
+      for (let i = 0; i < 6; i++) {
+        const a = Math.sin(t / 700 + i) * 0.5
+        c.fillStyle = `rgba(${['255,60,160', '60,200,255', '170,90,255'][i % 3]},0.16)`
+        c.beginPath()
+        c.moveTo(20 + i * 56, 0)
+        c.lineTo(30 + i * 56, 0)
+        c.lineTo(160 + a * 140, 150)
+        c.lineTo(100 + a * 140, 150)
+        c.fill()
+      }
+      // The ball.
+      fillRect(c, '#4a4a5a', 160, 0, 1, 14)
+      c.fillStyle = '#c8c8d8'
+      c.beginPath()
+      c.arc(160, 20, 8, 0, Math.PI * 2)
+      c.fill()
+      for (let i = 0; i < 14; i++) sparkle(c, 10 + ((i * 53 + t / 30) % 300), 20 + ((i * 41) % 110), 0.5)
+      fillRect(c, '#14101e', 0, 120, VIEW_W, 60)
+      // Strangers, dancing.
+      for (let i = 0; i < 16; i++) {
+        const x = 8 + i * 20
+        const y = 108 - Math.abs(Math.sin(t / 180 + i)) * 4
+        fillRect(c, '#0a0612', x, y, 10, 40)
+        fillRect(c, '#0a0612', x + 1, y - 7, 8, 8)
+        fillRect(c, '#0a0612', x - 3, y - 6 - (i % 2) * 4, 2, 10)
+        fillRect(c, '#0a0612', x + 11, y - 6 - ((i + 1) % 2) * 4, 2, 10)
+      }
+      // The table, and what is on it.
+      fillRect(c, '#05030a', 70, 138, 180, 8)
+      fillRect(c, '#ff3ca0', 70, 138, 180, 1)
+      fillRect(c, '#2a1a3a', 80, 146, 160, 34)
+      const cols = ['#2a8a4a', '#c9a14a', '#3a5ac8', '#c8402f']
+      for (let i = 0; i < 12; i++) bottle(c, 84 + i * 14, 138, cols[i % 4], 12 + (i % 3) * 3)
+      // You, up on the couch with a glass, swaying.
+      drawPerson(c, HERO_FIGURE, 'down', 0, { x: 130 + Math.round(Math.sin(t / 500) * 3), y: 76, scale: 3 })
+      fillRect(c, '#f0ece0', 120, 100, 4, 8)
+      fillRect(c, '#f2d27a', 120, 100, 4, 4)
+      // And her, at the edge of it, looking at the door.
+      drawPerson(c, WIFE, 'right', 0, { x: 4, y: 108, scale: 2 })
+      break
+    }
+    case 5: {
+      // Four in the morning, at any table that will have you.
+      fillRect(c, '#05080a', 0, 0, VIEW_W, VIEW_H)
+      glow(c, 160, 70, 140, '255,226,150', 0.1)
+      fillRect(c, '#0a3a22', 0, 90, VIEW_W, 90)
+      fillRect(c, '#0f5a34', 0, 96, VIEW_W, 84)
+      fillRect(c, '#2e1a0c', 0, 88, VIEW_W, 8)
+      for (let i = 0; i < 5; i++) chips(c, 40 + i * 20, 150 + (i % 2) * 6, 16 - i * 2 + (i % 2) * 5, ['#c8402f', '#2a4aa8', '#f2c14e', '#3ac87a', '#14141c'][i])
+      for (let i = 0; i < 5; i++) chips(c, 200 + i * 16, 156 - (i % 2) * 4, 5 + i * 2, ['#c8402f', '#2a4aa8', '#f2c14e', '#3ac87a', '#14141c'][(i + 2) % 5])
+      card(c, 128, 110, 'A', 2)
+      card(c, 142, 110, 'A', 3)
+      card(c, 156, 110, '8', 0)
+      bottle(c, 18, 110, '#2a8a4a', 20)
+      bottle(c, 296, 106, '#c9a14a', 20)
+      // The ashtray, and its smoke.
+      fillRect(c, '#4a4a56', 268, 124, 20, 6)
+      for (let i = 0; i < 8; i++) fillRect(c, 'rgba(200,200,210,0.25)', 276 + Math.sin(t / 400 + i) * 4, 120 - i * 7 - ((t / 60) % 7), 4, 3)
+      // The clock, and the phone face-up, lit, unanswered.
+      fillRect(c, '#05040a', 126, 8, 68, 20)
+      fillRect(c, '#c9a14a', 126, 8, 68, 1)
+      label(c, `${3 + Math.min(1, Math.floor(since / 4000))}:${String(10 + Math.floor(since / 700) % 50).padStart(2, '0')} AM`, 160, 15, '#e8e4d8', 'centre')
+      const buzz = Math.floor(t / 200) % 2
+      fillRect(c, '#05040a', 206 + buzz, 108, 56, 52)
+      fillRect(c, '#d8e4f4', 208 + buzz, 111, 52, 46)
+      label(c, 'HER', 234 + buzz, 116, '#a8281f', 'centre')
+      label(c, 'MISSED', 234 + buzz, 127, '#14141c', 'centre')
+      label(c, `${Math.min(14, 3 + Math.floor(since / 600))} CALLS`, 234 + buzz, 138, '#c8402f', 'centre')
+      drawPerson(c, HERO_FIGURE, 'down', 0, { x: 100, y: 32, scale: 3 })
+      break
+    }
+    case 6: {
+      // A dinner for two. The candle outlasts it.
+      fillRect(c, '#0c0810', 0, 0, VIEW_W, VIEW_H)
+      glow(c, 160, 100, 90, '255,190,100', 0.1 + Math.sin(t / 130) * 0.015)
+      // The window, and a city that did not wait.
+      fillRect(c, '#10122a', 28, 14, 90, 70)
+      fillRect(c, '#05050c', 31, 17, 84, 64)
+      for (let i = 0; i < 40; i++) fillRect(c, noise(i, 4, 33) > 0.5 ? '#f8d070' : '#3a4a8a', 34 + (i * 13) % 78, 40 + (i * 7) % 38, 2, 2)
+      fillRect(c, '#10122a', 72, 17, 2, 64)
+      fillRect(c, '#4a2c1c', 0, 120, VIEW_W, 60)
+      fillRect(c, '#6a4228', 0, 120, VIEW_W, 2)
+      fillRect(c, '#e8e4d8', 60, 118, 200, 6)
+      fillRect(c, '#c8c0b0', 60, 124, 200, 30)
+      // Two plates, one eaten at, one not.
+      for (const px of [100, 200]) {
+        fillRect(c, '#f0ece0', px, 126, 34, 8)
+        fillRect(c, '#c8c0b0', px + 4, 128, 26, 4)
+      }
+      fillRect(c, '#8a5a2a', 106, 127, 14, 3)
+      // Her chair, pulled out; yours, never sat in.
+      fillRect(c, '#2e1a14', 64, 132, 24, 5)
+      fillRect(c, '#2e1a14', 66, 100, 4, 34)
+      fillRect(c, '#2e1a14', 232, 132, 24, 5)
+      // The candle.
+      fillRect(c, '#e8e4d8', 158, 106, 5, 16)
+      fillRect(c, '#f8d070', 159, 99 - (Math.floor(t / 130) % 2), 3, 6)
+      fillRect(c, '#fff6c8', 160, 101, 1, 3)
+      label(c, `${9 + Math.floor(since / 3500)}:${String(10 + Math.floor(since / 90) % 50).padStart(2, '0')} PM`, 160, 14, '#8a8aa8', 'centre')
+      // A figure at the window who has stopped checking.
+      drawPerson(c, WIFE, 'up', 0, { x: 52, y: 52, scale: 2 })
+      break
+    }
+    default: {
+      // First light, where you stopped.
+      const sky = ['#1a1830', '#2a2848', '#4a3a5a', '#8a5a5a']
+      sky.forEach((col, i) => fillRect(c, col, 0, i * 20, VIEW_W, 21))
+      c.fillStyle = `rgba(255,190,130,${0.1 + 0.2 * ease})`
+      c.beginPath()
+      c.moveTo(0, 40)
+      c.lineTo(110, 40)
+      c.lineTo(220, 180)
+      c.lineTo(60, 180)
+      c.fill()
+      fillRect(c, '#1c1620', 0, 118, VIEW_W, 62)
+      fillRect(c, '#05040a', 120, 14, 80, 86)
+      fillRect(c, '#2a2848', 124, 18, 72, 78)
+      fillRect(c, '#f2a65a', 124, 78 - ease * 14, 72, 18 + ease * 14)
+      // Bottles on their sides, chips left where they fell.
+      for (let i = 0; i < 6; i++) {
+        fillRect(c, '#0a0a10', 24 + i * 44, 150 + (i % 2) * 10, 16, 5)
+        fillRect(c, i % 2 ? '#2a8a4a' : '#c9a14a', 25 + i * 44, 151 + (i % 2) * 10, 11, 3)
+      }
+      for (let i = 0; i < 30; i++) fillRect(c, ['#c8402f', '#2a4aa8', '#f2c14e', '#14141c'][i % 4], 10 + noise(i, 1, 71) * 290, 124 + noise(i, 2, 71) * 50, 6, 3)
+      // You, slumped, with the one tidy stack.
+      chips(c, 186, 146, 12, '#f2c14e')
+      c.fillStyle = 'rgba(0,0,0,0.4)'
+      c.beginPath()
+      c.ellipse(126, 150, 26, 5, 0, 0, Math.PI * 2)
+      c.fill()
+      drawPerson(c, HERO_FIGURE, 'down', 0, { x: 100, y: 94, scale: 2 })
+      fillRect(c, '#1c1620', 94, 126, 64, 10)
+      fillRect(c, HERO_FIGURE.look.shirt, 100, 124, 52, 6)
+      break
+    }
+  }
+  // Fewer colours as it goes on; the warm years first, then the film goes cold.
+  if (beat >= 4) {
+    c.fillStyle = `rgba(20,24,60,${Math.min(0.32, (beat - 3) * 0.08)})`
+    c.fillRect(0, 0, VIEW_W, VIEW_H)
+  }
+  // Film bars, and the cut in.
+  fillRect(c, '#000', 0, 0, VIEW_W, 5)
+  fillRect(c, '#000', 0, VIEW_H - 5, VIEW_W, 5)
+  for (let x = 4; x < VIEW_W; x += 12) {
+    fillRect(c, '#2a2a34', x, 1, 5, 3)
+    fillRect(c, '#2a2a34', x, VIEW_H - 4, 5, 3)
+  }
+  vignette(c, 0.5)
+  const fade = 1 - Math.min(1, since / 450)
+  if (fade > 0) {
+    c.fillStyle = `rgba(${beat === 0 ? '255,255,255' : '0,0,0'},${fade})`
+    c.fillRect(0, 0, VIEW_W, VIEW_H)
+  }
 }
 
 function drawLedgerShot(c: Ctx, t: number, since: number) {
@@ -908,6 +1441,7 @@ export function EndingFilm({ onDone, startAt = 'stage' }: { onDone: (skipped?: b
     creditsY.current = 0
     creditsEnd.current = null
     if (s === 'stage') setLine(FILM.stage[0])
+    if (s === 'montage') setLine(FILM.montage[0])
     if (s === 'ledger') setLine(FILM.ledger.lines[0])
     if (s === 'credits') setLine(null)
     if (s === 'after') setLine(FILM.after.lines[0])
@@ -938,10 +1472,15 @@ export function EndingFilm({ onDone, startAt = 'stage' }: { onDone: (skipped?: b
     }
     const next = beat.current + 1
     if (s === 'stage') {
-      if (next >= FILM.stage.length) return cutTo('walk', 900)
+      if (next >= FILM.stage.length) return cutTo('montage', 900)
       beat.current = next
       beatT0.current = performance.now()
       setLine(FILM.stage[next])
+    } else if (s === 'montage') {
+      if (next >= FILM.montage.length) return cutTo('walk', 900)
+      beat.current = next
+      beatT0.current = performance.now()
+      setLine(FILM.montage[next])
     } else if (s === 'ledger') {
       if (next >= FILM.ledger.lines.length) return cutTo('phone')
       beat.current = next
@@ -1020,6 +1559,8 @@ export function EndingFilm({ onDone, startAt = 'stage' }: { onDone: (skipped?: b
         const s = shot.current
         if (s === 'stage') {
           drawStageShot(c, t, beat.current, now - beatT0.current)
+        } else if (s === 'montage') {
+          drawMontageShot(c, t, beat.current, now - beatT0.current)
         } else if (s === 'ledger') {
           drawLedgerShot(c, t, now - shotT0.current)
         } else if (s === 'credits') {

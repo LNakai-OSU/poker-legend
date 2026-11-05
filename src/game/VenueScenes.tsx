@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { VENUES } from '../world/content'
+import { PENTHOUSE_FLOORS } from '../world/cities'
 import { MenuScreen, buttonStyle } from './MenuScenes'
 import { playSound } from '../audio/audio'
 import type { GameState } from './state'
@@ -91,9 +92,12 @@ export function VenueScene({
 export function PenthouseScene({
   state,
   onBack,
+  onGoTo,
 }: {
   state: GameState
   onBack: () => void
+  /** Ride to a floor: the lobby, the workroom, the gym, the pool, or home. */
+  onGoTo: (areaId: string) => void
 }) {
   if (!state.flags.hasPenthouse) {
     return (
@@ -107,15 +111,77 @@ export function PenthouseScene({
   }
 
   return (
-    <MenuScreen title="Your Penthouse" onBack={onBack} backLabel="Take the lift down">
-      <p>Corner glass, harbour on two sides, and the felt table still by the window.</p>
-      <p style={{ color: '#9a9ab0' }}>
-        Day {state.day}. ${state.cash.toLocaleString()} in the safe, {state.stats.handsWon} pots taken,
-        biggest one ${state.stats.biggestPot.toLocaleString()}.
-      </p>
-      <p style={{ color: '#9a9ab0' }}>
-        The attendant presses the button before you reach it now.
-      </p>
+    <MenuScreen title="The Lift" subtitle="Every button works for you now." onBack={onBack} backLabel="Stay here">
+      <div
+        style={{
+          width: 'fit-content',
+          maxWidth: '100%',
+          boxSizing: 'border-box',
+          margin: '8px 0',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 12,
+          padding: '16px 20px',
+          background: 'linear-gradient(90deg, #8a6a2a, #d8b45a 30%, #f2dc92 50%, #d8b45a 70%, #8a6a2a)',
+          border: '3px solid #5a4218',
+          borderRadius: 8,
+          boxShadow: 'inset 0 0 0 2px rgba(255,244,200,0.45), 0 6px 18px rgba(0,0,0,0.6)',
+        }}
+      >
+        {[...PENTHOUSE_FLOORS].reverse().map((floor) => {
+          const here = state.areaId === floor.areaId
+          return (
+            <button
+              key={floor.areaId}
+              data-testid={`lift-${floor.areaId}`}
+              disabled={here}
+              aria-label={`${floor.label}, ${floor.name}`}
+              onClick={() => {
+                playSound('ui')
+                onGoTo(floor.areaId)
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 14,
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                cursor: here ? 'default' : 'pointer',
+                width: '100%',
+                fontFamily: 'inherit',
+              }}
+            >
+              <span
+                style={{
+                  width: 46,
+                  height: 46,
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 18,
+                  fontWeight: 700,
+                  color: here ? '#2a1a00' : '#3a2a10',
+                  background: here
+                    ? 'radial-gradient(circle at 50% 40%, #fff2b0, #ffb830 70%)'
+                    : 'radial-gradient(circle at 35% 30%, #fffbe8, #d8d0b8 60%, #9a9078)',
+                  border: '3px solid #5a4218',
+                  boxShadow: here
+                    ? '0 0 14px 3px rgba(255,190,60,0.85), inset 0 -3px 5px rgba(120,60,0,0.4)'
+                    : 'inset 0 -3px 5px rgba(0,0,0,0.3), 0 2px 3px rgba(0,0,0,0.5)',
+                }}
+              >
+                {floor.label}
+              </span>
+              <span style={{ color: '#2a1a00', fontSize: 14, fontWeight: 600, minWidth: 130, textAlign: 'left' }}>
+                {floor.name}
+                {here ? ' •' : ''}
+              </span>
+            </button>
+          )
+        })}
+      </div>
     </MenuScreen>
   )
 }
