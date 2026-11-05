@@ -894,7 +894,7 @@ function withAlpha(hex: string, a: number): string {
 
 function drawLights(c: CanvasRenderingContext2D, countdown: number) {
   // The gantry over the road: three red lamps going out one by one, then green.
-  const y = 20
+  const y = 40
   c.fillStyle = '#10101a'
   c.fillRect(VIEW_W / 2 - 40, y - 8, 80, 22)
   c.fillStyle = '#2a2a38'

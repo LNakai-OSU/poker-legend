@@ -2313,6 +2313,10 @@ await test('a table still works with every lesson bought', async () => {
   await talkTo(page, 'Pit Boss')
 
   assert(await page.locator('[data-testid="pot-value"]').isVisible(), 'the table did not render')
+  const tips = page.locator('[data-testid="tips-toggle"]')
+  assert(await tips.isVisible(), "Hal's tips toggle is missing")
+  assert(!(await page.locator('[data-testid="hand-read"]').isVisible()), "Hal's tips should start folded away")
+  await tips.click()
   assert(
     await page.locator('[data-testid="hand-read"]').isVisible(),
     'the hand-reading panel the lesson pays for is missing',
@@ -3201,6 +3205,8 @@ await test('the pot-odds coach never divides by an empty pot', async () => {
 
   const coach = page.locator('[data-testid="pot-odds"]')
   for (let i = 0; i < 60; i++) {
+    const toggle = page.locator('[data-testid="tips-toggle"]')
+    if ((await toggle.isVisible().catch(() => false)) && (await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click()
     if (await coach.isVisible().catch(() => false)) {
       const text = await coach.innerText()
       assert(!/into 0\b/.test(text), `pot-odds coach said: ${text}`)
@@ -3976,6 +3982,27 @@ await test('the characters and events tabs fit a phone', async () => {
     assertNoSaving(page)
     await page.close()
   }
+})
+
+await test('the race fills a landscape phone screen, with the pads over the road', async () => {
+  const device = { ...devices['iPhone 13'], viewport: { width: 844, height: 390 }, screen: { width: 844, height: 390 }, isMobile: true, hasTouch: true }
+  const page = await newPage(baseSave({ cityId: 'crescentHarbor', cash: 5000, ownedItemIds: ['beater'] }), device)
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(400)
+  await enterDoor(page, 'Auto Row')
+  await talkTo(page, 'Racer')
+  await page.locator('[data-testid^="race-harbor-dash-"]').first().click()
+  await page.waitForSelector('[data-testid="race-hud"]')
+  await page.waitForTimeout(1500)
+  const box = await page.locator('[data-testid="race-hud"]').boundingBox()
+  assert(box.height >= 388, `the road is ${Math.round(box.height)}px tall on a 390px screen`)
+  const pad = await page.locator('[aria-label="Steer left"]').boundingBox()
+  assert(pad.height >= 60, 'the pads are too small to hit')
+  assert(pad.y + pad.height <= 390 && pad.x >= 0, 'a pad is off the screen')
+  if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT })
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
 })
 
 await browser.close()

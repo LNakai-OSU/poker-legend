@@ -617,6 +617,8 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
 
   /** The raise sizes are a sheet over the table, opened from the Raise button. */
   const [raiseSheet, setRaiseSheet] = useState(false)
+  /** Hal's coaching lines stay folded away until asked for; the choice sticks between hands. */
+  const [tipsOpen, setTipsOpen] = useState(false)
   useEffect(() => setRaiseSheet(false), [publicState.handNumber, publicState.street, publicState.currentBet])
 
   const act = (type: 'fold' | 'check' | 'call') => {
@@ -833,9 +835,21 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
         </div>
       )
     } else {
+      const tipToggle = (
+        <button
+          type="button"
+          data-testid="tips-toggle"
+          aria-expanded={tipsOpen}
+          onClick={() => setTipsOpen((open) => !open)}
+          style={{ all: 'unset', cursor: 'pointer', display: 'block', width: '100%', pointerEvents: 'auto' }}
+        >
+          <PxLine scale={P} align="center" ink={INFO_INK} text={tipsOpen ? "▾ Hal's tips (hide)" : "▸ Hal's tips"} />
+        </button>
+      )
       const info = (
         <>
-          {handRead && (
+          {tipToggle}
+          {tipsOpen && handRead && (
             <PxLine
               scale={P}
               wrap
@@ -845,7 +859,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
               text={`${handRead.made} · ~${Math.round(handRead.equity * 100)}% to win`}
             />
           )}
-          {potOdds && (
+          {tipsOpen && potOdds && (
             <PxLine
               scale={P}
               wrap

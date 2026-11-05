@@ -9,7 +9,7 @@ import { MenuScreen, buttonStyle } from './MenuScenes'
 import { drawText, measureText } from './pixel/font'
 import { Raster, pack } from './pixel/raster'
 import { TYPE, UI_FONT } from './pixel/webFont'
-import { useCrispScale } from './useCrispScale'
+import { useTouchFirst } from './device'
 import {
   emptyTally,
   placeOf,
@@ -109,15 +109,15 @@ function label(v: number, words: [string, string, string, string]): string {
 // --- the dials ---------------------------------------------------------------
 
 const HUD_LIGHT = '#f4f0e0'
-const HUD_DIM = '#8a8aa0'
+const HUD_DIM = '#b4b4cc'
 
 function text(h: Raster, s: string, x: number, y: number, color = HUD_LIGHT, align: 'l' | 'c' | 'r' = 'l') {
   const w = measureText(s)
   drawText(h, s, align === 'l' ? x : align === 'c' ? Math.round(x - w / 2) : x - w, y, color, '#0a0a14')
 }
 
-function bar(h: Raster, x: number, y: number, w: number, fill: number, color: string, back = '#10101c') {
-  h.rect(x - 1, y - 1, w + 2, 6, '#05050c')
+function bar(h: Raster, x: number, y: number, w: number, fill: number, color: string, back = '#2a2a40') {
+  h.rect(x - 1, y - 1, w + 2, 6, '#6a6a88')
   h.rect(x, y, w, 4, back)
   h.rect(x, y, Math.round(w * Math.max(0, Math.min(1, fill))), 4, color)
   h.rect(x, y, Math.round(w * Math.max(0, Math.min(1, fill))), 1, shade(color, 1.35))
@@ -145,11 +145,11 @@ function line(h: Raster, x0: number, y0: number, x1: number, y1: number, ink: st
 /** The road from above in the corner, with the corners marked and every car on it. */
 function drawMinimap(h: Raster, a: Active, me: Racer) {
   const { shape, race } = a
-  const bw = 86
-  const bh = 44
+  const bw = 66
+  const bh = 34
   const x0 = VIEW_W - bw - 6
-  const y0 = 18
-  h.rect(x0 - 3, y0 - 3, bw + 6, bh + 6, pack('#05050c', 170))
+  const y0 = 22
+  h.rect(x0 - 3, y0 - 3, bw + 6, bh + 6, pack('#05050c', 120))
   const scale = Math.min(bw / Math.max(shape.w, 0.01), bh / Math.max(shape.h, 0.01))
   const ox = x0 + (bw - shape.w * scale) / 2
   const oy = y0 + (bh - shape.h * scale) / 2
@@ -213,6 +213,10 @@ function drawHud(h: Raster, a: Active, me: Racer, view: View, dt: number, racing
   if (ahead && racing) text(h, `${ahead.name} +${gap(ahead.dist - me.dist)}`, 8, 28, '#ff9a8a')
   if (behind && racing) text(h, `${behind.name} -${gap(me.dist - behind.dist)}`, 8, 39, '#8ad4ff')
 
+  // A dark backing behind each dial, so the numbers read over any road.
+  h.rect(4, VIEW_H - 44, 98, 38, pack('#05050c', 150))
+  h.rect(VIEW_W - 98, VIEW_H - 44, 94, 38, pack('#05050c', 150))
+
   // Speed, the way a dash shows it: the number and a row of ticks that light up.
   text(h, String(kmh), 8, VIEW_H - 40, HUD_LIGHT)
   text(h, 'KM/H', 8 + measureText(String(kmh)) + 4, VIEW_H - 40, HUD_DIM)
@@ -220,7 +224,7 @@ function drawHud(h: Raster, a: Active, me: Racer, view: View, dt: number, racing
   for (let i = 0; i < ticks; i++) {
     const on = i / ticks < vFrac
     const hot = i > ticks * 0.8
-    h.rect(8 + i * 4, VIEW_H - 28, 3, 6, on ? (hot ? '#ff5a3a' : '#f4d03c') : '#1c1c2c')
+    h.rect(8 + i * 4, VIEW_H - 28, 3, 6, on ? (hot ? '#ff5a3a' : '#f4d03c') : '#34344c')
   }
 
   // Boost and damage.
@@ -382,7 +386,19 @@ export function RaceScene({
   const hud = useRef<HTMLCanvasElement>(null)
   const input = useRef({ left: false, right: false, brake: false, boost: false })
   const finished = useRef(false)
-  const P = useCrispScale(VIEW_W, VIEW_H + 90, 4)
+  const [screen, setScreen] = useState({ w: window.innerWidth, h: window.innerHeight })
+  useEffect(() => {
+    const on = () => setScreen({ w: window.innerWidth, h: window.innerHeight })
+    window.addEventListener('resize', on)
+    window.addEventListener('orientationchange', on)
+    return () => {
+      window.removeEventListener('resize', on)
+      window.removeEventListener('orientationchange', on)
+    }
+  }, [])
+  /** The road is drawn at 320×200 and stretched to the biggest size the screen holds. */
+  const fit = Math.max(0.5, Math.min(screen.w / VIEW_W, screen.h / VIEW_H))
+  const touch = useTouchFirst()
 
   const cars = useMemo(() => ownedCars(state.ownedItemIds), [state.ownedItemIds])
   const car = cars.find((c) => c.id === pickedCar) ?? cars[0] ?? null
@@ -563,37 +579,52 @@ export function RaceScene({
       onPointerLeave: () => { input.current[key] = false },
       onPointerCancel: () => { input.current[key] = false },
     })
-    const pad: CSSProperties = { ...buttonStyle, flex: 1, padding: '14px 0', fontSize: TYPE.large, touchAction: 'none', userSelect: 'none' }
+    // On a wide screen the road leaves a bar either side: the pads live there, clear of the dials.
+    // On a narrower one they float over the corners, translucent.
+    const barW = (screen.w - VIEW_W * fit) / 2
+    const side = barW >= 80
+    const size = side ? Math.min(Math.floor(barW) - 20, 120) : Math.max(64, Math.min(96, screen.h * 0.18))
+    const pad: CSSProperties = {
+      ...buttonStyle, padding: 0, width: size, height: size, fontSize: TYPE.large, touchAction: 'none', userSelect: 'none',
+      opacity: side ? 0.9 : 0.5, borderRadius: 14, WebkitTapHighlightColor: 'transparent',
+    }
+    const column: CSSProperties = side
+      ? { position: 'absolute', bottom: 12, display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center', width: barW }
+      : { position: 'absolute', bottom: 12, display: 'flex', flexDirection: 'row', gap: 10 }
+    const cw = VIEW_W * fit
+    const ch = VIEW_H * fit
     return (
       <div
         data-testid="race"
         style={{
-          width: '100vw', minHeight: '100vh', background: '#07070d', color: '#e8e8f0', fontFamily: UI_FONT,
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8,
+          position: 'fixed', inset: 0, background: '#000', color: '#e8e8f0', fontFamily: UI_FONT, overflow: 'hidden',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'none', userSelect: 'none',
         }}
       >
-        <div style={{ position: 'relative', width: VIEW_W * P, height: VIEW_H * P }}>
+        <div style={{ position: 'relative', width: cw, height: ch }}>
           <canvas
             ref={scene}
             width={VIEW_W}
             height={VIEW_H}
-            style={{ position: 'absolute', inset: 0, width: VIEW_W * P, height: VIEW_H * P, imageRendering: 'pixelated', touchAction: 'none' }}
+            style={{ position: 'absolute', inset: 0, width: cw, height: ch, imageRendering: 'pixelated', touchAction: 'none' }}
           />
           <canvas
             ref={hud}
             data-testid="race-hud"
             width={VIEW_W}
             height={VIEW_H}
-            style={{ position: 'absolute', inset: 0, width: VIEW_W * P, height: VIEW_H * P, imageRendering: 'pixelated', pointerEvents: 'none' }}
+            style={{ position: 'absolute', inset: 0, width: cw, height: ch, imageRendering: 'pixelated', pointerEvents: 'none' }}
           />
         </div>
-        <div style={{ width: VIEW_W * P, display: 'flex', gap: 8 }}>
+        <div style={{ ...column, left: side ? 0 : 12 }}>
+          {side ? <button style={{ ...pad, background: '#2a6ab8' }} aria-label="Boost" {...hold('boost')}>Boost</button> : <button style={pad} aria-label="Brake" {...hold('brake')}>Brake</button>}
           <button style={pad} aria-label="Steer left" {...hold('left')}>◀</button>
-          <button style={pad} aria-label="Brake" {...hold('brake')}>Brake</button>
-          <button style={{ ...pad, background: '#2a6ab8' }} aria-label="Boost" {...hold('boost')}>Boost</button>
+        </div>
+        <div style={{ ...column, right: side ? 0 : 12 }}>
+          {side ? <button style={pad} aria-label="Brake" {...hold('brake')}>Brake</button> : <button style={{ ...pad, background: '#2a6ab8' }} aria-label="Boost" {...hold('boost')}>Boost</button>}
           <button style={pad} aria-label="Steer right" {...hold('right')}>▶</button>
         </div>
-        <div style={{ color: '#7a7a90', fontSize: TYPE.small }}>← → steer · Space brake · Shift boost</div>
+        {!touch && <div style={{ position: 'absolute', bottom: 4, width: '100%', textAlign: 'center', color: '#7a7a90', fontSize: TYPE.small, pointerEvents: 'none' }}>← → steer · Space brake · Shift boost</div>}
       </div>
     )
   }
