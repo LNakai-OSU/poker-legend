@@ -62,6 +62,7 @@ const STORY_SEEN = [
   'hal-sends-you-on',
   'hal-mesa-last-stop',
   'nadia-names-the-match',
+  'lumina-welcome',
   // When it goes wrong: beats for owing, going broke and the lost match.
   'hal-short-for-the-harbor',
   'rent-day',
@@ -2831,25 +2832,38 @@ await test('holding a key still walks continuously', async () => {
   await page.close()
 })
 
-await test('Nadia greets you at the foyer rope and says to win the tournament' , async () => {
+await test('Marcus and Dana greet you at the foyer rope and explain the tournament' , async () => {
   const page = await newPage(
     baseSave({
       cityId: 'portoLumina',
       cash: 200000,
       unlockedCityIds: ['apartment', 'portoLumina'],
       ownedItemIds: ['tuxedo'], // the room's dress code, or she never deals
-      completedEventIds: STORY_SEEN.filter((id) => id !== 'nadia-names-the-match'),
+      completedEventIds: STORY_SEEN.filter((id) => id !== 'lumina-welcome' && id !== 'nadia-names-the-match'),
     }),
   )
   await page.goto(BASE)
   await page.waitForSelector('canvas')
   await page.waitForTimeout(400)
   await enterDoor(page, 'Casino')
-  // The only way into the hall is the gap in the rope, and Nadia is waiting on it.
+  // The only way into the hall is the gap in the rope, and Marcus and Dana are waiting on it.
   await page.keyboard.press('ArrowUp')
   await page.waitForTimeout(600)
   const said = await readUntil(page, /Poker Legends tournament/)
   assert(!/120,000 each/.test(String(said)), 'the old heads-up buy-in is still being offered')
+  // Play it out: ask for the desk, and they walk you to it.
+  for (let i = 0; i < 60; i++) {
+    if (await page.locator('[data-testid="choice-prompt"]').isVisible().catch(() => false)) await page.keyboard.press('3')
+    else await page.keyboard.press(' ')
+    await page.waitForTimeout(250)
+    const row = Number(await page.locator('[data-testid="overworld"]').getAttribute('data-player-row').catch(() => 99))
+    if (row <= 5 && !(await page.locator('[data-testid="dialogue"]').isVisible().catch(() => false))) break
+  }
+  const at = await page.evaluate(() => {
+    const el = document.querySelector('[data-testid="overworld"]')
+    return { col: Number(el?.dataset.playerCol), row: Number(el?.dataset.playerRow) }
+  })
+  assert(at.row <= 5, `they did not walk you to the desk (you are at ${at.col},${at.row})`)
   await page.close()
 })
 

@@ -342,8 +342,8 @@ export const CHARACTERS: Record<string, CharacterDef> = {
           ],
         },
         {
-          // Nadia sends a car for him once she has named the match.
-          when: [{ kind: 'chapter', cityId: 'portoLumina' }, { kind: 'eventDone', eventId: 'nadia-names-the-match' }],
+          // Nadia sends a car for him; he is waiting at the foyer rope when you walk in.
+          when: [{ kind: 'chapter', cityId: 'portoLumina' }, { kind: 'eventDone', eventId: 'lumina-welcome' }],
           lines: ['Marcus: I am at the rail. That is the rule.'],
           schedule: [
             { period: 'afternoon', areaId: 'pl-street', col: 12, row: 6 },

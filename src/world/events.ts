@@ -2335,15 +2335,117 @@ export const EVENTS: GameEvent[] = [
     ],
   },
   {
-    id: 'nadia-names-the-match',
+    id: 'lumina-welcome',
     about:
-      'Coming through the foyer rope into the casino, Nadia is the first to greet you: she knows the kitchen table, somebody ' +
-      'has been writing to her about you, she sends a car for Marcus, and she says what it takes: win ' +
-      'the Poker Legends tournament and you have a seat at the Invitational. What you ask her is ' +
-      'heard again by Dana (`dana-reveal`) and Marcus (`marcus-at-the-rail`).',
+      'Coming through the foyer rope into the casino: Marcus and Dana are waiting for you. They explain the ' +
+      'tournament (the entry, ten rounds of ten hands, the blinds, the replacements, the final table, the seat at ' +
+      'the Invitational), foreshadow the final table and Nadia, and walk you to the entry desk. Nadia herself is met ' +
+      'later (`nadia-names-the-match`).',
     // The foyer is roped off but for one gap, so you cannot come into the hall without stepping on it.
     trigger: { kind: 'standOn', areaId: 'pl-casino', col: 20, row: 22 },
     conditions: [{ kind: 'chapter', cityId: 'portoLumina' }],
+    actions: [
+      {
+        kind: 'dialogue',
+        lines: ['A hall the size of a ballroom: nine tables under the chandeliers, and somebody in a sports jacket waving both arms at you.'],
+      },
+      { kind: 'moveNpc', characterId: 'marcus', from: { col: 14, row: 21 }, to: 'player', pace: 'run' },
+      {
+        kind: 'dialogue',
+        speaker: 'marcus',
+        lines: [
+          'Marcus: There he is! They would not let me past the rope until I said I was your uncle. The loud side.',
+          'Marcus: A car came for me, man. A driver. He called me Mr. Marcus. I have not stopped thinking about it.',
+        ],
+      },
+      { kind: 'moveNpc', characterId: 'dana', from: { col: 26, row: 21 }, to: 'player' },
+      {
+        kind: 'dialogue',
+        speaker: 'dana',
+        lines: [
+          'Dana: He means well. Let me tell it properly, because you only get the one chance to hear it.',
+          'Dana: Tonight is the Poker Legends tournament. Nine tables in this hall, and you play at one of them.',
+          'Dana: Twenty thousand to enter, and twenty thousand in chips to play with. Ten rounds, ten hands a round. Every round the blinds go up.',
+          'Dana: When somebody is knocked out, somebody new sits down in their chair with a stack that fits the stage. The table never thins.',
+          'Dana: Get through the tenth round and your table is announced as the final table. Beat everybody sat at it, and you have a seat at the Legends Invitational.',
+        ],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'marcus',
+        lines: [
+          'Marcus: Knocked out, and it is twenty thousand again, from the first hand. So do not get knocked out.',
+          'Marcus: The Invitational is the televised one. Six chairs and cameras on every one. That is the table I told you about on the 14.',
+        ],
+      },
+      {
+        kind: 'choice',
+        speaker: 'dana',
+        prompt: 'What do you ask?',
+        options: [
+          {
+            label: 'Who is at that table?',
+            then: [
+              {
+                kind: 'dialogue',
+                speaker: 'dana',
+                lines: [
+                  'Dana: People you have met on the way up, mostly. They are the ones who held on.',
+                  'Dana: And one chair at the end that is not for anybody who walks in off this floor. It has had the same name on it for four years.',
+                ],
+              },
+            ],
+          },
+          {
+            label: 'Who is Nadia?',
+            then: [
+              {
+                kind: 'dialogue',
+                speaker: 'dana',
+                lines: [
+                  'Dana: Nadia Okonkwo. She lives in the penthouse over this floor, and she has never lost the last table she sat at.',
+                  'Dana: She does not greet the floor. If she wants to see you, you will know it. I would be a little careful when she does.',
+                ],
+              },
+              { kind: 'dialogue', speaker: 'marcus', lines: ['Marcus: Careful. Right. She is lovely. She sent a car.'] },
+            ],
+          },
+          {
+            label: 'Take me to the desk',
+            then: [{ kind: 'dialogue', speaker: 'marcus', lines: ['Marcus: That is the spirit. Not a question in his head.'] }],
+          },
+        ],
+      },
+      { kind: 'dialogue', speaker: 'dana', lines: ['Dana: Come on. The entry desk is at the back, under the chandelier. We will walk you.'] },
+      { kind: 'moveNpc', characterId: 'dana', to: { col: 21, row: 4 } },
+      { kind: 'moveNpc', characterId: 'marcus', to: { col: 19, row: 4 }, youFollow: true },
+      {
+        kind: 'dialogue',
+        speaker: 'marcus',
+        lines: [
+          'Marcus: Here. Give the nice man twenty thousand and a smile. I will be at the rail, being your uncle.',
+          'Marcus: Go and be a story I can tell.',
+        ],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'dana',
+        lines: [
+          'Dana: One more thing. If you get to the final table, somebody will be sitting at the end of it, looking at you like she has read the last page.',
+          'Dana: Do not let her read you. Play the cards, not the woman. Go on.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'nadia-names-the-match',
+    about:
+      'Walking up to Nadia in the hall, after Marcus and Dana have foreshadowed her (`lumina-welcome`): she knows ' +
+      'the kitchen table, somebody has been writing to her about you, she sent a car for Marcus, and she ' +
+      'says what it takes: win the Poker Legends tournament and you sit across from her. What you ask her is ' +
+      'heard again by Dana (`dana-reveal`) and Marcus (`marcus-at-the-rail`).',
+    trigger: { kind: 'interact', poiId: 'nadia' },
+    conditions: [{ kind: 'chapter', cityId: 'portoLumina' }, { kind: 'eventDone', eventId: 'lumina-welcome' }],
     actions: [
       {
         kind: 'dialogue',
@@ -2351,9 +2453,8 @@ export const EVENTS: GameEvent[] = [
         lines: [
           'Nadia: So you are the one from the kitchen table in Basin.',
           'Nadia: Somebody I trust has been writing to me about you since Marcus’s game.',
-          'Nadia: Tonight the Poker Legends tournament plays out on this floor. Nine tables, ten rounds of ten hands, and the blinds go up with every round.',
-          'Nadia: Win it, and you have a seat at the final table of the Legends Invitational. Win that, and the floor upstairs goes with the trophy.',
-          'Nadia: The entry desk is at the back, under the chandelier. Twenty thousand. Lose, and it is twenty thousand again, from the first hand.',
+          'Nadia: Your friends will have told you how tonight works. Win the floor, and you have a seat at the final table of the Legends Invitational.',
+          'Nadia: The chair at the end of that table is mine. It has been for four years. Win that, and the floor upstairs goes with the trophy.',
           'Nadia: I have sent a car for your friend Marcus. A challenger should have somebody at the rail.',
         ],
       },
@@ -2390,7 +2491,7 @@ export const EVENTS: GameEvent[] = [
           },
         ],
       },
-      { kind: 'dialogue', speaker: 'nadia', lines: ['Nadia: The desk is open whenever you are.'] },
+      { kind: 'dialogue', speaker: 'nadia', lines: ['Nadia: The desk is at the back, under the chandelier. I will be watching the floor.'] },
     ],
   },
   {
@@ -2469,8 +2570,9 @@ export const EVENTS: GameEvent[] = [
     conditions: [
       { kind: 'flag', flag: 'wonPokerNight' },
       { kind: 'chapter', cityId: 'portoLumina' },
-      // He is only in Porto Lumina once she has sent the car; saying so keeps
+      // He is only in Porto Lumina once he has met you at the rope; saying so keeps
       // this apart from the kitchen table he deals in Basin before then.
+      { kind: 'eventDone', eventId: 'lumina-welcome' },
       { kind: 'eventDone', eventId: 'nadia-names-the-match' },
       { kind: 'flag', flag: 'hasPenthouse', set: false },
     ],
@@ -3044,7 +3146,7 @@ export const EVENTS: GameEvent[] = [
       { kind: 'flag', flag: 'wonPokerNight' },
       { kind: 'cashBelow', amount: 100 },
       { kind: 'chapter', cityId: ['apartment', 'silverCreek', 'riverbend', 'crescentHarbor', 'neonMesa', 'portoLumina'] },
-      { kind: 'eventDone', eventId: 'nadia-names-the-match', done: false },
+      { kind: 'eventDone', eventId: 'lumina-welcome', done: false },
       { kind: 'flag', flag: 'hasPenthouse', set: false },
     ],
     repeatable: true,
@@ -3119,6 +3221,7 @@ export const EVENTS: GameEvent[] = [
     conditions: [
       { kind: 'flag', flag: 'wonPokerNight' },
       { kind: 'chapter', cityId: 'portoLumina' },
+      { kind: 'eventDone', eventId: 'lumina-welcome' },
       { kind: 'eventDone', eventId: 'nadia-names-the-match' },
       { kind: 'eventDone', eventId: 'marcus-at-the-rail' },
       { kind: 'flag', flag: 'hasPenthouse', set: false },
