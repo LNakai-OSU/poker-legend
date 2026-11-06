@@ -1072,7 +1072,44 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
             )}
             {hint}
             {body && ending ? (
-              <div style={{ pointerEvents: 'auto', maxWidth: '100%' }}>{body}</div>
+              <div
+                data-testid="end-popup"
+                style={{
+                  position: 'fixed',
+                  inset: 0,
+                  zIndex: 50,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: 4 * P,
+                  boxSizing: 'border-box',
+                  background: 'radial-gradient(ellipse at center, rgba(6,8,14,0.55), rgba(6,8,14,0.82))',
+                  pointerEvents: 'auto',
+                  animation: 'end-popup-fade 260ms ease-out both',
+                }}
+              >
+                <style>{`@keyframes end-popup-fade{from{opacity:0}to{opacity:1}}@keyframes end-popup-rise{from{opacity:0;transform:translateY(14px) scale(.94)}to{opacity:1;transform:none}}`}</style>
+                <Panel
+                  theme={theme}
+                  scale={P}
+                  testId="end-popup-card"
+                  style={{
+                    padding: 5 * P,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 3 * P,
+                    width: 'min(100%, ' + Math.round(150 * P) + 'px)',
+                    maxHeight: '100%',
+                    overflowY: 'auto',
+                    boxSizing: 'border-box',
+                    boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
+                    animation: 'end-popup-rise 360ms cubic-bezier(.2,.9,.3,1.2) both',
+                  }}
+                >
+                  {body}
+                </Panel>
+              </div>
             ) : body ? (
               <Panel
                 theme={theme}
@@ -1144,7 +1181,7 @@ function EndPanel({
   return (
     <div
       data-testid={ending}
-      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 * P, textAlign: 'center' }}
+      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 * P, textAlign: 'center', width: '100%' }}
     >
       <h2 style={{ margin: 0, lineHeight: 0 }}>
         <PixelText text={title} scale={P} ink={{ color: theme.ui.outline, shadow: theme.ui.band }} />

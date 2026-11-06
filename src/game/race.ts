@@ -30,6 +30,12 @@ import { SEG, buildTrack, curveAt, slopeAt, type Track, type TrackSpec } from '.
 
 export const CAR_LENGTH = 4.5
 /**
+ * How far apart along the road two cars' middles are when they touch. The picture draws a car as a
+ * flat rear view at its middle, so there is no body in front of or behind that point to touch with:
+ * the cars meet when their pictures do, not a whole car-length before.
+ */
+export const CAR_REACH = 1.3
+/**
  * What things measure, in the units the view draws them in. The sim and the
  * picture both read these, so what you can see touching is what touches: a slick
  * is as wide on the road as it looks, and a car's sides are where they seem to be.
@@ -197,7 +203,7 @@ export function reachX(kind: HazardKind): number {
 
 /** Where along the road a thing touches, from its middle, for a car this long. */
 export function reachY(kind: HazardKind): number {
-  return kind === 'traffic' ? CAR_LENGTH : kind === 'oil' ? OIL_HALF_L + CAR_LENGTH / 2 : CONE_HALF_L + CAR_LENGTH / 2
+  return kind === 'traffic' ? CAR_REACH : kind === 'oil' ? OIL_HALF_L + CAR_REACH / 2 : CONE_HALF_L + CAR_REACH / 2
 }
 
 /** The widest a car's middle can be put without leaving the tarmac. */
@@ -398,7 +404,7 @@ function hits(race: Race, r: Racer, vmax: number) {
     const pos = hazardAt(h, race.t)
     const gap = pos - r.dist
     const lateral = Math.abs(r.x - h.lat)
-    if (h.kind === 'traffic' && !r.passed.includes(h.id) && gap < -CAR_LENGTH && gap > -CAR_LENGTH - 2.5 && !r.struck.includes(h.id)) {
+    if (h.kind === 'traffic' && !r.passed.includes(h.id) && gap < -CAR_REACH && gap > -CAR_REACH - 2.5 && !r.struck.includes(h.id)) {
       // Slipped by with a car-width to spare is a near miss: skilled, and worth a little.
       r.passed.push(h.id)
       if (lateral < HIT_X + 0.34 && r.v > 25) {
@@ -418,7 +424,7 @@ function hits(race: Race, r: Racer, vmax: number) {
       const damage = hurt(r, (0.06 + 0.95 * strength) * (0.35 + 0.65 * overlap), 'traffic')
       // Rear-ended it: you stop being inside it. You end up behind it, slowed to about its speed.
       if (overlap > 0.5 && gap > 0) {
-        r.dist = Math.min(r.dist, pos - CAR_LENGTH + 0.2)
+        r.dist = Math.min(r.dist, pos - CAR_REACH + 0.1)
         r.v = Math.max(MIN_SPEED, Math.min(r.v, h.speed * 0.95))
       } else {
         r.v = Math.max(MIN_SPEED, Math.min(r.v, h.speed + rel * 0.4))
@@ -444,7 +450,7 @@ function hits(race: Race, r: Racer, vmax: number) {
 /** The cars touch: the rear one backs off and both are shoved apart. */
 function contact(a: Racer, b: Racer, dt: number, t: number) {
   const gap = a.dist - b.dist
-  if (Math.abs(gap) > CAR_LENGTH || Math.abs(a.x - b.x) > HIT_X) return
+  if (Math.abs(gap) > CAR_REACH || Math.abs(a.x - b.x) > HIT_X) return
   const [front, rear] = gap >= 0 ? [a, b] : [b, a]
   if (!rear.wrecked) {
     const rel = Math.max(0, rear.v - front.v)
@@ -468,7 +474,7 @@ function draftWho(race: Race) {
   for (const r of race.racers) {
     r.draft = false
     if (r.wrecked || r.finish !== null) continue
-    const near = (at: number, lat: number) => at - r.dist > CAR_LENGTH + 1 && at - r.dist < 26 && Math.abs(lat - r.x) < 0.4
+    const near = (at: number, lat: number) => at - r.dist > CAR_REACH + 1 && at - r.dist < 26 && Math.abs(lat - r.x) < 0.4
     r.draft =
       race.racers.some((o) => o !== r && !o.wrecked && near(o.dist, o.x)) ||
       traffic.some((h) => near(hazardAt(h, race.t), h.lat))
@@ -493,7 +499,7 @@ function whatIsAhead(race: Race, r: Racer, look: number): Ahead[] {
   const out: Ahead[] = []
   for (const h of race.hazards) {
     const gap = hazardAt(h, race.t) - r.dist
-    if (gap < -CAR_LENGTH || gap > look) continue
+    if (gap < -CAR_REACH || gap > look) continue
     // The first time something comes into view, a driver either sees it or does not.
     if (!r.seen.includes(h.id)) {
       r.seen.push(h.id)
@@ -505,7 +511,7 @@ function whatIsAhead(race: Race, r: Racer, look: number): Ahead[] {
   for (const o of race.racers) {
     if (o === r) continue
     const gap = o.dist - r.dist
-    if (gap < -CAR_LENGTH || gap > look) continue
+    if (gap < -CAR_REACH || gap > look) continue
     out.push({ gap, lat: o.x, speed: o.wrecked ? 0 : o.v, weight: o.wrecked ? 1 : 0.8, reach: HIT_X })
   }
   return out
@@ -605,7 +611,7 @@ export function threatOf(race: Race, r: Racer): Threat | null {
   }
   for (const o of race.racers) {
     if (o === r) continue
-    consider(o.wrecked ? 'wreck' : 'car', o.id, o.dist - r.dist - CAR_LENGTH, o.x, o.wrecked ? 0 : o.v, HIT_X, 0)
+    consider(o.wrecked ? 'wreck' : 'car', o.id, o.dist - r.dist - CAR_REACH, o.x, o.wrecked ? 0 : o.v, HIT_X, 0)
   }
   return best
 }
