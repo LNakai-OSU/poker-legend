@@ -357,8 +357,8 @@ const RIVERBOAT_FLOOR = parseMap(`
 ^RRRFRRRRFFFFRRRRRRRRRRRRRRRRRRRFFRRRRRRR^
 ^RRRFRRRRRRRRRRFFRRRRRRRRRRFRRRRRRRRRRRRR^
 ^RRRRRRRRRRRRRRRRRRRRRFFRRRFRRRRRRRRRFFRR^
-^RRRRRRRFRRRRRRRRRRFRRRRRRRRRRRRRFRRRRRRR^
-^RRRRRRRFRRFRRRFRRRRRRRRRFFRRRFRRFRRRRRRR^
+^RRRRRRRFRRRRRRRRRRFRRRRFFFFRRRRRFRRRRRRR^
+^RRRRRRRFRRFRRRFRRRRRRRRFFFFRRFRRFRRRRRRR^
 ^FRRRRRRRRRFRRRRRRRRRRRRRRRRRRRRRRRRRRRRR^
 ^RRRRFRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRF^
 ^^^^^^^^^^^^^D^^^^^^^^D^^^^^^^^^^^^^^^^^^^
@@ -414,14 +414,14 @@ const CAY_FLOOR = parseMap(`
 ^F''FF'''F''''FFFF''FFFF''F''F''''''F^
 ^'''''''''''''FFFF''FFFF'''''F''F''''^
 ^''''''''''''''''''''''''''''''''''''^
-^''FF''''''''''''''''''''''''''''''''^
-^'''''''''''''F''''''''''''''''''''''^
+^''FF'''''''''''''''''''FFFF'''''''''^
+^'''''''''''''F'''''''''FFFF'''''''''^
 ^'''''''FFF'''F''''''''''''''FFF'''''^
 ^'''F'''FFF''''''FFFF''FF''''FFF'''''^
 ^F''''''''''''F''FFFF'''''''''''''''F^
 ^F''''''''''''F'''''''''''''''''''''F^
 ^''''''''''''''''''''''F'''''''''''''^
-^'''F''FF''F''''''FF'''''''''''''''''^
+^'''F''FF''F'''''''''''''''''''''''''^
 ^'''''''''''''''''''''''''F''FF''FF''^
 ^''''''''''''''F'''''''''''''''''''''^
 ^''''''''''''''''''''''''''''''''''''^
@@ -442,8 +442,8 @@ const MESA_FLOOR = parseMap(`
 ^!!!!!F!!FFFFF!!!!!!!!!!!!!!!!FFF!!!!!!!!^
 ^!!F!!F!!FFFFF!!!F!!FFF!!!F!!!!!!!!!!!!!!^
 ^!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!FFF!!F^
-^!!!!!!!!!!!!!!!F!!!!!!!!!!!!!!!!!!!!!!!!^
-^!!!!!F!!FF!!!!!F!!!!!!!!F!!!!!!!!!!!!!!!^
+^!!!!!!!FFFF!!!!F!!!!!!!!!!!!!!!!!!!!!!!!^
+^!!!!!F!FFFF!!!!F!!!!!!!!F!!!!!!!!!!!!!!!^
 ^FFF!!!!!!!!!!!!!!!!!!!!!F!!!!!!!!!F!!!!!^
 ^FFF!!F!!!!!!!!!!!!!FF!!!!!!!!FF!!!!!!!!!^
 ^!!!!!F!!!FFF!!!F!!!!!!!!!!!!!!!!!!!!!F!!^
@@ -480,8 +480,8 @@ const LUMINA_FLOOR = parseMap(`
 ^MMMMMMMMMM&&&&&&&&&&&F&&&&&&&&&F&&&&&&&&&&&&&&MMMMMMMMMM^
 ^FMMMMMMMFFFF&&&&&&&&&&&&&&&&&&&&&&&&&&&&&FF&&&MMMMMMMMMF^
 ^FMMFFFMMFFFF&&F&&&&&&&&&&&&&&&F&&F&&&&&&&&&F&&MMMFFMMMMF^
-^MMMMMMMMMM&&&&F&&F&&&&&&&&&F&&F&&F&&F&&&&&&&&&MMMMMMMMMM^
-^MMMMMMMMMM&&&&&&&&&&&FF&&&&&&&&&&&&&&&&&&F&&&&MMMMMMMMMM^
+^MMMMMMMMMM&&&&F&&F&&FFFF&&&F&&F&&F&&F&&&&&&&&&MMMMMMMMMM^
+^MMMMMMMMMM&&&&&&&&&&FFFF&&&&&&&&&&&&&&&&&F&&&&MMMMMMMMMM^
 ^MMMMMMMMMM&&&&&&&&&&&&&&&&&&&&&F&&&&&&&&&&&&&&F&MFMMMMMM^
 ^MMMMMMMMMM&&&&&&&&&&&&&&&&&&&&&F&&&&&&&&&&&&&&&&MFMMFMMM^
 ^MMMFFFMMMF&&&&&FFF&&&&&&&FFF&&&&&&&FFF&&&&&&&&MMMMMMMMMM^
@@ -2219,8 +2219,8 @@ const palmCay: CityDef = {
         {
           id: 'pc-racebook',
           name: 'Racebook',
-          col: 18,
-          row: 17,
+          col: 25,
+          row: 11,
           color: COLORS.flavor,
           art: 'none',
           lines: ['Six runners on a board under a ceiling fan. The clerk says the ponies are faster in the afternoon.'],
@@ -3295,7 +3295,7 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
   // tables with a reef bank between them, the wheel, a bank either side of the
   // door. The tiki bar, the cage and the back bank are a walk up, whole above it.
   'pc-casino': [
-    { stampId: 'racebook', col: 17, row: 16 },
+    { stampId: 'racebook', col: 24, row: 10 },
     { stampId: 'palm', col: 1, row: 1 },
     { stampId: 'fern', col: 3, row: 2 },
     { stampId: 'slot-bank-island', col: 7, row: 1 },

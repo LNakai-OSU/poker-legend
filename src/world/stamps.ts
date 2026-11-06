@@ -279,7 +279,7 @@ export const STAMPS: StampDef[] = [
     name: 'Racebook',
     category: 'casino',
     about: 'A tote board of six runners over a betting counter. Horses, on a screen, forever.',
-    tiles: ['????', '?FF?', '????'].join('\n'),
+    tiles: ['FFFF', 'FFFF'].join('\n'),
     wiring: { kind: 'poi', at: { col: 1, row: 1 }, name: 'Racebook', action: 'horses' },
   },
   {

@@ -649,33 +649,33 @@ const roulette: StampArt = {
 /** The racebook: a tote board of six runners lit over a betting counter, a ticket spike and a stack of form guides. */
 const racebook: StampArt = {
   draw: (px, c) => {
-    const x = 4
-    const y = 5
-    const w = c.w - 8
-    shadow(px, x + 3, y + 4, w, c.h - 12, 0.35)
+    const x = 1
+    const y = 1
+    const w = c.w - 2
+    shadow(px, x + 2, y + 3, w, c.h - 3, 0.35)
     // The board: a black screen in a brass frame, six lines of runners and their prices.
-    px(x, y, w, 22, '#c8a040')
-    px(x + 1, y + 1, w - 2, 20, '#0c0a12')
-    text(px, 'RACES', x + 3, y + 3, '#f2c84a')
+    px(x, y, w, 17, '#c8a040')
+    px(x + 1, y + 1, w - 2, 15, '#0c0a12')
+    text(px, 'RACES', x + 3, y + 2, '#f2c84a')
     const lamps = ['#e83a3a', '#3a6ae8', '#f2c84a', '#3ac860', '#f4f0e4', '#c850d8']
     for (let i = 0; i < 6; i++) {
-      const ly = y + 9 + (i % 3) * 4
+      const ly = y + 8 + (i % 3) * 3
       const lx = x + 4 + Math.floor(i / 3) * Math.round((w - 8) / 2)
       px(lx, ly, 2, 2, lamps[i])
       px(lx + 4, ly, 9 + ((i * 5) % 7), 1, '#d8d8e0')
       px(lx + 20 - ((i * 3) % 5), ly, 5, 1, '#5ae870')
     }
     // The counter, and the ticket window in it.
-    px(x, y + 22, w, 14, '#24140a')
-    px(x + 1, y + 22, w - 2, 12, '#4a2e1a')
-    px(x + 1, y + 22, w - 2, 1, '#7a5434')
-    px(x + 6, y + 25, 12, 7, '#14100c')
-    px(x + 7, y + 26, 10, 5, '#2a2018')
+    px(x, y + 17, w, 13, '#24140a')
+    px(x + 1, y + 17, w - 2, 11, '#4a2e1a')
+    px(x + 1, y + 17, w - 2, 1, '#7a5434')
+    px(x + 6, y + 20, 12, 7, '#14100c')
+    px(x + 7, y + 21, 10, 5, '#2a2018')
     // Form guides and a ticket spike on the counter.
-    px(x + w - 16, y + 23, 7, 3, '#f4f0e4')
-    px(x + w - 15, y + 24, 5, 1, '#8a8a98')
-    px(x + w - 8, y + 21, 1, 3, '#c8c8d0')
-    px(x + w - 9, y + 23, 3, 1, '#e83a3a')
+    px(x + w - 16, y + 18, 7, 3, '#f4f0e4')
+    px(x + w - 15, y + 19, 5, 1, '#8a8a98')
+    px(x + w - 8, y + 16, 1, 3, '#c8c8d0')
+    px(x + w - 9, y + 18, 3, 1, '#e83a3a')
   },
 }
 
