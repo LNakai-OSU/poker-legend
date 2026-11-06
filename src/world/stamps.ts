@@ -271,7 +271,7 @@ export const STAMPS: StampDef[] = [
     name: 'Roulette',
     category: 'casino',
     about: 'The wheel at one end, the layout at the other.',
-    tiles: ['????', '?FF?', '????'].join('\n'),
+    tiles: ['????', 'FFFF', '????'].join('\n'),
     wiring: { kind: 'poi', at: { col: 1, row: 1 }, name: 'Roulette Table', action: 'roulette' },
   },
   {
@@ -341,7 +341,7 @@ export const STAMPS: StampDef[] = [
   fixture('kitchenette', 'Kitchenette', 'A fridge, a sink, a stove, cupboards over. Against the back wall.', ['FFF', 'FFF']),
   fixture('bookshelf', 'Bookshelf', 'Coloured spines on four shelves. Against the back wall.', ['FF', 'FF']),
   fixture('bookshelf-dark', 'Dark bookshelf', 'Older books, darker wood.', ['FF', 'FF']),
-  fixture('table-chairs', 'Table and chairs', 'A small table with two chairs pulled up.', ['FF', '??']),
+  fixture('table-chairs', 'Table and chairs', 'A small table with two chairs pulled up.', ['FF', 'FF']),
   fixture('rug-red', 'Red rug', 'Walk on it.', ['???', '???']),
   fixture('rug-blue', 'Blue rug', 'Walk on it.', ['???', '???']),
   fixture('rug-green', 'Green rug', 'Walk on it.', ['???', '???']),

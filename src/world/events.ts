@@ -4611,7 +4611,7 @@ export const EVENTS: GameEvent[] = [
         ],
       },
       // Back from the mail: at the kitchen table where you read it, not at the door.
-      { kind: 'teleport', areaId: 'home', col: 3, row: 5 },
+      { kind: 'teleport', areaId: 'home', col: 4, row: 5 },
       { kind: 'fade', to: 'in' },
       // After the film, or after skipping it: how to play, once, in one line.
       {

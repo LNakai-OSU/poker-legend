@@ -1,4 +1,5 @@
 import { isWalkable, parseMap } from '../overworld/tileRenderer'
+import { FURNITURE } from '../overworld/tiles'
 import { MISSIONS, SPONSORS } from './npcs'
 import type { AreaDef, CityDef, PoiDef } from './types'
 import { STAMPS, type PlacedStamp } from './stamps'
@@ -608,7 +609,7 @@ const LANDING_DINER = parseMap(`
 ^FFFGGFFGGFGGFF^
 ^GGGGGGGGGFGGFF^
 ^GGGGGGGGGGGGGG^
-^GFFGGFFGGGGGFF^
+^GFFGFFGGGGGGFF^
 ^FGGGGGGGGGGGFF^
 ^^^^^^^D^^^^^^^^
 `)
@@ -3585,7 +3586,7 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'jukebox', col: 10, row: 4 },
     { stampId: 'booth', col: 13, row: 4 },
     { stampId: 'table-chairs', col: 2, row: 7 },
-    { stampId: 'table-chairs', col: 6, row: 7 },
+    { stampId: 'table-chairs', col: 5, row: 7 },
     { stampId: 'booth', col: 13, row: 7 },
     { stampId: 'plant-tall', col: 1, row: 8 },
   ],
@@ -4276,6 +4277,23 @@ const CROWD: Record<string, number> = {
   'pl-casino': 1,
 }
 
+/**
+ * A roulette table is drawn nearly as wide as its footprint, so its ends are
+ * furniture too; left walkable, the player stands on the felt. Written here so
+ * the casino maps need not repeat it by hand.
+ */
+function solidifyStamps(area: AreaDef) {
+  for (const placed of area.stamps ?? []) {
+    const stamp = STAMPS.find((st) => st.id === placed.stampId)
+    if (!stamp || (stamp.id !== 'roulette' && stamp.id !== 'table-chairs')) continue
+    stamp.tiles.split('\n').forEach((line, r) => {
+      for (let c = 0; c < line.length; c++) {
+        if (line[c] === 'F') area.map[placed.row + r][placed.col + c] = FURNITURE
+      }
+    })
+  }
+}
+
 function addSlotMachines(area: AreaDef) {
   for (const placed of area.stamps ?? []) {
     if (!placed.stampId.startsWith('slot-bank')) continue
@@ -4312,6 +4330,7 @@ export const AREAS: Record<string, { area: AreaDef; cityId: CityId }> = (() => {
         area.stamps = OUTSKIRTS[area.id].stamps
         area.moonlit = true
       }
+      solidifyStamps(area)
       addSlotMachines(area)
       if (CROWD[area.id] !== undefined) area.crowd = CROWD[area.id]
       index[area.id] = { area, cityId: city.id }
