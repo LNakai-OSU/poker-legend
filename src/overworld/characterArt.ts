@@ -2640,11 +2640,9 @@ const OUTFITS: Record<NpcRole, (look: PersonLook) => Outfit> = {
 
   player: (look) => look.wear ? heroWearing(look, look.wear) : ({
     colors: {
-      top: '#e9a630', sleeve: '#e9a630', under: '#f4f4f6', legs: '#3a5c9e',
-      shoe: '#d23c3c', hat: '#d23c3c', pack: '#2e6c8e',
+      top: '#4f7a5e', sleeve: '#4f7a5e', under: '#e8e2d4', legs: '#4a4038',
+      shoe: '#2a2220', pack: '#7a5a3a',
     },
-    hat: 'hero',
-    hair: 'hero',
     patterns: ['soles'],
     behind: {
       left: [at(13,

@@ -3337,10 +3337,14 @@ await test('touch controls appear on a phone and move the player', async () => {
   await page.waitForTimeout(600)
   assert(await page.locator('[data-testid="touch-controls"]').isVisible(), 'no touch controls')
   const before = await posOf(page)
-  const pad = page.locator('[data-testid="pad-up"]')
-  const box = await pad.boundingBox()
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  // The stick floats: it appears wherever the thumb lands, then a drag up walks up.
+  const zone = await page.locator('[data-testid="touch-stick-zone"]').boundingBox()
+  const x0 = zone.x + zone.width / 2
+  const y0 = zone.y + zone.height / 2
+  await page.mouse.move(x0, y0)
   await page.mouse.down()
+  await page.mouse.move(x0, y0 - 40, { steps: 4 })
+  assert(await page.locator('[data-testid="touch-stick-base"]').isVisible(), 'the stick did not appear under the thumb')
   await page.waitForTimeout(500)
   await page.mouse.up()
   await page.waitForTimeout(300)

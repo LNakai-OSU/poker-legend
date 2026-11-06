@@ -20,7 +20,7 @@ import {
 /** The hero. One design, never recoloured: you should find yourself on any screen at a glance. */
 export const HERO_FIGURE: Figure = {
   role: 'player',
-  look: { skin: '#eab88c', hair: '#4a2a18', hairStyle: 'short', shirt: '#e9a630', accessory: 'none' },
+  look: { skin: '#eab88c', hair: '#4a2a18', hairStyle: 'short', shirt: '#4f7a5e', accessory: 'none' },
 }
 
 const heroListeners = new Set<() => void>()

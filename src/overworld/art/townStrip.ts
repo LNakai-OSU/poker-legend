@@ -468,6 +468,8 @@ function mesaTower(name: string, glass: string, accent: { core: string; tube: st
 /** A parking garage with a billboard on the roof. */
 const garageMesa: StampArt = {
   bleed: { left: 1, right: 3, top: 6 },
+  // The billboard and roof band stand over the benches and palms on the pavement north of it.
+  standsUp: 14,
   frames: 2,
   draw: (px, c) => {
     const { w, h, frame } = c
