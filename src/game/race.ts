@@ -42,10 +42,10 @@ export const CAR_REACH = 1.3
  */
 export const CAR_HALF_W = 0.23
 /** Road halves across: the half-width of each thing's footprint. */
-export const OIL_HALF_W = 0.55
-export const CONE_HALF_W = 0.3
+export const OIL_HALF_W = 0.3
+export const CONE_HALF_W = 0.22
 /** Metres along the road: half the length of each thing's footprint. */
-export const OIL_HALF_L = 5.5
+export const OIL_HALF_L = 3.2
 export const CONE_HALF_L = 0.7
 /** How close across the road two cars must be to touch. */
 const HIT_X = CAR_HALF_W * 2
@@ -229,7 +229,7 @@ export function layRoad(length: number, traffic: number, rng: Rng): Hazard[] {
     const cluster: Hazard[] = []
     for (const lat of shuffle(LANES, rng).slice(0, count)) {
       const roll = rng()
-      const kind: HazardKind = roll < 0.6 ? 'traffic' : roll < 0.82 ? 'oil' : 'cone'
+      const kind: HazardKind = roll < 0.64 ? 'traffic' : roll < 0.8 ? 'oil' : 'cone'
       const next: Hazard = { id: id++, at: at + (rng() - 0.5) * 10, lat, kind, speed: kind === 'traffic' ? 20 + rng() * 8 : 0 }
       if (hasWayThrough([...cluster, next])) cluster.push(next)
     }
@@ -435,9 +435,9 @@ function hits(race: Race, r: Racer, vmax: number) {
       r.events.push({ kind: 'hit', cause: 'traffic', strength, damage, id: h.id })
     } else if (h.kind === 'oil') {
       // Oil takes the grip away; the car goes on in the direction it was already moving.
-      r.oil = 1.3
+      r.oil = 0.8
       r.hitLog.oil++
-      r.skid += Math.sign(r.steer || (race.rng() < 0.5 ? -1 : 1)) * (0.5 + 0.5 * Math.min(1, r.v / vmax))
+      r.skid += Math.sign(r.steer || (race.rng() < 0.5 ? -1 : 1)) * (0.3 + 0.3 * Math.min(1, r.v / vmax))
       r.events.push({ kind: 'oil', id: h.id })
     } else {
       const damage = hurt(r, 0.035, 'cone')

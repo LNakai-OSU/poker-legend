@@ -365,15 +365,15 @@ describe('what is on the road', () => {
 
   it('throws the car sideways on oil, and no damage', () => {
     const { race, r } = withThing('oil', 0)
-    r.steer = 0.6
+    r.steer = 0.05
     let skid = 0
     for (let i = 0; i < 60 * 3 && r.hitLog.oil === 0; i++) {
-      stepRace(race, 1 / 60, { steer: 0.6, brake: false, boost: false })
+      stepRace(race, 1 / 60, { steer: 0.05, brake: false, boost: false })
       skid = r.skid
     }
     expect(r.hitLog.oil).toBe(1)
     expect(r.damage).toBe(0)
-    expect(Math.abs(skid)).toBeGreaterThan(0.3)
+    expect(Math.abs(skid)).toBeGreaterThan(0.2)
   })
 
   it('gives the wheel back faster if you ease off it than if you fight the skid', () => {
