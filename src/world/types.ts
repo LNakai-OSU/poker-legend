@@ -209,6 +209,7 @@ export type PoiAction =
   | { kind: 'slots' }
   | { kind: 'craps' }
   | { kind: 'roulette' }
+  | { kind: 'horses' }
   /** The street races on offer here, listed by id in `racing.ts`. */
   | { kind: 'race'; raceIds: string[] }
   | { kind: 'venue'; venueId: string }

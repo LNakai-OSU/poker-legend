@@ -48,7 +48,7 @@ function glow(r: Raster, cx: number, cy: number, rx: number, ry: number, hex: st
 // The room
 // ---------------------------------------------------------------------------
 
-export type HallKind = 'slots' | 'craps' | 'roulette'
+export type HallKind = 'slots' | 'craps' | 'roulette' | 'horses'
 
 /** The casino a game is played in: wall, carpet and the lights of the room. */
 export function paintHall(kind: HallKind, theme: TableTheme, w: number, h: number): Raster {

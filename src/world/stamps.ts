@@ -271,8 +271,16 @@ export const STAMPS: StampDef[] = [
     name: 'Roulette',
     category: 'casino',
     about: 'The wheel at one end, the layout at the other.',
-    tiles: ['????', 'FFFF', '????'].join('\n'),
+    tiles: ['????', 'FFFF', 'FFFF'].join('\n'),
     wiring: { kind: 'poi', at: { col: 1, row: 1 }, name: 'Roulette Table', action: 'roulette' },
+  },
+  {
+    id: 'racebook',
+    name: 'Racebook',
+    category: 'casino',
+    about: 'A tote board of six runners over a betting counter. Horses, on a screen, forever.',
+    tiles: ['????', '?FF?', '????'].join('\n'),
+    wiring: { kind: 'poi', at: { col: 1, row: 1 }, name: 'Racebook', action: 'horses' },
   },
   {
     id: 'cashier-cage',

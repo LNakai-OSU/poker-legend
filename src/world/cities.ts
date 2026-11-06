@@ -358,7 +358,7 @@ const RIVERBOAT_FLOOR = parseMap(`
 ^RRRFRRRRRRRRRRFFRRRRRRRRRRFRRRRRRRRRRRRR^
 ^RRRRRRRRRRRRRRRRRRRRRFFRRRFRRRRRRRRRFFRR^
 ^RRRRRRRFRRRRRRRRRRFRRRRRRRRRRRRRFRRRRRRR^
-^RRRRRRRFRRFRRRFRRRRRRRRRRRRRRFRRFRRRRRRR^
+^RRRRRRRFRRFRRRFRRRRRRRRRFFRRRFRRFRRRRRRR^
 ^FRRRRRRRRRFRRRRRRRRRRRRRRRRRRRRRRRRRRRRR^
 ^RRRRFRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRF^
 ^^^^^^^^^^^^^D^^^^^^^^D^^^^^^^^^^^^^^^^^^^
@@ -421,7 +421,7 @@ const CAY_FLOOR = parseMap(`
 ^F''''''''''''F''FFFF'''''''''''''''F^
 ^F''''''''''''F'''''''''''''''''''''F^
 ^''''''''''''''''''''''F'''''''''''''^
-^'''F''FF''F'''''''''''''''''''''''''^
+^'''F''FF''F''''''FF'''''''''''''''''^
 ^'''''''''''''''''''''''''F''FF''FF''^
 ^''''''''''''''F'''''''''''''''''''''^
 ^''''''''''''''''''''''''''''''''''''^
@@ -443,7 +443,7 @@ const MESA_FLOOR = parseMap(`
 ^!!F!!F!!FFFFF!!!F!!FFF!!!F!!!!!!!!!!!!!!^
 ^!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!FFF!!F^
 ^!!!!!!!!!!!!!!!F!!!!!!!!!!!!!!!!!!!!!!!!^
-^!!!!!F!!!!!!!!!F!!!!!!!!F!!!!!!!!!!!!!!!^
+^!!!!!F!!FF!!!!!F!!!!!!!!F!!!!!!!!!!!!!!!^
 ^FFF!!!!!!!!!!!!!!!!!!!!!F!!!!!!!!!F!!!!!^
 ^FFF!!F!!!!!!!!!!!!!FF!!!!!!!!FF!!!!!!!!!^
 ^!!!!!F!!!FFF!!!F!!!!!!!!!!!!!!!!!!!!!F!!^
@@ -481,7 +481,7 @@ const LUMINA_FLOOR = parseMap(`
 ^FMMMMMMMFFFF&&&&&&&&&&&&&&&&&&&&&&&&&&&&&FF&&&MMMMMMMMMF^
 ^FMMFFFMMFFFF&&F&&&&&&&&&&&&&&&F&&F&&&&&&&&&F&&MMMFFMMMMF^
 ^MMMMMMMMMM&&&&F&&F&&&&&&&&&F&&F&&F&&F&&&&&&&&&MMMMMMMMMM^
-^MMMMMMMMMM&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&F&&&&MMMMMMMMMM^
+^MMMMMMMMMM&&&&&&&&&&&FF&&&&&&&&&&&&&&&&&&F&&&&MMMMMMMMMM^
 ^MMMMMMMMMM&&&&&&&&&&&&&&&&&&&&&F&&&&&&&&&&&&&&F&MFMMMMMM^
 ^MMMMMMMMMM&&&&&&&&&&&&&&&&&&&&&F&&&&&&&&&&&&&&&&MFMMFMMM^
 ^MMMFFFMMMF&&&&&FFF&&&&&&&FFF&&&&&&&FFF&&&&&&&&MMMMMMMMMM^
@@ -1660,6 +1660,16 @@ const riverbend: CityDef = {
           'Bartender: Do not tell him I said that. Do not tell him anything, honestly.',
         ]),
         {
+          id: 'rb-racebook',
+          name: 'Racebook',
+          col: 25,
+          row: 16,
+          color: COLORS.flavor,
+          art: 'none',
+          lines: ['A tote board bolted over the bar rail. The river is on the screen, and so, somehow, is a racecourse in Kentucky.'],
+          action: { kind: 'horses' },
+        },
+        {
           id: 'rb-roulette',
           name: 'Roulette Table',
           col: 32,
@@ -2207,6 +2217,16 @@ const palmCay: CityDef = {
           action: { kind: 'table', tableId: 'palmcay-tourist' },
         },
         {
+          id: 'pc-racebook',
+          name: 'Racebook',
+          col: 18,
+          row: 17,
+          color: COLORS.flavor,
+          art: 'none',
+          lines: ['Six runners on a board under a ceiling fan. The clerk says the ponies are faster in the afternoon.'],
+          action: { kind: 'horses' },
+        },
+        {
           id: 'pc-roulette',
           name: 'Roulette Table',
           col: 20,
@@ -2498,7 +2518,7 @@ const neonMesa: CityDef = {
         {
           id: 'mesa-croupier',
           name: 'Croupier',
-          col: 31,
+          col: 32,
           row: 10,
           color: COLORS.local,
           role: 'dealer',
@@ -2557,6 +2577,16 @@ const neonMesa: CityDef = {
           art: 'none',
           lines: ['Five machines and a jackpot board that has not stopped counting since the place opened.'],
           action: { kind: 'slots' },
+        },
+        {
+          id: 'nm-racebook',
+          name: 'Racebook',
+          col: 9,
+          row: 9,
+          color: COLORS.flavor,
+          art: 'none',
+          lines: ['The board flickers neon green. Every horse on it is named for a mistake somebody here has already made.'],
+          action: { kind: 'horses' },
         },
         {
           id: 'nm-roulette',
@@ -2819,6 +2849,16 @@ const portoLumina: CityDef = {
           role: 'clerk',
           lines: ['Registrar: The Poker Legends tournament. Twenty thousand to enter, twenty thousand in chips, ten rounds. Knocked out, and it is twenty thousand again.'],
           action: { kind: 'table', tableId: 'lumina-tournament' },
+        },
+        {
+          id: 'pl-racebook',
+          name: 'Racebook',
+          col: 22,
+          row: 14,
+          color: COLORS.flavor,
+          art: 'none',
+          lines: ['Gilt-framed tote board, linen form guides, a clerk in white gloves. Nobody here calls it gambling. They call it the Turf.'],
+          action: { kind: 'horses' },
         },
         {
           id: 'pl-roulette',
@@ -3148,6 +3188,7 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
   // cage and the bar stand there, and the bank is out on the deck where its
   // marquee has the room above it. Plants and the life rings are past the edges.
   'rb-boat': [
+    { stampId: 'racebook', col: 24, row: 15 },
     { stampId: 'palm', col: 1, row: 1 },
     { stampId: 'life-ring', col: 3, row: 1 },
     { stampId: 'porthole', col: 5, row: 1 },
@@ -3254,6 +3295,7 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
   // tables with a reef bank between them, the wheel, a bank either side of the
   // door. The tiki bar, the cage and the back bank are a walk up, whole above it.
   'pc-casino': [
+    { stampId: 'racebook', col: 17, row: 16 },
     { stampId: 'palm', col: 1, row: 1 },
     { stampId: 'fern', col: 3, row: 2 },
     { stampId: 'slot-bank-island', col: 7, row: 1 },
@@ -3310,6 +3352,7 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
   // inside them; the prize car and the change booth fill the corners past the
   // left edge, where you find them whole when you walk over.
   'nm-casino': [
+    { stampId: 'racebook', col: 8, row: 8 },
     { stampId: 'slot-bank-jackpot', col: 1, row: 1 },
     { stampId: 'neon-vip', col: 16, row: 1 },
     { stampId: 'door-vip', col: 22, row: 1 },
@@ -3365,6 +3408,7 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
   // down the east side. The door is at the bottom, and the first thing past it is
   // the crest underfoot.
   'pl-casino': [
+    { stampId: 'racebook', col: 21, row: 13 },
     { stampId: 'painting-portrait', col: 4, row: 1 },
     { stampId: 'painting-portrait', col: 13, row: 1 },
     { stampId: 'painting-portrait', col: 21, row: 1 },

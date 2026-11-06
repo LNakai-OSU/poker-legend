@@ -149,13 +149,9 @@ export function returnPerDollar(chance: number): number {
   return Math.max(MIN_RETURN, Math.floor(fair * 20) / 20)
 }
 
-/** The board's price for a bet, as the tote shows it: "7-2", "9-5", "1-20". */
-export function oddsLabel(chance: number): string {
-  const profit = returnPerDollar(chance) - 1
-  const hundredths = Math.round(profit * 100)
-  const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b))
-  const g = gcd(hundredths, 100)
-  return `${hundredths / g}-${100 / g}`
+/** What the board shows beside a horse: what a winning dollar comes back as, "x4.35". */
+export function payLabel(chance: number): string {
+  return `x${returnPerDollar(chance).toFixed(2)}`
 }
 
 export interface RaceSettlement {

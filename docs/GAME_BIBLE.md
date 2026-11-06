@@ -804,6 +804,16 @@ UI_ONLY="…" npm run test:ui   # one or more scenarios, comma separated
 card, a seat overlapping its neighbour or a panel taller than the window. The
 browser suite can, and has.
 
+### The racebook
+
+A 'horses' POI (`racebook` stamp, placed on the Riverboat, Cay Room, Mesa and
+Lumina floors) opens a six-horse race you bet on: win, place (top two) or show
+(top three). `engine/horses.ts` draws each horse's hidden strength and the
+finishing order from it, and the board pays the fair price less a 15% takeout,
+rounded down to the nickel — `horses.test.ts` checks that every bet on every
+horse loses to the house. A race costs no time and counts for nothing toward a
+boss's `winTarget`, like the other pit games.
+
 ---
 
 ## Open questions

@@ -7,7 +7,7 @@ import { TableScene, type SessionResult } from './TableScene'
 import { buttonStyle as menuButtonStyle, MentorScene, MenuScreen, ShopScene, SponsorScene, TravelScene } from './MenuScenes'
 import { CaughtScene, FinaleLostScene } from './EndScenes'
 import { EndingFilm } from './EndingFilm'
-import { CrapsScene, RouletteScene, SlotsScene } from './CasinoGameScenes'
+import { CrapsScene, HorseRaceScene, RouletteScene, SlotsScene } from './CasinoGameScenes'
 import { RaceScene, type RaceCommit, type RaceOutcome } from './RaceScene'
 import { PenthouseScene, VenueScene } from './VenueScenes'
 import { SideNav } from './SideNav'
@@ -85,6 +85,7 @@ type View =
   | { kind: 'slots' }
   | { kind: 'craps' }
   | { kind: 'roulette' }
+  | { kind: 'horses' }
   | { kind: 'race'; raceIds: string[] }
   | { kind: 'venue'; venueId: string }
   | { kind: 'penthouse' }
@@ -236,6 +237,9 @@ export function GameApp({ playtest = false }: { playtest?: boolean }) {
         break
       case 'roulette':
         setView({ kind: 'roulette' })
+        break
+      case 'horses':
+        setView({ kind: 'horses' })
         break
       case 'race':
         setView({ kind: 'race', raceIds: action.raceIds })
@@ -682,6 +686,9 @@ export function GameApp({ playtest = false }: { playtest?: boolean }) {
 
     case 'roulette':
       return <RouletteScene state={state} onResult={settleGamble} onBack={backToCity} />
+
+    case 'horses':
+      return <HorseRaceScene state={state} onResult={settleGamble} onBack={backToCity} />
 
     case 'race':
       return <RaceScene state={state} raceIds={view.raceIds} onCommit={commitRace} onFinish={finishRace} onBack={backToCity} />

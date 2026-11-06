@@ -559,10 +559,12 @@ const pokerTable4 = (s: TableStyle) => pokerTable(s, 9, 9, 46, 30, 3)
 function crapsTable(felt: string, feltLine: string): StampArt {
   return {
     draw: (px, c) => {
-      const x = 6
-      const y = 10
-      const w = c.w - 12
-      const h = c.h - 20
+      // Held inside the blocked tiles: the rows and columns around it are where
+      // the crew stand and the player walks, and must not be drawn over the rail.
+      const x = 14
+      const y = 14
+      const w = c.w - 28
+      const h = c.h - 26
       shadow(px, x + 3, y + 4, w, h, 0.35)
       px(x + 2, y + 2, w - 4, h, '#24140a')
       px(x, y + 4, w, h - 6, '#24140a')
@@ -603,9 +605,10 @@ function crapsTable(felt: string, feltLine: string): StampArt {
 /** A roulette table: the wheel at one end, the number layout at the other. */
 const roulette: StampArt = {
   draw: (px, c) => {
-    const x = 4
-    const y = 8
-    const w = c.w - 8
+    // The bottom two rows of its footprint exactly, so the croupier's row above is clear.
+    const x = 2
+    const y = 16
+    const w = c.w - 4
     const h = c.h - 16
     shadow(px, x + 3, y + 4, w, h, 0.35)
     px(x, y, w, h, '#24140a')
@@ -640,6 +643,39 @@ const roulette: StampArt = {
     }
     px(gx - 3, y + 6, 2, 14, '#2a9a3a')
     chips(px, gx + 2, y + h - 7, ['#f2c84a', '#e83a3a', '#2a6ad8'])
+  },
+}
+
+/** The racebook: a tote board of six runners lit over a betting counter, a ticket spike and a stack of form guides. */
+const racebook: StampArt = {
+  draw: (px, c) => {
+    const x = 4
+    const y = 5
+    const w = c.w - 8
+    shadow(px, x + 3, y + 4, w, c.h - 12, 0.35)
+    // The board: a black screen in a brass frame, six lines of runners and their prices.
+    px(x, y, w, 22, '#c8a040')
+    px(x + 1, y + 1, w - 2, 20, '#0c0a12')
+    text(px, 'RACES', x + 3, y + 3, '#f2c84a')
+    const lamps = ['#e83a3a', '#3a6ae8', '#f2c84a', '#3ac860', '#f4f0e4', '#c850d8']
+    for (let i = 0; i < 6; i++) {
+      const ly = y + 9 + (i % 3) * 4
+      const lx = x + 4 + Math.floor(i / 3) * Math.round((w - 8) / 2)
+      px(lx, ly, 2, 2, lamps[i])
+      px(lx + 4, ly, 9 + ((i * 5) % 7), 1, '#d8d8e0')
+      px(lx + 20 - ((i * 3) % 5), ly, 5, 1, '#5ae870')
+    }
+    // The counter, and the ticket window in it.
+    px(x, y + 22, w, 14, '#24140a')
+    px(x + 1, y + 22, w - 2, 12, '#4a2e1a')
+    px(x + 1, y + 22, w - 2, 1, '#7a5434')
+    px(x + 6, y + 25, 12, 7, '#14100c')
+    px(x + 7, y + 26, 10, 5, '#2a2018')
+    // Form guides and a ticket spike on the counter.
+    px(x + w - 16, y + 23, 7, 3, '#f4f0e4')
+    px(x + w - 15, y + 24, 5, 1, '#8a8a98')
+    px(x + w - 8, y + 21, 1, 3, '#c8c8d0')
+    px(x + w - 9, y + 23, 3, 1, '#e83a3a')
   },
 }
 
@@ -1037,6 +1073,7 @@ export const CASINO_ART: Record<string, StampArt> = {
   'craps-table': crapsTable('#1e6a3e', '#f4f0e4'),
   'craps-table-neon': crapsTable('#3a1a6a', '#ff9ef0'),
   roulette,
+  racebook,
   'cashier-cage': cashierCage,
   bar: bar('#5e3420', '#8a5a36', '#8a2a2a'),
   'bar-brass': bar('#4a2414', '#c89a58', '#6a2a2a'),

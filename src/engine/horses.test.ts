@@ -6,7 +6,7 @@ import {
   chances,
   drawField,
   drawFinish,
-  oddsLabel,
+  payLabel,
   planRace,
   placesPaid,
   progressAt,
@@ -98,8 +98,8 @@ describe('horse racing', () => {
     expect(settleBet(field, { kind: 'show', post: 1 }, 50, finish).net).toBe(-50)
   })
 
-  it('labels odds the way a tote board does', () => {
-    expect(oddsLabel(0.5)).toMatch(/^\d+-\d+$/)
+  it('labels what a winning dollar comes back as', () => {
+    expect(payLabel(0.5)).toBe('x1.70')
     expect(returnPerDollar(0.99)).toBe(MIN_RETURN)
   })
 
