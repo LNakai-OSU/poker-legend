@@ -347,10 +347,10 @@ export const CHARACTERS: Record<string, CharacterDef> = {
           lines: ['Marcus: I am at the rail. That is the rule.'],
           schedule: [
             // By the desk, where he left you: at the rail, all day.
-            { period: 'morning', areaId: 'pl-casino', col: 19, row: 4 },
-            { period: 'afternoon', areaId: 'pl-casino', col: 19, row: 4 },
-            { period: 'evening', areaId: 'pl-casino', col: 19, row: 4 },
-            { period: 'night', areaId: 'pl-casino', col: 19, row: 4 },
+            { period: 'morning', areaId: 'pl-casino', col: 27, row: 4 },
+            { period: 'afternoon', areaId: 'pl-casino', col: 27, row: 4 },
+            { period: 'evening', areaId: 'pl-casino', col: 27, row: 4 },
+            { period: 'night', areaId: 'pl-casino', col: 27, row: 4 },
           ],
         },
         {
@@ -443,16 +443,16 @@ export const CHARACTERS: Record<string, CharacterDef> = {
           when: [{ kind: 'chapter', cityId: 'silverCreek' }],
           lines: ['Dana: I go where the games are.'],
           schedule: [
-            { period: 'evening', areaId: 'sc-floor', col: 17, row: 7 },
-            { period: 'night', areaId: 'sc-floor', col: 17, row: 7 },
+            { period: 'evening', areaId: 'sc-floor', col: 32, row: 12 },
+            { period: 'night', areaId: 'sc-floor', col: 32, row: 12 },
           ],
         },
         {
           when: [{ kind: 'chapter', cityId: 'riverbend' }],
           lines: ['Dana: A bar on a boat that does not move. My kind of place.'],
           schedule: [
-            { period: 'evening', areaId: 'rb-boat', col: 19, row: 3 },
-            { period: 'night', areaId: 'rb-boat', col: 19, row: 3 },
+            { period: 'evening', areaId: 'rb-boat', col: 35, row: 3 },
+            { period: 'night', areaId: 'rb-boat', col: 35, row: 3 },
           ],
         },
         {
@@ -466,7 +466,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
         {
           when: [{ kind: 'chapter', cityId: 'palmCay' }],
           lines: ['Dana: Marcus is here. He does not know I am. Let us keep it that way.'],
-          schedule: [{ period: 'night', areaId: 'pc-casino', col: 9, row: 8 }],
+          schedule: [{ period: 'night', areaId: 'pc-casino', col: 18, row: 15 }],
         },
         {
           when: [{ kind: 'chapter', cityId: 'neonMesa' }],
@@ -480,10 +480,10 @@ export const CHARACTERS: Record<string, CharacterDef> = {
           when: [{ kind: 'chapter', cityId: 'portoLumina' }],
           lines: ['Dana: Go and say hello to her. She has waited a long time for somebody worth it.'],
           schedule: [
-            { period: 'morning', areaId: 'pl-casino', col: 21, row: 4 },
-            { period: 'afternoon', areaId: 'pl-casino', col: 21, row: 4 },
-            { period: 'evening', areaId: 'pl-casino', col: 21, row: 4 },
-            { period: 'night', areaId: 'pl-casino', col: 21, row: 4 },
+            { period: 'morning', areaId: 'pl-casino', col: 29, row: 4 },
+            { period: 'afternoon', areaId: 'pl-casino', col: 29, row: 4 },
+            { period: 'evening', areaId: 'pl-casino', col: 29, row: 4 },
+            { period: 'night', areaId: 'pl-casino', col: 29, row: 4 },
           ],
         },
         {
@@ -859,8 +859,8 @@ export const CHARACTERS: Record<string, CharacterDef> = {
           when: [{ kind: 'chapter', cityId: 'palmCay' }],
           lines: ['Kit: Working. Bernard is working too. He just does not know it.'],
           schedule: [
-            { period: 'afternoon', areaId: 'pc-casino', col: 12, row: 5 },
-            { period: 'evening', areaId: 'pc-casino', col: 12, row: 5 },
+            { period: 'afternoon', areaId: 'pc-casino', col: 21, row: 12 },
+            { period: 'evening', areaId: 'pc-casino', col: 21, row: 12 },
           ],
         },
         {
@@ -1125,8 +1125,8 @@ export const CHARACTERS: Record<string, CharacterDef> = {
           when: [{ kind: 'chapter', cityId: 'portoLumina' }, { kind: 'count', of: 'repaid', sponsorId: 'cass' }],
           lines: ['Cass: Watching my investment. It is a long way from the dock.'],
           schedule: [
-            { period: 'evening', areaId: 'pl-casino', col: 9, row: 21 },
-            { period: 'night', areaId: 'pl-casino', col: 9, row: 21 },
+            { period: 'evening', areaId: 'pl-casino', col: 14, row: 29 },
+            { period: 'night', areaId: 'pl-casino', col: 14, row: 29 },
           ],
         },
       ],
@@ -1269,13 +1269,13 @@ export const CHARACTERS: Record<string, CharacterDef> = {
       look: { garment: 'cardigan', garmentColor: '#8a3a5a', sleeves: 'long', build: 'elder', prop: 'pearls', propColor: '#c8a8e0' },
       lines: ['Dolores: Rub the foot. Go on. It does not bite. Much.'],
       schedule: [
-        { period: 'afternoon', areaId: 'sc-floor', col: 13, row: 7, lines: [
+        { period: 'afternoon', areaId: 'sc-floor', col: 28, row: 12, lines: [
           'Dolores: I tip the dealer in cigarettes. They love it. They are not allowed to say.',
         ] },
-        { period: 'evening', areaId: 'sc-floor', col: 13, row: 7, lines: [
+        { period: 'evening', areaId: 'sc-floor', col: 28, row: 12, lines: [
           'Dolores: Never play on a Tuesday. Never play on a Wednesday. Thursday I am in a mood.',
         ] },
-        { period: 'night', areaId: 'sc-floor', col: 13, row: 7, lines: [
+        { period: 'night', areaId: 'sc-floor', col: 28, row: 12, lines: [
           'Dolores: Honey, you look like a man who is about to be right. Do not let it show.',
         ] },
       ],
@@ -1299,10 +1299,10 @@ export const CHARACTERS: Record<string, CharacterDef> = {
       look: { garment: 'jacket', garmentColor: '#1c1c24', sleeves: 'long', prop: 'collar' },
       lines: ['Gaines: Ten percent, my friend. Not for me. For the boat.'],
       schedule: [
-        { period: 'evening', areaId: 'rb-boat', col: 17, row: 5, lines: [
+        { period: 'evening', areaId: 'rb-boat', col: 33, row: 11, lines: [
           'Gaines: I took up a collection. It was mostly me. It is called a bankroll, in the gospel.',
         ] },
-        { period: 'night', areaId: 'rb-boat', col: 17, row: 5, lines: [
+        { period: 'night', areaId: 'rb-boat', col: 33, row: 11, lines: [
           'Gaines: Folds to a river bet seven times in ten. The Lord does not hold with bluffing. He prefers to be asked.',
         ] },
       ],
@@ -1326,10 +1326,10 @@ export const CHARACTERS: Record<string, CharacterDef> = {
       look: { garment: 'vest', garmentColor: '#40204a', sleeves: 'short', hat: 'tophat', hatColor: '#5a2a5a' },
       lines: ['Contessa: My late husband left me everything. His name was Gary.'],
       schedule: [
-        { period: 'evening', areaId: 'ch-cardroom', col: 9, row: 6, lines: [
+        { period: 'evening', areaId: 'ch-cardroom', col: 17, row: 12, lines: [
           'Contessa: Another cocktail, darling. A small one. The size of a Gary.',
         ] },
-        { period: 'night', areaId: 'ch-cardroom', col: 9, row: 6, lines: [
+        { period: 'night', areaId: 'ch-cardroom', col: 17, row: 12, lines: [
           'Contessa: Bluff? Me? I am an aristocrat. I do not need to. I simply bet.',
         ] },
       ],
@@ -1352,13 +1352,13 @@ export const CHARACTERS: Record<string, CharacterDef> = {
       look: { garment: 'hoodie', garmentColor: '#c82060', sleeves: 'long', hat: 'headphones', hatColor: '#f0f0f4' },
       lines: ['Zeke: Live in four-three-two. Say something interesting.'],
       schedule: [
-        { period: 'afternoon', areaId: 'nm-casino', col: 17, row: 8, lines: [
+        { period: 'afternoon', areaId: 'nm-casino', col: 32, row: 13, lines: [
           'Zeke: Eleven thousand watching. Eleven. And one is my mum.',
         ] },
-        { period: 'evening', areaId: 'nm-casino', col: 17, row: 8, lines: [
+        { period: 'evening', areaId: 'nm-casino', col: 32, row: 13, lines: [
           'Zeke: I read three poker books and watched six hundred hours of solver. I have never won a hand against anyone in the same room.',
         ] },
-        { period: 'night', areaId: 'nm-casino', col: 17, row: 8, lines: [
+        { period: 'night', areaId: 'nm-casino', col: 32, row: 13, lines: [
           'Zeke: Stack of ten thousand, sub-goal of twenty. Be cool. Tip the streamer.',
         ] },
       ],

@@ -721,11 +721,11 @@ await test(`pressing "Let's go" on the arrival card walks you into the casino`, 
   assert(!(await card.isVisible().catch(() => false)), 'a box was left open inside')
   assert(!(await page.locator('[data-testid="event-fade"]').isVisible().catch(() => false)), 'the screen was left black')
   const at = await posOf(page)
-  assert(at.col === 10 && at.row === 10, `you came in somewhere other than the door (${at.col},${at.row})`)
+  assert(at.col === 20 && at.row === 20, `you came in somewhere other than the door (${at.col},${at.row})`)
   // Not stuck: the keys are yours again, and the walk does not run twice.
   await step(page, 'ArrowUp')
   const moved = await posOf(page)
-  assert(moved.row === 9, `the keys did not come back after the walk in (${moved.col},${moved.row})`)
+  assert(moved.row === 19, `the keys did not come back after the walk in (${moved.col},${moved.row})`)
   const saved = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? 'null'), SAVE_KEY)
   assert(saved.completedEventIds.includes('arrive-silvercreek'), 'the arrival was not marked done, so it would play again')
   assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
@@ -1836,13 +1836,30 @@ await test('every casino table has players sitting at it', async () => {
   const CASINOS = ['sc-floor', 'rb-boat', 'ch-cardroom', 'pc-casino', 'nm-casino', 'pl-casino']
   let compared = 0
   for (const areaId of CASINOS) {
+    // The floors are doubled: a window wide enough to hold two tables of a kind at once.
+    // Lumina's hall is bigger than any window and keeps the ordinary one.
+    const VIEW_W = areaId === 'pl-casino' ? 1280 : 2800
+    const VIEW_H = areaId === 'pl-casino' ? 960 : 2100
     const page = await newPage(baseSave({ cityId: 'apartment', areaId, period: 'evening', day: 2 }), {
-      viewport: { width: 1280, height: 960 },
+      viewport: { width: VIEW_W, height: VIEW_H },
     })
     await page.goto(BASE)
     await page.waitForSelector('[data-testid="overworld"] canvas')
     const grid = await settle(page)
     await page.waitForTimeout(400)
+    // The floors are bigger than the window: walk to the middle of the tables so the camera shows them.
+    const all = await page.evaluate(() => JSON.parse(document.querySelector('[data-testid="overworld"]').dataset.chairs || '[]'))
+    if (all.length > 0) {
+      const mid = { col: all.reduce((n, c) => n + c.col, 0) / all.length, row: all.reduce((n, c) => n + c.row, 0) / all.length }
+      let target = null
+      for (let r = 0; r < grid.length; r++) for (let c = 0; c < grid[r].length; c++) {
+        if (grid[r][c] !== 'w') continue
+        const d = Math.abs(c - mid.col) + Math.abs(r - mid.row)
+        if (!target || d < target.d) target = { c, r, d }
+      }
+      if (target) await moveTo(page, target.c, target.r)
+      await page.waitForTimeout(500)
+    }
     const { chairs, view } = await page.evaluate(() => {
       const el = document.querySelector('[data-testid="overworld"]')
       return { chairs: JSON.parse(el.dataset.chairs || '[]'), view: (el.dataset.view || '').split(',').map(Number) }
@@ -1883,7 +1900,7 @@ await test('every casino table has players sitting at it', async () => {
     // A hall bigger than the window (Lumina's) has chairs off the edge of the canvas: nothing to compare there.
     const onScreen = (chair) => {
       const [x, y, w, h] = box(chair, 0, 0, 32, 48)
-      return x >= 0 && y >= 0 && x + w <= 1280 && y + h <= 960
+      return x >= 0 && y >= 0 && x + w <= VIEW_W && y + h <= VIEW_H
     }
     for (const chair of chairs.filter(onScreen)) {
       const kind = `${chair.stampId}#${chair.seat}`
@@ -1933,7 +1950,13 @@ await test('an empty chair offers a seat from any side and Space or X takes it',
   let plan = null
   for (const chair of chairs.filter((c) => !c.taken)) {
     for (const [dir, dc, dr] of [['right', -1, 0], ['left', 1, 0], ['down', 0, -1], ['up', 0, 1]]) {
-      if (grid[chair.row + dr]?.[chair.col + dc] === 'w') plan = plan ?? { chair, from: { col: chair.col + dc, row: chair.row + dr }, dir }
+      const from = { col: chair.col + dc, row: chair.row + dr }
+      // Somewhere nobody else is standing beside: a person next to you is offered before the chair.
+      const crowded = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([ac, ar]) => {
+        const at = { col: from.col + ac, row: from.row + ar }
+        return !(at.col === chair.col && at.row === chair.row) && grid[at.row]?.[at.col] === 'o'
+      })
+      if (grid[from.row]?.[from.col] === 'w' && !crowded) plan = plan ?? { chair, from, dir }
     }
   }
   assert(plan, 'no empty chair with somewhere to stand next to it')
@@ -2868,13 +2891,13 @@ await test('Marcus and Dana greet you at the foyer rope and explain the tourname
     else await page.keyboard.press(' ')
     await page.waitForTimeout(250)
     const row = Number(await page.locator('[data-testid="overworld"]').getAttribute('data-player-row').catch(() => 99))
-    if (row <= 5 && !(await page.locator('[data-testid="dialogue"]').isVisible().catch(() => false))) break
+    if (row <= 6 && !(await page.locator('[data-testid="dialogue"]').isVisible().catch(() => false))) break
   }
   const at = await page.evaluate(() => {
     const el = document.querySelector('[data-testid="overworld"]')
     return { col: Number(el?.dataset.playerCol), row: Number(el?.dataset.playerRow) }
   })
-  assert(at.row <= 5, `they did not walk you to the desk (you are at ${at.col},${at.row})`)
+  assert(at.row <= 6 && Math.abs(at.col - 28) <= 3, `they did not walk you to the desk (you are at ${at.col},${at.row})`)
   await page.close()
 })
 

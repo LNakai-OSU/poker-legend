@@ -310,18 +310,28 @@ TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT`)
 
 /** Silver Creek: saloon panelling, dusty diamond carpet, slots along the back, one live table. */
 const SILVER_CREEK_FLOOR = parseMap(`
-^^^^^^^^^^^^^^^^^^^^
-^FFFFFFFFFFFFFFFFFF^
-^F,FFFFFFFFFFFFFF,,^
-^,,,,,,,,,,,,,,,,,,^
-^F,,,,,,,,,,,,,,,,F^
-^,,,FFF,,F,F,,FFF,,^
-^,,,FFF,,F,F,,FFF,,^
-^,,,,,,,,,,,,,,,,,,^
-^F,FFFF,,,,,,FFFF,F^
-^F,FFFF,,,,,,FFFF,,^
-^F,,,,,F,,,,,,,,,,,^
-^^^^^^^^^^D^^^^^^D^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^FwFwwwFFFFwwwwFFFFFwwwwwwFFFFFwwwFwF^
+^F,,,,,FFFF,,,,FFFFF,,,,,,FFFFF,,,,,,^
+^,,,F,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,^
+^,,,F,,,,,,,,,,,,,,,,,,,,,,,,,,,,F,,,^
+^,,,,,,,,,F,,,,,,,,,,,,,,,FF,,F,,,,,,^
+^,,,F,,F,,F,,,FF,,F,,,FF,,,,,,F,,,,,,^
+^F,,F,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,F^
+^,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,^
+^,,,,,,,,,,,,,F,,,,,,,,,,F,,,,,,,,,,,^
+^,,FF,,,FFF,,,,,,F,,,,F,,,,,,FFF,,,,,^
+^,,,,,,,FFF,,,,,,F,,,,F,,F,,,FFF,,,,,^
+^,,,,,,,,,,,,,,,,,,,,,,,,F,,,,,,,,,,,^
+^,,F,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,^
+^,,F,,F,,,,,,,,F,,,,,,,,,,F,,F,,,,,,,^
+^,,,,,F,,F,,F,,F,,FF,,,F,,F,,F,,F,,,,^
+^,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,^
+^F,,,,,,,,,,,,,,F,,,,,,,F,,,,,,,,,,,F^
+^F,,F,,FFFF,,,,,F,,,,,,,F,,FFFF,F,,,,^
+^,,,,,,FFFF,,,,,,,,,,,,,,,,FFFF,,,,,,^
+^F,,,,,,,,,,,F,,,,,,,,,,,,,,,,,,,,,,,^
+^^^^^^^^^^^^^^^^^^^^D^^^^^^^^^^^^^D^^^
 `)
 
 /**
@@ -331,17 +341,26 @@ const SILVER_CREEK_FLOOR = parseMap(`
  * wheel across the deck, and plants in the corners past the edges.
  */
 const RIVERBOAT_FLOOR = parseMap(`
-^^^^^^^^^^^^^^^^^^^^^^
-^FssFFFFFsssssFFFFFsF^
-^FRRFFFFFRRRRRFFFFFRF^
-^RRRRRRFFFRRRRRRRRRRR^
-^RFRRRRRRRRRRRRRRRRRR^
-^RFRFFFFRRFFFRRRRRRFR^
-^RRRFFFFRRFFFRRRFFRFR^
-^RRRRRRRRRRRRRRRRRRRR^
-^FRRRRRRRRRRRRRRRRRRR^
-^RRFRRRRRRRRRRRRRRRRF^
-^^^^^^^D^^^D^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^FsssssssFFFFFssssssssssssssssFFFFFsssssF^
+^FRRRRRRRFFFFFRRRRRRRRRRRRRRRRFFFFFRRRRRF^
+^RRRRRRRRRRRRRRRRRRRRRRRRRRFRRRRRRRRRRRRR^
+^RRFRRRRRRRRRRRRRRRRRRRRFRRFRRRRRRRRRRRRR^
+^RRFRRFFFFRRRRFFFRRFFRRRFRRRRRRRRRRRRFRRR^
+^RRRRRFFFFRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR^
+^RRRRRRRRRRRRRRRRRRRRRRRRRRFFRRRFRRRRRRRR^
+^RRFRRRRRRRRFRRRRRRRRRRRRRRRRRRRRRRFRRRRR^
+^RRFRRRRRRRRRRRFFRRRRRRRRRRRRRRRRRRRRRRRR^
+^RRRRRRRRRRRRRRRRRRRRFFFRRRFFRRRRRRRRRFRR^
+^RRRRRRRRFFFFRRRRRRRRFFFRRRRRRRRRRRRRRFRR^
+^RRRFRRRRFFFFRRRRRRRRRRRRRRRRRRRFFRRRRRRR^
+^RRRFRRRRRRRRRRFFRRRRRRRRRRFRRRRRRRRRRRRR^
+^RRRRRRRRRRRRRRRRRRRRRFFRRRFRRRRRRRRRFFRR^
+^RRRRRRRFRRRRRRRRRRFRRRRRRRRRRRRRFRRRRRRR^
+^RRRRRRRFRRFRRRFRRRRRRRRRRRRRRFRRFRRRRRRR^
+^FRRRRRRRRRFRRRRRRRRRRRRRRRRRRRRRRRRRRRRR^
+^RRRRFRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRF^
+^^^^^^^^^^^^^D^^^^^^^^D^^^^^^^^^^^^^^^^^^^
 `)
 
 /**
@@ -351,19 +370,30 @@ const RIVERBOAT_FLOOR = parseMap(`
  * is above the view, whole when you walk up to it.
  */
 const CARDROOM_FLOOR = parseMap(`
-^^^^^^^^^^^^^^^^^^^^
-^FFggFFFFFFFFggggFF^
-^FF;;FFFFFFFF;;;;FF^
-^F;;;;;FFF;FFF;;;;F^
-^;;;;;;;;;;;;;;;;;;^
-^;;;FFF;;;;;;;FFF;;^
-^F;;FFF;;;;;;;FFF;F^
-^F;;;;;;;;;;;;;;;;F^
-^;;;;;;;;;;;;;;;;;;^
-^;;FF;;FF;;;FF;;FF;^
-^;;;;;;;;;;;;;;;;;F^
-^F;;;;;;;;;;;;;;;;;^
-^^^^^^^^^^D^^^^^^D^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^FFgggggggFFFgggggFFFFFggggggggggggFF^
+^FF;;;;;;;FFF;;;;;FFFFF;;;;;;;;;;;;FF^
+^;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;^
+^F;;;;;;;;;;;;FFF;;F;;;FFF;;FFF;;;;;F^
+^;;;;FFF;;FF;;;;;;;F;;;;;;;;FFF;;F;;;^
+^;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;^
+^;;;;;;;;;;;;;F;;;;;;;;;;;;;;;;;;;;;;^
+^;;F;;;;;;;;;;;;;;;;;;FFF;;;;;;;;;;;;^
+^;;F;;;;;;;;;;;;;FFF;;;;;;;;;;;;;;;;;^
+^;;;;;;;FFF;;;F;;FFF;;;;;;;;;FFF;;;;;^
+^;;;F;;;FFF;;;;;;;;;;;;;;;;;;FFF;;;;;^
+^F;;F;;;;;;;;;;;;;;;;;FFF;;;;;;;;;;;F^
+^F;;;;;;;;;;;;;;;;;F;;FFF;;;;;;;;;;;F^
+^;;;;;;;;;;;;;FFF;;;;;;;;;;;;;;;;;;;;^
+^;;;FF;;;;;;;;;;;;;;;;;;;;;;;;;;F;;;;^
+^;;;;;;;F;;;;;;;;;;F;;;;;;;;;F;;F;;;;^
+^;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;^
+^;;;;;;;;;;;;;;;;;;FF;;;;;;;;;;;;;;;;^
+^;;;;F;F;;;;;;FF;;;;;;;;FF;;;F;;F;F;;^
+^;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;^
+^;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;F^
+^F;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;^
+^^^^^^^^^^^^^^^^^^^^D^^^^^^^^^^^^^D^^^
 `)
 
 /**
@@ -373,38 +403,62 @@ const CARDROOM_FLOOR = parseMap(`
  * and the back bank are a walk up, past the top of the view.
  */
 const CAY_FLOOR = parseMap(`
-^^^^^^^^^^^^^^^^^^^^
-^FbFFFFFFFFFFFFFFFF^
-^FFFFFFFFFFFFFFFFFF^
-^'''''''''''FFF'FFF^
-^F''''''''''''''''F^
-^''''''''''''''''''^
-^'''FFF'FFFF''FFF''^
-^F''FFF'FFFF''FFF'F^
-^F''''''''''''''''F^
-^''''''''''''''''''^
-^'FFF'F'''FF''FFFF'^
-^F''''F'''''''FFFFF^
-^''''''FFF'''''''''^
-^^^^^^D^^^D^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^FbbbbbFFFFbbbbFFFFFbbbbFbbbFFFFFbbbF^
+^F'F'''FFFF''''FFFFF''''F'''FFFFF'''F^
+^''''''''''''''''''''''''''''''''''''^
+^''''''''''''''''''''''''FFF''''''FFF^
+^'''''''''''''''''''''''''''''FF'''''^
+^''''''''''''''''''''''''''''''''''''^
+^F''FF'''F''''FFFF''FFFF''F''F''''''F^
+^'''''''''''''FFFF''FFFF'''''F''F''''^
+^''''''''''''''''''''''''''''''''''''^
+^''FF''''''''''''''''''''''''''''''''^
+^'''''''''''''F''''''''''''''''''''''^
+^'''''''FFF'''F''''''''''''''FFF'''''^
+^'''F'''FFF''''''FFFF''FF''''FFF'''''^
+^F''''''''''''F''FFFF'''''''''''''''F^
+^F''''''''''''F'''''''''''''''''''''F^
+^''''''''''''''''''''''F'''''''''''''^
+^'''F''FF''F'''''''''''''''''''''''''^
+^'''''''''''''''''''''''''F''FF''FF''^
+^''''''''''''''F'''''''''''''''''''''^
+^''''''''''''''''''''''''''''''''''''^
+^'''FF'F'''F''''''''FF'''F'''''''''''^
+^''''''''''F'''''''''''''''''FFFF''''^
+^F'''''''''''''''''''''''''''FFFF'''F^
+^'''''''''''''FFF''''''''''''''''''''^
+^^^^^^^^^^^D^^^^^^^^D^^^^^^^^^^^^^^^^^
 `)
 
 /** The Mesa Casino: near-black carpet with neon trim, neon walls, a progressive bank, the high-roller door roped off. */
 const MESA_FLOOR = parseMap(`
-^^^^^^^^^^^^^^^^^^^^^^
-^FFFFFFnnnnnnnnnFFFFF^
-^FFFFFF!FFF!FFF!FFFFF^
-^!!!!!!!!!!!!!!!!!!!!^
-^!!!!!!!!!!!!!!!!!!!F^
-^FFF!!!!!!!!!!!!!!!!!^
-^FFF!FFF!!FF!!!FF!!F!^
-^!!!!FFF!!!!!!!!!!!F!^
-^!!!!!!!!!!!!!!!!!!!!^
-^FFFFFFFFF!!!F!!!!!!F^
-^FFFFFFFFF!!!F!FFF!!F^
-^!!!!!!!!!!!!!!FFF!!!^
-^!!!!!!!!!!!!!!!!!!!!^
-^^^^D^^^^^^D^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^FFFFFFnnnnnnnnnnnnnnnnnnnnnnnnnnnnnFFFFF^
+^FFFFFF!!!!!!!!!FFF!!!!!!FFF!!!!!!!!FFFFF^
+^!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!^
+^!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!^
+^!!!!!F!!FFFFF!!!!!!!!!!!!!!!!FFF!!!!!!!!^
+^!!F!!F!!FFFFF!!!F!!FFF!!!F!!!!!!!!!!!!!!^
+^!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!FFF!!F^
+^!!!!!!!!!!!!!!!F!!!!!!!!!!!!!!!!!!!!!!!!^
+^!!!!!F!!!!!!!!!F!!!!!!!!F!!!!!!!!!!!!!!!^
+^FFF!!!!!!!!!!!!!!!!!!!!!F!!!!!!!!!F!!!!!^
+^FFF!!F!!!!!!!!!!!!!FF!!!!!!!!FF!!!!!!!!!^
+^!!!!!F!!!FFF!!!F!!!!!!!!!!!!!!!!!!!!!F!!^
+^!!!!!!!!!FFF!!!!!!!!!!!!F!!!!!!!!!!!!F!!^
+^!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!^
+^!!!F!!!!!!!!!!!F!!!!!!!F!!!!!!!!!F!!!!!!^
+^!!!!!!F!!!!!F!!F!!!!F!!F!!!!FFF!!!!!F!!!^
+^!!!!!!F!!F!!F!!!!!!!!!!!!!!!!!!!!!!!!!!!^
+^!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!^
+^FFF!!F!!!!!!!!!!F!!!!!!!!F!!!!!!!!!!F!!F^
+^FFF!!F!!FFFFF!!!F!!FFF!!!F!!!!!!!!!!!!!F^
+^!!!!!!!!FFFFF!!!!!!!!!!!!!!!!!FFF!!!!!!!^
+^!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!FFF!!!F!!!^
+^!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!^
+^!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!^
+^^^^^^^D^^^^^^^^^^^^^^D^^^^^^^^^^^^^^^^^^^
 `)
 
 /**
@@ -412,32 +466,42 @@ const MESA_FLOOR = parseMap(`
  * for the last game. The hall is forty tiles across, and the tournament fills the middle of it.
  */
 const LUMINA_FLOOR = parseMap(`
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-^mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm^
-^FFFFFFMFMFFFFFMMMFFFFFMMMFMFFFFMMFFFFF^
-^FFFFFFMFMFFFFFMMMFFFFFMMMFMFFFFMMFFFFF^
-^MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM^
-^MMMMMMMF&&&&&&&&&&&&&&&&&&&&&&FMMMMMMM^
-^MMFFFMMF&&FFF&&&&FFF&&&&FFF&&&FMMMMMMM^
-^MMMMMMM&&&FFF&&&&FFF&&&&FFF&&&&MMMMMMM^
-^FMMMMMM&&&&&&&&&&&&&&&&&&&&&&&&MMMMMMF^
-^FMFFFMM&&&&&&&&&&&&&&&&&&&&&&&&MMFFMMF^
-^MMMMMMM&&&&&&&&&&&&&&&&&&&&&&&&MMMMMMM^
-^MMMMMMM&&&&&&&&&&&&&&&&&&&&&&&&FMMMMMM^
-^MMFFFMF&&&FFF&&&&FFF&&&&FFF&&&&MMMMMMM^
-^MMMMMMM&&&FFF&&&&FFF&&&&FFF&&&&MMMMMMM^
-^MMMMMMM&&&&&&&&&&&&&&&&&&&&&&&&MFFFMMM^
-^FMFFFMMF&&&&&&&&&&&&&&&&&&&&&&&MFFFMMF^
-^MMMMMMMF&&&&&&&&&&&&&&&&&&&&&&FMMMMMMM^
-^MMMMMMM&&&&&&&&&&&&&&&&&&&&&&&FMMMMMMM^
-^MFFFMMM&&&FFF&&&&FFF&&&&FFF&&&&MMMMMMM^
-^MMMMMMF&&&FFF&&&&FFF&&&&FFF&&&&MMMMMMM^
-^MMMMMMF&&&&&&&&&&&&&&&&&&&&&&&&MMMMMMM^
-^MMMMMMM&&&&&&&&&&&&&&&&&&&&&&&&MMMMFMM^
-^FFFFFFFFFFFFFFFFFFFMFFFFFFFFFFFFFFFFFF^
-^FFMMMMMMMMMMMMMMMMFMFMMMMMMMMMMMMMMMMM^
-^MMMFMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM^
-^^^^^^^^^^^^^^^^^^^^D^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm^
+^FMFFFFFMMMFMMMFFFFFMMMMMMFFFFFMMMMMMFMMFFFFMMMMMMMFFFFMF^
+^FMFFFFFMMMFMMMFFFFFMMMMMMFFFFFMMMMMMFMMFFFFMMMMFMMFFFFMF^
+^MMMMMMMMMMMMMMMMMMMMMFMMMMMMMMMMFMMMMMMMMMMMMMMFMMMMMMMM^
+^MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM^
+^MMMMMMMMMMM&&&&&&&&&&F&&&&&&&&&&&&&&&&&&&&&&&MMMMMMMMMMM^
+^MMMMMMMMMMF&&&&&&&&&&F&&&&&&&&&F&&&&&&&&&&F&&FMMFFMMFMMM^
+^MMMFFFMMMMF&&&&FFF&&&&&&&FFF&&&&&&&FFF&&&&F&&FMMMMMMMMMM^
+^MMMMMMMMMM&&&&&FFF&&&&&&&FFF&&&F&&&FFF&&&&&&&&MMMMMMMMMM^
+^MMMMMMMMMM&&&&&&&&&&&F&&&&&&&&&F&&&&&&&&&&&&&&MMMMMMMMMM^
+^FMMMMMMMFFFF&&&&&&&&&&&&&&&&&&&&&&&&&&&&&FF&&&MMMMMMMMMF^
+^FMMFFFMMFFFF&&F&&&&&&&&&&&&&&&F&&F&&&&&&&&&F&&MMMFFMMMMF^
+^MMMMMMMMMM&&&&F&&F&&&&&&&&&F&&F&&F&&F&&&&&&&&&MMMMMMMMMM^
+^MMMMMMMMMM&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&F&&&&MMMMMMMMMM^
+^MMMMMMMMMM&&&&&&&&&&&&&&&&&&&&&F&&&&&&&&&&&&&&F&MFMMMMMM^
+^MMMMMMMMMM&&&&&&&&&&&&&&&&&&&&&F&&&&&&&&&&&&&&&&MFMMFMMM^
+^MMMFFFMMMF&&&&&FFF&&&&&&&FFF&&&&&&&FFF&&&&&&&&MMMMMMMMMM^
+^MMMMMMMMMM&&&&&FFF&&&&&&&FFF&&&F&&&FFF&&&F&&&&MMMMMMMMMM^
+^MMMMMMMMMM&&&&&&&&&&&F&&&&&&&&&F&&&&&&&&&F&&&&MMMMMMMMMM^
+^MMMMMMMMMM&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&F&&MMFFFMMMMM^
+^FMMFFFMMMMF&&F&&&&&&&&F&&F&&&&&&&&F&&F&&&&&&&&MMFFFMMMMF^
+^MMMMMMMMMMF&&F&&F&&F&&F&&F&&F&&F&&F&&F&&F&&&&&MMMMMMMMMM^
+^MMMMMMMMMMM&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&FMMMMMMMMMM^
+^MMMMMMMMMM&&&&&&&&&&&&&&&&&&&&&F&&&&&&&&&&&&&FMMMMMMMFMM^
+^MMMMMMMMMM&&&&&&&&&&&F&&&&&&&&&F&&&&&&&&&&&&&&MMMMMMMFMM^
+^MMFFFMMMMM&&&&&FFF&&&&&&&FFF&&&&&&&FFF&&&&&&&&MMFFFMMMMM^
+^MMMMMMMMMF&&&&&FFF&&&&&&&FFF&&&&&&&FFF&&&&F&&&MMMMMMMMMM^
+^MMMMMMMMMF&&&&&&&&&&&F&&&&&&&&&F&&&&&&&&&&F&&&MFMMMMMMMM^
+^MMMMMMMMMM&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&MFMMMMMMMM^
+^MMMMMMMMMM&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&MMMMMMFMMM^
+^MMMMMMMMMMM&&&&&&&&&&&&&&&&M&&&&&&&&&&&&&&&&&&&&MMMMFMMM^
+^FFFFFFFFFFFFFFFFFFFFFFFFFFF&FFFFFFFFFFFFFFFFFFFFFFFFFFFF^
+^FFMMMMMMMMMMMMMMMMMMMMMMMMFMFMMMMMMMMMMMMMMMMMMMMMMMMMMM^
+^MMMMFMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^D^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 `)
 
 /** The Harbour Room: damask, a fire going, leather sofas, and a door at the back with nothing on it. */
@@ -1372,7 +1436,7 @@ const silverCreek: CityDef = {
         ]),
       ],
       [
-        { col: 16, row: 4, toAreaId: 'sc-floor', toCol: 10, toRow: 10, label: 'Casino' },
+        { col: 16, row: 4, toAreaId: 'sc-floor', toCol: 20, toRow: 20, label: 'Casino' },
         { col: 9, row: 16, toAreaId: 'sc-gift', toCol: 6, toRow: 7, label: 'Gift Shop' },
       ],
       { west: { toAreaId: 'road-silvercreek', offset: -3 }, east: { toAreaId: 'road-riverbend', offset: -3, blocked: HIGHWAY } },
@@ -1381,16 +1445,16 @@ const silverCreek: CityDef = {
       'sc-floor',
       'Silver Creek Casino',
       SILVER_CREEK_FLOOR,
-      { col: 10, row: 10 },
+      { col: 20, row: 20 },
       '#161018',
       [
         // Who meets you at the door.
-        { ...local('sc-hatcheck', 'Hat Check', 8, 10, ['Hat Check: Hats on the hooks, guns in the box, manners at the door. One out of three ain’t bad.']), role: 'clerk' },
-        { ...local('sc-floor-manager', 'Floor Manager', 11, 10, ['Floor Manager: Howdy. Cards at the back, dice on the right, slots wherever there is a wall. Lou don’t like trouble, and neither do I.']), role: 'suit' },
+        { ...local('sc-hatcheck', 'Hat Check', 14, 20, ['Hat Check: Hats on the hooks, guns in the box, manners at the door. One out of three ain’t bad.']), role: 'clerk' },
+        { ...local('sc-floor-manager', 'Floor Manager', 21, 20, ['Floor Manager: Howdy. Cards at the back, dice on the right, slots wherever there is a wall. Lou don’t like trouble, and neither do I.']), role: 'suit' },
         {
           id: 'slots',
           name: 'Slot Row',
-          col: 4,
+          col: 8,
           row: 2,
           color: COLORS.flavor,
           art: 'none',
@@ -1400,8 +1464,8 @@ const silverCreek: CityDef = {
         {
           id: 'craps',
           name: 'Craps Table',
-          col: 15,
-          row: 5,
+          col: 30,
+          row: 10,
           color: COLORS.flavor,
           art: 'none',
           lines: ['Shooter is coming out. The pass line is the only bet worth making here.'],
@@ -1410,8 +1474,8 @@ const silverCreek: CityDef = {
         {
           id: 'pitboss',
           name: 'Pit Boss',
-          col: 5,
-          row: 4,
+          col: 9,
+          row: 9,
           color: COLORS.dealer,
           lines: [
             'Pit Boss: Low-stakes table has an open seat. Dollar-two blinds.',
@@ -1419,14 +1483,14 @@ const silverCreek: CityDef = {
           ],
           action: { kind: 'table', tableId: 'silvercreek-low' },
         },
-        local('sc-regular', 'Table Regular', 3, 6, [
+        local('sc-regular', 'Table Regular', 7, 11, [
           'Regular: Ray plays every hand he is dealt. Every single one.',
           'Regular: I have made more off Ray than I have off my job.',
         ]),
-        local('sc-cashier', 'Cashier', 14, 2, [
+        local('sc-cashier', 'Cashier', 28, 2, [
           'Cashier: Chips for cash, cash for chips. The house keeps what falls between.',
         ]),
-        local('sc-bartender', 'Bartender', 9, 2, [
+        local('sc-bartender', 'Bartender', 17, 2, [
           'Bartender: Coffee is free if you are playing. Whiskey is free if you are losing.',
           'Bartender: Ray has a tab. Ray has had a tab since 1994.',
         ]),
@@ -1434,22 +1498,22 @@ const silverCreek: CityDef = {
         local('sc-slotter', 'Slot Player', 2, 3, [
           'Slot Player: I’m not playing. I’m keeping it warm for my sister. She’s been in the ladies’ since Tuesday.',
         ]),
-        local('sc-cowhand', 'Cowhand', 11, 3, [
+        local('sc-cowhand', 'Cowhand', 19, 3, [
           'Cowhand: The whiskey’s from Kentucky, he says. So’s he. Make of that what you will.',
         ]),
-        local('sc-tourist', 'Tourist', 12, 6, [
+        local('sc-tourist', 'Tourist', 27, 11, [
           'Tourist: Is it bad that I don’t know which way the dice are meant to go?',
         ]),
-        local('sc-retiree', 'Retiree', 7, 9, [
+        local('sc-retiree', 'Retiree', 11, 19, [
           'Retiree: Forty years on the railroad and this machine still owes me a pension.',
         ]),
-        local('sc-waitress', 'Cocktail Waitress', 8, 7, [
+        local('sc-waitress', 'Cocktail Waitress', 12, 12, [
           'Waitress: Coffee, whiskey, or the special? The special is coffee with whiskey in it.',
         ]),
       ],
       [
-        { col: 10, row: 11, toAreaId: 'sc-street', toCol: 16, toRow: 5, label: 'Out' },
-        { col: 17, row: 11, toAreaId: 'sc-private', toCol: 7, toRow: 8, label: 'Private Room', privateRoomOf: 'silverCreek' },
+        { col: 20, row: 21, toAreaId: 'sc-street', toCol: 16, toRow: 5, label: 'Out' },
+        { col: 34, row: 21, toAreaId: 'sc-private', toCol: 7, toRow: 8, label: 'Private Room', privateRoomOf: 'silverCreek' },
       ],
     ),
     'sc-private': bossRoom({
@@ -1461,7 +1525,7 @@ const silverCreek: CityDef = {
       tableId: 'silvercreek-boss',
       dealerLine: 'Dealer: One match. Five hundred each. Nobody leaves until one of you has all of it.',
       floorId: 'sc-floor',
-      floorDoor: { col: 17, row: 10 },
+      floorDoor: { col: 34, row: 20 },
     }),
     'sc-gift': area(
       'sc-gift',
@@ -1568,7 +1632,7 @@ const riverbend: CityDef = {
         ]),
       ],
       [
-        { col: 9, row: 5, toAreaId: 'rb-boat', toCol: 11, toRow: 9, label: 'Riverboat' },
+        { col: 9, row: 5, toAreaId: 'rb-boat', toCol: 22, toRow: 18, label: 'Riverboat' },
         { col: 5, row: 15, toAreaId: 'rb-diner', toCol: 7, toRow: 8, label: 'Diner' },
         { col: 26, row: 15, toAreaId: 'rb-outfitters', toCol: 6, toRow: 7, label: 'Outfitters' },
       ],
@@ -1578,27 +1642,27 @@ const riverbend: CityDef = {
       'rb-boat',
       'The Riverboat',
       RIVERBOAT_FLOOR,
-      { col: 11, row: 9 },
+      { col: 22, row: 18 },
       '#0f1620',
       [
         {
           id: 'riverboat-dealer',
           name: 'Dealer',
-          col: 11,
-          row: 4,
+          col: 22,
+          row: 9,
           color: COLORS.dealer,
           lines: ['Dealer: Two-five, three hundred to sit. Tiny has been here since noon.'],
           action: { kind: 'table', tableId: 'riverbend-mid' },
         },
-        local('rb-tiny-watcher', 'Bartender', 16, 2, [
+        local('rb-tiny-watcher', 'Bartender', 32, 2, [
           'Bartender: Tiny tips like a man who does not know what money is.',
           'Bartender: Do not tell him I said that. Do not tell him anything, honestly.',
         ]),
         {
           id: 'rb-roulette',
           name: 'Roulette Table',
-          col: 16,
-          row: 6,
+          col: 32,
+          row: 12,
           color: COLORS.flavor,
           art: 'none',
           lines: ['A brass wheel bolted to the deck. The croupier says the river has never once affected the ball.'],
@@ -1607,36 +1671,36 @@ const riverbend: CityDef = {
         {
           id: 'rb-slots',
           name: 'Slot Machines',
-          col: 5,
-          row: 6,
+          col: 10,
+          row: 12,
           color: COLORS.flavor,
           art: 'none',
           lines: ['Three brass-trimmed machines and one that only takes old quarters.'],
           action: { kind: 'slots' },
         },
         // A Saturday on the river: somebody at the purser's window, the bank, the wheel and the rail.
-        local('rb-purser', 'Purser', 6, 2, [
+        local('rb-purser', 'Purser', 11, 2, [
           'Purser: Chips at the window, cash at the window. The river takes nothing. I take ID.',
         ]),
-        local('rb-slotter', 'Slot Player', 8, 6, [
+        local('rb-slotter', 'Slot Player', 13, 12, [
           'Slot Player: The one on the end only takes the old quarters. I brought a jar of them from home.',
         ]),
-        local('rb-wheel', 'Roulette Player', 18, 6, [
+        local('rb-wheel', 'Roulette Player', 34, 12, [
           'Roulette Player: Black every spin since we left the landing. The boat is tied up, mind. We have not left anything.',
         ]),
-        local('rb-barfly', 'Deckhand', 14, 3, [
+        local('rb-barfly', 'Deckhand', 30, 3, [
           'Deckhand: I swab this deck at six. Till then I am a customer, and the customer is always thirsty.',
         ]),
-        local('rb-farmer', 'Farmer', 14, 8, [
+        local('rb-farmer', 'Farmer', 25, 13, [
           'Farmer: My granddaddy lost the farm at this table. I am here to win back the porch.',
         ]),
-        local('rb-widow', 'Widow', 6, 8, [
+        local('rb-widow', 'Widow', 11, 14, [
           'Widow: My husband loved this boat. He is not here because I am spending his money on it.',
         ]),
       ],
       [
-        { col: 11, row: 10, toAreaId: 'rb-street', toCol: 9, toRow: 6, label: 'Ashore' },
-        { col: 7, row: 10, toAreaId: 'rb-private', toCol: 7, toRow: 8, label: 'Captain’s Cabin', privateRoomOf: 'riverbend' },
+        { col: 22, row: 19, toAreaId: 'rb-street', toCol: 9, toRow: 6, label: 'Ashore' },
+        { col: 13, row: 19, toAreaId: 'rb-private', toCol: 7, toRow: 8, label: 'Captain’s Cabin', privateRoomOf: 'riverbend' },
       ],
     ),
     'rb-private': bossRoom({
@@ -1648,7 +1712,7 @@ const riverbend: CityDef = {
       tableId: 'riverbend-boss',
       dealerLine: 'Dealer: Fifteen hundred each, one match. The Captain does not like to be kept waiting.',
       floorId: 'rb-boat',
-      floorDoor: { col: 7, row: 9 },
+      floorDoor: { col: 13, row: 18 },
     }),
     'rb-diner': area(
       'rb-diner',
@@ -1798,7 +1862,7 @@ const crescentHarbor: CityDef = {
         ]),
       ],
       [
-        { col: 14, row: 4, toAreaId: 'ch-cardroom', toCol: 10, toRow: 11, label: 'Card Room' },
+        { col: 14, row: 4, toAreaId: 'ch-cardroom', toCol: 20, toRow: 22, label: 'Card Room' },
         { col: 20, row: 4, toAreaId: 'ch-menswear', toCol: 6, toRow: 7, label: 'Menswear' },
         { col: 25, row: 4, toAreaId: 'ch-autorow', toCol: 7, toRow: 8, label: 'Auto Row' },
         { col: 8, row: 4, toAreaId: 'ch-supper', toCol: 7, toRow: 8, label: 'Supper Club' },
@@ -1810,14 +1874,14 @@ const crescentHarbor: CityDef = {
       'ch-cardroom',
       'Harbor Card Room',
       CARDROOM_FLOOR,
-      { col: 10, row: 11 },
+      { col: 20, row: 22 },
       '#121020',
       [
         {
           id: 'ch-roulette',
           name: 'Roulette Table',
-          col: 12,
-          row: 9,
+          col: 24,
+          row: 19,
           color: COLORS.flavor,
           art: 'none',
           lines: ['A wheel in mahogany. Bellamy\u2019s house allows it, which is the most that can be said for it.'],
@@ -1826,8 +1890,8 @@ const crescentHarbor: CityDef = {
         {
           id: 'harbor-dealer',
           name: 'Dealer',
-          col: 5,
-          row: 4,
+          col: 9,
+          row: 9,
           color: COLORS.dealer,
           lines: ['Dealer: Five-ten, thousand to sit. Hollis is in for his third buy-in.'],
           action: { kind: 'table', tableId: 'crescent-main' },
@@ -1835,8 +1899,8 @@ const crescentHarbor: CityDef = {
         {
           id: 'crescent-headsup',
           name: 'Heads-Up Table',
-          col: 8,
-          row: 8,
+          col: 15,
+          row: 18,
           color: COLORS.dealer,
           lines: ['Dealer: One-on-one, five-ten. Vance has been waiting for someone to sit.'],
           action: { kind: 'table', tableId: 'crescent-headsup' },
@@ -1844,30 +1908,30 @@ const crescentHarbor: CityDef = {
         {
           id: 'doorman',
           name: 'Doorman',
-          col: 9,
-          row: 11,
+          col: 16,
+          row: 21,
           color: COLORS.person,
           lines: MISSIONS['crescent-suit'].brief,
           action: { kind: 'mission', missionId: 'crescent-suit' },
         },
-        local('ch-cashier', 'Cashier', 10, 2, [
+        local('ch-cashier', 'Cashier', 20, 2, [
           'Cashier: Thousand to sit at five-ten. We do not do credit. We do not do favours.',
         ]),
         // The members, at the rail and between the tables.
-        local('ch-railbird', 'Railbird', 8, 5, [
+        local('ch-railbird', 'Railbird', 12, 10, [
           'Railbird: I have not played a hand here in eleven years. I have watched every one.',
         ]),
-        local('ch-widow', 'Shipping Widow', 12, 6, [
+        local('ch-widow', 'Shipping Widow', 27, 11, [
           'Shipping Widow: My husband built half the boats in this harbour. I am playing the other half.',
         ]),
-        local('ch-yachtsman', 'Yachtsman', 15, 9, [
+        local('ch-yachtsman', 'Yachtsman', 27, 19, [
           'Yachtsman: Named the boat after my wife. Lost the wife at this table. Kept the boat.',
         ]),
         {
           id: 'ch-waiter',
           name: 'Card-Room Waiter',
-          col: 11,
-          row: 7,
+          col: 23,
+          row: 17,
           color: COLORS.local,
           role: 'waiter',
           lines: ['Waiter: Brandy at the tables, tea at the fire. Mr. Bellamy takes neither while he is playing.'],
@@ -1875,8 +1939,8 @@ const crescentHarbor: CityDef = {
         },
       ],
       [
-        { col: 10, row: 12, toAreaId: 'ch-street', toCol: 14, toRow: 5, label: 'Out' },
-        { col: 17, row: 12, toAreaId: 'ch-private', toCol: 7, toRow: 8, label: 'Private Room', privateRoomOf: 'crescentHarbor' },
+        { col: 20, row: 23, toAreaId: 'ch-street', toCol: 14, toRow: 5, label: 'Out' },
+        { col: 34, row: 23, toAreaId: 'ch-private', toCol: 7, toRow: 8, label: 'Private Room', privateRoomOf: 'crescentHarbor' },
       ],
     ),
     'ch-private': bossRoom({
@@ -1888,7 +1952,7 @@ const crescentHarbor: CityDef = {
       tableId: 'crescent-boss',
       dealerLine: 'Dealer: Five thousand each. Mr. Bellamy will not be hurried, and neither should you.',
       floorId: 'ch-cardroom',
-      floorDoor: { col: 17, row: 11 },
+      floorDoor: { col: 34, row: 22 },
     }),
     'ch-menswear': area(
       'ch-menswear',
@@ -2103,7 +2167,7 @@ const palmCay: CityDef = {
         },
       ],
       [
-        { col: 13, row: 4, toAreaId: 'pc-casino', toCol: 10, toRow: 12, label: 'Cay Room' },
+        { col: 13, row: 4, toAreaId: 'pc-casino', toCol: 20, toRow: 24, label: 'Cay Room' },
         { col: 9, row: 15, toAreaId: 'pc-boutique', toCol: 6, toRow: 7, label: 'Boutique' },
         { col: 23, row: 15, toAreaId: 'pc-grill', toCol: 7, toRow: 8, label: 'Shoreline Grill' },
         { col: 5, row: 4, toAreaId: 'pc-marina', toCol: 7, toRow: 8, label: 'Marina Motors' },
@@ -2114,17 +2178,17 @@ const palmCay: CityDef = {
       'pc-casino',
       'The Cay Room',
       CAY_FLOOR,
-      { col: 10, row: 12 },
+      { col: 20, row: 24 },
       '#0c1a1c',
       [
         // Who meets you at the door.
-        { ...local('pc-coatcheck', 'Coat Check', 3, 11, ['Coat Check: Coats, hats, shopping. You would be amazed what people check in Palm Cay. Last week, a parrot.']), role: 'clerk' },
-        { ...local('pc-floor-manager', 'Floor Manager', 11, 12, ['Floor Manager: Welcome to the Cay Room. Tables either side, the wheel ahead, the bar at the back. Sandals are fine. Bare feet are not.']), role: 'suit' },
+        { ...local('pc-coatcheck', 'Coat Check', 5, 22, ['Coat Check: Coats, hats, shopping. You would be amazed what people check in Palm Cay. Last week, a parrot.']), role: 'clerk' },
+        { ...local('pc-floor-manager', 'Floor Manager', 21, 24, ['Floor Manager: Welcome to the Cay Room. Tables either side, the wheel ahead, the bar at the back. Sandals are fine. Bare feet are not.']), role: 'suit' },
         {
           id: 'cay-dealer',
           name: 'Dealer',
-          col: 5,
-          row: 5,
+          col: 9,
+          row: 11,
           color: COLORS.dealer,
           lines: ['Dealer: Ten-twenty-five. Twenty-five hundred to sit.'],
           action: { kind: 'table', tableId: 'palmcay-high' },
@@ -2132,8 +2196,8 @@ const palmCay: CityDef = {
         {
           id: 'tourist-dealer',
           name: 'Tourist Table',
-          col: 15,
-          row: 5,
+          col: 30,
+          row: 11,
           color: COLORS.dealer,
           lines: [
             'Dealer: Same stake, softer game. Bernard is celebrating something.',
@@ -2144,8 +2208,8 @@ const palmCay: CityDef = {
         {
           id: 'pc-roulette',
           name: 'Roulette Table',
-          col: 10,
-          row: 10,
+          col: 20,
+          row: 21,
           color: COLORS.flavor,
           art: 'none',
           lines: ['A wheel under a ceiling fan. The ball lands slowly here, and the croupier prefers it that way.'],
@@ -2154,37 +2218,37 @@ const palmCay: CityDef = {
         {
           id: 'pc-slots',
           name: 'Slot Machines',
-          col: 9,
-          row: 7,
+          col: 18,
+          row: 14,
           color: COLORS.flavor,
           art: 'none',
           lines: ['The machines here pay out in sunburn and optimism.'],
           action: { kind: 'slots' },
         },
-        local('pc-barman', 'Barman', 9, 2, [
+        local('pc-barman', 'Barman', 17, 2, [
           'Barman: Something with an umbrella in it? Everyone has something with an umbrella in it.',
         ]),
-        local('pc-cashier', 'Cashier', 15, 2, [
+        local('pc-cashier', 'Cashier', 30, 2, [
           'Cashier: Chips in shells, if you like. They are plastic. Everybody asks.',
         ]),
         // Linen and sunburn: the island's evening crowd round the wheel and the banks.
-        local('pc-honeymooner', 'Honeymooner', 8, 10, [
+        local('pc-honeymooner', 'Honeymooner', 18, 21, [
           'Honeymooner: We said one spin for luck. That was the second night of the honeymoon. It is the ninth.',
         ]),
-        local('pc-surfer', 'Surfer', 12, 9, [
+        local('pc-surfer', 'Surfer', 22, 20, [
           'Surfer: Flat out there today. In here the waves are all in my favour. Mostly. Sometimes.',
         ]),
-        local('pc-retiree', 'Retiree', 8, 8, [
+        local('pc-retiree', 'Retiree', 17, 15, [
           'Retiree: I came for a fortnight in 1987. I keep meaning to go home and the machine keeps saying wait.',
         ]),
-        local('pc-sunburn', 'Tourist', 17, 9, [
+        local('pc-sunburn', 'Tourist', 32, 15, [
           'Tourist: Is it meant to be this red? The man at the pool said twenty minutes a side.',
         ]),
         {
           id: 'pc-waitress',
           name: 'Cocktail Waitress',
-          col: 12,
-          row: 7,
+          col: 21,
+          row: 14,
           color: COLORS.local,
           role: 'waiter',
           look: { lower: 'skirt', hairStyle: 'long' },
@@ -2193,8 +2257,8 @@ const palmCay: CityDef = {
         },
       ],
       [
-        { col: 10, row: 13, toAreaId: 'pc-street', toCol: 13, toRow: 5, label: 'Out' },
-        { col: 6, row: 13, toAreaId: 'pc-private', toCol: 7, toRow: 8, label: 'Owner’s Table', privateRoomOf: 'palmCay' },
+        { col: 20, row: 25, toAreaId: 'pc-street', toCol: 13, toRow: 5, label: 'Out' },
+        { col: 11, row: 25, toAreaId: 'pc-private', toCol: 7, toRow: 8, label: 'Owner’s Table', privateRoomOf: 'palmCay' },
       ],
     ),
     'pc-private': bossRoom({
@@ -2206,7 +2270,7 @@ const palmCay: CityDef = {
       tableId: 'palmcay-boss',
       dealerLine: 'Dealer: Fifteen thousand each. Miss Calloway is feeling generous. That should worry you.',
       floorId: 'pc-casino',
-      floorDoor: { col: 6, row: 12 },
+      floorDoor: { col: 11, row: 24 },
     }),
     'pc-boutique': area(
       'pc-boutique',
@@ -2398,7 +2462,7 @@ const neonMesa: CityDef = {
         ]),
       ],
       [
-        { col: 6, row: 5, toAreaId: 'nm-casino', toCol: 11, toRow: 12, label: 'Mesa Casino' },
+        { col: 6, row: 5, toAreaId: 'nm-casino', toCol: 22, toRow: 24, label: 'Mesa Casino' },
         { col: 14, row: 5, toAreaId: 'nm-luxury', toCol: 6, toRow: 7, label: 'Mesa Luxury' },
         { col: 20, row: 5, toAreaId: 'nm-motors', toCol: 7, toRow: 8, label: 'Mesa Motors' },
         { col: 27, row: 5, toAreaId: 'nm-club', toCol: 7, toRow: 8, label: 'Ultraviolet' },
@@ -2409,14 +2473,14 @@ const neonMesa: CityDef = {
       'nm-casino',
       'Mesa Casino',
       MESA_FLOOR,
-      { col: 11, row: 12 },
+      { col: 22, row: 24 },
       '#1a1020',
       [
         {
           id: 'mesa-dealer',
           name: 'Dealer',
-          col: 6,
-          row: 5,
+          col: 11,
+          row: 11,
           color: COLORS.dealer,
           lines: ['Dealer: Twenty-five fifty. Ten thousand to sit.'],
           action: { kind: 'table', tableId: 'mesa-main' },
@@ -2424,8 +2488,8 @@ const neonMesa: CityDef = {
         {
           id: 'mesa-headsup',
           name: 'Heads-Up Table',
-          col: 11,
-          row: 5,
+          col: 21,
+          row: 10,
           color: COLORS.dealer,
           lines: ['Dealer: Fifty-hundred, one-on-one. Lorna plays here most nights.'],
           action: { kind: 'table', tableId: 'mesa-headsup' },
@@ -2433,8 +2497,8 @@ const neonMesa: CityDef = {
         {
           id: 'mesa-croupier',
           name: 'Croupier',
-          col: 16,
-          row: 5,
+          col: 31,
+          row: 10,
           color: COLORS.local,
           role: 'dealer',
           look: { hairStyle: 'bun' },
@@ -2445,7 +2509,7 @@ const neonMesa: CityDef = {
           id: 'mesa-cashier',
           name: 'Change Booth',
           col: 2,
-          row: 10,
+          row: 20,
           color: COLORS.local,
           role: 'dealer',
           lines: ['Cashier: Chips in, cash out. Count it at the window, not on the floor.'],
@@ -2455,7 +2519,7 @@ const neonMesa: CityDef = {
           id: 'mesa-tourist',
           name: 'Tourist',
           col: 2,
-          row: 7,
+          row: 12,
           color: COLORS.local,
           lines: ['Tourist: I have played that bank for six hours. I am going to win that car.', 'Tourist: Take my picture with it? Just in case.'],
           action: { kind: 'flavor' },
@@ -2463,8 +2527,8 @@ const neonMesa: CityDef = {
         {
           id: 'mesa-waitress',
           name: 'Cocktail Waitress',
-          col: 13,
-          row: 4,
+          col: 23,
+          row: 9,
           color: COLORS.local,
           role: 'waiter',
           look: { lower: 'skirt', hairStyle: 'long' },
@@ -2474,7 +2538,7 @@ const neonMesa: CityDef = {
         {
           id: 'highroller',
           name: 'High Roller Room',
-          col: 11,
+          col: 19,
           row: 2,
           color: COLORS.finale,
           lines: [
@@ -2486,7 +2550,7 @@ const neonMesa: CityDef = {
         {
           id: 'nm-slots',
           name: 'Slot Machines',
-          col: 17,
+          col: 37,
           row: 2,
           color: COLORS.flavor,
           art: 'none',
@@ -2496,8 +2560,8 @@ const neonMesa: CityDef = {
         {
           id: 'nm-roulette',
           name: 'Roulette Table',
-          col: 15,
-          row: 6,
+          col: 30,
+          row: 11,
           color: COLORS.flavor,
           art: 'none',
           lines: ['Thirty-seven pockets and a croupier who has not blinked since the neon came on.'],
@@ -2506,30 +2570,30 @@ const neonMesa: CityDef = {
         {
           id: 'nm-craps',
           name: 'Craps Table',
-          col: 16,
-          row: 10,
+          col: 32,
+          row: 21,
           color: COLORS.flavor,
           art: 'none',
           lines: ['Purple felt and a stickman who has seen everything twice.'],
           action: { kind: 'craps' },
         },
         // The Strip at its busiest: a wedding party, a convention, a woman who will not leave her machine.
-        local('nm-slotter', 'Slot Player', 5, 12, [
+        local('nm-slotter', 'Slot Player', 10, 23, [
           'Slot Player: This one’s due. I can feel it. I’ve been feeling it since the Tuesday buffet.',
         ]),
-        local('nm-newlywed', 'Newlywed', 13, 8, [
+        local('nm-newlywed', 'Newlywed', 23, 13, [
           'Newlywed: We got married at the Boneyard chapel an hour ago. Elvira cried. We’re honeymooning at roulette.',
         ]),
-        local('nm-conventioneer', 'Conventioneer', 9, 11, [
+        local('nm-conventioneer', 'Conventioneer', 14, 22, [
           'Conventioneer: I’m here for the dental supply expo. I have been to none of the dental supply expo.',
         ]),
-        local('nm-bachelorette', 'Bachelorette', 7, 12, [
+        local('nm-bachelorette', 'Bachelorette', 12, 23, [
           'Bachelorette: Have you seen a bride? Veil, sash, the look of somebody about to put it all on black?',
         ]),
       ],
       [
-        { col: 11, row: 13, toAreaId: 'nm-street', toCol: 6, toRow: 6, label: 'Out' },
-        { col: 4, row: 13, toAreaId: 'nm-private', toCol: 7, toRow: 8, label: 'Vale Suite', privateRoomOf: 'neonMesa' },
+        { col: 22, row: 25, toAreaId: 'nm-street', toCol: 6, toRow: 6, label: 'Out' },
+        { col: 7, row: 25, toAreaId: 'nm-private', toCol: 7, toRow: 8, label: 'Vale Suite', privateRoomOf: 'neonMesa' },
       ],
     ),
     'nm-private': bossRoom({
@@ -2541,7 +2605,7 @@ const neonMesa: CityDef = {
       tableId: 'mesa-boss',
       dealerLine: 'Dealer: Fifty thousand each, one match. Mr. Vale has not lost in this room in nine years.',
       floorId: 'nm-casino',
-      floorDoor: { col: 4, row: 12 },
+      floorDoor: { col: 7, row: 24 },
     }),
     'nm-luxury': area(
       'nm-luxury',
@@ -2717,7 +2781,7 @@ const portoLumina: CityDef = {
         ]),
       ],
       [
-        { col: 15, row: 5, toAreaId: 'pl-casino', toCol: 20, toRow: 23, label: 'Casino' },
+        { col: 15, row: 5, toAreaId: 'pl-casino', toCol: 28, toRow: 33, label: 'Casino' },
         { col: 25, row: 5, toAreaId: 'pl-atelier', toCol: 6, toRow: 7, label: 'Atelier' },
         { col: 5, row: 5, toAreaId: 'pl-lift', toCol: 6, toRow: 7, label: 'Penthouse Lift' },
       ],
@@ -2727,17 +2791,17 @@ const portoLumina: CityDef = {
       'pl-casino',
       'Porto Lumina Casino',
       LUMINA_FLOOR,
-      { col: 20, row: 23 },
+      { col: 28, row: 33 },
       '#141020',
       [
         // Who meets you at the door.
-        { ...local('pl-coatcheck', 'Coat Check', 3, 23, ['Coat Check: Your coat. Ticket forty-one. Do not lose it; the coat will outlive us both.']), role: 'clerk' },
-        { ...local('pl-floor-manager', 'Floor Manager', 24, 23, ['Floor Manager: Good evening. The tournament is the nine tables, the desk is under the chandelier at the back, and the salon is behind the rope. Madame asks that nobody counts their chips aloud.']), role: 'suit' },
+        { ...local('pl-coatcheck', 'Coat Check', 3, 33, ['Coat Check: Your coat. Ticket forty-one. Do not lose it; the coat will outlive us both.']), role: 'clerk' },
+        { ...local('pl-floor-manager', 'Floor Manager', 34, 33, ['Floor Manager: Good evening. The tournament is the nine tables, the desk is under the chandelier at the back, and the salon is behind the rope. Madame asks that nobody counts their chips aloud.']), role: 'suit' },
         {
           id: 'nadia',
           name: 'Nadia Okonkwo',
-          col: 22,
-          row: 21,
+          col: 30,
+          row: 29,
           color: COLORS.finale,
           lines: [
             'Nadia: The desk is at the back, under the chandelier. Twenty thousand to enter.',
@@ -2748,7 +2812,7 @@ const portoLumina: CityDef = {
         {
           id: 'lumina-tournament-desk',
           name: 'Tournament Desk',
-          col: 20,
+          col: 28,
           row: 3,
           color: COLORS.dealer,
           role: 'clerk',
@@ -2758,8 +2822,8 @@ const portoLumina: CityDef = {
         {
           id: 'pl-roulette',
           name: 'Roulette Table',
-          col: 34,
-          row: 9,
+          col: 50,
+          row: 12,
           color: COLORS.flavor,
           art: 'none',
           lines: ['A wheel gilded to the rim. The croupier spins it as though it were a sacrament.'],
@@ -2768,49 +2832,49 @@ const portoLumina: CityDef = {
         {
           id: 'lumina-dealer',
           name: 'Dealer',
-          col: 34,
-          row: 13,
+          col: 50,
+          row: 19,
           color: COLORS.dealer,
           lines: ['Dealer: Hundred-two hundred. Thirty thousand to sit.'],
           action: { kind: 'table', tableId: 'lumina-nosebleed' },
         },
-        local('pl-barman', 'Sommelier', 4, 3, [
+        local('pl-barman', 'Sommelier', 5, 3, [
           'Sommelier: The house pours for the players at the far table. You will know when you are one.',
         ]),
-        local('pl-cashier', 'Cashier', 12, 3, [
+        local('pl-cashier', 'Cashier', 17, 3, [
           'Cashier: Plaques, not chips, above ten thousand. They are heavier. People like that.',
         ]),
-        local('pl-director', 'Tournament Director', 17, 4, [
+        local('pl-director', 'Tournament Director', 25, 4, [
           'Director: Ten hands a round, then the blinds go up. Nobody asks for the clock to be stopped, and nobody gets it.',
         ]),
-        local('pl-railbird', 'Rail Bird', 29, 23, [
+        local('pl-railbird', 'Rail Bird', 41, 33, [
           'Rail Bird: I have watched every Invitational since the fire. Do not ask which fire.',
         ]),
         // Old money, new money, and the people who carry its drinks.
-        local('pl-heiress', 'Heiress', 15, 9, [
+        local('pl-heiress', 'Heiress', 20, 11, [
           'Heiress: Grandmother broke the bank here in 1961. The bank has been very rude to us ever since.',
         ]),
-        local('pl-shipowner', 'Shipowner', 32, 4, [
+        local('pl-shipowner', 'Shipowner', 46, 4, [
           'Shipowner: Eleven tankers and I still cannot hit a seven on that machine. It is personal now.',
         ]),
-        local('pl-croupier', 'Croupier', 32, 9, [
+        local('pl-croupier', 'Croupier', 48, 12, [
           'Croupier: Faites vos jeux. That means hurry up, in a nicer voice.',
         ]),
         {
           id: 'pl-waiter',
           name: 'Salon Waiter',
-          col: 31,
-          row: 15,
+          col: 47,
+          row: 21,
           color: COLORS.local,
           role: 'waiter',
           lines: ['Waiter: Champagne goes past the rope. You go past the rope when Miss Okonkwo says so.'],
           action: { kind: 'flavor' },
         },
-        local('pl-debutante', 'Debutante', 5, 14, [
+        local('pl-debutante', 'Debutante', 6, 20, [
           'Debutante: Mummy said to stand by the palm and look expensive. I think I am nailing it.',
         ]),
       ],
-      [{ col: 20, row: 25, toAreaId: 'pl-street', toCol: 15, toRow: 6, label: 'Out' }],
+      [{ col: 28, row: 35, toAreaId: 'pl-street', toCol: 15, toRow: 6, label: 'Out' }],
     ),
     'pl-atelier': area(
       'pl-atelier',
@@ -3027,26 +3091,56 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
   // stands beyond them is a plant or a cactus, whole when you walk over to it.
   'sc-floor': [
     { stampId: 'palm', col: 1, row: 1 },
-    { stampId: 'gumball', col: 2, row: 1 },
-    { stampId: 'slot-bank-western', col: 3, row: 1 },
-    { stampId: 'bar-brass', col: 7, row: 1 },
-    { stampId: 'cashier-cage', col: 12, row: 1 },
-    { stampId: 'fern', col: 17, row: 1 },
-    { stampId: 'cactus', col: 18, row: 1 },
-    { stampId: 'cactus', col: 1, row: 4 },
-    { stampId: 'cactus', col: 18, row: 4 },
-    { stampId: 'poker-table-6', col: 3, row: 4 },
-    { stampId: 'craps-table', col: 13, row: 4 },
-    { stampId: 'pillar-wood', col: 9, row: 5 },
-    { stampId: 'pillar-wood', col: 11, row: 5 },
-    { stampId: 'palm', col: 1, row: 8 },
-    { stampId: 'slot-bank', col: 3, row: 8 },
-    { stampId: 'slot-bank-western', col: 13, row: 8 },
-    { stampId: 'cactus', col: 18, row: 8 },
+    { stampId: 'gumball', col: 3, row: 1 },
+    { stampId: 'slot-bank-western', col: 7, row: 1 },
+    { stampId: 'bar-brass', col: 15, row: 1 },
+    { stampId: 'cashier-cage', col: 26, row: 1 },
+    { stampId: 'fern', col: 34, row: 1 },
+    { stampId: 'cactus', col: 36, row: 1 },
+    { stampId: 'cactus', col: 1, row: 7 },
+    { stampId: 'cactus', col: 36, row: 7 },
+    { stampId: 'poker-table-6', col: 7, row: 9 },
+    { stampId: 'craps-table', col: 28, row: 9 },
+    { stampId: 'pillar-wood', col: 17, row: 10 },
+    { stampId: 'pillar-wood', col: 22, row: 10 },
+    { stampId: 'palm', col: 1, row: 17 },
+    { stampId: 'slot-bank', col: 7, row: 18 },
+    { stampId: 'slot-bank-western', col: 27, row: 18 },
+    { stampId: 'cactus', col: 36, row: 17 },
     // Inside the door: the hat rack, a cactus in the corner, the house's star underfoot.
-    { stampId: 'coat-stand', col: 7, row: 10 },
-    { stampId: 'cactus', col: 1, row: 10 },
-    { stampId: 'inlay-crest', col: 9, row: 9 },
+    { stampId: 'coat-stand', col: 13, row: 20 },
+    { stampId: 'cactus', col: 1, row: 20 },
+    { stampId: 'inlay-crest', col: 19, row: 19 },
+    // The floor was doubled in each direction: these fill the room out so there is
+    // somewhere to walk between them rather than a field of bare carpet.
+    { stampId: 'velvet-bench', col: 22, row: 6 },
+    { stampId: 'pillar-wood', col: 15, row: 14 },
+    { stampId: 'velvet-bench', col: 18, row: 15 },
+    { stampId: 'floor-lamp', col: 23, row: 15 },
+    { stampId: 'velvet-bench', col: 26, row: 5 },
+    { stampId: 'pillar-wood', col: 30, row: 5 },
+    { stampId: 'velvet-bench', col: 14, row: 6 },
+    { stampId: 'floor-lamp', col: 18, row: 6 },
+    { stampId: 'velvet-bench', col: 3, row: 10 },
+    { stampId: 'pillar-wood', col: 3, row: 13 },
+    { stampId: 'palm', col: 4, row: 3 },
+    { stampId: 'floor-lamp', col: 33, row: 4 },
+    { stampId: 'cactus', col: 7, row: 6 },
+    { stampId: 'pillar-wood', col: 10, row: 5 },
+    { stampId: 'palm', col: 4, row: 6 },
+    { stampId: 'floor-lamp', col: 14, row: 9 },
+    { stampId: 'cactus', col: 25, row: 9 },
+    { stampId: 'pillar-wood', col: 25, row: 11 },
+    { stampId: 'palm', col: 6, row: 14 },
+    { stampId: 'floor-lamp', col: 9, row: 15 },
+    { stampId: 'cactus', col: 12, row: 15 },
+    { stampId: 'pillar-wood', col: 26, row: 14 },
+    { stampId: 'palm', col: 29, row: 14 },
+    { stampId: 'floor-lamp', col: 32, row: 15 },
+    { stampId: 'cactus', col: 4, row: 18 },
+    { stampId: 'pillar-wood', col: 16, row: 17 },
+    { stampId: 'palm', col: 24, row: 17 },
+    { stampId: 'floor-lamp', col: 32, row: 18 },
   ],
   // From the gangway the view is columns 4 to 18 and the whole height of the
   // room, so nothing on the back wall may reach into the hidden wall top: the
@@ -3054,25 +3148,50 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
   // marquee has the room above it. Plants and the life rings are past the edges.
   'rb-boat': [
     { stampId: 'palm', col: 1, row: 1 },
-    { stampId: 'life-ring', col: 2, row: 1 },
-    { stampId: 'porthole', col: 3, row: 1 },
-    { stampId: 'cashier-cage', col: 4, row: 1 },
-    { stampId: 'porthole', col: 9, row: 1 },
-    { stampId: 'painting-ship', col: 10, row: 1 },
-    { stampId: 'clock', col: 12, row: 1 },
-    { stampId: 'porthole', col: 13, row: 1 },
-    { stampId: 'bar-brass', col: 14, row: 1 },
-    { stampId: 'life-ring', col: 19, row: 1 },
-    { stampId: 'palm', col: 20, row: 1 },
-    { stampId: 'velvet-rope', col: 7, row: 3 },
-    { stampId: 'slot-bank-brass', col: 4, row: 5 },
-    { stampId: 'poker-table-brass', col: 9, row: 4 },
-    { stampId: 'roulette', col: 15, row: 5 },
-    { stampId: 'pillar-brass', col: 2, row: 4 },
-    { stampId: 'fern', col: 1, row: 8 },
-    { stampId: 'fern', col: 3, row: 9 },
-    { stampId: 'pillar-brass', col: 19, row: 5 },
-    { stampId: 'fern', col: 20, row: 9 },
+    { stampId: 'life-ring', col: 3, row: 1 },
+    { stampId: 'porthole', col: 5, row: 1 },
+    { stampId: 'cashier-cage', col: 9, row: 1 },
+    { stampId: 'porthole', col: 17, row: 1 },
+    { stampId: 'painting-ship', col: 20, row: 1 },
+    { stampId: 'clock', col: 24, row: 1 },
+    { stampId: 'porthole', col: 26, row: 1 },
+    { stampId: 'bar-brass', col: 30, row: 1 },
+    { stampId: 'life-ring', col: 38, row: 1 },
+    { stampId: 'palm', col: 40, row: 1 },
+    { stampId: 'velvet-rope', col: 14, row: 5 },
+    { stampId: 'slot-bank-brass', col: 9, row: 11 },
+    { stampId: 'poker-table-brass', col: 20, row: 9 },
+    { stampId: 'roulette', col: 31, row: 11 },
+    { stampId: 'pillar-brass', col: 3, row: 8 },
+    { stampId: 'fern', col: 1, row: 17 },
+    { stampId: 'fern', col: 5, row: 18 },
+    { stampId: 'pillar-brass', col: 38, row: 10 },
+    { stampId: 'fern', col: 40, row: 18 },
+    // The floor was doubled in each direction: these fill the room out so there is
+    // somewhere to walk between them rather than a field of bare carpet.
+    { stampId: 'slot-bank-brass', col: 6, row: 5 },
+    { stampId: 'velvet-bench', col: 19, row: 5 },
+    { stampId: 'palm', col: 24, row: 4 },
+    { stampId: 'velvet-bench', col: 27, row: 7 },
+    { stampId: 'floor-lamp', col: 32, row: 7 },
+    { stampId: 'velvet-bench', col: 15, row: 9 },
+    { stampId: 'palm', col: 4, row: 12 },
+    { stampId: 'velvet-bench', col: 15, row: 13 },
+    { stampId: 'floor-lamp', col: 37, row: 5 },
+    { stampId: 'velvet-bench', col: 27, row: 10 },
+    { stampId: 'palm', col: 27, row: 13 },
+    { stampId: 'velvet-bench', col: 37, row: 14 },
+    { stampId: 'floor-lamp', col: 19, row: 15 },
+    { stampId: 'velvet-bench', col: 22, row: 14 },
+    { stampId: 'palm', col: 27, row: 3 },
+    { stampId: 'pillar-brass', col: 3, row: 4 },
+    { stampId: 'floor-lamp', col: 12, row: 8 },
+    { stampId: 'fern', col: 35, row: 8 },
+    { stampId: 'palm', col: 8, row: 15 },
+    { stampId: 'pillar-brass', col: 11, row: 16 },
+    { stampId: 'floor-lamp', col: 15, row: 16 },
+    { stampId: 'fern', col: 30, row: 16 },
+    { stampId: 'palm', col: 33, row: 15 },
   ],
   // From the door the view is columns 3 to 17 and rows 3 down. The back wall
   // (fire, shelves, the cage behind a rope gate) is above it and whole; the
@@ -3080,161 +3199,292 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
   // the sides.
   'ch-cardroom': [
     { stampId: 'bookshelf-dark', col: 1, row: 1 },
-    { stampId: 'painting-portrait', col: 3, row: 1 },
-    { stampId: 'fireplace', col: 5, row: 1 },
-    { stampId: 'cashier-cage', col: 8, row: 1 },
-    { stampId: 'clock', col: 13, row: 1 },
-    { stampId: 'painting-ship', col: 14, row: 1 },
-    { stampId: 'bookshelf-dark', col: 17, row: 1 },
-    { stampId: 'velvet-rope', col: 7, row: 3 },
-    { stampId: 'velvet-rope', col: 11, row: 3 },
-    { stampId: 'poker-table-baize', col: 3, row: 4 },
-    { stampId: 'poker-table-baize', col: 13, row: 4 },
-    { stampId: 'poker-table-baize-4', col: 6, row: 8 },
-    { stampId: 'roulette', col: 11, row: 8 },
-    { stampId: 'light-pool', col: 4, row: 5 },
-    { stampId: 'light-pool', col: 14, row: 5 },
-    { stampId: 'light-pool', col: 6, row: 8 },
-    { stampId: 'light-pool', col: 11, row: 8 },
-    { stampId: 'armchair-green', col: 3, row: 9 },
-    { stampId: 'side-table', col: 4, row: 9 },
-    { stampId: 'side-table', col: 16, row: 9 },
-    { stampId: 'armchair-green', col: 17, row: 9 },
-    { stampId: 'fern', col: 1, row: 3 },
-    { stampId: 'palm', col: 1, row: 6 },
-    { stampId: 'fern', col: 1, row: 11 },
-    { stampId: 'fern', col: 18, row: 3 },
-    { stampId: 'palm', col: 18, row: 6 },
-    { stampId: 'fern', col: 18, row: 10 },
+    { stampId: 'painting-portrait', col: 6, row: 1 },
+    { stampId: 'fireplace', col: 10, row: 1 },
+    { stampId: 'cashier-cage', col: 18, row: 1 },
+    { stampId: 'clock', col: 26, row: 1 },
+    { stampId: 'painting-ship', col: 28, row: 1 },
+    { stampId: 'bookshelf-dark', col: 35, row: 1 },
+    { stampId: 'velvet-rope', col: 14, row: 4 },
+    { stampId: 'velvet-rope', col: 23, row: 4 },
+    { stampId: 'poker-table-baize', col: 7, row: 9 },
+    { stampId: 'poker-table-baize', col: 28, row: 9 },
+    { stampId: 'poker-table-baize-4', col: 13, row: 18 },
+    { stampId: 'roulette', col: 23, row: 18 },
+    { stampId: 'light-pool', col: 8, row: 11 },
+    { stampId: 'light-pool', col: 29, row: 11 },
+    { stampId: 'light-pool', col: 12, row: 18 },
+    { stampId: 'light-pool', col: 23, row: 18 },
+    { stampId: 'armchair-green', col: 5, row: 19 },
+    { stampId: 'side-table', col: 7, row: 19 },
+    { stampId: 'side-table', col: 32, row: 19 },
+    { stampId: 'armchair-green', col: 34, row: 19 },
+    { stampId: 'fern', col: 1, row: 4 },
+    { stampId: 'palm', col: 1, row: 12 },
+    { stampId: 'fern', col: 1, row: 22 },
+    { stampId: 'fern', col: 36, row: 4 },
+    { stampId: 'palm', col: 36, row: 12 },
+    { stampId: 'fern', col: 36, row: 21 },
+    // The floor was doubled in each direction: these fill the room out so there is
+    // somewhere to walk between them rather than a field of bare carpet.
+    { stampId: 'piano', col: 17, row: 9 },
+    { stampId: 'sofa-velvet', col: 22, row: 8 },
+    { stampId: 'piano', col: 22, row: 12 },
+    { stampId: 'sofa-velvet', col: 5, row: 5 },
+    { stampId: 'piano', col: 28, row: 4 },
+    { stampId: 'sofa-velvet', col: 14, row: 14 },
+    { stampId: 'velvet-bench', col: 10, row: 5 },
+    { stampId: 'palm', col: 3, row: 8 },
+    { stampId: 'velvet-bench', col: 4, row: 15 },
+    { stampId: 'armchair-green', col: 19, row: 16 },
+    { stampId: 'velvet-bench', col: 19, row: 18 },
+    { stampId: 'palm', col: 19, row: 4 },
+    { stampId: 'floor-lamp', col: 33, row: 5 },
+    { stampId: 'armchair-green', col: 14, row: 7 },
+    { stampId: 'fern', col: 14, row: 10 },
+    { stampId: 'palm', col: 4, row: 11 },
+    { stampId: 'floor-lamp', col: 19, row: 13 },
+    { stampId: 'armchair-green', col: 8, row: 16 },
+    { stampId: 'fern', col: 29, row: 16 },
+    { stampId: 'palm', col: 32, row: 15 },
+    { stampId: 'floor-lamp', col: 29, row: 19 },
   ],
   // From the door the view is columns 3 to 17 and rows 4 down: the two long
   // tables with a reef bank between them, the wheel, a bank either side of the
   // door. The tiki bar, the cage and the back bank are a walk up, whole above it.
   'pc-casino': [
     { stampId: 'palm', col: 1, row: 1 },
-    { stampId: 'fern', col: 2, row: 2 },
-    { stampId: 'slot-bank-island', col: 3, row: 1 },
-    { stampId: 'bar-tiki', col: 7, row: 1 },
-    { stampId: 'palm', col: 12, row: 1 },
-    { stampId: 'cashier-cage', col: 13, row: 1 },
-    { stampId: 'palm', col: 18, row: 1 },
-    { stampId: 'velvet-rope', col: 12, row: 3 },
-    { stampId: 'velvet-rope', col: 16, row: 3 },
-    { stampId: 'fern', col: 1, row: 4 },
-    { stampId: 'fern', col: 18, row: 4 },
-    { stampId: 'poker-table-teal', col: 3, row: 5 },
-    { stampId: 'slot-bank-reef', col: 8, row: 6 },
-    { stampId: 'poker-table-teal', col: 13, row: 5 },
-    { stampId: 'roulette', col: 9, row: 9 },
+    { stampId: 'fern', col: 3, row: 2 },
+    { stampId: 'slot-bank-island', col: 7, row: 1 },
+    { stampId: 'bar-tiki', col: 15, row: 1 },
+    { stampId: 'palm', col: 24, row: 1 },
+    { stampId: 'cashier-cage', col: 28, row: 1 },
+    { stampId: 'palm', col: 36, row: 1 },
+    { stampId: 'velvet-rope', col: 25, row: 4 },
+    { stampId: 'velvet-rope', col: 34, row: 4 },
+    { stampId: 'fern', col: 1, row: 7 },
+    { stampId: 'fern', col: 36, row: 7 },
+    { stampId: 'poker-table-teal', col: 7, row: 11 },
+    { stampId: 'slot-bank-reef', col: 17, row: 13 },
+    { stampId: 'poker-table-teal', col: 28, row: 11 },
+    { stampId: 'roulette', col: 19, row: 20 },
     // Inside the door: the coat check and its rail, a palm, the rope by the
     // owner's door, and the house's crest in the floor where you come in.
-    { stampId: 'rack-suits', col: 2, row: 10 },
-    { stampId: 'coat-stand', col: 4, row: 10 },
-    { stampId: 'palm', col: 6, row: 10 },
-    { stampId: 'velvet-rope', col: 7, row: 12 },
-    { stampId: 'inlay-crest', col: 9, row: 11 },
-    { stampId: 'slot-bank-reef', col: 14, row: 10 },
-    { stampId: 'palm', col: 1, row: 7 },
-    { stampId: 'fern', col: 1, row: 11 },
-    { stampId: 'palm', col: 18, row: 7 },
-    { stampId: 'fern', col: 18, row: 11 },
+    { stampId: 'rack-suits', col: 4, row: 21 },
+    { stampId: 'coat-stand', col: 7, row: 21 },
+    { stampId: 'palm', col: 11, row: 21 },
+    { stampId: 'velvet-rope', col: 14, row: 24 },
+    { stampId: 'inlay-crest', col: 19, row: 23 },
+    { stampId: 'slot-bank-reef', col: 29, row: 22 },
+    { stampId: 'palm', col: 1, row: 14 },
+    { stampId: 'fern', col: 1, row: 23 },
+    { stampId: 'palm', col: 36, row: 14 },
+    { stampId: 'fern', col: 36, row: 23 },
+    // The floor was doubled in each direction: these fill the room out so there is
+    // somewhere to walk between them rather than a field of bare carpet.
+    { stampId: 'slot-bank-reef', col: 14, row: 7 },
+    { stampId: 'slot-bank-island', col: 20, row: 7 },
+    { stampId: 'lounger', col: 4, row: 7 },
+    { stampId: 'fern', col: 9, row: 7 },
+    { stampId: 'lounger', col: 23, row: 13 },
+    { stampId: 'plant-tall', col: 26, row: 18 },
+    { stampId: 'lounger', col: 29, row: 18 },
+    { stampId: 'fern', col: 15, row: 19 },
+    { stampId: 'lounger', col: 30, row: 5 },
+    { stampId: 'plant-tall', col: 26, row: 7 },
+    { stampId: 'lounger', col: 3, row: 10 },
+    { stampId: 'fern', col: 4, row: 17 },
+    { stampId: 'lounger', col: 7, row: 17 },
+    { stampId: 'plant-tall', col: 11, row: 17 },
+    { stampId: 'lounger', col: 33, row: 18 },
+    { stampId: 'fern', col: 25, row: 21 },
+    { stampId: 'pillar-bamboo', col: 29, row: 7 },
+    { stampId: 'plant-tall', col: 32, row: 8 },
+    { stampId: 'palm', col: 14, row: 11 },
+    { stampId: 'fern', col: 4, row: 13 },
+    { stampId: 'pillar-bamboo', col: 14, row: 14 },
+    { stampId: 'plant-tall', col: 23, row: 16 },
   ],
   // From the door you see columns 4 to 18, so the pit and the front stand
   // inside them; the prize car and the change booth fill the corners past the
   // left edge, where you find them whole when you walk over.
   'nm-casino': [
     { stampId: 'slot-bank-jackpot', col: 1, row: 1 },
-    { stampId: 'neon-vip', col: 8, row: 1 },
-    { stampId: 'door-vip', col: 11, row: 1 },
-    { stampId: 'velvet-rope', col: 8, row: 2 },
-    { stampId: 'velvet-rope', col: 12, row: 2 },
-    { stampId: 'slot-bank-neon', col: 16, row: 1 },
-    { stampId: 'cactus', col: 20, row: 4 },
-    { stampId: 'prize-car', col: 1, row: 5 },
-    { stampId: 'poker-table-neon', col: 4, row: 5 },
-    { stampId: 'poker-table-neon-4', col: 9, row: 5 },
-    { stampId: 'roulette', col: 14, row: 5 },
-    { stampId: 'palm', col: 19, row: 6 },
-    { stampId: 'change-booth', col: 1, row: 9 },
-    { stampId: 'slot-bank-neon', col: 4, row: 9 },
-    { stampId: 'pillar-neon', col: 9, row: 9 },
-    { stampId: 'pillar-neon', col: 13, row: 9 },
-    { stampId: 'craps-table-neon', col: 14, row: 9 },
-    { stampId: 'palm', col: 20, row: 9 },
+    { stampId: 'neon-vip', col: 16, row: 1 },
+    { stampId: 'door-vip', col: 22, row: 1 },
+    { stampId: 'velvet-rope', col: 16, row: 2 },
+    { stampId: 'velvet-rope', col: 25, row: 2 },
+    { stampId: 'slot-bank-neon', col: 36, row: 1 },
+    { stampId: 'cactus', col: 40, row: 7 },
+    { stampId: 'prize-car', col: 1, row: 10 },
+    { stampId: 'poker-table-neon', col: 9, row: 11 },
+    { stampId: 'poker-table-neon-4', col: 19, row: 10 },
+    { stampId: 'roulette', col: 29, row: 10 },
+    { stampId: 'palm', col: 38, row: 12 },
+    { stampId: 'change-booth', col: 1, row: 19 },
+    { stampId: 'slot-bank-neon', col: 9, row: 20 },
+    { stampId: 'pillar-neon', col: 17, row: 19 },
+    { stampId: 'pillar-neon', col: 26, row: 19 },
+    { stampId: 'craps-table-neon', col: 30, row: 20 },
+    { stampId: 'palm', col: 40, row: 19 },
+    // The floor was doubled in each direction: these fill the room out so there is
+    // somewhere to walk between them rather than a field of bare carpet.
+    { stampId: 'slot-bank-neon', col: 9, row: 5 },
+    { stampId: 'sofa-velvet', col: 30, row: 5 },
+    { stampId: 'cactus', col: 21, row: 16 },
+    { stampId: 'sofa-velvet', col: 20, row: 20 },
+    { stampId: 'floor-lamp', col: 17, row: 6 },
+    { stampId: 'sofa-velvet', col: 20, row: 6 },
+    { stampId: 'cactus', col: 26, row: 6 },
+    { stampId: 'sofa-velvet', col: 35, row: 7 },
+    { stampId: 'floor-lamp', col: 4, row: 15 },
+    { stampId: 'sofa-velvet', col: 29, row: 16 },
+    { stampId: 'cactus', col: 3, row: 6 },
+    { stampId: 'palm', col: 25, row: 9 },
+    { stampId: 'floor-lamp', col: 25, row: 13 },
+    { stampId: 'pillar-neon', col: 16, row: 15 },
+    { stampId: 'cactus', col: 34, row: 15 },
+    { stampId: 'palm', col: 6, row: 5 },
+    { stampId: 'floor-lamp', col: 6, row: 9 },
+    { stampId: 'pillar-neon', col: 16, row: 8 },
+    { stampId: 'cactus', col: 35, row: 10 },
+    { stampId: 'palm', col: 6, row: 11 },
+    { stampId: 'floor-lamp', col: 16, row: 12 },
+    { stampId: 'pillar-neon', col: 24, row: 15 },
+    { stampId: 'cactus', col: 37, row: 16 },
+    { stampId: 'palm', col: 7, row: 16 },
+    { stampId: 'floor-lamp', col: 10, row: 17 },
+    { stampId: 'pillar-neon', col: 13, row: 16 },
+    { stampId: 'cactus', col: 37, row: 19 },
+    { stampId: 'palm', col: 6, row: 19 },
+    { stampId: 'floor-lamp', col: 37, row: 22 },
   ],
   // A hall the size of a ballroom: nine tables of the tournament in a grid on the
   // royal carpet, the bar and the cages along the back wall, the salon and the wheel
   // down the east side. The door is at the bottom, and the first thing past it is
   // the crest underfoot.
   'pl-casino': [
-    { stampId: 'painting-portrait', col: 3, row: 1 },
-    { stampId: 'painting-portrait', col: 9, row: 1 },
-    { stampId: 'painting-portrait', col: 15, row: 1 },
-    { stampId: 'painting-portrait', col: 23, row: 1 },
-    { stampId: 'painting-portrait', col: 29, row: 1 },
-    { stampId: 'painting-portrait', col: 35, row: 1 },
-    { stampId: 'bar-marble', col: 2, row: 2 },
-    { stampId: 'cashier-cage', col: 10, row: 2 },
-    { stampId: 'cashier-cage', col: 18, row: 2 },
-    { stampId: 'slot-bank-gold', col: 28, row: 2 },
-    { stampId: 'slot-bank-gold', col: 34, row: 2 },
-    { stampId: 'poker-table-royal', col: 10, row: 5 },
-    { stampId: 'poker-table-royal', col: 17, row: 5 },
-    { stampId: 'poker-table-royal', col: 24, row: 5 },
-    { stampId: 'poker-table-royal', col: 10, row: 11 },
-    { stampId: 'poker-table-royal', col: 17, row: 11 },
-    { stampId: 'poker-table-royal', col: 24, row: 11 },
-    { stampId: 'poker-table-royal', col: 10, row: 17 },
-    { stampId: 'poker-table-royal', col: 17, row: 17 },
-    { stampId: 'poker-table-royal', col: 24, row: 17 },
-    { stampId: 'poker-table-royal', col: 32, row: 13 },
-    { stampId: 'roulette', col: 33, row: 8 },
-    { stampId: 'velvet-rope', col: 1, row: 22 },
-    { stampId: 'velvet-rope', col: 4, row: 22 },
-    { stampId: 'velvet-rope', col: 7, row: 22 },
-    { stampId: 'velvet-rope', col: 10, row: 22 },
-    { stampId: 'velvet-rope', col: 13, row: 22 },
-    { stampId: 'velvet-rope', col: 16, row: 22 },
-    { stampId: 'velvet-rope', col: 22, row: 22 },
-    { stampId: 'velvet-rope', col: 25, row: 22 },
-    { stampId: 'velvet-rope', col: 28, row: 22 },
-    { stampId: 'velvet-rope', col: 31, row: 22 },
-    { stampId: 'velvet-rope', col: 34, row: 22 },
-    { stampId: 'pillar-marble', col: 19, row: 22 },
-    { stampId: 'pillar-marble', col: 21, row: 22 },
-    { stampId: 'fern', col: 37, row: 22 },
-    { stampId: 'fern', col: 38, row: 22 },
+    { stampId: 'painting-portrait', col: 4, row: 1 },
+    { stampId: 'painting-portrait', col: 13, row: 1 },
+    { stampId: 'painting-portrait', col: 21, row: 1 },
+    { stampId: 'painting-portrait', col: 33, row: 1 },
+    { stampId: 'painting-portrait', col: 41, row: 1 },
+    { stampId: 'painting-portrait', col: 52, row: 1 },
+    { stampId: 'bar-marble', col: 3, row: 2 },
+    { stampId: 'cashier-cage', col: 15, row: 2 },
+    { stampId: 'cashier-cage', col: 26, row: 2 },
+    { stampId: 'slot-bank-gold', col: 40, row: 2 },
+    { stampId: 'slot-bank-gold', col: 51, row: 2 },
+    { stampId: 'poker-table-royal', col: 15, row: 7 },
+    { stampId: 'poker-table-royal', col: 25, row: 7 },
+    { stampId: 'poker-table-royal', col: 35, row: 7 },
+    { stampId: 'poker-table-royal', col: 15, row: 16 },
+    { stampId: 'poker-table-royal', col: 25, row: 16 },
+    { stampId: 'poker-table-royal', col: 35, row: 16 },
+    { stampId: 'poker-table-royal', col: 15, row: 25 },
+    { stampId: 'poker-table-royal', col: 25, row: 25 },
+    { stampId: 'poker-table-royal', col: 35, row: 25 },
+    { stampId: 'poker-table-royal', col: 48, row: 19 },
+    { stampId: 'roulette', col: 49, row: 11 },
+    { stampId: 'velvet-rope', col: 1, row: 32 },
+    { stampId: 'velvet-rope', col: 4, row: 32 },
+    { stampId: 'velvet-rope', col: 7, row: 32 },
+    { stampId: 'velvet-rope', col: 10, row: 32 },
+    { stampId: 'velvet-rope', col: 13, row: 32 },
+    { stampId: 'velvet-rope', col: 16, row: 32 },
+    { stampId: 'velvet-rope', col: 19, row: 32 },
+    { stampId: 'velvet-rope', col: 22, row: 32 },
+    { stampId: 'fern', col: 25, row: 32 },
+    { stampId: 'fern', col: 26, row: 32 },
+    { stampId: 'pillar-marble', col: 27, row: 32 },
+    { stampId: 'pillar-marble', col: 29, row: 32 },
+    { stampId: 'velvet-rope', col: 30, row: 32 },
+    { stampId: 'velvet-rope', col: 33, row: 32 },
+    { stampId: 'velvet-rope', col: 36, row: 32 },
+    { stampId: 'velvet-rope', col: 39, row: 32 },
+    { stampId: 'velvet-rope', col: 42, row: 32 },
+    { stampId: 'velvet-rope', col: 45, row: 32 },
+    { stampId: 'velvet-rope', col: 48, row: 32 },
+    { stampId: 'velvet-rope', col: 51, row: 32 },
+    { stampId: 'velvet-rope', col: 54, row: 32 },
     { stampId: 'palm', col: 1, row: 2 },
-    { stampId: 'palm', col: 8, row: 2 },
-    { stampId: 'palm', col: 26, row: 2 },
-    { stampId: 'palm', col: 38, row: 2 },
-    { stampId: 'palm', col: 1, row: 8 },
-    { stampId: 'palm', col: 38, row: 8 },
-    { stampId: 'fern', col: 1, row: 15 },
-    { stampId: 'fern', col: 38, row: 15 },
-    { stampId: 'fern', col: 7, row: 12 },
-    { stampId: 'fern', col: 32, row: 11 },
-    { stampId: 'palm', col: 7, row: 19 },
-    { stampId: 'palm', col: 36, row: 21 },
-    { stampId: 'pillar-marble', col: 8, row: 5 },
-    { stampId: 'pillar-marble', col: 31, row: 5 },
-    { stampId: 'pillar-marble', col: 8, row: 15 },
-    { stampId: 'pillar-marble', col: 31, row: 16 },
-    { stampId: 'rack-suits', col: 1, row: 23 },
-    { stampId: 'coat-stand', col: 4, row: 24 },
-    { stampId: 'inlay-crest', col: 17, row: 23 },
-    { stampId: 'light-pool', col: 16, row: 10 },
-    { stampId: 'light-pool', col: 19, row: 3 },
-    { stampId: 'rug-red', col: 3, row: 6 },
-    { stampId: 'sofa-leather', col: 3, row: 6 },
-    { stampId: 'rug-red', col: 3, row: 9 },
-    { stampId: 'sofa-leather', col: 3, row: 9 },
-    { stampId: 'rug-red', col: 3, row: 12 },
-    { stampId: 'sofa-leather', col: 3, row: 12 },
-    { stampId: 'rug-red', col: 3, row: 15 },
-    { stampId: 'sofa-leather', col: 3, row: 15 },
-    { stampId: 'rug-red', col: 2, row: 18 },
-    { stampId: 'sofa-leather', col: 2, row: 18 },
+    { stampId: 'palm', col: 11, row: 2 },
+    { stampId: 'palm', col: 37, row: 2 },
+    { stampId: 'palm', col: 56, row: 2 },
+    { stampId: 'palm', col: 1, row: 11 },
+    { stampId: 'palm', col: 56, row: 11 },
+    { stampId: 'fern', col: 1, row: 21 },
+    { stampId: 'fern', col: 56, row: 21 },
+    { stampId: 'fern', col: 10, row: 17 },
+    { stampId: 'fern', col: 47, row: 15 },
+    { stampId: 'palm', col: 10, row: 27 },
+    { stampId: 'palm', col: 53, row: 30 },
+    { stampId: 'pillar-marble', col: 11, row: 7 },
+    { stampId: 'pillar-marble', col: 46, row: 7 },
+    { stampId: 'pillar-marble', col: 11, row: 21 },
+    { stampId: 'pillar-marble', col: 46, row: 23 },
+    { stampId: 'rack-suits', col: 1, row: 33 },
+    { stampId: 'coat-stand', col: 5, row: 34 },
+    { stampId: 'inlay-crest', col: 24, row: 33 },
+    { stampId: 'light-pool', col: 23, row: 14 },
+    { stampId: 'light-pool', col: 27, row: 4 },
+    { stampId: 'rug-red', col: 4, row: 8 },
+    { stampId: 'sofa-leather', col: 4, row: 8 },
+    { stampId: 'rug-red', col: 4, row: 13 },
+    { stampId: 'sofa-leather', col: 4, row: 12 },
+    { stampId: 'rug-red', col: 4, row: 17 },
+    { stampId: 'sofa-leather', col: 4, row: 17 },
+    { stampId: 'rug-red', col: 4, row: 21 },
+    { stampId: 'sofa-leather', col: 4, row: 21 },
+    { stampId: 'rug-red', col: 3, row: 26 },
+    { stampId: 'sofa-leather', col: 3, row: 26 },
+    // The floor was doubled in each direction: these fill the room out so there is
+    // somewhere to walk between them rather than a field of bare carpet.
+    { stampId: 'slot-bank-gold', col: 9, row: 11 },
+    { stampId: 'sofa-velvet', col: 49, row: 26 },
+    { stampId: 'palm', col: 43, row: 27 },
+    { stampId: 'velvet-bench', col: 49, row: 7 },
+    { stampId: 'floor-lamp', col: 53, row: 7 },
+    { stampId: 'velvet-bench', col: 42, row: 11 },
+    { stampId: 'palm', col: 42, row: 18 },
+    { stampId: 'plant-tall', col: 22, row: 4 },
+    { stampId: 'floor-lamp', col: 33, row: 4 },
+    { stampId: 'pillar-marble', col: 48, row: 3 },
+    { stampId: 'palm', col: 22, row: 6 },
+    { stampId: 'plant-tall', col: 32, row: 7 },
+    { stampId: 'floor-lamp', col: 22, row: 10 },
+    { stampId: 'pillar-marble', col: 32, row: 9 },
+    { stampId: 'palm', col: 15, row: 12 },
+    { stampId: 'plant-tall', col: 18, row: 13 },
+    { stampId: 'floor-lamp', col: 28, row: 13 },
+    { stampId: 'pillar-marble', col: 31, row: 12 },
+    { stampId: 'palm', col: 34, row: 12 },
+    { stampId: 'plant-tall', col: 37, row: 13 },
+    { stampId: 'floor-lamp', col: 42, row: 14 },
+    { stampId: 'pillar-marble', col: 32, row: 15 },
+    { stampId: 'palm', col: 50, row: 15 },
+    { stampId: 'plant-tall', col: 53, row: 16 },
+    { stampId: 'floor-lamp', col: 22, row: 19 },
+    { stampId: 'pillar-marble', col: 32, row: 18 },
+    { stampId: 'palm', col: 14, row: 21 },
+    { stampId: 'plant-tall', col: 17, row: 22 },
+    { stampId: 'floor-lamp', col: 20, row: 22 },
+    { stampId: 'pillar-marble', col: 23, row: 21 },
+    { stampId: 'palm', col: 26, row: 21 },
+    { stampId: 'plant-tall', col: 29, row: 22 },
+    { stampId: 'floor-lamp', col: 32, row: 22 },
+    { stampId: 'pillar-marble', col: 35, row: 21 },
+    { stampId: 'palm', col: 38, row: 21 },
+    { stampId: 'plant-tall', col: 41, row: 22 },
+    { stampId: 'floor-lamp', col: 22, row: 25 },
+    { stampId: 'pillar-marble', col: 32, row: 24 },
+    { stampId: 'palm', col: 54, row: 24 },
+    { stampId: 'plant-tall', col: 22, row: 28 },
+    { stampId: 'floor-lamp', col: 32, row: 28 },
+    { stampId: 'pillar-marble', col: 48, row: 28 },
+    { stampId: 'pillar-marble', col: 43, row: 7 },
+    { stampId: 'fern', col: 44, row: 12 },
+    { stampId: 'plant-tall', col: 44, row: 20 },
   ],
   'ch-club': [
     { stampId: 'bookshelf-dark', col: 1, row: 1 },

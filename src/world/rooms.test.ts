@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CITIES, allAreas } from './cities'
+import { AREAS, CITIES, allAreas } from './cities'
 import { STAMP_BY_ID, stampSize } from './stamps'
 import { DOOR, isTileWalkable } from '../overworld/tiles'
 
@@ -84,5 +84,84 @@ describe('rooms', () => {
       .map(({ area }) => ({ room: area.id, square: biggestBareSquare(area) }))
       .filter(({ square }) => square > 3)
     expect(bare).toEqual([])
+  })
+
+  describe('casino floors', () => {
+    // Every floor was doubled in each direction (Lumina's hall, already a ballroom,
+    // in area) after players found the casinos cramped. What was asked of them:
+    // room to walk, and a way to every table, door and person that is not a
+    // single-file squeeze.
+    const FLOORS: Record<string, number> = {
+      'sc-floor': 20 * 12,
+      'rb-boat': 22 * 11,
+      'ch-cardroom': 20 * 13,
+      'pc-casino': 20 * 14,
+      'nm-casino': 22 * 14,
+      'pl-casino': 40 * 26,
+    }
+
+    /** The widest square of floor each walkable tile belongs to, up to 3. */
+    function widths(map: number[][]): number[][] {
+      const walk = (c: number, r: number) => isTileWalkable(map[r]?.[c] ?? -1)
+      const out = map.map((row) => row.map(() => 0))
+      for (let k = 1; k <= 3; k++) {
+        for (let r = 0; r + k <= map.length; r++) {
+          for (let c = 0; c + k <= map[0].length; c++) {
+            let all = true
+            for (let dr = 0; dr < k && all; dr++) for (let dc = 0; dc < k; dc++) if (!walk(c + dc, r + dr)) { all = false; break }
+            if (all) for (let dr = 0; dr < k; dr++) for (let dc = 0; dc < k; dc++) out[r + dr][c + dc] = k
+          }
+        }
+      }
+      return out
+    }
+
+    it('are at least twice the size they were', () => {
+      for (const [id, was] of Object.entries(FLOORS)) {
+        const map = AREAS[id].area.map
+        expect(map.length * map[0].length, id).toBeGreaterThanOrEqual(was * 2)
+      }
+    })
+
+    it('leave a path two tiles wide to everything on them', () => {
+      for (const id of Object.keys(FLOORS)) {
+        const area = AREAS[id].area
+        const map = area.map
+        const wid = widths(map)
+        const walk = (c: number, r: number) => isTileWalkable(map[r]?.[c] ?? -1)
+        // From inside the hall, past the foyer: Lumina's rope has one deliberate gap.
+        const door = area.exits[0]
+        let start: { col: number; row: number } | null = null
+        for (let r = door.row - 6; r >= 1 && !start; r--) {
+          for (const dc of [0, 1, -1, 2, -2]) if (walk(door.col + dc, r) && wid[r][door.col + dc] >= 2) { start = { col: door.col + dc, row: r }; break }
+        }
+        expect(start, `${id}: nowhere to start`).not.toBeNull()
+        // The widest route from the start to each tile: the narrowest tile along the best way.
+        const best = map.map((row) => row.map(() => 0))
+        best[start!.row][start!.col] = wid[start!.row][start!.col]
+        const queue: [number, number][] = [[start!.col, start!.row]]
+        while (queue.length) {
+          const [c, r] = queue.shift()!
+          for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+            const nc = c + dc, nr = r + dr
+            if (!walk(nc, nr)) continue
+            const v = Math.min(best[r][c], wid[nr][nc])
+            if (v > best[nr][nc]) { best[nr][nc] = v; queue.push([nc, nr]) }
+          }
+        }
+        const squeezed: string[] = []
+        for (const poi of area.pois) {
+          if (poi.id.includes('-slot-')) continue
+          // The foyer by the door, behind Lumina's rope with its one gap, is a corridor on purpose.
+          if (poi.row >= map.length - 4) continue
+          // Somebody stands against what they are at, so look at the floor beside them.
+          const beside = [[0, 1], [0, -1], [1, 0], [-1, 0], [0, 0]].map(([dc, dr]) => ({ c: poi.col + dc, r: poi.row + dr })).filter(({ c, r }) => walk(c, r))
+          const reach = Math.max(0, ...beside.map(({ c, r }) => best[r][c]))
+          if (reach === 0) squeezed.push(`${poi.id}: no way there`)
+          else if (reach < 2) squeezed.push(`${poi.id}@${poi.col},${poi.row}`)
+        }
+        expect(squeezed, id).toEqual([])
+      }
+    })
   })
 })

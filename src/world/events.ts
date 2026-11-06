@@ -1439,7 +1439,7 @@ export const EVENTS: GameEvent[] = [
       { kind: 'dialogue', speaker: 'marcus', lines: ['Marcus: Smell that? Carpet and cigarettes. Real poker.'] },
       { kind: 'moveNpc', characterId: 'marcus', to: { col: 16, row: 5 }, youFollow: true },
       { kind: 'fade', to: 'out' },
-      { kind: 'teleport', areaId: 'sc-floor', col: 10, row: 9, with: ['marcus'] },
+      { kind: 'teleport', areaId: 'sc-floor', col: 20, row: 19, with: ['marcus'] },
       { kind: 'fade', to: 'in' },
       { kind: 'dialogue', speaker: 'marcus', lines: ['Marcus: Pit boss, top left. He seats the low-stakes table. A hundred to sit.'] },
       {
@@ -1463,7 +1463,7 @@ export const EVENTS: GameEvent[] = [
         ],
       },
       { kind: 'clearFlag', flag: 'marcusSeesYouOff' },
-      { kind: 'moveNpc', characterId: 'marcus', to: { col: 10, row: 11 }, leaves: true },
+      { kind: 'moveNpc', characterId: 'marcus', to: { col: 20, row: 21 }, leaves: true },
       { kind: 'dialogue', lines: ['The low-stakes table is top left. The pit boss is waiting to seat you.'] },
       { kind: 'wait', ms: 400 },
       {
@@ -1547,7 +1547,7 @@ export const EVENTS: GameEvent[] = [
       // and through it, rather than being left at the stop to find it.
       { kind: 'movePlayer', to: { col: 16, row: 5 } },
       { kind: 'fade', to: 'out' },
-      { kind: 'teleport', areaId: 'sc-floor', col: 10, row: 10 },
+      { kind: 'teleport', areaId: 'sc-floor', col: 20, row: 20 },
       { kind: 'fade', to: 'in' },
     ],
   },
@@ -1715,7 +1715,7 @@ export const EVENTS: GameEvent[] = [
       // and through it, rather than being left at the stop to find it.
       { kind: 'movePlayer', to: { col: 9, row: 6 } },
       { kind: 'fade', to: 'out' },
-      { kind: 'teleport', areaId: 'rb-boat', col: 11, row: 9 },
+      { kind: 'teleport', areaId: 'rb-boat', col: 22, row: 18 },
       { kind: 'fade', to: 'in' },
     ],
   },
@@ -1895,7 +1895,7 @@ export const EVENTS: GameEvent[] = [
       // and through it, rather than being left at the stop to find it.
       { kind: 'movePlayer', to: { col: 14, row: 5 } },
       { kind: 'fade', to: 'out' },
-      { kind: 'teleport', areaId: 'ch-cardroom', col: 10, row: 11 },
+      { kind: 'teleport', areaId: 'ch-cardroom', col: 20, row: 22 },
       { kind: 'fade', to: 'in' },
     ],
   },
@@ -2039,7 +2039,7 @@ export const EVENTS: GameEvent[] = [
       // and through it, rather than being left at the stop to find it.
       { kind: 'movePlayer', to: { col: 13, row: 5 } },
       { kind: 'fade', to: 'out' },
-      { kind: 'teleport', areaId: 'pc-casino', col: 10, row: 12 },
+      { kind: 'teleport', areaId: 'pc-casino', col: 20, row: 24 },
       { kind: 'fade', to: 'in' },
     ],
   },
@@ -2171,7 +2171,7 @@ export const EVENTS: GameEvent[] = [
       // and through it, rather than being left at the stop to find it.
       { kind: 'movePlayer', to: { col: 6, row: 6 } },
       { kind: 'fade', to: 'out' },
-      { kind: 'teleport', areaId: 'nm-casino', col: 11, row: 12 },
+      { kind: 'teleport', areaId: 'nm-casino', col: 22, row: 24 },
       { kind: 'fade', to: 'in' },
     ],
   },
@@ -2311,7 +2311,7 @@ export const EVENTS: GameEvent[] = [
       // and through it, rather than being left at the stop to find it.
       { kind: 'movePlayer', to: { col: 15, row: 6 } },
       { kind: 'fade', to: 'out' },
-      { kind: 'teleport', areaId: 'pl-casino', col: 20, row: 23 },
+      { kind: 'teleport', areaId: 'pl-casino', col: 28, row: 33 },
       { kind: 'fade', to: 'in' },
     ],
   },
@@ -2344,14 +2344,14 @@ export const EVENTS: GameEvent[] = [
       'the Invitational), foreshadow the final table and Nadia, and walk you to the entry desk. Nadia herself is met ' +
       'later (`nadia-names-the-match`).',
     // The foyer is roped off but for one gap, so you cannot come into the hall without stepping on it.
-    trigger: { kind: 'standOn', areaId: 'pl-casino', col: 20, row: 22 },
+    trigger: { kind: 'standOn', areaId: 'pl-casino', col: 28, row: 32 },
     conditions: [{ kind: 'chapter', cityId: 'portoLumina' }],
     actions: [
       {
         kind: 'dialogue',
         lines: ['A hall the size of a ballroom: nine tables under the chandeliers, and somebody in a sports jacket waving both arms at you.'],
       },
-      { kind: 'moveNpc', characterId: 'marcus', from: { col: 14, row: 21 }, to: 'player', pace: 'run' },
+      { kind: 'moveNpc', characterId: 'marcus', from: { col: 19, row: 29 }, to: 'player', pace: 'run' },
       {
         kind: 'dialogue',
         speaker: 'marcus',
@@ -2360,7 +2360,7 @@ export const EVENTS: GameEvent[] = [
           'Marcus: A car came for me, man. A driver. He called me Mr. Marcus. I have not stopped thinking about it.',
         ],
       },
-      { kind: 'moveNpc', characterId: 'dana', from: { col: 26, row: 21 }, to: 'player' },
+      { kind: 'moveNpc', characterId: 'dana', from: { col: 37, row: 29 }, to: 'player' },
       {
         kind: 'dialogue',
         speaker: 'dana',
@@ -2419,8 +2419,8 @@ export const EVENTS: GameEvent[] = [
         ],
       },
       { kind: 'dialogue', speaker: 'dana', lines: ['Dana: Come on. The entry desk is at the back, under the chandelier. We will walk you.'] },
-      { kind: 'moveNpc', characterId: 'dana', to: { col: 21, row: 4 } },
-      { kind: 'moveNpc', characterId: 'marcus', to: { col: 19, row: 4 }, youFollow: true },
+      { kind: 'moveNpc', characterId: 'dana', to: { col: 29, row: 4 } },
+      { kind: 'moveNpc', characterId: 'marcus', to: { col: 27, row: 4 }, youFollow: true },
       {
         kind: 'dialogue',
         speaker: 'marcus',
@@ -2776,13 +2776,13 @@ export const EVENTS: GameEvent[] = [
     ],
     actions: [
       { kind: 'wait', ms: 300 },
-      { kind: 'moveNpc', characterId: 'lou', from: { col: 14, row: 10 }, to: 'player' },
+      { kind: 'moveNpc', characterId: 'lou', from: { col: 28, row: 20 }, to: 'player' },
       { kind: 'dialogue', speaker: 'lou', lines: [
           'Lou: Four hundred off my floor. Nobody does that and sits down after.',
           'Lou: Come on. I do not hold the door for just anyone, and I am not holding it twice.',
           'Lou: Mind the humidor. My nephew is not allowed near it either.',
         ] },
-      { kind: 'moveNpc', characterId: 'lou', to: { col: 14, row: 10 }, youFollow: true },
+      { kind: 'moveNpc', characterId: 'lou', to: { col: 28, row: 20 }, youFollow: true },
       { kind: 'fade', to: 'out' },
       { kind: 'teleport', areaId: 'sc-private', col: 7, row: 8, with: ['lou'] },
       { kind: 'fade', to: 'in' },
@@ -2837,12 +2837,12 @@ export const EVENTS: GameEvent[] = [
     ],
     actions: [
       { kind: 'wait', ms: 300 },
-      { kind: 'moveNpc', characterId: 'odette', from: { col: 7, row: 9 }, to: 'player' },
+      { kind: 'moveNpc', characterId: 'odette', from: { col: 13, row: 18 }, to: 'player' },
       { kind: 'dialogue', speaker: 'odette', lines: [
           'Odette: Hm. Twelve hundred taken off my tables. The deckhand sent a note up.',
           'Odette: Walk with me. The cabin is aft, and I do not shout down corridors.',
         ] },
-      { kind: 'moveNpc', characterId: 'odette', to: { col: 7, row: 9 }, youFollow: true },
+      { kind: 'moveNpc', characterId: 'odette', to: { col: 13, row: 18 }, youFollow: true },
       { kind: 'fade', to: 'out' },
       { kind: 'teleport', areaId: 'rb-private', col: 7, row: 8, with: ['odette'] },
       { kind: 'fade', to: 'in' },
@@ -2897,12 +2897,12 @@ export const EVENTS: GameEvent[] = [
     ],
     actions: [
       { kind: 'wait', ms: 300 },
-      { kind: 'moveNpc', characterId: 'bellamy', from: { col: 17, row: 11 }, to: 'player' },
+      { kind: 'moveNpc', characterId: 'bellamy', from: { col: 34, row: 22 }, to: 'player' },
       { kind: 'dialogue', speaker: 'bellamy', lines: [
           'Bellamy: Four thousand off the card room, quietly. I admire quiet.',
           'Bellamy: Come along. I will not insult you by sending somebody else.',
         ] },
-      { kind: 'moveNpc', characterId: 'bellamy', to: { col: 17, row: 11 }, youFollow: true },
+      { kind: 'moveNpc', characterId: 'bellamy', to: { col: 34, row: 22 }, youFollow: true },
       { kind: 'fade', to: 'out' },
       { kind: 'teleport', areaId: 'ch-private', col: 7, row: 8, with: ['bellamy'] },
       { kind: 'fade', to: 'in' },
@@ -2957,12 +2957,12 @@ export const EVENTS: GameEvent[] = [
     ],
     actions: [
       { kind: 'wait', ms: 300 },
-      { kind: 'moveNpc', characterId: 'ines', from: { col: 6, row: 12 }, to: 'player' },
+      { kind: 'moveNpc', characterId: 'ines', from: { col: 11, row: 24 }, to: 'player' },
       { kind: 'dialogue', speaker: 'ines', lines: [
           'Ines: Twelve thousand, on my carpet, between lunches. I like you already.',
           'Ines: Come. I keep the good table at the back, where the sea breeze cannot read your cards.',
         ] },
-      { kind: 'moveNpc', characterId: 'ines', to: { col: 6, row: 12 }, youFollow: true },
+      { kind: 'moveNpc', characterId: 'ines', to: { col: 11, row: 24 }, youFollow: true },
       { kind: 'fade', to: 'out' },
       { kind: 'teleport', areaId: 'pc-private', col: 7, row: 8, with: ['ines'] },
       { kind: 'fade', to: 'in' },
@@ -3016,12 +3016,12 @@ export const EVENTS: GameEvent[] = [
     ],
     actions: [
       { kind: 'wait', ms: 300 },
-      { kind: 'moveNpc', characterId: 'vale', from: { col: 4, row: 12 }, to: 'player' },
+      { kind: 'moveNpc', characterId: 'vale', from: { col: 7, row: 24 }, to: 'player' },
       { kind: 'dialogue', speaker: 'vale', lines: [
           'Vale: Forty thousand on the Mesa floor. People do not do that without wanting something.',
           'Vale: Come up. The suite is private, and I record everything in it.',
         ] },
-      { kind: 'moveNpc', characterId: 'vale', to: { col: 4, row: 12 }, youFollow: true },
+      { kind: 'moveNpc', characterId: 'vale', to: { col: 7, row: 24 }, youFollow: true },
       { kind: 'fade', to: 'out' },
       { kind: 'teleport', areaId: 'nm-private', col: 7, row: 8, with: ['vale'] },
       { kind: 'fade', to: 'in' },

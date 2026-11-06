@@ -176,6 +176,15 @@ A room should not be one rug on a bare floor: the content tests fail on a
 five-by-five square of floor with nothing on it, and its floor should not be
 the same floor as another room in its town.
 
+**Casino floors are big on purpose.** Each of the six is at least twice the area
+it was (about twice the width and the height, but Lumina's hall, already a
+ballroom, in area), because walking between tables was cramped. Keep them that
+way: every table, bank, door and person on a floor must be reachable along a path
+at least two tiles wide (`rooms.test.ts` checks it; Lumina's roped foyer is the
+one deliberate one-tile gap). When you add an object to a floor, leave a lane
+round it. The no-bare-5x5 rule above still holds, so a roomy floor is filled with
+spaced-out banks, pillars, benches and plants rather than left empty.
+
 ### Casino goals — `src/world/goals.ts`
 
 Every casino town but the last asks for something besides money. Behind its
