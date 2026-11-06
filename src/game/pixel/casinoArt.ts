@@ -48,7 +48,7 @@ function glow(r: Raster, cx: number, cy: number, rx: number, ry: number, hex: st
 // The room
 // ---------------------------------------------------------------------------
 
-export type HallKind = 'slots' | 'craps' | 'roulette' | 'horses'
+export type HallKind = 'slots' | 'craps' | 'roulette' | 'horses' | 'lottery' | 'coinflip' | 'boxing'
 
 /** The casino a game is played in: wall, carpet and the lights of the room. */
 export function paintHall(kind: HallKind, theme: TableTheme, w: number, h: number): Raster {
@@ -95,6 +95,9 @@ export function paintHall(kind: HallKind, theme: TableTheme, w: number, h: numbe
 
   if (kind === 'slots') paintSlotsWall(r, theme, w, wallH)
   else if (kind === 'craps') paintCrapsWall(r, theme, w, wallH)
+  else if (kind === 'lottery') paintLotteryWall(r, theme, w)
+  else if (kind === 'coinflip') paintAlleyWall(r, w, wallH)
+  else if (kind === 'boxing') paintArenaWall(r, theme, w, wallH)
   else paintRouletteWall(r, theme, w, wallH)
 
   // Darker toward the corners, so the table is where the eye goes.
@@ -162,6 +165,68 @@ function paintCrapsWall(r: Raster, theme: TableTheme, w: number, wallH: number):
   r.hline(lx - 11, 16, 23, theme.table.railLight)
   r.rect(lx - 9, 17, 19, 1, '#fff4c0')
   glow(r, lx, wallH + 12, w * 0.4, wallH * 1.4, '#ffe8a0', 0.2)
+  void theme
+}
+
+/** A corner shop's back wall: shelves of stock under a hot-pink LOTTO sign. */
+function paintLotteryWall(r: Raster, theme: TableTheme, w: number): void {
+  const cx = Math.round(w / 2)
+  for (let x = 4; x < w - 20; x += 24) {
+    for (let row = 0; row < 3; row++) {
+      const y = 22 + row * 9
+      r.rect(x, y + 6, 20, 2, '#5a4030')
+      for (let k = 0; k < 5; k++) r.rect(x + 1 + k * 4, y + 1, 3, 5, ['#d82a2a', '#f2c84a', '#2a8a48', '#3a6ad8', '#f4f0e4'][(k + row + x) % 5])
+    }
+  }
+  r.rect(cx - 34, 4, 68, 15, '#14081a')
+  r.box(cx - 34, 4, 68, 15, '#ff4fd8')
+  drawText(r, 'LOTTO', cx - measureText('LOTTO') / 2, 8, '#ffd2f6')
+  glow(r, cx, 12, 60, 24, '#ff4fd8', 0.3)
+  sconce(r, 10, 12, '#ffd890')
+  sconce(r, w - 12, 12, '#ffd890')
+  void theme
+}
+
+/** A brick alley at night: a wall, a lamp, a dumpster and a stack of crates. */
+function paintAlleyWall(r: Raster, w: number, wallH: number): void {
+  r.each(0, 0, w, wallH, (x, y) => {
+    const row = Math.floor(y / 5)
+    const off = (row % 2) * 6
+    const mortar = y % 5 === 0 || (x + off) % 12 === 0
+    const base = mortar ? '#1a1014' : dither(x, y, 0.4) ? '#3a2220' : '#33201e'
+    return shade(base, 1 - (y / wallH) * 0.25)
+  })
+  const lx = Math.round(w * 0.18)
+  glow(r, lx, 20, 50, 46, '#ffd890', 0.4)
+  r.rect(lx - 1, 4, 3, 14, '#2a2a30')
+  r.rect(lx - 5, 16, 11, 3, '#2a2a30')
+  r.rect(lx - 4, 19, 9, 2, '#fff0b0')
+  const dx = Math.round(w * 0.62)
+  r.rect(dx, wallH - 22, 34, 22, '#1e3a2a')
+  r.rect(dx, wallH - 22, 34, 4, '#2a5a3a')
+  r.box(dx, wallH - 22, 34, 22, OUTLINE)
+  for (let i = 0; i < 3; i++) r.rect(dx + 40 + i * 9, wallH - 10 - (i % 2) * 8, 8, 10 + (i % 2) * 8, '#6a4a2a')
+}
+
+/** The arena's far wall: banners, a rack of white lights and the dark of the stands. */
+function paintArenaWall(r: Raster, theme: TableTheme, w: number, wallH: number): void {
+  r.rect(0, 0, w, wallH, '#0a0814')
+  for (let y = 18; y < wallH - 2; y += 6) {
+    for (let x = (y / 6) % 2 ? 2 : 6; x < w - 2; x += 8) {
+      r.rect(x, y, 4, 3, hash2(x, y) < 0.5 ? '#1e1830' : '#2a2240')
+      if (hash2(y, x) < 0.14) r.rect(x + 1, y - 2, 2, 2, ['#f4d4b4', '#c08654', '#74482c'][Math.floor(hash2(x, 7) * 3)])
+    }
+  }
+  const banners = ['#d82a2a', '#2a6ad8', '#f2c84a', '#30a050']
+  for (let x = 16, i = 0; x < w - 24; x += Math.max(48, Math.round(w / 5)), i++) {
+    r.rect(x, 3, 18, 22, banners[i % 4])
+    r.box(x, 3, 18, 22, GOLD)
+    r.rect(x + 6, 9, 6, 6, '#fff4c8')
+  }
+  for (let x = 6; x < w; x += 20) {
+    r.rect(x, 0, 6, 3, '#e8e8f0')
+    glow(r, x + 3, 4, 20, 36, '#fff4d0', 0.14)
+  }
   void theme
 }
 

@@ -441,6 +441,62 @@ const ultraviolet: StampArt = {
   },
 }
 
+/** Mesa Arena: a drum of black glass under floodlights, FIGHT NIGHT in red tube, a marquee of tonight's card. */
+const arenaMesa: StampArt = {
+  bleed: { left: 1, right: 3, top: 14, bottom: 10 },
+  lights: [{ x: 72, y: 100, reach: 50, color: '#ffd0a0', strength: 0.9 }],
+  frames: 2,
+  draw: (px, c) => {
+    const { w, h, frame } = c
+    const RED = { core: '#ffe0d8', tube: '#ff4a3a', glow: '#6a1410' }
+    // Floodlight masts over the roof, throwing their beams across the sky.
+    for (const [bx, lean] of [[10, frame ? 1 : -1], [w - 14, frame ? -1 : 1]] as const) {
+      for (let i = 0; i < 22; i++) px(bx + Math.round(lean * i * 0.5), -i + 4, 3 + Math.round(i / 6), 1, 'rgba(255, 244, 210, 0.15)')
+      px(bx + 1, 0, 2, 12, '#3a3a48')
+      px(bx - 3, -3, 10, 4, '#e8e8f0')
+      px(bx - 2, -2, 8, 2, '#fff8d8')
+    }
+    flatRoof(px, -1, 0, w + 2, 10, { hi: '#4a4a5a', base: '#2a2a36', lo: '#14141c' }, '#1a1a24')
+    px(0, 10, w, h - 10, '#0c0a12')
+    for (let y = 12; y < 52; y += 4) px(0, y, w, 1, '#14101c')
+    // The name, and the glove either side of it.
+    const aw = textWidth('ARENA', 2)
+    neonText(px, 'ARENA', Math.round((w - aw) / 2), 14, frame ? RED.core : RED.tube, RED.glow, 2)
+    const glove = ['.####.', '######', '######', '######', '.####.', '..##..']
+    glow('neon', () => {
+      sprite(px, glove, 14, 14, { '#': '#ff4a3a' })
+      sprite(px, glove, w - 20, 14, { '#': '#ff4a3a' })
+    })
+    // The marquee: tonight's card in bulbs.
+    px(8, 32, w - 16, 20, '#14101c')
+    px(9, 33, w - 18, 18, '#08060e')
+    textCentred(px, 'FIGHT NIGHT', w / 2, 36, frame ? '#fff4c8' : '#f2c84a')
+    textCentred(px, '3 BOUTS', w / 2, 44, '#f4f0e4')
+    bulbBorder(px, 8, 32, w - 16, 20, frame)
+    // The door in a frame of red light, glass either side.
+    for (const door of doorTiles(c)) {
+      glow('neon', () => {
+        px(door.x - 2, door.y - 12, 20, 28, '#ff4a3a')
+        px(door.x - 1, door.y - 11, 18, 27, '#2a1010')
+        px(door.x + 1, door.y - 9, 14, 25, '#08060c')
+        px(door.x + 7, door.y - 2, 1, 6, '#ff4a3a')
+        px(door.x + 8, door.y - 2, 1, 6, '#ff4a3a')
+      })
+    }
+    for (const x of [10, w - 26]) {
+      px(x, 62, 16, 22, '#14101c')
+      glow('window', () => px(x + 1, 63, 14, 20, frame ? '#5a2a2a' : '#4a2030'))
+    }
+    plinth(px, 0, h - 2, w, '#2a2a36')
+    for (const door of doorTiles(c)) {
+      glow('window', () => px(door.x - 6, h, 28, 2, '#ff8a6a'))
+      px(door.x - 6, h + 2, 28, 10, '#6a1414')
+      px(door.x - 5, h + 2, 26, 10, '#a82424')
+    }
+    groundShadow(px, w, 10, h)
+  },
+}
+
 /** A hotel tower seen past the Strip: a helipad on the roof, a lit grid of rooms. */
 function mesaTower(name: string, glass: string, accent: { core: string; tube: string; glow: string }): StampArt {
   return {
@@ -756,9 +812,11 @@ export const STRIP_BUILDINGS: Record<string, StampArt> = {
   'luxury-mesa': luxury,
   'motors-mesa': motors,
   'club-mesa': ultraviolet,
+  'arena-mesa': arenaMesa,
   'tower-mesa-a': mesaTower('ARIA', '#14182a', CYAN_NEON),
   'garage-mesa': garageMesa,
   'tower-mesa-b': mesaTower('DESERT ROSE', '#2a1420', PINK_NEON),
+  'tower-mesa-c': mesaTower('MIRAGE', '#10202a', CYAN_NEON),
   'tower-lumina': towerLumina,
   'casino-lumina': casinoLumina,
   'atelier-lumina': atelier,

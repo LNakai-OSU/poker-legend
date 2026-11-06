@@ -7,7 +7,7 @@ import { TableScene, type SessionResult } from './TableScene'
 import { buttonStyle as menuButtonStyle, MentorScene, MenuScreen, ShopScene, SponsorScene, TravelScene } from './MenuScenes'
 import { CaughtScene, FinaleLostScene } from './EndScenes'
 import { EndingFilm } from './EndingFilm'
-import { CrapsScene, HorseRaceScene, RouletteScene, SlotsScene } from './CasinoGameScenes'
+import { BoxingScene, CoinFlipScene, CrapsScene, HorseRaceScene, LotteryScene, RouletteScene, SlotsScene } from './CasinoGameScenes'
 import { RaceScene, type RaceCommit, type RaceOutcome } from './RaceScene'
 import { PenthouseScene, VenueScene } from './VenueScenes'
 import { SideNav } from './SideNav'
@@ -86,6 +86,9 @@ type View =
   | { kind: 'craps' }
   | { kind: 'roulette' }
   | { kind: 'horses' }
+  | { kind: 'lottery'; scratchers: number[] }
+  | { kind: 'coinflip'; who: string; fairness: number; limit: number }
+  | { kind: 'boxing' }
   | { kind: 'race'; raceIds: string[] }
   | { kind: 'venue'; venueId: string }
   | { kind: 'penthouse' }
@@ -240,6 +243,15 @@ export function GameApp({ playtest = false }: { playtest?: boolean }) {
         break
       case 'horses':
         setView({ kind: 'horses' })
+        break
+      case 'lottery':
+        setView({ kind: 'lottery', scratchers: action.scratchers })
+        break
+      case 'coinflip':
+        setView({ kind: 'coinflip', who: action.who, fairness: action.fairness, limit: action.limit })
+        break
+      case 'boxing':
+        setView({ kind: 'boxing' })
         break
       case 'race':
         setView({ kind: 'race', raceIds: action.raceIds })
@@ -440,6 +452,9 @@ export function GameApp({ playtest = false }: { playtest?: boolean }) {
       )
       return s.cash >= BUST_LINE && cash < BUST_LINE ? recordBust(next) : next
     })
+
+  /** Taking a seat at the fights costs the evening, like a session at a table. */
+  const commitFightNight = () => setState((s) => advancePeriod(s, 1))
 
   /** The line: what comes back (the stake and the winnings, or minus the repairs) and any car won. */
   const finishRace = ({ delta, carsWon }: RaceOutcome) => {
@@ -689,6 +704,15 @@ export function GameApp({ playtest = false }: { playtest?: boolean }) {
 
     case 'horses':
       return <HorseRaceScene state={state} onResult={settleGamble} onBack={backToCity} />
+
+    case 'lottery':
+      return <LotteryScene state={state} scratchers={view.scratchers} onResult={settleGamble} onBack={backToCity} />
+
+    case 'coinflip':
+      return <CoinFlipScene state={state} who={view.who} fairness={view.fairness} limit={view.limit} onResult={settleGamble} onBack={backToCity} />
+
+    case 'boxing':
+      return <BoxingScene state={state} onResult={settleGamble} onCommit={commitFightNight} onBack={backToCity} />
 
     case 'race':
       return <RaceScene state={state} raceIds={view.raceIds} onCommit={commitRace} onFinish={finishRace} onBack={backToCity} />

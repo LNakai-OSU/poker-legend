@@ -811,8 +811,44 @@ Lumina floors) opens a six-horse race you bet on: win, place (top two) or show
 (top three). `engine/horses.ts` draws each horse's hidden strength and the
 finishing order from it, and the board pays the fair price less a 15% takeout,
 rounded down to the nickel — `horses.test.ts` checks that every bet on every
-horse loses to the house. A race costs no time and counts for nothing toward a
+horse loses to the house. The race is staged on a long course the camera follows the leader along: a grandstand sliding slowly behind the rail, furlong poles counting down, a starting gate and a chequered line, and four-beat galloping horses with jockeys in their silks and dust at the heels (`game/horseArt.ts`). A race costs no time and counts for nothing toward a
 boss's `winTarget`, like the other pit games.
+
+### Scratchers, the lottery, hustlers and the arena
+
+Four more ways to lose money slowly, all of them side games that count for nothing
+toward a boss's `winTarget` and none of which can be a way past the ladder.
+
+- **Scratchers and the lottery** — a `lottery` POI (`lotto-counter` stamp, in
+  Patel's, the Silver Creek gift shop, the Riverbend outfitters and the arena
+  concourse) lists the card prices it sells in `scratchers`. `engine/scratch.ts`
+  holds three tiers ($1, $5, $20) as prize tables, so `returnOf` adds up exactly
+  what comes back (about half) and a test reads it. The prize is settled when the
+  card is bought and the nine symbols are laid out to show it; walking out with
+  an unscratched card cashes it. The number draw is five of forty at $2, drawn at
+  the counter; the top prize is $100,000 at about one in 658,000.
+- **Coin-flip hustlers** — a `coinflip` POI on each town's street (`who`,
+  `fairness`, `limit`). `fairness` is the chance your call lands and is always
+  under a half; "Look at the coin" tells you how bad. A win can be let ride up to
+  three times (the pot doubles, the chance compounds). They get bolder with the
+  town: $50, $50, $200, $200, $1,000, $1,000, $1,000.
+- **The arena** — `nm-arena`, through a new door at the east end of the Mesa
+  Strip (the street is nine columns wider). A `boxing` POI (the box office) opens
+  fight night: three bouts between twelve named fighters, the same card for
+  everyone on the same evening. It is open at any hour, and
+  **the first bell costs the period**, like a session at a table. Five bets per
+  bout — either man to win, either by knockout, or the distance — priced at the
+  fair price less a 12% takeout, rounded down to the nickel; `boxing.test.ts`
+  checks that every bet on every bout loses to the house. The result is drawn
+  first and the fight you watch is a story told to fit it: round by round, the
+  winner lands the better punches, a knockout ends on a landed hook, a decision
+  leaves both men standing. Each exchange has footwork (advance, circle, back off), a
+  string of one to three punches from jab, cross, hook, uppercut and body shot, and
+  a miss is answered with a block, slip, parry, duck or clinch. Some fights have a
+  knockdown the man gets up from. The ring is drawn from above as an isometric diamond (crowd on all sides, ropes on four, near ropes in front of the men) and rounds run twelve exchanges with a three-minute clock. The ring has a referee (who counts), a trainer in
+  each corner, stools the men sit on between rounds, and a ring girl who walks the
+  round card across. `game/boxingChoreo.ts` turns the plan into a timeline and
+  `boxingArt.ts` draws it.
 
 ---
 

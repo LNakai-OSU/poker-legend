@@ -210,6 +210,15 @@ export type PoiAction =
   | { kind: 'craps' }
   | { kind: 'roulette' }
   | { kind: 'horses' }
+  /** Scratch cards (by price) and the number draw, at a counter. */
+  | { kind: 'lottery'; scratchers: number[] }
+  /**
+   * A street hustler who flips a coin for money. `fairness` is the chance your
+   * call comes up and is always under a half; `limit` is the most they will flip for.
+   */
+  | { kind: 'coinflip'; who: string; fairness: number; limit: number }
+  /** Fight night at the arena: a card of bouts to watch and bet on. */
+  | { kind: 'boxing' }
   /** The street races on offer here, listed by id in `racing.ts`. */
   | { kind: 'race'; raceIds: string[] }
   | { kind: 'venue'; venueId: string }

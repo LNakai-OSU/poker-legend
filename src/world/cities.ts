@@ -251,27 +251,27 @@ TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT`)
  * Enormous facades down both sides, a fountain in the middle of the plaza, and
  * six lanes of road running through the lot of it.
  */
-const NEON_MESA_TOWN = parseMap(`T##############################T
-T##############################T
-T##############################T
-T##############################T
-T##############################T
-T#####D#######D#####D######D###T
-T+o++++++++++++++++++++ooo+++++T
-T++oo+++++++~~~~~~++++++++oo++oT
-T+++++++++o+~~~~~~+o+++++++++++T
-To++++++++++o+++o++++++++++++++T
---o-o---o+o++++++++++o++-----o--
-=====zzz=====FFF================
-=====zzz========================
-=====zzz================FFF=====
---o-----++o++++++++++o++-----o--
-T++++++++++++++++++++++++++++++T
-T++oo+++oo++o++oo++o+o+o++oo+++T
-T##############################T
-T##############################T
-T##############################T
-T##############################T`)
+const NEON_MESA_TOWN = parseMap(`T#######################################T
+T#######################################T
+T#######################################T
+T#######################################T
+T#######################################T
+T#####D#######D#####D######D#######D####T
+T+o++++++++++++++++++++ooo++++++++++++++T
+T++oo+++++++~~~~~~++++++++oo++o+++o+o+++T
+T+++++++++o+~~~~~~+o++++++++++++o+++++o+T
+To++++++++++o+++o+++++++++++++++++++++++T
+--o-o---o+o++++++++++o++-----o-o------o--
+=====zzz=====FFF=========================
+=====zzz=================================
+=====zzz================FFF==============
+--o-----++o++++++++++o++-----o-o------o--
+T+++++++++++++++++++++++++++++++++++++++T
+T++oo+++oo++o++oo++o+o+o++oo+++++oo++o++T
+T#######################################T
+T#######################################T
+T#######################################T
+T#######################################T`)
 
 /**
  * Marble and water: colonnades down both sides and a reflecting pool between.
@@ -547,6 +547,24 @@ const ULTRAVIOLET = parseMap(`
 ^^^^^^^D^^^^^^^^
 `)
 
+/** Mesa Arena: a concrete concourse under the stands, a ring on its platform, a box office and a lottery counter. */
+const ARENA = parseMap(`
+^^^^^^^^^^^^^^^^^^^^
+^nnnnnnnFFFnnnnnnnn^
+^FFFFFFeFFFeeFFFFFF^
+^FFFFFFeeeeeeFFFFFF^
+^FFFFFFeeeeeeFFFFFF^
+^eeeeeeeeeeeeeeeeee^
+^eeeFeeFFFFFFeeFeee^
+^eeeeeeFFFFFFeeeeee^
+^eeeeeeFFFFFFeeeeee^
+^eeeeeeFFFFFFeeeeee^
+^FeeeeeeeeeeeeeeeeF^
+^eeFFeeeeeeeeFFFeee^
+^eeeeeeeeeeeeeeeeee^
+^^^^^^^^^D^^^^^^^^^^
+`)
+
 /** Patel's: shelves to the ceiling, a lit cooler, the till, two islands of everything else. */
 const BODEGA = parseMap(`
 ^^^^^^^^^^^^^^
@@ -556,7 +574,7 @@ const BODEGA = parseMap(`
 ^FFFvvvvvFFFv^
 ^FFFvvvvvFFFv^
 ^vvvvvvvvvvvv^
-^vvvFvvvFvvvv^
+^vvvFvvvFvFFv^
 ^^^^^^D^^^^^^^
 `)
 
@@ -596,7 +614,7 @@ const GIFT_SHOP = parseMap(`
 ^xFFxxxxxxFFx^
 ^xxxxxxxxxxxx^
 ^Fxxxxxxxxxxx^
-^xFFxxxxxxFFx^
+^xFFFFxxxxFFx^
 ^^^^^^D^^^^^^^
 `)
 
@@ -623,7 +641,7 @@ const OUTFITTERS = parseMap(`
 ^yyyyyyyyyyyy^
 ^yFFyyyyyyFFy^
 ^yyyyyyyyyyyy^
-^yyyyyyyyyyyy^
+^yyyFFyyyyyyy^
 ^^^^^^D^^^^^^^
 `)
 
@@ -1214,6 +1232,19 @@ const apartmentCity: CityDef = {
       { col: 1, row: 8 },
       '#0e1018',
       [
+        {
+          id: 'seventh-hustler',
+          name: 'Quarter Kid',
+          col: 13,
+          row: 11,
+          color: COLORS.flavor,
+          art: 'person',
+          look: { build: 'kid', garment: 'hoodie', garmentColor: '#c8602a' },
+          lines: [
+            'Quarter Kid: Heads or tails. Winner keeps it. I never lose the same coin twice.',
+          ],
+          action: { kind: 'coinflip', who: 'Quarter Kid', fairness: 0.49, limit: 50 },
+        },
         local('seventh-busker', 'Busker', 9, 6, [
           'Busker: Requests are a dollar. Silence is five.',
           'Busker: Big night for you? You have got the walk of someone with a plan.',
@@ -1325,6 +1356,16 @@ const apartmentCity: CityDef = {
         thing('bodega-cooler', 'Cooler', 10, 2, [
           'Energy drinks, a sad sandwich, and one bottle of champagne nobody has ever bought.',
         ]),
+        {
+          id: 'patel-lotto',
+          name: 'Lottery Counter',
+          col: 10,
+          row: 7,
+          color: COLORS.flavor,
+          art: 'none',
+          lines: ['Scratch cards under the glass and a terminal that prints a ticket and a bad idea.'],
+          action: { kind: 'lottery', scratchers: [1] },
+        },
       ],
       [{ col: 6, row: 8, toAreaId: 'seventh', toCol: 4, toRow: 4, label: 'Seventh Street' }],
     ),
@@ -1400,6 +1441,19 @@ const silverCreek: CityDef = {
       { col: 16, row: 12 },
       '#161018',
       [
+        {
+          id: 'sc-hustler',
+          name: 'Dusty Dan',
+          col: 6,
+          row: 11,
+          color: COLORS.flavor,
+          art: 'person',
+          look: { hat: 'flatcap', hatColor: '#6a4a2a', garment: 'vest', garmentColor: '#5a3a22' },
+          lines: [
+            'Dusty Dan: Call it in the air, partner. Even money, honest as the dust.',
+          ],
+          action: { kind: 'coinflip', who: 'Dusty Dan', fairness: 0.49, limit: 50 },
+        },
         // Out walking: most of them about in the afternoon, few at night.
         walker('sc-walk-rancher', 'Rancher', [[6, 7], [13, 7]], DAY, ['Rancher: Sold forty head this morning. Going to lose it by supper, the way my daddy did. Tradition.'], ['Rancher: Wind\'s from the east. Means nothing. I just like saying it.']),
         walker('sc-walk-prospector', 'Old Prospector', [[19, 7], [25, 7]], NOON, ['Prospector: There\'s silver in that creek yet. I\'ve been saying it fifty years. One of these days I\'ll go look.']),
@@ -1546,6 +1600,16 @@ const silverCreek: CityDef = {
           lines: ['Clerk: Souvenirs, snacks, and things nobody needs.'],
           action: { kind: 'shop', shopId: 'silvercreek-gift' },
         },
+        {
+          id: 'sc-lotto',
+          name: 'Lottery Counter',
+          col: 4,
+          row: 7,
+          color: COLORS.flavor,
+          art: 'none',
+          lines: ['The state lottery, in a state that has had a lot of luck and not much of it good.'],
+          action: { kind: 'lottery', scratchers: [1, 5] },
+        },
       ],
       [{ col: 6, row: 8, toAreaId: 'sc-street', toCol: 9, toRow: 17, label: 'Out' }],
     ),
@@ -1599,6 +1663,20 @@ const riverbend: CityDef = {
       { col: 16, row: 7 },
       '#0f1620',
       [
+        {
+          id: 'rb-hustler',
+          name: 'Riverside Raff',
+          col: 8,
+          row: 11,
+          color: COLORS.flavor,
+          art: 'person',
+          look: { garment: 'jacket', garmentColor: '#3a4a5a', hairStyle: 'slick' },
+          lines: [
+            'Raff: Ten says it is tails. Hundred says I can tell which way you will call.',
+            'Raff: Look at the coin if you like. Everybody does. Nobody knows what they are looking at.',
+          ],
+          action: { kind: 'coinflip', who: 'Riverside Raff', fairness: 0.45, limit: 200 },
+        },
         // Out walking: most of them about in the afternoon, few at night.
         walker('rb-walk-millhand', 'Mill Hand', [[11, 12], [18, 12]], DAY, ['Mill Hand: Shift change. Ten hours of sawdust and then the boat takes the rest.'], ['Mill Hand: Don\'t play the old man in the hat. He can\'t see the cards and he still wins.']),
         walker('rb-walk-basket', 'Woman with a Basket', [[12, 14], [21, 14]], NOON, ['Woman: Catfish, if the diner\'s buying. Eggs, if it isn\'t. Gossip either way.']),
@@ -1774,6 +1852,16 @@ const riverbend: CityDef = {
           lines: ['Clerk: Jackets, bikes, whatever gets you upriver.'],
           action: { kind: 'shop', shopId: 'riverbend-outfitters' },
         },
+        {
+          id: 'rb-lotto',
+          name: 'Lottery Counter',
+          col: 4,
+          row: 7,
+          color: COLORS.flavor,
+          art: 'none',
+          lines: ['A lottery terminal bolted beside the bait fridge. Nobody on the river thinks that is strange.'],
+          action: { kind: 'lottery', scratchers: [1, 5] },
+        },
       ],
       [{ col: 6, row: 8, toAreaId: 'rb-street', toCol: 26, toRow: 16, label: 'Out' }],
     ),
@@ -1827,6 +1915,19 @@ const crescentHarbor: CityDef = {
       { col: 15, row: 6 },
       '#121020',
       [
+        {
+          id: 'ch-hustler',
+          name: 'Coin Counsel',
+          col: 10,
+          row: 11,
+          color: COLORS.flavor,
+          art: 'person',
+          look: { garment: 'jacket', garmentColor: '#2a2a3a', prop: 'bowtie', propColor: '#c82828' },
+          lines: [
+            'Coin Counsel: Gentlemen settle disputes with a coin. I settle them for a small fee.',
+          ],
+          action: { kind: 'coinflip', who: 'Coin Counsel', fairness: 0.45, limit: 200 },
+        },
         // Out walking: most of them about in the afternoon, few at night.
         walker('ch-walk-dogs', 'Dog Walker', [[9, 7], [5, 7]], DAY, ['Dog Walker: They are not mine. I am paid. The small one bites, and he is the one they love.']),
         walker('ch-walk-shopper', 'Shopper', [[16, 7], [20, 7]], LATE, ['Shopper: The tailor wanted three fittings. I have had four. I am beginning to suspect the tailor.']),
@@ -2141,6 +2242,19 @@ const palmCay: CityDef = {
       { col: 15, row: 6 },
       '#0c1a1c',
       [
+        {
+          id: 'pc-hustler',
+          name: 'Beach Hustler',
+          col: 11,
+          row: 11,
+          color: COLORS.flavor,
+          art: 'person',
+          look: { garment: 'stripes', garmentColor: '#e8e0c0', hat: 'bandana', hatColor: '#d84a2a' },
+          lines: [
+            'Beach Hustler: Tourists love a bet. Locals know better. You look like which one?',
+          ],
+          action: { kind: 'coinflip', who: 'Beach Hustler', fairness: 0.4, limit: 1000 },
+        },
         // Out walking: most of them about in the afternoon, few at night.
         walker('pc-walk-sunhat', 'Woman in a Sun Hat', [[16, 7], [26, 7]], DAY, ['Woman: The hotel gave us a room facing the car park. Facing the car park! On an island!']),
         walker('pc-walk-surfer', 'Kid with a Surfboard', [[2, 12], [11, 12]], MORNINGS, ['Kid: Waves are flat. Waves are always flat. I carry it so people think there are waves.']),
@@ -2431,6 +2545,19 @@ const neonMesa: CityDef = {
       { col: 9, row: 7 },
       '#1a1020',
       [
+        {
+          id: 'nm-hustler',
+          name: 'Neon Flipper',
+          col: 33,
+          row: 9,
+          color: COLORS.flavor,
+          art: 'person',
+          look: { garment: 'jacket', garmentColor: '#8a3ad0', hairStyle: 'slick' },
+          lines: [
+            'Neon Flipper: Double or nothing, as many times as I will let you. I will not let you much.',
+          ],
+          action: { kind: 'coinflip', who: 'Neon Flipper', fairness: 0.45, limit: 1000 },
+        },
         // Out walking: most of them about in the afternoon, few at night.
         walker('nm-walk-showgirl', 'Showgirl', [[15, 6], [19, 6]], NIGHTS, ['Showgirl: Two shows a night and a matinee. The feathers weigh more than you do. Excuse me.']),
         walker('nm-walk-convention', 'Conventioneer', [[8, 9], [11, 9]], MORNINGS, ['Conventioneer: Dental supplies. Forty thousand of us. Not one of us has slept.']),
@@ -2487,6 +2614,7 @@ const neonMesa: CityDef = {
         { col: 14, row: 5, toAreaId: 'nm-luxury', toCol: 6, toRow: 7, label: 'Mesa Luxury' },
         { col: 20, row: 5, toAreaId: 'nm-motors', toCol: 7, toRow: 8, label: 'Mesa Motors' },
         { col: 27, row: 5, toAreaId: 'nm-club', toCol: 7, toRow: 8, label: 'Ultraviolet' },
+        { col: 35, row: 5, toAreaId: 'nm-arena', toCol: 9, toRow: 12, label: 'Mesa Arena' },
       ],
       { west: { toAreaId: 'road-mesa', offset: -5 }, east: { toAreaId: 'road-lumina', offset: -5, blocked: HIGHWAY } },
     ),
@@ -2701,6 +2829,54 @@ const neonMesa: CityDef = {
       ],
       [{ col: 7, row: 9, toAreaId: 'nm-street', toCol: 20, toRow: 6, label: 'Out' }],
     ),
+    'nm-arena': area(
+      'nm-arena',
+      'Mesa Arena',
+      ARENA,
+      { col: 9, row: 12 },
+      '#1a1020',
+      [
+        {
+          id: 'mesa-boxoffice',
+          name: 'Box Office',
+          col: 9,
+          row: 2,
+          color: COLORS.shop,
+          art: 'person',
+          role: 'clerk',
+          lines: [
+            'Box Office: Doors at six, first bell at the half. Three bouts, the big one last.',
+            'Box Office: Bets close when the bell goes. Nothing is fixed. I would know; I am the one who would be asked.',
+          ],
+          action: { kind: 'boxing' },
+        },
+        {
+          id: 'arena-lotto',
+          name: 'Lottery Counter',
+          col: 3,
+          row: 11,
+          color: COLORS.flavor,
+          art: 'none',
+          lines: ['A lit terminal on a concourse counter. The tickets are two dollars and the dream is free.'],
+          action: { kind: 'lottery', scratchers: [5, 20] },
+        },
+        local('arena-announcer', 'Ring Announcer', 9, 10, [
+          'Announcer: Ladies and gentlemen, I have been saying that for nineteen years and it has never once been true.',
+          'Announcer: Do not shout the names at me. I know the names. I wrote the names.',
+        ]),
+        local('arena-cutman', 'Cut Man', 3, 8, [
+          'Cut Man: Vaseline, a swab, and a speech about getting up. That is the whole job.',
+        ]),
+        local('arena-fan', 'Fight Fan', 16, 8, [
+          'Fan: Always the middle rounds. Anyone can look good in the first one.',
+          'Fan: I had the Landlord at four to one last spring. I have not paid rent since.',
+        ]),
+        local('arena-vendor', 'Vendor', 17, 12, [
+          'Vendor: Hot dogs, peanuts, regret. Two dollars each, the regret is free.',
+        ]),
+      ],
+      [{ col: 9, row: 13, toAreaId: 'nm-street', toCol: 35, toRow: 6, label: 'Out' }],
+    ),
     'nm-club': area(
       'nm-club',
       'Ultraviolet',
@@ -2782,6 +2958,19 @@ const portoLumina: CityDef = {
       { col: 15, row: 9 },
       '#141020',
       [
+        {
+          id: 'pl-hustler',
+          name: 'The Count',
+          col: 19,
+          row: 12,
+          color: COLORS.flavor,
+          art: 'person',
+          look: { garment: 'vest', garmentColor: '#1a1a2a', prop: 'pearls', propColor: '#f4f0e4' },
+          lines: [
+            'The Count: A gold coin, a fair toss, a gentleman’s wager. I have never been accused of anything.',
+          ],
+          action: { kind: 'coinflip', who: 'The Count', fairness: 0.49, limit: 1000 },
+        },
         // Out walking: most of them about in the afternoon, few at night.
         walker('pl-walk-parasol', 'Lady with a Parasol', [[5, 18], [26, 18]], DAY, ['Lady: One walks the length of the pool and back. One does not run. One is seen.']),
         walker('pl-walk-linen', 'Man in Linen', [[5, 14], [14, 14]], LATE, ['Man in Linen: The yacht is at the mole. I prefer to walk. The yacht prefers it too.']),
@@ -3563,6 +3752,24 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'dining-table', col: 10, row: 5 },
     { stampId: 'fern', col: 14, row: 8 },
   ],
+  // The concourse: a box office under the back wall, a block of bleachers either
+  // side of it, the ring on its platform in the middle and a lottery counter by
+  // the door. Plants stand at the foot of the stands; the floor between is a lane.
+  'nm-arena': [
+    { stampId: 'neon-vip', col: 2, row: 1 },
+    { stampId: 'counter-glass', col: 8, row: 1 },
+    { stampId: 'clock', col: 12, row: 1 },
+    { stampId: 'neon-open', col: 15, row: 1 },
+    { stampId: 'bleachers', col: 1, row: 2 },
+    { stampId: 'bleachers', col: 13, row: 2 },
+    { stampId: 'boxing-ring', col: 7, row: 6 },
+    { stampId: 'plant-tall', col: 4, row: 6 },
+    { stampId: 'plant-tall', col: 15, row: 6 },
+    { stampId: 'plant-tall', col: 1, row: 10 },
+    { stampId: 'plant-tall', col: 18, row: 10 },
+    { stampId: 'sofa-velvet', col: 13, row: 11 },
+    { stampId: 'lotto-counter', col: 3, row: 11 },
+  ],
   'nm-club': [
     { stampId: 'door-vip', col: 2, row: 1 },
     { stampId: 'neon-cocktails', col: 3, row: 1 },
@@ -3581,6 +3788,7 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'gondola-groceries', col: 9, row: 4 },
     { stampId: 'crates', col: 4, row: 7 },
     { stampId: 'brochure-stand', col: 8, row: 7 },
+    { stampId: 'lotto-counter', col: 10, row: 7 },
   ],
   laundromat: [
     { stampId: 'dryer-stack', col: 1, row: 1 },
@@ -3615,6 +3823,7 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'cactus', col: 1, row: 6 },
     { stampId: 'pottery-table', col: 2, row: 7 },
     { stampId: 'pottery-table', col: 10, row: 7 },
+    { stampId: 'lotto-counter', col: 4, row: 7 },
   ],
   'rb-diner': [
     { stampId: 'window-sea', col: 1, row: 1 },
@@ -3643,6 +3852,7 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'rack-outdoor', col: 2, row: 5 },
     { stampId: 'rack-outdoor', col: 10, row: 5 },
     { stampId: 'rug-green', col: 5, row: 4 },
+    { stampId: 'lotto-counter', col: 4, row: 7 },
   ],
   'ch-menswear': [
     { stampId: 'shelves-shoes', col: 1, row: 1 },
@@ -4130,6 +4340,18 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'luxury-mesa', col: 12, row: 0 },
     { stampId: 'motors-mesa', col: 17, row: 0 },
     { stampId: 'club-mesa', col: 24, row: 0 },
+    { stampId: 'arena-mesa', col: 31, row: 0 },
+    { stampId: 'tower-mesa-c', col: 31, row: 17 },
+    { stampId: 'palm-planter', col: 32, row: 7 },
+    { stampId: 'palm-planter', col: 38, row: 7 },
+    { stampId: 'lamp-chrome', col: 31, row: 9 },
+    { stampId: 'lamp-chrome', col: 38, row: 9 },
+    { stampId: 'lamp-chrome', col: 31, row: 13 },
+    { stampId: 'lamp-chrome', col: 38, row: 13 },
+    { stampId: 'bench-chrome', col: 33, row: 16 },
+    { stampId: 'palm-planter', col: 37, row: 15 },
+    { stampId: 'bollard', col: 34, row: 7 },
+    { stampId: 'bollard', col: 36, row: 7 },
     { stampId: 'tower-mesa-a', col: 1, row: 17 },
     { stampId: 'garage-mesa', col: 11, row: 17 },
     { stampId: 'tower-mesa-b', col: 21, row: 17 },

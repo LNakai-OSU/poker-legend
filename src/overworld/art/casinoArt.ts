@@ -1048,6 +1048,105 @@ const inlayCrest: StampArt = {
   },
 }
 
+/** The lottery counter: a terminal with its screen lit, a rack of scratch cards, and LOTTO in pink over the till. */
+const lottoCounter: StampArt = {
+  frames: 2,
+  bleed: { top: 6 },
+  standsUp: 0,
+  draw: (px, c) => {
+    const { w, frame } = c
+    shadow(px, 1, 14, w - 2, 2, 0.35)
+    // The sign over the counter.
+    px(2, -6, w - 4, 7, INK)
+    px(3, -5, w - 6, 5, '#2a0a2a')
+    glow('neon', () => {
+      textCentred(px, 'LOTTO', w / 2, -4, frame ? '#ffd2f6' : '#ff4fd8')
+    })
+    // The counter.
+    px(0, 3, w, 12, '#3a2a1e')
+    px(0, 3, w, 2, '#c8a878')
+    px(0, 5, w, 1, '#24160c')
+    // The terminal: a screen with numbers, and a slot for the ticket.
+    px(3, 0, 11, 8, '#1a1a22')
+    px(4, 1, 9, 5, '#2a6a4a')
+    for (let i = 0; i < 5; i++) px(5 + i * 2, 2 + (i % 2), 1, 2, '#c8f8d0')
+    px(6, 7, 6, 1, '#08080c')
+    // A rack of scratch cards in four colours.
+    const cards = ['#f2d878', '#9ad8a0', '#f0b830', '#e8607a']
+    for (let i = 0; i < 4; i++) {
+      px(w - 15 + i * 3, 0, 3, 7, cards[i])
+      px(w - 15 + i * 3, 0, 1, 7, tint(cards[i], 0.3))
+    }
+    px(w - 16, 7, 14, 1, '#6a5a48')
+    // A jar of coins for scratching.
+    px(w - 5, 8, 3, 4, '#c8a040')
+    px(w - 5, 8, 3, 1, '#f2d068')
+  },
+}
+
+/**
+ * The ring: a canvas square on a raised platform, three ropes in red, white and
+ * blue on posts at the corners, and a corner stool. Seen from the front, so the
+ * back ropes are drawn under whoever stands behind it and the front rope over.
+ */
+const boxingRing: StampArt = {
+  frames: 1,
+  bleed: { top: 8 },
+  standsUp: 10,
+  draw: (px, c) => {
+    const { w, h } = c
+    shadow(px, 2, h - 4, w - 4, 4, 0.4)
+    // The apron: the platform's skirt, red, and its steps.
+    px(0, h - 12, w, 12, '#2a1010')
+    px(0, h - 12, w, 2, '#e8e0d0')
+    px(2, h - 9, w - 4, 7, '#a82020')
+    for (let x = 6; x < w - 8; x += 18) px(x, h - 8, 10, 1, '#f2c84a')
+    // The canvas, in perspective: narrower at the back.
+    px(6, 8, w - 12, h - 22, '#d8d0b8')
+    px(4, 18, w - 8, h - 32, '#e0d8c0')
+    for (let x = 12; x < w - 12; x += 12) px(x, 10, 1, h - 24, '#c0b898')
+    px(w / 2 - 12, h / 2 - 4, 24, 8, '#a82020')
+    px(w / 2 - 10, h / 2 - 2, 20, 4, '#f4f0e4')
+    // The back ropes behind, then the posts.
+    for (const [y, color] of [[2, '#d82a2a'], [7, '#f4f0e4'], [12, '#2a6ad8']] as const) px(3, y, w - 6, 2, color)
+    for (const x of [0, w - 5]) {
+      px(x, 0, 5, h - 8, '#3a3a48')
+      px(x, 0, 5, 2, '#d8d8e0')
+      px(x + 1, 6, 3, 9, '#d82a2a')
+    }
+  },
+  over: (px, c) => {
+    const { w, h } = c
+    // The near ropes, in front of the boxers.
+    for (const [y, color] of [[h - 24, '#d82a2a'], [h - 19, '#f4f0e4'], [h - 14, '#2a6ad8']] as const) px(1, y, w - 2, 2, color)
+    for (const x of [0, w - 5]) {
+      px(x, h - 30, 5, 22, '#3a3a48')
+      px(x + 1, h - 24, 3, 9, '#d82a2a')
+    }
+  },
+}
+
+/** Tiered benches in the dark: a block of seats, each a coloured head or an empty place. */
+const bleachers: StampArt = {
+  frames: 1,
+  draw: (px, c) => {
+    const { w, h } = c
+    shadow(px, 1, h - 3, w - 2, 3, 0.4)
+    const rows = Math.floor(h / 8)
+    for (let r = 0; r < rows; r++) {
+      const y = r * 8 + 1
+      px(0, y + 4, w, 4, r % 2 ? '#3a3a52' : '#2e2e44')
+      px(0, y + 4, w, 1, '#6a6a8a')
+      for (let x = 3; x < w - 5; x += 7) {
+        const v = (x * 5 + r * 11) % 5
+        px(x, y + 1, 5, 5, ['#d8a87a', '#8d5a3b', '#f4d4b4', '#c08654', '#74482c'][v])
+        px(x, y, 5, 2, ['#2e2018', '#141414', '#b07a3a', '#141414', '#8a8a90'][v])
+        px(x + 1, y + 6, 3, 2, ['#d82a2a', '#2a6ad8', '#f2c84a', '#30a050', '#f4f0e4'][(v + r) % 5])
+      }
+    }
+  },
+}
+
 export const CASINO_ART: Record<string, StampArt> = {
   'slot-bank': slotBank([RED, BLUE, GREEN, PURPLE, ORANGE], 3),
   'slot-bank-6': slotBank([RED, BLUE, GREEN, PURPLE, ORANGE], 3),
@@ -1093,4 +1192,7 @@ export const CASINO_ART: Record<string, StampArt> = {
   'inlay-crest': inlayCrest,
   'prize-car': prizeCar,
   'change-booth': changeBooth,
+  'lotto-counter': lottoCounter,
+  'boxing-ring': boxingRing,
+  bleachers,
 }
