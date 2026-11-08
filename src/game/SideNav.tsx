@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { audio } from '../audio/audio'
 import { LESSONS, MISSIONS, findItem } from '../world/content'
 import { PERIOD_LABEL } from './time'
-import { challengeLines, goalStatus, missionStatus, standing } from './progression'
+import { challengeLines, goalStatus, missionStatus, nadiaFile, standing } from './progression'
 import { GOAL_ORDER } from '../world/goals'
 import { totalOwed, type GameState } from './state'
 import { PxButton } from './pixel/ui'
@@ -204,6 +204,9 @@ export function SideNav({
         {next ? <div data-testid="next-step">{line(next, INK.gold)}</div> : null}
         {challengeLines(state).map((l, i) => (
           <div key={`challenge-${i}`}>{line(i === 0 ? `Challenge: ${l}` : l, INK.gold)}</div>
+        ))}
+        {nadiaFile(state).map((l, i) => (
+          <div key={`nadia-${i}`}>{line(l, i === 0 ? INK.gold : INK.dim)}</div>
         ))}
         {!next && taken.length === 0 && openErrands.length === 0 ? line('Nobody has asked you for anything yet.', INK.dim) : null}
         {openErrands.map(({ errand, todo, stage, pays }) => (

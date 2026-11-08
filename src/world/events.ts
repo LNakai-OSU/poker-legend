@@ -3334,6 +3334,14 @@ export const EVENTS: GameEvent[] = [
           'Lou: Sit. The dealer knows the rules, and so do I, which is worse for you.',
           'Lou: Five hundred each. Last one with chips walks out.',
         ] },
+      {
+        kind: 'dialogue',
+        speaker: 'lou',
+        lines: [
+          'Lou: I remember every stack that ever came in on a ring. One girl won hers back. Somebody called Mr. W paid for her third.',
+        ],
+      },
+      { kind: 'setFlag', flag: 'clueRing' },
       { kind: 'dialogue', lines: ['The dealer is at the table. Talk to the dealer when you are ready to sit.'] },
     ],
   },
@@ -3364,6 +3372,13 @@ export const EVENTS: GameEvent[] = [
           'Lou: The Riverbend bus. I rang ahead, so the driver will not leave you at the depot.',
           'Lou: Go on. Before I ask for a rematch.',
         ] },
+      {
+        kind: 'dialogue',
+        speaker: 'lou',
+        lines: [
+          'Lou: The chair at the rail is yours any night. And if you meet that girl with the ring, tell her Lou says it was a fair price.',
+        ],
+      },
       { kind: 'playSound', sound: 'win' },
       { kind: 'moveNpc', characterId: 'lou', to: { col: 27, row: 12 }, leaves: true },
       { kind: 'dialogue', lines: ['Riverbend is open to you. Take the bus when you are ready.'] },
@@ -3394,6 +3409,14 @@ export const EVENTS: GameEvent[] = [
           'Odette: Shut the door. Boat rules: one table, one winner, no rebuy.',
           'Odette: Cut your chips like you mean it.',
         ] },
+      {
+        kind: 'dialogue',
+        speaker: 'odette',
+        lines: [
+          'Odette: Cass’s rope is how the river chooses who to watch. Everybody who borrows gets looked at by someone upstairs.',
+        ],
+      },
+      { kind: 'setFlag', flag: 'clueRope' },
       { kind: 'dialogue', lines: ['The dealer is at the table. Talk to the dealer when you are ready to sit.'] },
     ],
   },
@@ -3424,6 +3447,13 @@ export const EVENTS: GameEvent[] = [
           'Odette: The harbor ferry rides the same tide as the bus. I have signalled ahead.',
           'Odette: Do not look back at the boat. It makes the sailors nervous.',
         ] },
+      {
+        kind: 'dialogue',
+        speaker: 'odette',
+        lines: [
+          'Odette: You played the boat like you were already somewhere else. Go there. Mind Cass: ropes get shorter.',
+        ],
+      },
       { kind: 'playSound', sound: 'win' },
       { kind: 'moveNpc', characterId: 'odette', to: { col: 27, row: 12 }, leaves: true },
       { kind: 'dialogue', lines: ['Crescent Harbor is open to you. Take the bus when you are ready.'] },
@@ -3454,6 +3484,14 @@ export const EVENTS: GameEvent[] = [
           'Bellamy: Please. The chair on the left is the better one.',
           'Bellamy: One match, one winner, and a very good reason not to talk about it.',
         ] },
+      {
+        kind: 'dialogue',
+        speaker: 'bellamy',
+        lines: [
+          'Bellamy: Hal sends me his best pupils. Then they stop writing. He sent me a girl once. She read my room in a minute and never sat down properly again.',
+        ],
+      },
+      { kind: 'setFlag', flag: 'clueTable' },
       { kind: 'dialogue', lines: ['The dealer is at the table. Talk to the dealer when you are ready to sit.'] },
     ],
   },
@@ -3484,6 +3522,13 @@ export const EVENTS: GameEvent[] = [
           'Bellamy: My car is out front, and I have asked it to take you to the transit hub.',
           'Bellamy: It is the least I can do for the man who beat me.',
         ] },
+      {
+        kind: 'dialogue',
+        speaker: 'bellamy',
+        lines: [
+          'Bellamy: Tell Hal he may stop writing. The girl never took the lesson. You might.',
+        ],
+      },
       { kind: 'playSound', sound: 'win' },
       { kind: 'moveNpc', characterId: 'bellamy', to: { col: 27, row: 12 }, leaves: true },
       { kind: 'dialogue', lines: ['Palm Cay is open to you. Take the bus when you are ready.'] },
@@ -3514,6 +3559,14 @@ export const EVENTS: GameEvent[] = [
           'Ines: Sit, sit. Sparkling water is on me. The match is not.',
           'Ines: Heads up, to the last chip. It is the only honest way.',
         ] },
+      {
+        kind: 'dialogue',
+        speaker: 'ines',
+        lines: [
+          'Inés: My honeymoon was comped by the Consortium. The same people sign the Invitational’s cheque, and nobody has seen the champion spend a cent of it.',
+        ],
+      },
+      { kind: 'setFlag', flag: 'clueConsortium' },
       { kind: 'dialogue', lines: ['The dealer is at the table. Talk to the dealer when you are ready to sit.'] },
     ],
   },
@@ -3543,6 +3596,13 @@ export const EVENTS: GameEvent[] = [
           'Ines: The ferry leaves in a few minutes. I asked them to hold it, and they are very bad at saying no to me.',
           'Ines: Go. Leave me with my sea.',
         ] },
+      {
+        kind: 'dialogue',
+        speaker: 'ines',
+        lines: [
+          'Inés: I will write to the Mesa ahead of you. They will know your name. Ask the Consortium for nothing: let them be curious.',
+        ],
+      },
       { kind: 'playSound', sound: 'win' },
       { kind: 'moveNpc', characterId: 'ines', to: { col: 27, row: 12 }, leaves: true },
       { kind: 'dialogue', lines: ['Neon Mesa is open to you. Take the bus when you are ready.'] },
@@ -3573,6 +3633,13 @@ export const EVENTS: GameEvent[] = [
           'Vale: This is not a game for the cameras. They are off, I promise.',
           'Vale: Everything on the table. Nobody else has ever stayed to the end.',
         ] },
+      {
+        kind: 'dialogue',
+        speaker: 'vale',
+        lines: [
+          'Vale: The Consortium keeps a champion. It is not Nadia’s name on the cheque. And there is a boy on the Strip eleven short, pretending he is not. I would not be him.',
+        ],
+      },
       { kind: 'dialogue', lines: ['The dealer is at the table. Talk to the dealer when you are ready to sit.'] },
     ],
   },
@@ -3603,6 +3670,13 @@ export const EVENTS: GameEvent[] = [
           'Vale: The shuttle is on the tarmac. It goes where I have never gone, and I own half the airport.',
           'Vale: Go and be the one who finally sits down across from her.',
         ] },
+      {
+        kind: 'dialogue',
+        speaker: 'vale',
+        lines: [
+          'Vale: The Consortium keeps a list. Today you moved up it. Take the plane.',
+        ],
+      },
       { kind: 'playSound', sound: 'win' },
       { kind: 'moveNpc', characterId: 'vale', to: { col: 27, row: 15 }, leaves: true },
       { kind: 'dialogue', lines: ['Porto Lumina is open to you. Take the bus when you are ready.'] },

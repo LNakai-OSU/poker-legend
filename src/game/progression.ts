@@ -172,6 +172,25 @@ export function challengeLines(state: GameState): string[] {
   return lines
 }
 
+/**
+ * The Nadia file: what you have heard about why she wants a challenger, one
+ * line per clue (docs/STORYBOARD.md §8). Empty until the first is heard.
+ */
+export const NADIA_CLUES: Array<{ flag: 'clueWatch' | 'clueRing' | 'clueRope' | 'clueTable' | 'clueConsortium' | 'clueScout'; line: string }> = [
+  { flag: 'clueWatch', line: 'She came through Basin once and left her watch under Marcus’s sugar bowl.' },
+  { flag: 'clueRing', line: 'Her first stack at Silver Creek was a ring, and a Mr. W paid for the third.' },
+  { flag: 'clueRope', line: 'Everybody on the river owes somebody. She owes the biggest.' },
+  { flag: 'clueTable', line: 'Hal taught her to read a room and she never learned to stop.' },
+  { flag: 'clueConsortium', line: 'The Consortium pays the Invitational. Nobody has seen her spend it.' },
+  { flag: 'clueScout', line: 'Dana was told to find somebody she cannot buy and cannot fix.' },
+]
+
+export function nadiaFile(state: GameState): string[] {
+  const heard = NADIA_CLUES.filter((c) => state.flags[c.flag])
+  if (heard.length === 0) return []
+  return [`Nadia file: ${heard.length} of ${NADIA_CLUES.length}`, ...heard.map((c) => c.line)]
+}
+
 export interface TravelOption {
   cityId: CityId
   name: string
