@@ -41,6 +41,8 @@ interface CitySceneProps {
   paused?: boolean
   /** Something to say to a player who has been stopped at a shut door or a highway. */
   onNotice?: (lines: string[]) => void
+  /** The guiding arrow is a playtest aid; other accounts do not see it. */
+  showGuide?: boolean
 }
 
 export function CityScene({
@@ -55,6 +57,7 @@ export function CityScene({
   onCueDone,
   paused,
   onNotice,
+  showGuide = false,
 }: CitySceneProps) {
   // Areas resolve globally, not within a city: walking off the edge of a street
   // can take you into the next town, which is the point of the world being one
@@ -230,7 +233,7 @@ export function CityScene({
   const due = daysUntilDue(state)
   // What is next, and the way to it from here (`world/nextSteps.ts`).
   const next = nextHeading(state, city.id)
-  const guide = guideFor(next?.goTo ?? null, areaId, state, interactables)
+  const guide = showGuide ? guideFor(next?.goTo ?? null, areaId, state, interactables) : null
 
   return (
     <OverworldScene

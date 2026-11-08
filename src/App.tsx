@@ -78,7 +78,7 @@ function Session({ name }: { name: string }) {
   return (
     <>
       <FullscreenControls />
-      {displaced ? <Displaced name={name} onReclaim={reclaim} /> : <GameApp key={slug} playtest={isPlaytester(slug)} />}
+      {displaced ? <Displaced name={name} onReclaim={reclaim} /> : <GameApp key={slug} playtest={isPlaytester(slug)} showGuide={isPlaytester(slug) || (automated && new URLSearchParams(location.search).has('guide'))} />}
     </>
   )
 }

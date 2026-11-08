@@ -1623,7 +1623,7 @@ async function guideGold(page) {
  */
 await test('the overworld points the way to the first poker night, and its corners keep off the street', async () => {
   const page = await newPage(openedSave())
-  await page.goto(BASE)
+  await page.goto(`${BASE}?guide`)
   await page.waitForSelector('canvas')
   await page.waitForTimeout(600)
   const overworld = '[data-testid="overworld"]'

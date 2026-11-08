@@ -98,7 +98,7 @@ type View =
   | { kind: 'caught' }
   | { kind: 'finaleLost' }
 
-export function GameApp({ playtest = false }: { playtest?: boolean }) {
+export function GameApp({ playtest = false, showGuide = playtest }: { playtest?: boolean; showGuide?: boolean }) {
   const [loaded] = useState<GameState>(() => loadGame() ?? initialState())
   const [state, setState] = useState<GameState>(loaded)
   const [view, setView] = useState<View>({ kind: 'city' })
@@ -786,6 +786,7 @@ export function GameApp({ playtest = false }: { playtest?: boolean }) {
             onCueDone={events.cueDone}
             // The menu is a pause: nobody walks, nobody chases, while it is open.
             paused={events.isRunning || menuOpen || worldMapOpen || playtestOpen}
+            showGuide={showGuide}
           />
         )
     }
