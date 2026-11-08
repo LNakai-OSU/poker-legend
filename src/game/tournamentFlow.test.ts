@@ -75,3 +75,35 @@ describe('a tournament, hand by hand', () => {
     for (const entry of finals) expect(entry.replaced).toBe(0)
   }, 300_000)
 })
+
+describe('a guest at the final table', () => {
+  // A one-hand tournament: the first step after the hand is the final table.
+  const short = { ...table, tournament: { rounds: 1, handsPerRound: 1, blinds: [[100, 200]] as [number, number][] } }
+
+  it('sits Kit down once, in the shortest chair, when the story asks', () => {
+    const rng = mulberry32(7)
+    const engine = build(rng)
+    const everSeated = new Set<string>(table.opponents.map((r) => (typeof r === 'string' ? r : r.character)))
+    engine.startNewHand()
+    playHand(engine, rng)
+    const step = stepTournament(engine, short, short.bigBlind, everSeated, rng, 'kit')
+    expect(step.finalTable).toBe(true)
+    expect(step.replaced.map((r) => r.newcomer.id)).toEqual(['kit'])
+    const players = engine.getState().players
+    expect(players.filter((p) => p.id === 'kit')).toHaveLength(1)
+    expect(players).toHaveLength(6)
+    // Not again on the next hand.
+    engine.startNewHand()
+    playHand(engine, rng)
+    expect(stepTournament(engine, short, short.bigBlind, everSeated, rng, 'kit').replaced).toEqual([])
+  })
+
+  it('seats nobody when the story does not ask', () => {
+    const rng = mulberry32(7)
+    const engine = build(rng)
+    const everSeated = new Set<string>()
+    engine.startNewHand()
+    playHand(engine, rng)
+    expect(stepTournament(engine, short, short.bigBlind, everSeated, rng).replaced).toEqual([])
+  })
+})

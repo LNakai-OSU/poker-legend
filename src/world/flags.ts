@@ -156,6 +156,19 @@ export const STORY_FLAGS = {
     clear: 'you have not opened the stake fund',
   },
 
+  tookKitsDare: {
+    set: 'you told Kit you would take Cass’s money to spite him',
+    clear: 'you told Kit you would earn it yourself',
+  },
+  tippedOffKit: {
+    set: 'you gave Kit to Mr. Lowe at the Mesa',
+    clear: 'you did not give Kit to the collectors',
+  },
+  ignoredKit: {
+    set: 'you said nothing when Kit was short at the Mesa',
+    clear: 'you did not leave Kit to the Consortium’s money',
+  },
+
   // The errands (`errands.ts`): small jobs round each town. Each is a choice the
   // client and the afterword remember.
   errandPatelRaised: {

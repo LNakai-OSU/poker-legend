@@ -27,6 +27,8 @@ export function stepTournament(
   currentBigBlind: number,
   everSeated: Set<string>,
   rng: Rng,
+  /** A character the story has put at the final table (Kit, if you left him to Wen's money). */
+  guestId?: string,
 ): TournamentStep {
   const rules = table.tournament
   if (!rules) throw new Error(`${table.id} is not a tournament`)
@@ -40,7 +42,19 @@ export function stepTournament(
     engine.setBlinds(blinds.small, blinds.big)
     step.newBlinds = blinds
   }
-  if (finalTable) return step
+  if (finalTable) {
+    // The story's guest sits down once, in the chair of whoever is shortest.
+    if (guestId && !everSeated.has(guestId) && !engine.getState().players.some((p) => p.id === guestId)) {
+      const others = engine.getState().players.filter((p) => p.id !== 'you')
+      const out = others.reduce((a, b) => (b.stack < a.stack ? b : a))
+      const [guest] = seatsOf(table, [guestId])
+      const stack = replacementStack(rng, engine.getState().players.filter((p) => p.id !== out.id).map((p) => p.stack), blinds.big)
+      everSeated.add(guest.id)
+      engine.replacePlayer(out.id, { id: guest.id, name: guest.name, isHuman: false, skillTier: guest.skillTier, archetype: guest.archetype, startingStack: stack })
+      step.replaced.push({ outId: out.id, outName: out.name, newcomer: guest, stack })
+    }
+    return step
+  }
 
   for (const out of engine.getState().players.filter((p) => p.id !== 'you' && p.stack <= 0)) {
     const seated = engine.getState().players

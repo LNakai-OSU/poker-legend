@@ -158,6 +158,16 @@ export const TABLES: Record<string, TableDef> = {
     bossOf: 'crescentHarbor',
     opponents: ['bellamy'],
   },
+  // Kit's side game at Palm Cay (`kit-palmcay`): heads up, stakes of your choosing.
+  'palmcay-kit': {
+    id: 'palmcay-kit',
+    name: 'The Corner Table',
+    theme: 'palmcay',
+    smallBlind: 50,
+    bigBlind: 100,
+    buyIn: 5000,
+    opponents: ['kit'],
+  },
   'palmcay-boss': {
     id: 'palmcay-boss',
     name: 'The Owner’s Table',

@@ -389,7 +389,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
    */
   const tournamentBetweenHands = () => {
     if (!rules) return
-    const step = stepTournament(engine, table, blinds.big, everSeatedRef.current, defaultRng)
+    const step = stepTournament(engine, table, blinds.big, everSeatedRef.current, defaultRng, state.flags.ignoredKit ? 'kit' : undefined)
     if (step.newBlinds) {
       setBlinds(step.newBlinds)
       const detail = `Blinds ${step.newBlinds.small.toLocaleString()}/${step.newBlinds.big.toLocaleString()}`

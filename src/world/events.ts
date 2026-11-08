@@ -1795,6 +1795,38 @@ export const EVENTS: GameEvent[] = [
           'Kit: Cass will offer you money. Take it or do not. I would enjoy either.',
         ],
       },
+      {
+        kind: 'choice',
+        speaker: 'kit',
+        prompt: 'Kit dares you to take Cass’s money. What do you tell him?',
+        options: [
+          {
+            label: '“I will take it, just to spite you”',
+            then: [
+          { kind: 'setFlag', flag: 'tookKitsDare' },
+          {
+            kind: 'dialogue',
+            speaker: 'kit',
+            lines: [
+              'Kit: Good. I like a man who borrows out of pride. It always ends the same way.',
+            ],
+          },
+            ],
+          },
+          {
+            label: '“I will earn it myself”',
+            then: [
+          {
+            kind: 'dialogue',
+            speaker: 'kit',
+            lines: [
+              'Kit: Admirable. Slow, but admirable.',
+            ],
+          },
+            ],
+          },
+        ],
+      },
     ],
   },
   {
@@ -2274,6 +2306,60 @@ export const EVENTS: GameEvent[] = [
           'Kit: Two days is plenty. It is always plenty.',
         ],
       },
+      {
+        kind: 'if',
+        when: [{ kind: 'flag', flag: 'tookKitsDare' }],
+        then: [
+          {
+            kind: 'dialogue',
+            speaker: 'kit',
+            lines: [
+              'Kit: Cass’s rope suits you. You have the look of somebody who likes being owed.',
+            ],
+          },
+        ],
+        else: [
+          {
+            kind: 'dialogue',
+            speaker: 'kit',
+            lines: [
+              'Kit: You never borrowed. I cannot tell if that is discipline or vanity.',
+            ],
+          },
+        ],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'kit',
+        lines: [
+          'Kit: Heads up, then. A side game. I put in what is left of Bernard, you put in what you like, and we find out which of us is the story.',
+        ],
+      },
+      {
+        kind: 'choice',
+        speaker: 'kit',
+        prompt: 'Play Kit heads up?',
+        options: [
+          {
+            label: 'Sit down with Kit',
+            then: [
+          { kind: 'startTable', tableId: 'palmcay-kit' },
+            ],
+          },
+          {
+            label: 'Not today',
+            then: [
+          {
+            kind: 'dialogue',
+            speaker: 'kit',
+            lines: [
+              'Kit: Afraid of the answer. Fair.',
+            ],
+          },
+            ],
+          },
+        ],
+      },
     ],
   },
   {
@@ -2439,6 +2525,54 @@ export const EVENTS: GameEvent[] = [
           'Kit: I am on the plane tonight. Do not follow me too fast.',
         ],
       },
+      {
+        kind: 'choice',
+        speaker: 'kit',
+        prompt: 'Kit is eleven thousand short of the Consortium. What do you do?',
+        options: [
+          {
+            label: 'Stake him $10,000',
+            conditions: [{ kind: 'cashAtLeast', amount: 10000 }],
+            then: [
+          { kind: 'giveCash', amount: -10000 },
+          { kind: 'setFlag', flag: 'stakedKit' },
+          {
+            kind: 'dialogue',
+            speaker: 'kit',
+            lines: [
+              'Kit: ...You are serious.',
+              'Kit: Ten. I will find the eleventh. Do not look for me. I will come to you.',
+            ],
+          },
+            ],
+          },
+          {
+            label: 'Tell Mr. Lowe where he is going',
+            then: [
+          { kind: 'setFlag', flag: 'tippedOffKit' },
+          {
+            kind: 'dialogue',
+              lines: [
+              'You find Mr. Lowe by the cashier and say one word. Kit is still on the plane when a hand lands on his shoulder.',
+            ],
+          },
+            ],
+          },
+          {
+            label: 'Say nothing',
+            then: [
+          { kind: 'setFlag', flag: 'ignoredKit' },
+          {
+            kind: 'dialogue',
+            speaker: 'kit',
+            lines: [
+              'Kit: Right. Nothing. I know what that looks like.',
+            ],
+          },
+            ],
+          },
+        ],
+      },
     ],
   },
   {
@@ -2584,6 +2718,9 @@ export const EVENTS: GameEvent[] = [
     conditions: [
       { kind: 'chapter', cityId: 'portoLumina' },
       { kind: 'flag', flag: 'hasPenthouse', set: false },
+      { kind: 'flag', flag: 'stakedKit', set: false },
+      { kind: 'flag', flag: 'ignoredKit', set: false },
+      { kind: 'flag', flag: 'tippedOffKit', set: false },
     ],
     actions: [
       {
@@ -2594,6 +2731,78 @@ export const EVENTS: GameEvent[] = [
           'Kit: She knew what I would do before I did. Like somebody had written it down for her.',
           'Kit: The Consortium has sent two men. I am on the next boat out, if they let me reach it.',
           'Kit: Do not take Wen’s money for the buy-in. Do not be me.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'kit-lumina-staked',
+    about:
+      'The rival you staked: he stands at the rail, solvent, and says what Wen’s terms really are.',
+    trigger: { kind: 'talkTo', characterId: 'kit' },
+    conditions: [
+      { kind: 'eventDone', eventId: 'kit-lumina', done: false },
+      { kind: 'chapter', cityId: 'portoLumina' },
+      { kind: 'flag', flag: 'hasPenthouse', set: false },
+      { kind: 'flag', flag: 'stakedKit' },
+    ],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'kit',
+        lines: [
+          'Kit: Your ten bought two days. Forty hands against her bought the rest of it back.',
+          'Kit: I will be at the rail. I will pay you back whatever happens.',
+          'Kit: Wen’s terms: she does not want the money. She wants to be owed. Do not be the one who lets her.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'kit-lumina-ignored',
+    about:
+      'The rival you left alone: he took Wen’s money, and he is at the final table.',
+    trigger: { kind: 'talkTo', characterId: 'kit' },
+    conditions: [
+      { kind: 'eventDone', eventId: 'kit-lumina', done: false },
+      { kind: 'chapter', cityId: 'portoLumina' },
+      { kind: 'flag', flag: 'hasPenthouse', set: false },
+      { kind: 'flag', flag: 'stakedKit', set: false },
+      { kind: 'flag', flag: 'ignoredKit' },
+    ],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'kit',
+        lines: [
+          'Kit: You said nothing. I noticed.',
+          'Kit: So I took Wen’s money. It is not much of a debt if you plan to win.',
+          'Kit: I will see you at the final table. I am going to play you like I have never been owed a thing.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'kit-lumina-tipped',
+    about:
+      'The rival you gave to the collectors: he is hunted, and he knows who talked.',
+    trigger: { kind: 'talkTo', characterId: 'kit' },
+    conditions: [
+      { kind: 'eventDone', eventId: 'kit-lumina', done: false },
+      { kind: 'chapter', cityId: 'portoLumina' },
+      { kind: 'flag', flag: 'hasPenthouse', set: false },
+      { kind: 'flag', flag: 'stakedKit', set: false },
+      { kind: 'flag', flag: 'ignoredKit', set: false },
+      { kind: 'flag', flag: 'tippedOffKit' },
+    ],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'kit',
+        lines: [
+          'Kit: Mr. Lowe knew which plane. Mr. Lowe does not read the manifests.',
+          'Kit: I am not going to say it. I am going to remember it.',
+          'Kit: Do not take Wen’s money. I know what it is like on the other side.',
         ],
       },
     ],
@@ -3032,6 +3241,8 @@ export const EVENTS: GameEvent[] = [
     conditions: [
       { kind: 'chapter', cityId: 'portoLumina' },
       { kind: 'flag', flag: 'hasPenthouse' },
+      { kind: 'flag', flag: 'stakedKit', set: false },
+      { kind: 'flag', flag: 'tippedOffKit', set: false },
     ],
     actions: [
       {
@@ -4719,7 +4930,6 @@ export const EVENTS: GameEvent[] = [
     conditions: [
       { kind: 'chapter', cityId: 'portoLumina' },
       { kind: 'flag', flag: 'hasPenthouse' },
-      { kind: 'eventDone', eventId: 'kit-after' },
       { kind: 'flag', flag: 'stakedKit' },
     ],
     actions: [
@@ -4733,6 +4943,29 @@ export const EVENTS: GameEvent[] = [
       },
       { kind: 'giveCash', amount: 20000 },
       { kind: 'dialogue', speaker: 'kit', lines: ['Kit: Next year I am coming for the penthouse. Keep the chairs warm.'] },
+    ],
+  },
+  {
+    id: 'kit-after-hunted',
+    about:
+      'Aftermath, if you gave Kit to the collectors: he asks you for nothing.',
+    trigger: { kind: 'talkTo', characterId: 'kit' },
+    conditions: [
+      { kind: 'flag', flag: 'stakedKit', set: false },
+      { kind: 'eventDone', eventId: 'kit-after', done: false },
+      { kind: 'chapter', cityId: 'portoLumina' },
+      { kind: 'flag', flag: 'hasPenthouse' },
+      { kind: 'flag', flag: 'tippedOffKit' },
+    ],
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'kit',
+        lines: [
+          'Kit: Congratulations. I mean it. I know where I would be, if I were you.',
+          'Kit: I will not be asking you for anything. Not now, not next year.',
+        ],
+      },
     ],
   },
   {
