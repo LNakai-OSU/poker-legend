@@ -10,6 +10,7 @@ import {
   isHunted,
   chapterOf,
   CAUGHT_GRACE_DAYS,
+  arrivalAmbush,
   caughtByCollectors,
   daysUntilDue,
   daysUntilRematch,
@@ -101,23 +102,29 @@ describe('getting caught', () => {
     return advanceDay(staked({ cash: 500 }), 4)
   }
 
-  it('takes most of the bankroll but leaves the debt standing', () => {
+  it('takes everything you own but leaves the debt standing', () => {
     // Wiping the debt made deliberately walking into collectors strictly better
     // than paying, which inverted the whole point of borrowing.
-    const before = hunted()
+    const before = { ...hunted(), ownedItemIds: ['work-jacket', 'sedan'], wornItemId: 'work-jacket' }
     const after = caughtByCollectors(before)
-    expect(after.cash).toBeLessThan(before.cash)
+    expect(after.ownedItemIds).toEqual([])
+    expect(after.wornItemId).toBeUndefined()
     expect(after.debts).toEqual(before.debts)
     expect(totalOwed(after)).toBe(totalOwed(before))
   })
 
-  it('leaves enough behind to keep playing', () => {
-    // Taking the whole bankroll ended the run on the spot: broke, still in debt,
-    // and with no buy-in to earn it back with. It has to hurt, not be terminal.
-    const before = advanceDay(staked({ cash: 4000 }), 4)
-    const after = caughtByCollectors(before)
-    expect(after.cash).toBeGreaterThan(0)
-    expect(after.cash / before.cash).toBeLessThan(0.5)
+  it('leaves only a bus fare', () => {
+    const after = caughtByCollectors(advanceDay(staked({ cash: 4000 }), 4))
+    expect(after.cash).toBe(20)
+    expect(caughtByCollectors({ ...hunted(), cash: 5 }).cash).toBe(5)
+  })
+
+  it('ambushes you on arrival in a town while a debt is overdue, unless they have just had you', () => {
+    const before = hunted()
+    const after = { ...before, huntedInCityId: null, cityId: 'palmCay' as const, day: before.day + 1 }
+    expect(arrivalAmbush(before, after).huntedInCityId).toBe('palmCay')
+    expect(arrivalAmbush({ ...before, huntGraceUntilDay: after.day }, after).huntedInCityId).toBeNull()
+    expect(arrivalAmbush(staked(), { ...staked(), cityId: 'palmCay' as const }).huntedInCityId).toBeNull()
   })
 
   it('is never cheaper than paying what you owe', () => {

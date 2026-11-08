@@ -836,39 +836,47 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
       )
     } else {
       const tipToggle = (
-        <button
-          type="button"
-          data-testid="tips-toggle"
-          aria-expanded={tipsOpen}
-          onClick={() => setTipsOpen((open) => !open)}
-          style={{ all: 'unset', cursor: 'pointer', display: 'block', width: '100%', pointerEvents: 'auto' }}
-        >
-          <PxLine scale={P} align="center" ink={INFO_INK} text={tipsOpen ? "▾ Hal's tips (hide)" : "▸ Hal's tips"} />
-        </button>
+        <div style={{ display: 'flex', justifyContent: 'center', pointerEvents: 'auto' }}>
+          <PxButton
+            lines={[tipsOpen ? "Hide Hal's tips" : "Show Hal's tips"]}
+            scale={P}
+            role="plain"
+            height={one}
+            testId="tips-toggle"
+            onClick={() => setTipsOpen((open) => !open)}
+            style={{ pointerEvents: 'auto' }}
+          />
+        </div>
       )
-      const info = (
-        <>
-          {tipToggle}
-          {tipsOpen && handRead && (
+      // Dark type on the pale panel it sits in: pale blue type was hard to read.
+      const tipsPanel = tipsOpen && (handRead || potOdds) && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 * P, marginTop: 2 * P }}>
+          {handRead && (
             <PxLine
               scale={P}
               wrap
               align="center"
-              ink={INFO_INK}
+              ink={INK.dark}
               testId="hand-read"
-              text={`${handRead.made} · ~${Math.round(handRead.equity * 100)}% to win`}
+              text={`${handRead.made} · about ${Math.round(handRead.equity * 100)}% to win`}
             />
           )}
-          {tipsOpen && potOdds && (
+          {potOdds && (
             <PxLine
               scale={P}
               wrap
               align="center"
-              ink={INFO_INK}
+              ink={INK.dark}
               testId="pot-odds"
               text={`Calling ${potOdds.toCall} into ${publicState.pot} — you need ${Math.round(potOdds.breakEven * 100)}% to break even`}
             />
           )}
+        </div>
+      )
+      const info = (
+        <>
+          {tipToggle}
+          {tipsPanel}
         </>
       )
       if (!canAct) {
@@ -1150,9 +1158,6 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
     />
   )
 }
-
-/** Information over the betting buttons: odds and reads the lessons paid for. */
-const INFO_INK = INK.blue
 /** Money that is about to change hands. */
 const STAKE_INK = { color: '#8a5a10', shadow: '#ecd8b0' }
 

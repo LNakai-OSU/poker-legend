@@ -2340,6 +2340,7 @@ await test('a table still works with every lesson bought', async () => {
   assert(await tips.isVisible(), "Hal's tips toggle is missing")
   assert(!(await page.locator('[data-testid="hand-read"]').isVisible()), "Hal's tips should start folded away")
   await tips.click()
+  await shot(page, 'hals-tips-open')
   assert(
     await page.locator('[data-testid="hand-read"]').isVisible(),
     'the hand-reading panel the lesson pays for is missing',

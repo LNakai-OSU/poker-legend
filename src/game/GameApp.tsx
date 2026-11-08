@@ -37,8 +37,11 @@ import {
   advancePeriod,
   endSession,
   arriveAt,
+  arrivalAmbush,
   caughtByCollectors,
   huntingSponsorId,
+  isHunted,
+  overdueDebts,
   recordBust,
   initialState,
   lostFinalChallenge,
@@ -121,6 +124,8 @@ export function GameApp({ playtest = false }: { playtest?: boolean }) {
   const [playtestOpen, setPlaytestOpen] = useState(false)
   /** Whose collectors it was, for the shakedown screen; the hunt is over by the time it shows. */
   const [caughtBy, setCaughtBy] = useState<string | null>(null)
+  /** Stepped off a bus owing: the collectors play their scene as soon as the street is up. */
+  const [ambushing, setAmbushing] = useState(false)
   useAudioUnlock()
 
   /**
@@ -430,6 +435,12 @@ export function GameApp({ playtest = false }: { playtest?: boolean }) {
     if (!event || !events.run(event, shakedown)) shakedown()
   }
 
+  useEffect(() => {
+    if (!ambushing || view.kind !== 'city' || events.isRunning) return
+    setAmbushing(false)
+    if (isHunted(state)) handleCaught()
+  }, [ambushing, view.kind, events.isRunning, state])
+
   /** Gambling a bankroll away below the cheapest seat is a bust, like a session. */
   const settleGamble = (delta: number) =>
     setState((s) => {
@@ -490,14 +501,16 @@ export function GameApp({ playtest = false }: { playtest?: boolean }) {
           road={rideRoad(ride.arrive)}
           period={state.period}
           onArrive={() => {
+            // Owing money that is past due, a town is where they jump you.
+            if (ride.arrive.cityId && overdueDebts(state).length > 0) setAmbushing(true)
             setState((s) =>
               ride.arrive.cityId
-                ? travelTo(s, ride.arrive.cityId, {
+                ? arrivalAmbush(s, travelTo(s, ride.arrive.cityId, {
                     keepDay: hasFastTravel(s),
                     areaId:
                       CITIES[ride.arrive.cityId].arrivalAreaId ??
                       CITIES[ride.arrive.cityId].entryAreaId,
-                  })
+                  }))
                 : // A ride across town costs no day — that is what makes the bus
                   // worth taking — but it is still an hour of your afternoon, and
                   // the hour is how you find somebody who is not where they were.

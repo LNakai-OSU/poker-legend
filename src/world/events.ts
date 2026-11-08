@@ -3992,8 +3992,8 @@ export const EVENTS: GameEvent[] = [
   },
 
   // The collectors catch you. Each sponsor's person says their piece standing
-  // over you; the shakedown follows the last line and costs three quarters of
-  // what you carry. The debt stays where it was.
+  // over you; the shakedown follows the last line and costs everything you own
+  // but a bus fare. The debt stays where it was.
   {
     id: 'caught-by-dutch',
     about: 'Cass’s collector, the first time: apologetic, thorough, and he leaves you bus fare.',
@@ -4008,7 +4008,7 @@ export const EVENTS: GameEvent[] = [
         speaker: 'dutch',
         lines: [
           'Dutch: Sorry. Sorry about this. She is my wife’s sister.',
-          'Dutch: Pockets out for me? I will leave you bus fare. I always leave bus fare.',
+          'Dutch: Pockets out for me? And the coat, and the keys. I will leave you bus fare. I always leave bus fare.',
           'Dutch: You still owe her, mind. This is just what late costs.',
         ],
       },
@@ -4027,13 +4027,13 @@ export const EVENTS: GameEvent[] = [
       {
         kind: 'dialogue',
         speaker: 'dutch',
-        lines: ['Dutch: Again? I am starting to think we are friends.', 'Dutch: Same as last time. Pockets. Bus fare stays. The debt stays.'],
+        lines: ['Dutch: Again? I am starting to think we are friends.', 'Dutch: Same as last time. Pockets, coat, keys. Bus fare stays. The debt stays.'],
       },
     ],
   },
   {
     id: 'caught-by-abel',
-    about: 'Mr. Emeka’s collector, the first time: perfectly polite, and he takes most of it.',
+    about: 'Mr. Emeka’s collector, the first time: perfectly polite, and he takes all of it.',
     trigger: { kind: 'caught' },
     conditions: [
       { kind: 'hunted', sponsorId: 'emeka' },
@@ -4045,7 +4045,7 @@ export const EVENTS: GameEvent[] = [
         speaker: 'abel',
         lines: [
           'Abel: Good evening. Mr. Emeka sends his regards, and me.',
-          'Abel: I will take most of what you are carrying. Not all. He wants you able to pay him.',
+          'Abel: I will take everything you are carrying and everything you are wearing. A bus fare stays. He wants you able to find him.',
           'Abel: The debt remains. Please do not make me find you twice.',
         ],
       },
@@ -4082,7 +4082,7 @@ export const EVENTS: GameEvent[] = [
         speaker: 'lowe',
         lines: [
           'Mr. Lowe: We said we do not lose track of people.',
-          'Mr. Lowe: Three quarters of what you carry. The balance stands.',
+          'Mr. Lowe: Everything you carry, everything you own. The balance stands.',
           'Mr. Lowe: Your friend Kit did not believe in the balance either.',
         ],
       },
@@ -4119,7 +4119,7 @@ export const EVENTS: GameEvent[] = [
         speaker: 'fong',
         lines: [
           'Ms. Fong: I keep the book. Today I am also the bailiff.',
-          'Ms. Fong: Three quarters, entered against your page. The total has not moved.',
+          'Ms. Fong: Everything you own, entered against your page. The total has not moved.',
           'Ms. Fong: Madame Wen wants her money, not your misery. Pay her and I stop visiting.',
         ],
       },
@@ -4295,7 +4295,7 @@ export const EVENTS: GameEvent[] = [
   },
   {
     id: 'kit-caught',
-    about: 'Kit’s debt comes due on Kit: the Consortium’s men caught him, took three quarters, and the debt did not move.',
+    about: 'Kit’s debt comes due on Kit: the Consortium’s men caught him, took everything, and the debt did not move.',
     trigger: { kind: 'talkTo', characterId: 'kit' },
     conditions: [
       { kind: 'chapter', cityId: 'portoLumina' },
@@ -4352,7 +4352,7 @@ export const EVENTS: GameEvent[] = [
         speaker: 'kit',
         lines: [
           'Kit: You took Wen’s money. I said do not be me.',
-          'Kit: Listen, then, because I know this part. Skip town and they lose you for a day. Get caught and they take three quarters and leave the debt.',
+          'Kit: Listen, then, because I know this part. Skip town and they are waiting at the other end. Get caught and they take everything you own and leave the debt.',
           'Kit: Pay her first, then the match. Nadia waits a week. Wen does not wait at all.',
         ],
       },

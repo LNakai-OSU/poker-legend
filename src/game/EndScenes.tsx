@@ -34,11 +34,11 @@ export function CaughtScene({ sponsorId, onRestart }: { sponsorId?: string | nul
         {sponsor
           ? `${sponsor.name}'s people, either side, walking you out through the service corridor. `
           : 'Two of them, either side, walking you out through the service corridor. '}
-        Nobody in the room looks up. They count most of it out of your hands and explain, patiently,
-        what happens if there is a next time.
+        Nobody looks up. They empty your pockets, take the coat off your back and the keys off your belt,
+        and explain, patiently, what happens if there is a next time.
       </p>
       <p style={{ color: '#9a9ab0' }}>
-        You wake up back where you last felt safe, with cab fare and not much else. What you owe has
+        You wake up back where you last felt safe, with a bus fare and nothing else you own. What you owe has
         not moved a cent &mdash; they will just be looking for you again in a few days.
       </p>
       <button style={{ ...buttonStyle, marginTop: 12 }} onClick={onRestart}>Pick yourself up</button>

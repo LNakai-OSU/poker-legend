@@ -406,32 +406,44 @@ export function payDebt(state: GameState, debtId: string): GameState {
 export const CAUGHT_GRACE_DAYS = 3
 
 /**
- * The share of the bankroll a shakedown costs. Taking all of it was a mugging
- * rather than a mechanic: the run was over on the spot, with nothing left to
- * rebuy a table with and the debt still standing. Three quarters hurts badly
- * enough to be worth running from while leaving something to play out of.
+ * What a shakedown leaves in your pocket: a bus fare. They take every other
+ * dollar and everything you own, so being caught is the worst the debt can do
+ * to you short of ending the run — and the debt itself still stands.
  */
-export const CAUGHT_CASH_LOSS_FRACTION = 0.75
+export const CAUGHT_CASH_LEFT = 20
 
 /**
- * Collectors catch up with you. They take most of the bankroll you are carrying
- * and the debt stays exactly where it was: wiping the slate used to make walking
- * into them strictly better than paying, which is the opposite of the intended
- * pressure. They also leave you alone for a few days afterwards, so being shaken
- * down is a hole you can dig out of rather than a dead end.
+ * Collectors catch up with you. They take every possession — the clothes, the
+ * car, the lot — and all the cash but a bus fare, and the debt stays exactly
+ * where it was: wiping the slate used to make walking into them strictly better
+ * than paying. They leave you alone for a few days afterwards, so it is a hole
+ * you can dig out of with a bus fare and what you have learned.
  */
 export function caughtByCollectors(state: GameState): GameState {
-  const cash = state.cash - Math.round(state.cash * CAUGHT_CASH_LOSS_FRACTION)
+  const cash = Math.min(state.cash, CAUGHT_CASH_LEFT)
   const hunter = huntingSponsorId(state)
   const caught = {
     ...state,
     cash,
+    ownedItemIds: [],
+    wornItemId: undefined,
     huntedInCityId: null,
     huntGraceUntilDay: state.day + CAUGHT_GRACE_DAYS,
     record: hunter ? bumpSponsor(state.record, hunter, 'caught') : state.record,
   }
   // Shaken down below the cheapest seat is a bust like any other.
   return state.cash >= BUST_LINE && cash < BUST_LINE ? recordBust(caught) : caught
+}
+
+/**
+ * Stepping off the bus owing money that is past due. The collectors do not need
+ * to find you when you walk back into a town: they are waiting. `before` is the
+ * state you left in (its grace period is the one that counts, because arriving
+ * resets it) and `after` is the state you arrived in.
+ */
+export function arrivalAmbush(before: GameState, after: GameState): GameState {
+  if (overdueDebts(after).length === 0 || before.huntGraceUntilDay >= after.day) return after
+  return { ...after, huntedInCityId: after.cityId, huntGraceUntilDay: before.huntGraceUntilDay }
 }
 
 /** How long Nadia makes you wait before she will put the match up again. */
