@@ -24,7 +24,7 @@ import { CoinBurst } from './CasinoFx'
 import { ChipRow } from './CasinoControls'
 import { Panel, PxButton } from './pixel/ui'
 import { PixelText } from './pixel/PixelText'
-import { CW, RING_H } from './boxingArt'
+import { CW, RING_H, SS } from './boxingArt'
 import { buildRun, frameAt, idleFrame, type Run } from './boxingChoreo'
 import { Arena } from './boxingRender'
 import type { GameState } from './state'
@@ -247,11 +247,11 @@ export function BoxingScene({
             <div style={{ ...place(P, tx, ty, CW, RING_H), outline: `${P}px solid #14101c` }} data-testid="boxing-ring" data-round={roundNo} data-phase={phase}>
               <canvas
                 ref={canvasRef}
-                width={CW}
-                height={RING_H}
+                width={CW * SS}
+                height={RING_H * SS}
                 aria-hidden="true"
                 data-testid="boxing-canvas"
-                style={{ width: CW * P, height: RING_H * P, imageRendering: 'pixelated', display: 'block' }}
+                style={{ width: CW * P, height: RING_H * P, display: 'block' }}
               />
               {bout
                 ? ([bout.a, bout.b] as const).map((f, side) => (

@@ -1,5 +1,6 @@
-import { Raster } from './pixel/raster'
-import { drawTiny } from './pixel/tiny'
+import { SS } from './boxingRig'
+
+export { SS }
 
 /** Art pixels. */
 export const CW = 236
@@ -28,100 +29,215 @@ export function reach(depth: number): number {
   return Math.max(8, half - 12)
 }
 
-function line(r: Raster, x0: number, y0: number, x1: number, y1: number, ink: string, thick = 1): void {
-  const steps = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0))
-  for (let i = 0; i <= steps; i++) {
-    const x = Math.round(x0 + ((x1 - x0) * i) / steps)
-    const y = Math.round(y0 + ((y1 - y0) * i) / steps)
-    r.rect(x, y, 1, thick, ink)
-  }
-}
-
-const ROPES = [['#d82a2a', 6], ['#f4f0e4', 12], ['#2a6ad8', 18]] as const
-
 /** The half-width of the diamond at a height, or 0 outside it. */
 export function halfAt(y: number, grow = 0): number {
   const f = 1 - Math.abs(y - RING_CY) / (RING_HH + grow)
   return f > 0 ? (RING_HW + grow * 2) * f : 0
 }
 
+
+type Ctx = CanvasRenderingContext2D
+
+function layer(): { canvas: HTMLCanvasElement; c: Ctx } {
+  const canvas = document.createElement('canvas')
+  canvas.width = CW * SS
+  canvas.height = RING_H * SS
+  const c = canvas.getContext('2d')!
+  c.scale(SS, SS)
+  return { canvas, c }
+}
+
+const poly = (c: Ctx, pts: Array<[number, number]>) => {
+  c.beginPath()
+  pts.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y)))
+  c.closePath()
+}
+
 /**
- * The ring from above: a diamond of canvas on a red apron, ropes round all four
- * sides, a post at each corner padded red on the left and blue on the right, and
- * the crowd in the dark beyond. In two layers, because the near ropes go in front
- * of whoever is fighting and the far ones behind.
+ * The ring from above, at twice the pixel density of the rest of the game: a
+ * canvas of planks with a worn centre logo on a red apron with white piping,
+ * three ropes on each side with a catch of light on every one, steel posts with
+ * padded corners. In two layers, because the near ropes go in front of whoever
+ * is fighting and the far ones behind.
  */
-export function paintRing(): { back: Raster; front: Raster } {
-  const back = new Raster(CW, RING_H)
-  const front = new Raster(CW, RING_H)
-  const { CX, CY, HW, HH } = { CX: RING_CX, CY: RING_CY, HW: RING_HW, HH: RING_HH }
-  // Beyond the ring: the hall, dark, with the floor ringside a shade lighter where the tables are.
-  back.rect(0, 112, CW, RING_H - 112, '#1a1424')
-  back.rect(0, 112, CW, 1, '#3a2a50')
-  for (let x = 0; x < CW; x += 10) back.rect(x, 113, 1, RING_H - 113, '#1e182a')
-  // Ringside: the timekeeper with the bell on the left, the three judges on the right.
-  back.rect(8, 126, 44, 12, '#5a3a22')
-  back.rect(8, 126, 44, 2, '#8a5a32')
-  back.rect(8, 138, 44, 2, '#2a1a0e')
-  back.rect(12, 120, 5, 6, '#c8a040')
-  back.rect(13, 118, 3, 2, '#e8c860')
-  drawTiny(back, 'TIME', 26, 130, '#f2c84a')
-  back.rect(CW - 112, 126, 104, 12, '#5a3a22')
-  back.rect(CW - 112, 126, 104, 2, '#8a5a32')
-  back.rect(CW - 112, 138, 104, 2, '#2a1a0e')
-  drawTiny(back, 'JUDGES', CW - 64, 130, '#f2c84a')
-  // The apron: the platform's red skirt under the two near sides.
-  for (let x = CX - HW; x <= CX + HW; x++) {
-    const ye = CY + Math.round(HH * (1 - Math.abs(x - CX) / HW))
-    back.rect(x, ye, 1, 7, '#8a1818')
-    back.rect(x, ye, 1, 1, '#e8e0d0')
-    back.rect(x, ye + 6, 1, 1, '#4a0c0c')
+export function paintRing(): { back: HTMLCanvasElement; front: HTMLCanvasElement } {
+  const B = layer()
+  const F = layer()
+  const b = B.c
+  const f = F.c
+  const { RING_CX: CX, RING_CY: CY, RING_HW: HW, RING_HH: HH } = { RING_CX, RING_CY, RING_HW, RING_HH }
+  // The hall floor ringside, polished, with the tables.
+  const floor = b.createLinearGradient(0, 112, 0, RING_H)
+  floor.addColorStop(0, '#2a2038')
+  floor.addColorStop(1, '#120e1c')
+  b.fillStyle = floor
+  b.fillRect(0, 112, CW, RING_H - 112)
+  b.fillStyle = '#4a3a64'
+  b.fillRect(0, 112, CW, 0.5)
+  b.fillStyle = 'rgba(255,255,255,0.03)'
+  for (let x = 0; x < CW; x += 10) b.fillRect(x, 113, 0.5, RING_H - 113)
+  const table = (x: number, w: number, label: string) => {
+    const g = b.createLinearGradient(0, 126, 0, 140)
+    g.addColorStop(0, '#8a5a32')
+    g.addColorStop(0.2, '#6a4426')
+    g.addColorStop(1, '#2a1a0e')
+    b.fillStyle = g
+    b.fillRect(x, 126, w, 14)
+    b.fillStyle = '#b07a44'
+    b.fillRect(x, 126, w, 0.5)
+    b.fillStyle = '#f2c84a'
+    b.font = `bold 5px sans-serif`
+    b.textAlign = 'center'
+    b.fillText(label, x + w / 2, 135)
   }
-  // The canvas, boards running along the ring.
-  for (let y = CY - HH; y <= CY + HH; y++) {
-    const half = Math.round(halfAt(y))
-    for (let x = CX - half; x < CX + half; x++) {
-      const u = ((x - CX) / HW + (y - CY) / HH) / 2
-      const w = ((x - CX) / HW - (y - CY) / HH) / 2
-      const plank = Math.floor((u + 1) * 7) % 2 === 0
-      const edge = Math.abs(((u + 1) * 7) % 1) < 0.07 || Math.abs(((w + 1) * 5) % 1) < 0.05
-      back.rect(x, y, 1, 1, edge ? '#a89e88' : plank ? '#d8d0b8' : '#cfc6b0')
+  table(8, 44, 'TIMEKEEPER')
+  table(CW - 112, 104, 'JUDGES')
+  // The shadow the ring throws on the floor.
+  const sh = b.createRadialGradient(CX, CY + HH + 6, 10, CX, CY + HH + 6, 130)
+  sh.addColorStop(0, 'rgba(0,0,0,0.5)')
+  sh.addColorStop(1, 'rgba(0,0,0,0)')
+  b.fillStyle = sh
+  b.fillRect(0, 90, CW, 60)
+  const top: [number, number] = [CX, CY - HH]
+  const right: [number, number] = [CX + HW, CY]
+  const bottom: [number, number] = [CX, CY + HH]
+  const left: [number, number] = [CX - HW, CY]
+  // The apron: the platform's skirt under the two near sides, red with white piping and a sponsor.
+  const APRON = 8
+  const apron = b.createLinearGradient(0, CY, 0, CY + HH + APRON)
+  apron.addColorStop(0, '#a02020')
+  apron.addColorStop(1, '#5a0c0c')
+  for (const [a, c2] of [[left, bottom], [bottom, right]] as Array<[[number, number], [number, number]]>) {
+    b.fillStyle = apron
+    poly(b, [a, c2, [c2[0], c2[1] + APRON], [a[0], a[1] + APRON]])
+    b.fill()
+    b.strokeStyle = '#f0e8d8'
+    b.lineWidth = 0.7
+    b.beginPath()
+    b.moveTo(a[0], a[1] + 0.4)
+    b.lineTo(c2[0], c2[1] + 0.4)
+    b.stroke()
+    b.strokeStyle = 'rgba(0,0,0,0.5)'
+    b.beginPath()
+    b.moveTo(a[0], a[1] + APRON - 0.4)
+    b.lineTo(c2[0], c2[1] + APRON - 0.4)
+    b.stroke()
+  }
+  // The canvas: planks with a sheen, running along the ring.
+  const mat = b.createLinearGradient(CX - HW, CY - HH, CX + HW, CY + HH)
+  mat.addColorStop(0, '#d8d0b8')
+  mat.addColorStop(0.5, '#e6dfc8')
+  mat.addColorStop(1, '#c8bfa6')
+  b.fillStyle = mat
+  poly(b, [top, right, bottom, left])
+  b.fill()
+  b.save()
+  poly(b, [top, right, bottom, left])
+  b.clip()
+  b.strokeStyle = 'rgba(120,108,84,0.35)'
+  b.lineWidth = 0.4
+  for (let k = -14; k <= 14; k++) {
+    const t = k / 14
+    b.beginPath()
+    b.moveTo(CX + t * HW, CY - HH * (1 - Math.abs(t)))
+    b.lineTo(CX + t * HW + HW * 0.0, CY + HH * (1 - Math.abs(t)))
+    b.stroke()
+  }
+  for (let k = -9; k <= 9; k++) {
+    const t = k / 9
+    b.beginPath()
+    b.moveTo(left[0] + (top[0] - left[0]) * (0.5 + t / 2), left[1] + (top[1] - left[1]) * (0.5 + t / 2))
+    b.lineTo(bottom[0] + (right[0] - bottom[0]) * (0.5 + t / 2), bottom[1] + (right[1] - bottom[1]) * (0.5 + t / 2))
+    b.stroke()
+  }
+  // The worn centre: a red ring and a logo, scuffed by a thousand fights.
+  b.translate(CX, CY)
+  b.scale(1, HH / HW)
+  const rg = b.createRadialGradient(0, 0, 4, 0, 0, 34)
+  rg.addColorStop(0, '#d83030')
+  rg.addColorStop(0.55, '#c02828')
+  rg.addColorStop(0.6, '#f4f0e4')
+  rg.addColorStop(0.72, '#f4f0e4')
+  rg.addColorStop(0.76, '#b83a3a')
+  rg.addColorStop(1, '#a83030')
+  b.fillStyle = rg
+  b.beginPath()
+  b.arc(0, 0, 34, 0, Math.PI * 2)
+  b.fill()
+  b.fillStyle = '#f4f0e4'
+  b.font = 'bold 9px sans-serif'
+  b.textAlign = 'center'
+  b.fillText('MESA', 0, -1)
+  b.font = 'bold 5px sans-serif'
+  b.fillText('ARENA', 0, 6)
+  b.restore()
+  // The ring's lit edge: a white tape line round the canvas.
+  b.strokeStyle = 'rgba(255,255,255,0.7)'
+  b.lineWidth = 0.6
+  poly(b, [top, right, bottom, left])
+  b.stroke()
+
+  // The ropes: a catch of light on top, a shadow beneath, a little sag between the posts.
+  const ropes: Array<[string, number]> = [['#d82a2a', 6], ['#f4f0e4', 12], ['#2a6ad8', 18]]
+  const rope = (c: Ctx, a: [number, number], z: [number, number]) => {
+    for (const [color, h] of ropes) {
+      const mx = (a[0] + z[0]) / 2
+      const my = (a[1] + z[1]) / 2 - h + 1.2
+      c.strokeStyle = 'rgba(0,0,0,0.35)'
+      c.lineWidth = 1.8
+      c.beginPath()
+      c.moveTo(a[0], a[1] - h + 2)
+      c.quadraticCurveTo(mx, my + 2, z[0], z[1] - h + 2)
+      c.stroke()
+      c.strokeStyle = color
+      c.lineWidth = 1.8
+      c.beginPath()
+      c.moveTo(a[0], a[1] - h)
+      c.quadraticCurveTo(mx, my, z[0], z[1] - h)
+      c.stroke()
+      c.strokeStyle = 'rgba(255,255,255,0.45)'
+      c.lineWidth = 0.5
+      c.beginPath()
+      c.moveTo(a[0], a[1] - h - 0.7)
+      c.quadraticCurveTo(mx, my - 0.7, z[0], z[1] - h - 0.7)
+      c.stroke()
     }
   }
-  // The centre mark.
-  back.ellipse(CX - 22, CY - 9, 44, 18, '#b83a3a')
-  back.ellipse(CX - 18, CY - 7, 36, 14, '#f4f0e4')
-  back.ellipse(CX - 8, CY - 3, 16, 6, '#d82a2a')
-  // The red and blue corner pads on the floor, and a stool in each.
-  for (const x of [CORNER_A_X + 8, CORNER_B_X + 14]) {
-    const y = Math.round(feetOf(0.5)) - 8
-    back.rect(x, y, 12, 2, '#8a8a98')
-    back.rect(x + 1, y + 2, 2, 6, '#5a5a68')
-    back.rect(x + 9, y + 2, 2, 6, '#5a5a68')
+  rope(b, left, top)
+  rope(b, top, right)
+  rope(f, left, bottom)
+  rope(f, bottom, right)
+  const post = (c: Ctx, [x, y]: [number, number], pad: string) => {
+    const steel = c.createLinearGradient(x - 2.5, 0, x + 2.5, 0)
+    steel.addColorStop(0, '#8a8a9a')
+    steel.addColorStop(0.4, '#e0e0ea')
+    steel.addColorStop(1, '#4a4a5a')
+    c.fillStyle = 'rgba(0,0,0,0.35)'
+    c.fillRect(x - 3.5, y + 0.5, 7, 2)
+    c.fillStyle = steel
+    c.fillRect(x - 2, y - 27, 4, 29)
+    c.fillStyle = '#f4f4fa'
+    c.fillRect(x - 2.5, y - 27.5, 5, 2)
+    // Turnbuckle pads up the post, in the corner's colour.
+    const pg = c.createLinearGradient(x - 3, 0, x + 3, 0)
+    pg.addColorStop(0, shadeHex(pad, 1.2))
+    pg.addColorStop(1, shadeHex(pad, 0.6))
+    c.fillStyle = pg
+    c.fillRect(x - 3, y - 22, 6, 17)
+    c.fillStyle = 'rgba(255,255,255,0.35)'
+    c.fillRect(x - 2.5, y - 22, 1, 17)
+    c.fillStyle = 'rgba(0,0,0,0.3)'
+    c.fillRect(x - 3, y - 14, 6, 0.5)
   }
-  const top = [CX, CY - HH]
-  const right = [CX + HW, CY]
-  const bottom = [CX, CY + HH]
-  const left = [CX - HW, CY]
-  const rope = (layer: Raster, a: number[], b: number[]) => {
-    for (const [color, h] of ROPES) {
-      line(layer, a[0], a[1] - h, b[0], b[1] - h, color, 2)
-      line(layer, a[0], a[1] - h + 2, b[0], b[1] - h + 2, 'rgba(0,0,0,0.3)')
-    }
-  }
-  rope(back, left, top)
-  rope(back, top, right)
-  rope(front, left, bottom)
-  rope(front, bottom, right)
-  const post = (layer: Raster, [x, y]: number[], pad: string) => {
-    layer.rect(x - 2, y - 26, 5, 28, '#3a3a48')
-    layer.rect(x - 2, y - 26, 5, 3, '#d8d8e0')
-    layer.rect(x - 1, y - 21, 3, 14, pad)
-    layer.rect(x - 3, y + 1, 7, 2, 'rgba(0,0,0,0.35)')
-  }
-  post(back, top, '#f4f0e4')
-  post(front, left, '#d82a2a')
-  post(front, right, '#2a5ad8')
-  post(front, bottom, '#f4f0e4')
-  return { back, front }
+  post(b, top, '#f4f0e4')
+  post(f, left, '#d82a2a')
+  post(f, right, '#2a5ad8')
+  post(f, bottom, '#f4f0e4')
+  return { back: B.canvas, front: F.canvas }
+}
+
+function shadeHex(hex: string, k: number): string {
+  const n = parseInt(hex.slice(1, 7), 16)
+  const ch = (v: number) => Math.max(0, Math.min(255, Math.round(v * k)))
+  return `rgb(${ch((n >> 16) & 255)},${ch((n >> 8) & 255)},${ch(n & 255)})`
 }

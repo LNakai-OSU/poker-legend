@@ -1,5 +1,5 @@
 import type { Bout, Fighter } from '../engine/boxing'
-import { CW, RING_CX, RING_H, RING_HH, RING_HW, RING_CY, feetOf, halfAt, paintRing } from './boxingArt'
+import { CW, RING_CX, RING_H, RING_HH, RING_HW, RING_CY, SS, feetOf, halfAt, paintRing } from './boxingArt'
 import type { Frame, Impact, Person } from './boxingChoreo'
 import { CLEAN, POSES, drawPerson, type Look } from './boxingRig'
 import { hash2 } from './pixel/color'
@@ -44,11 +44,11 @@ export class Arena {
 
   constructor(bout: Bout) {
     const ring = paintRing()
-    this.back = ring.back.toCanvas()
-    this.front = ring.front.toCanvas()
+    this.back = ring.back
+    this.front = ring.front
     this.buf = document.createElement('canvas')
-    this.buf.width = CW
-    this.buf.height = RING_H
+    this.buf.width = CW * SS
+    this.buf.height = RING_H * SS
     this.looks = [lookOf(bout.a), lookOf(bout.b)]
     this.names = [bout.a.name.split(' ').pop()!.toUpperCase(), bout.b.name.split(' ').pop()!.toUpperCase()]
   }
@@ -80,14 +80,21 @@ export class Arena {
         const shirt = SHIRTS[Math.floor(hash2(k, 1, 4) * SHIRTS.length)]
         const skin = SKINS[Math.floor(hash2(k, 2, 5) * SKINS.length)]
         c.globalAlpha = lit
+        // Shoulders and a round head, a highlight on the hair where the lights hit.
         c.fillStyle = shirt
-        c.fillRect(x - 1, yy + 2, 5, 3)
+        c.beginPath()
+        c.ellipse(x + 1.5, yy + 4, 3, 2.2, 0, 0, Math.PI * 2)
+        c.fill()
         c.fillStyle = skin
-        c.fillRect(x, yy - 1, 3, 3)
-        if (hash2(k, 3, 6) > 0.7) {
-          c.fillStyle = ['#2a1a10', '#141010', '#c8a050'][Math.floor(who * 3) % 3]
-          c.fillRect(x, yy - 1, 3, 1)
-        }
+        c.beginPath()
+        c.arc(x + 1.5, yy + 0.4, 1.6, 0, Math.PI * 2)
+        c.fill()
+        c.fillStyle = ['#2a1a10', '#141010', '#c8a050', '#6a3a1a'][Math.floor(who * 4) % 4]
+        c.beginPath()
+        c.arc(x + 1.5, yy - 0.1, 1.6, Math.PI, Math.PI * 2)
+        c.fill()
+        c.fillStyle = 'rgba(255,255,255,0.18)'
+        c.fillRect(x + 0.5, yy - 1.3, 1, 0.5)
         if (e > 0.6 && who > 0.5) {
           c.fillStyle = skin
           const up = Math.sin(t / 90 + who * 30) > 0 ? 3 : 2
@@ -281,11 +288,12 @@ export class Arena {
 
   draw(out: Ctx, f: Frame, t: number, cards: Array<[number, number]>): void {
     const c = this.buf.getContext('2d')!
+    c.setTransform(SS, 0, 0, SS, 0, 0)
     c.imageSmoothingEnabled = false
     c.fillStyle = '#07060f'
     c.fillRect(0, 0, CW, RING_H)
     this.crowd(c, f, t)
-    c.drawImage(this.back, 0, 0)
+    c.drawImage(this.back, 0, 0, CW, RING_H)
     this.lights(c, f, t)
     this.board(c, f, t)
     this.judges(c, f, t, cards)
@@ -330,7 +338,7 @@ export class Arena {
       })
     }
     items.sort((p, q) => p.y - q.y).forEach((it) => it.draw())
-    c.drawImage(this.front, 0, 0)
+    c.drawImage(this.front, 0, 0, CW, RING_H)
     for (const i of f.impacts) this.impact(c, i)
     // Corner talk: a bubble over the trainer who is speaking.
     if (f.talking) {
@@ -355,7 +363,9 @@ export class Arena {
     void POSES
 
     // To the screen: punched in on the action, shaken when something lands.
-    out.imageSmoothingEnabled = false
+    out.setTransform(1, 0, 0, 1, 0, 0)
+    out.imageSmoothingEnabled = true
+    out.imageSmoothingQuality = 'high'
     const z = Math.max(1, f.zoom)
     const sw = CW / z
     const sh = RING_H / z
@@ -365,8 +375,9 @@ export class Arena {
     const dx = shk ? Math.round((Math.random() - 0.5) * shk * 2) : 0
     const dy = shk ? Math.round((Math.random() - 0.5) * shk * 2) : 0
     out.fillStyle = '#07060f'
-    out.fillRect(0, 0, CW, RING_H)
-    out.drawImage(this.buf, sx, sy, sw, sh, dx, dy, CW, RING_H)
+    out.fillRect(0, 0, CW * SS, RING_H * SS)
+    out.drawImage(this.buf, sx * SS, sy * SS, sw * SS, sh * SS, dx * SS, dy * SS, CW * SS, RING_H * SS)
+    out.setTransform(SS, 0, 0, SS, 0, 0)
     this.hud(out, f)
   }
 

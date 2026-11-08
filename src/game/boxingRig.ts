@@ -188,13 +188,20 @@ export const CLEAN: Marks = { head: 0, body: 0, cut: false, sweat: 0, gasp: fals
 type Ctx = CanvasRenderingContext2D
 
 const INK = '#14101c'
+/** Device pixels per art pixel: everything is drawn to the half pixel. */
+export const SS = 2
+const q = (v: number) => Math.round(v * SS) / SS
+const alpha = (hex: string, a: number) => {
+  const n = parseInt(hex.slice(1, 7), 16)
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`
+}
 
 function seg(c: Ctx, x0: number, y0: number, x1: number, y1: number, th: number, color: string) {
   c.fillStyle = color
-  const n = Math.max(1, Math.ceil(Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0))))
-  const t = Math.max(1, Math.round(th))
+  const n = Math.max(1, Math.ceil(Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)) * SS))
+  const t = Math.max(1 / SS, q(th))
   for (let i = 0; i <= n; i++) {
-    c.fillRect(Math.round(x0 + ((x1 - x0) * i) / n - t / 2), Math.round(y0 + ((y1 - y0) * i) / n - t / 2), t, t)
+    c.fillRect(q(x0 + ((x1 - x0) * i) / n - t / 2), q(y0 + ((y1 - y0) * i) / n - t / 2), t, t)
   }
 }
 
@@ -218,16 +225,21 @@ function limb(a: [number, number], b: [number, number], l1: number, l2: number, 
 
 /**
  * Draws one person at (x, y) — the middle of his feet — in a pose. `face` is 1 for
- * looking right, -1 for left. `scale` stretches the whole drawing.
+ * looking right, -1 for left. `scale` stretches the whole drawing. Limbs are
+ * shaded top and bottom, the torso has a chest, ribs and abs, the glove has a
+ * thumb and laces, the face has a brow, an eye with a pupil, a nose and lips.
  */
 export function drawPerson(c: Ctx, pose: Pose, look: Look, x: number, y: number, face: 1 | -1, marks: Marks = CLEAN, scale = 1): void {
   const skin = look.skin
   const dim = shade(skin, 0.8)
+  const dark = shade(skin, 0.62)
+  const lit = shade(skin, 1.14)
   const tall = look.build === 'tall' ? 1.06 : look.build === 'stocky' ? 0.96 : 1
   const tw = look.build === 'stocky' ? 9 : look.build === 'lean' ? 7 : 8
   c.save()
-  c.translate(Math.round(x), Math.round(y))
+  c.translate(q(x), q(y))
   c.scale(face * scale * tall, scale * tall)
+  const R = (rx: number, ry: number, w: number, h: number) => c.fillRect(q(rx), q(ry), Math.max(1 / SS, q(w)), Math.max(1 / SS, q(h)))
   const H = at(pose, 'H')
   const SF = at(pose, 'SF')
   const SR = at(pose, 'SR')
@@ -235,164 +247,229 @@ export function drawPerson(c: Ctx, pose: Pose, look: Look, x: number, y: number,
   const sh: [number, number] = [(SF[0] + SR[0]) / 2, (SF[1] + SR[1]) / 2]
   const shoe = look.shoes ?? '#201818'
 
-  // Legs.
-  const leg = (hip: [number, number], foot: [number, number], hint: [number, number], color: string) => {
+  // Legs: thigh and calf shaded on the underside, a knee, a shoe with a sole and a lace.
+  const leg = (hip: [number, number], foot: [number, number], hint: [number, number], color: string, far: boolean) => {
     const l = limb(hip, foot, 8.2, 8.2, hint)
-    seg(c, hip[0], hip[1], l.mid[0], l.mid[1], 3.4, color)
-    seg(c, l.mid[0], l.mid[1], l.end[0], l.end[1], 2.8, color)
-    c.fillStyle = shoe
-    c.fillRect(Math.round(foot[0] - 2), Math.round(foot[1] - 2), 6, 2)
+    seg(c, hip[0], hip[1], l.mid[0], l.mid[1], 3.6, color)
+    seg(c, l.mid[0], l.mid[1], l.end[0], l.end[1], 3, color)
+    seg(c, hip[0] + 0.5, hip[1] + 0.6, l.mid[0] + 0.5, l.mid[1] + 0.6, 1, shade(color, 0.8))
+    seg(c, l.mid[0] - 0.4, l.mid[1] - 0.6, l.mid[0] - 0.4, l.mid[1] + 0.4, 1, shade(color, 1.15))
+    c.fillStyle = far ? shade(shoe, 0.8) : shoe
+    R(foot[0] - 2.5, foot[1] - 2.5, 7, 2.5)
     c.fillStyle = '#e8e4dc'
-    c.fillRect(Math.round(foot[0] - 2), Math.round(foot[1] - 1), 6, 1)
+    R(foot[0] - 2.5, foot[1] - 0.5, 7, 0.5)
+    c.fillStyle = '#f4f0e4'
+    R(foot[0] + 1, foot[1] - 2.5, 0.5, 1.5)
+    R(foot[0] + 2.5, foot[1] - 2.5, 0.5, 1.5)
   }
   const legColor = look.skirt ? skin : look.top ? look.bottom : skin
-  leg([P[0] - 1, P[1]], at(pose, 'FR'), at(pose, 'KR'), look.top && !look.skirt ? shade(look.bottom, 0.85) : dim)
-  // The near leg, over the far.
-  leg([P[0] + 1, P[1]], at(pose, 'FF'), at(pose, 'KF'), legColor)
+  leg([P[0] - 1, P[1]], at(pose, 'FR'), at(pose, 'KR'), look.top && !look.skirt ? shade(look.bottom, 0.85) : dim, true)
+  leg([P[0] + 1, P[1]], at(pose, 'FF'), at(pose, 'KF'), legColor, false)
 
-  // The rear arm, behind the body.
   const arm = (shoulder: [number, number], glove: [number, number], hint: [number, number], color: string, front: boolean) => {
     const l = limb(shoulder, glove, 7.2, 7.2, hint)
-    seg(c, shoulder[0], shoulder[1], l.mid[0], l.mid[1], 3, look.top && look.gloves === null ? look.top : color)
-    seg(c, l.mid[0], l.mid[1], l.end[0], l.end[1], 2.6, color)
+    const sleeve = look.top && look.gloves === null ? look.top : color
+    seg(c, shoulder[0], shoulder[1], l.mid[0], l.mid[1], 3.4, sleeve)
+    seg(c, l.mid[0], l.mid[1], l.end[0], l.end[1], 2.8, color)
+    if (!look.top || look.gloves) {
+      // A bicep catching the light, a shadow under the arm.
+      seg(c, shoulder[0] - 0.3, shoulder[1] - 0.6, l.mid[0] - 0.3, l.mid[1] - 0.6, 1, front ? lit : color)
+      seg(c, shoulder[0] + 0.3, shoulder[1] + 0.9, l.mid[0] + 0.3, l.mid[1] + 0.9, 1, shade(color, 0.78))
+    }
     if (look.gloves) {
       const g = look.gloves
-      const gx = Math.round(l.end[0])
-      const gy = Math.round(l.end[1])
+      const gx = l.end[0]
+      const gy = l.end[1]
+      // The cuff and tape first, back along the forearm.
+      const wx = l.end[0] + (l.mid[0] - l.end[0]) * 0.32
+      const wy = l.end[1] + (l.mid[1] - l.end[1]) * 0.32
+      seg(c, wx, wy, l.end[0] + (l.mid[0] - l.end[0]) * 0.12, l.end[1] + (l.mid[1] - l.end[1]) * 0.12, 3.4, '#f4f0e4')
+      // The glove: a dark outline, the body, a bright top, a shadow, a thumb and laces.
       c.fillStyle = INK
-      c.fillRect(gx - 3, gy - 3, 7, 7)
+      R(gx - 3.5, gy - 3.5, 8, 7.5)
+      R(gx - 4, gy - 3, 9, 6.5)
       c.fillStyle = g
-      c.fillRect(gx - 2, gy - 2, 5, 5)
-      c.fillStyle = shade(g, 1.35)
-      c.fillRect(gx - 2, gy - 2, 5, 1)
-      c.fillRect(gx - 2, gy - 2, 1, 3)
-      c.fillStyle = shade(g, 0.7)
-      c.fillRect(gx - 2, gy + 2, 5, 1)
-      // The cuff and tape at the wrist, back along the forearm.
-      const wx = l.end[0] + (l.mid[0] - l.end[0]) * 0.3
-      const wy = l.end[1] + (l.mid[1] - l.end[1]) * 0.3
+      R(gx - 3, gy - 3, 7, 6.5)
+      R(gx - 3.5, gy - 2.5, 8, 5.5)
+      c.fillStyle = shade(g, 1.4)
+      R(gx - 3, gy - 3, 6, 1)
+      R(gx - 3.5, gy - 2.5, 1, 3)
+      c.fillStyle = shade(g, 0.68)
+      R(gx - 3, gy + 2, 7, 1)
+      R(gx + 3, gy - 1.5, 1, 4)
+      c.fillStyle = shade(g, 0.82)
+      R(gx - 1, gy - 0.5, 3, 2.5)
+      c.fillStyle = shade(g, 1.25)
+      R(gx - 1, gy - 0.5, 3, 0.5)
       c.fillStyle = '#f4f0e4'
-      c.fillRect(Math.round(wx - 1), Math.round(wy - 1), 3, 3)
-      void front
+      R(gx - 2.5, gy + 1.5, 0.5, 0.5)
+      R(gx - 1.5, gy + 1.5, 0.5, 0.5)
     } else {
       c.fillStyle = skin
-      c.fillRect(Math.round(l.end[0] - 1), Math.round(l.end[1] - 1), 3, 3)
+      R(l.end[0] - 1.5, l.end[1] - 1.5, 3.5, 3.5)
+      c.fillStyle = dim
+      R(l.end[0] - 1.5, l.end[1] + 1, 3.5, 1)
     }
   }
   arm(SR, at(pose, 'GR'), at(pose, 'ER'), dim, false)
 
-  // Torso, shoulders broader than the waist; a vest or bare chest.
+  // Torso, shoulders broader than the waist; chest, ribs and abs on a bare one.
   const dx = P[0] - sh[0]
   const dy = P[1] - sh[1]
-  const rows = Math.max(4, Math.round(Math.hypot(dx, dy) / 1.2))
+  const len = Math.hypot(dx, dy)
+  const rows = Math.max(6, Math.round(len * SS))
   for (let i = 0; i <= rows; i++) {
     const u = i / rows
     const cx = sh[0] + dx * u
     const cy = sh[1] + dy * u
-    const w = tw + 1 - u * 1.8
-    c.fillStyle = look.top ?? skin
-    c.fillRect(Math.round(cx - w / 2), Math.round(cy), Math.round(w), 2)
+    const w = tw + 1.5 - u * 2.4 + Math.sin(u * Math.PI) * 0.8
+    c.fillStyle = look.top ?? (u < 0.3 ? lit : skin)
+    R(cx - w / 2, cy, w, 1.5 / 1)
   }
   if (!look.top) {
-    // Ribs and a dark line down the middle, red where he has been hit; sweat catches the light.
-    const rx = Math.round(sh[0] + dx * 0.55)
-    const ry = Math.round(sh[1] + dy * 0.55)
+    const at2 = (u: number): [number, number] => [sh[0] + dx * u, sh[1] + dy * u]
+    const [px, py] = at2(0.28)
+    c.fillStyle = dark
+    R(px - 3, py + 0.5, 6, 0.5)
+    R(px, py - 1.5, 0.5, 3)
+    const [rx, ry] = at2(0.55)
     c.fillStyle = dim
-    c.fillRect(rx - 2, ry, 4, 1)
-    c.fillRect(rx - 2, ry + 2, 4, 1)
+    for (let k = 0; k < 3; k++) R(rx - 2.5 + (k % 2) * 0.5, ry + k * 1.5, 5, 0.5)
+    const [ax, ay] = at2(0.8)
+    c.fillStyle = dark
+    R(ax - 0.25, ay - 2, 0.5, 4)
+    R(ax - 2, ay, 4, 0.5)
+    // Back and shoulder shading down the side away from the light.
+    seg(c, sh[0] - tw / 2 + 0.5, sh[1] + 1, P[0] - tw / 2 + 1, P[1], 1, dim)
     if (marks.body > 0.05) {
       c.fillStyle = `rgba(200,50,50,${0.25 + marks.body * 0.5})`
-      c.fillRect(rx - 1, ry - 2, 4, 5)
+      R(rx - 2, ry - 2.5, 5, 6)
+      c.fillStyle = `rgba(120,30,90,${marks.body * 0.5})`
+      R(rx, ry - 1, 3, 3)
     }
     if (marks.sweat > 0.1) {
       c.fillStyle = 'rgba(255,255,255,0.55)'
-      c.fillRect(Math.round(sh[0]) - 1, Math.round(sh[1]) + 1, 3, 1)
-      c.fillRect(rx + 1, ry - 3, 1, 2)
+      R(sh[0] - 1.5, sh[1] + 0.5, 3.5, 1)
+      R(rx + 1, ry - 3.5, 1, 2.5)
+      R(px - 2.5, py + 1.5, 1.5, 0.5)
     }
   } else if (look.tie) {
     c.fillStyle = '#14101c'
-    c.fillRect(Math.round(sh[0] + dx * 0.05) + 1, Math.round(sh[1] + 1), 3, 2)
+    R(sh[0] + dx * 0.06 + 1, sh[1] + 1, 3, 2.5)
+    R(sh[0] + dx * 0.06 + 1.5, sh[1] + 3.5, 2, 3)
   } else if (look.trim) {
     c.fillStyle = look.trim
-    c.fillRect(Math.round(sh[0] - tw / 2), Math.round(sh[1]), tw + 1, 2)
+    R(sh[0] - tw / 2, sh[1], tw + 1, 2)
   }
 
-  // Trunks, skirt or trousers from the waist.
-  const bottomH = look.skirt ? 12 : 7
+  // Trunks, skirt or trousers from the waist: a band, a fold, a stripe down the side.
+  const bottomH = look.skirt ? 12 : 7.5
+  const bx = P[0] - tw / 2 - 0.5
   c.fillStyle = look.bottom
-  c.fillRect(Math.round(P[0] - tw / 2 - 0.5), Math.round(P[1] - 2), tw + 1, bottomH)
+  R(bx, P[1] - 2, tw + 1, bottomH)
+  c.fillStyle = shade(look.bottom, 1.2)
+  R(bx, P[1] - 0.5, tw + 1, 1)
   c.fillStyle = look.accent
-  c.fillRect(Math.round(P[0] - tw / 2 - 0.5), Math.round(P[1] - 2), tw + 1, 2)
-  if (!look.skirt) {
-    c.fillStyle = shade(look.bottom, 0.8)
-    c.fillRect(Math.round(P[0] - tw / 2 - 0.5), Math.round(P[1] + bottomH - 3), tw + 1, 1)
-  }
+  R(bx, P[1] - 2.5, tw + 1, 2.5)
+  c.fillStyle = shade(look.accent, 0.7)
+  R(bx, P[1] - 0.5, tw + 1, 0.5)
+  c.fillStyle = shade(look.bottom, 0.72)
+  R(bx, P[1] + bottomH - 3.5, tw + 1, 1.5)
+  R(bx + tw / 2, P[1], 0.5, bottomH - 3)
   if (look.trim && !look.top) {
     c.fillStyle = look.trim
-    c.fillRect(Math.round(P[0] + tw / 2 - 1), Math.round(P[1]), 1, 5)
+    R(bx + tw, P[1] - 0.5, 1, bottomH - 2)
   }
 
   // Neck and head.
   c.fillStyle = skin
-  c.fillRect(Math.round((H[0] + sh[0]) / 2 - 1), Math.round(H[1] + 3), 3, Math.max(2, Math.round(sh[1] - H[1] - 3)))
-  const hx = Math.round(H[0])
-  const hy = Math.round(H[1])
-  c.fillStyle = INK
-  c.fillRect(hx - 5, hy - 5, 10, 10)
-  c.fillStyle = skin
-  c.fillRect(hx - 4, hy - 4, 8, 9)
-  c.fillRect(hx + 4, hy - 1, 1, 3)
+  R((H[0] + sh[0]) / 2 - 1.5, H[1] + 3, 3.5, Math.max(2, sh[1] - H[1] - 3))
   c.fillStyle = dim
-  c.fillRect(hx - 4, hy + 3, 8, 1)
-  // Hair or a bald head, the ear.
+  R((H[0] + sh[0]) / 2 - 1.5, H[1] + 3, 3.5, 1)
+  const hx = H[0]
+  const hy = H[1]
+  c.fillStyle = INK
+  R(hx - 5, hy - 5.5, 10.5, 10.5)
+  R(hx - 4.5, hy - 6, 9.5, 11.5)
+  c.fillStyle = skin
+  R(hx - 4, hy - 5, 8, 9.5)
+  R(hx - 4.5, hy - 4, 9, 7)
+  R(hx + 4, hy - 1.5, 1.5, 3.5)
+  // Jaw and brow shading, a cheek highlight.
+  c.fillStyle = dim
+  R(hx - 4, hy + 3, 8, 1.5)
+  R(hx - 4.5, hy + 1, 1, 3)
+  c.fillStyle = lit
+  R(hx + 1, hy + 0.5, 2, 0.5)
+  R(hx - 2, hy - 4, 3, 0.5)
+  // Hair: a cap with a fringe, or a shaved head.
   if (!look.bald) {
     c.fillStyle = look.hair
-    c.fillRect(hx - 4, hy - 5, 8, 3)
-    c.fillRect(hx - 5, hy - 4, 2, look.long ? 11 : 4)
-    c.fillRect(hx + 2, hy - 3, 2, 1)
+    R(hx - 4.5, hy - 6, 9, 3.5)
+    R(hx - 5, hy - 5, 2, look.long ? 11.5 : 5)
+    R(hx + 1.5, hy - 3, 2.5, 1)
+    c.fillStyle = shade(look.hair, 1.5)
+    R(hx - 2, hy - 6, 3, 0.5)
   }
-  c.fillStyle = dim
-  c.fillRect(hx - 2, hy - 1, 2, 2)
-  // Face: brow, eye, nose, mouth.
+  // The ear.
+  c.fillStyle = dark
+  R(hx - 2.5, hy - 1, 2, 2.5)
+  c.fillStyle = skin
+  R(hx - 2, hy - 0.5, 1, 1.5)
+  // Face: brow, eye (white and pupil), nose, mouth.
   const swollen = marks.head > 0.45
   c.fillStyle = look.hair
-  c.fillRect(hx + 1, hy - 2, 3, 1)
-  c.fillStyle = swollen ? '#7a3a6a' : INK
-  c.fillRect(hx + 2, hy - 1, 2, swollen ? 2 : 1)
+  R(hx + 0.5, hy - 2.5, 4, 1)
   if (swollen) {
+    c.fillStyle = '#7a3a6a'
+    R(hx + 1.5, hy - 1.5, 3.5, 2.5)
     c.fillStyle = '#3a1a3a'
-    c.fillRect(hx + 2, hy, 2, 1)
+    R(hx + 1.5, hy - 0.5, 3, 1)
+  } else {
+    c.fillStyle = '#f4f0e4'
+    R(hx + 2, hy - 1.5, 2.5, 1.5)
+    c.fillStyle = INK
+    R(hx + 3.5, hy - 1.5, 1, 1.5)
   }
   c.fillStyle = dim
-  c.fillRect(hx + 4, hy + 1, 1, 1)
+  R(hx + 4.5, hy + 0.5, 1, 1.5)
+  c.fillStyle = dark
+  R(hx + 4, hy + 1.5, 1.5, 0.5)
   if (marks.gasp) {
     c.fillStyle = INK
-    c.fillRect(hx + 1, hy + 2, 4, 2)
+    R(hx + 1.5, hy + 2.5, 4, 2)
     c.fillStyle = '#f4f0e4'
-    c.fillRect(hx + 1, hy + 2, 3, 1)
+    R(hx + 1.5, hy + 2.5, 3.5, 1)
+    c.fillStyle = '#d83a5a'
+    R(hx + 2.5, hy + 3.5, 2, 0.5)
   } else {
-    c.fillStyle = shade(skin, 0.55)
-    c.fillRect(hx + 2, hy + 3, 2, 1)
+    c.fillStyle = shade(skin, 0.5)
+    R(hx + 2, hy + 3, 3, 0.5)
+    c.fillStyle = shade(skin, 0.75)
+    R(hx + 2.5, hy + 3.5, 2, 0.5)
   }
   if (marks.head > 0.12) {
     c.fillStyle = `rgba(210,60,60,${0.15 + marks.head * 0.45})`
-    c.fillRect(hx + 1, hy + 1, 3, 3)
-    c.fillRect(hx - 3, hy - 1, 2, 3)
+    R(hx + 1, hy + 0.5, 3.5, 3)
+    R(hx - 3, hy - 1, 2.5, 3)
   }
   if (marks.cut) {
     c.fillStyle = '#d82020'
-    c.fillRect(hx + 1, hy - 3, 3, 1)
-    c.fillRect(hx + 3, hy - 2, 1, 5)
+    R(hx + 1, hy - 3.5, 3.5, 0.5)
+    R(hx + 3.5, hy - 3, 1, 5.5)
     c.fillStyle = '#a01010'
-    c.fillRect(hx + 4, hy + 2, 1, 4)
+    R(hx + 4.5, hy + 2, 1, 4.5)
+    R(hx + 4.5, hy + 5.5, 0.5, 1.5)
   }
   if (marks.sweat > 0.1) {
     c.fillStyle = 'rgba(255,255,255,0.6)'
-    c.fillRect(hx - 2, hy - 4, 2, 1)
-    c.fillRect(hx + 1, hy + 4, 1, 1)
+    R(hx - 2, hy - 5, 2.5, 0.5)
+    R(hx + 1, hy + 4.5, 1, 1)
+    R(hx + 3, hy - 3, 0.5, 1)
   }
 
   // The lead arm over the body.
   arm(SF, at(pose, 'GF'), at(pose, 'EF'), skin, true)
   c.restore()
+  void alpha
 }
