@@ -521,3 +521,136 @@ Hal teaches the nerd's side of the game; Dr. Anand is the nerd on the air.
   unchanged.
 - Per-town lunatic *beats* beyond their lines (a talk event each) are not
   written; today they are met in their lines, the interludes and the table.
+
+---
+
+## 8. The Okonkwo question — a mystery, a rival, a boss each town (proposed, 2026-11-07)
+
+Status: **proposed**. Nothing here is built. Everything is data — events, flags,
+character chapters, a Jobs/Goals line — and fits the content model in the Bible.
+Bosses named below (Lou Brannigan, Odette, Bellamy, Inés Calloway, Solomon Vale)
+are from `goals.ts`; their lines should be fitted to the voices already in
+`characters.ts` when written.
+
+### 8.1 The mystery: *why does Nadia want you?*
+
+The long pull today is "the penthouse." It needs a question under it, one the
+player can only answer by going up the ladder. **The question: Nadia Okonkwo has
+held the penthouse for four years, and has been reading Dana's letters about a
+nobody from a kitchen table. Why does the champion want a challenger?**
+
+**The answer (revealed at Lumina).** The penthouse is not Nadia's. Madame Wen
+staked Nadia's first chip, and the debt chain (Cass → Emeka → Consortium → Wen)
+is the ladder Nadia climbed; she is still on its top rung. She holds the
+penthouse *as Wen's collateral*, and cannot lose on purpose without Wen taking
+it. She wants someone who beats her **fairly**, so the loss is nobody's fault
+and the debt passes to the winner's name or is settled in the winner's. That is
+why Dana's letters were a scouting report and a job interview in one.
+
+This keeps every built beat true (Dana the scout, Wen's stake offered to you,
+Kit warned off Wen, Nadia's "Watch for the next one") and gives the ending film's
+hollow note ("I've made it...", the unanswered call) a cause: *the penthouse
+comes with a creditor.*
+
+**The clues: six, one per stop, found by talking.** Each is one event that sets a
+flag `clue<Town>`, fired by a character the player already meets (no new maps).
+A **Nadia file** line on the Jobs page shows "Clues: 3/6" and the last one read.
+
+| # | Town | Who says it | The clue |
+|---|---|---|---|
+| 1 | Basin | Marcus, after the first game | Nadia came through Basin once, years ago: sat at *this* table, won, left her watch under the sugar bowl. He still has it. (Item: **Nadia's watch**, returnable in Lumina.) |
+| 2 | Silver Creek | Ray | A girl bought her first stack here with a wedding ring and lost it twice in a night. "Third time she didn't lose." Someone paid her stack: a Mr. W. |
+| 3 | Riverbend | Cass | Cass's first sponsor came from the same house as Nadia's: "Everybody up there owes somebody. She just owes the biggest." |
+| 4 | Crescent Harbor | Hal | Why they split: he taught her to read people; she couldn't stop. "I told her the table is the only place you are allowed to do that. She took the penthouse for a table that never closes." |
+| 5 | Palm Cay | Rosa (or Marcus on holiday) | The Invitational's prize is paid by the Consortium. Nobody has ever seen the champion spend it. |
+| 6 | Neon Mesa | Dana, at Ultraviolet | Dana is not Nadia's friend; she is her *employee* ("scout") and has her instructions: find someone who plays fair under pressure. She was told not to say who for. |
+
+**Payoff, tied to clue count.** Dana's reveal (`dana-reveal`) and Nadia's match
+read differently by clues found: with all six, Dana tells the whole truth and
+Nadia opens the match with one line that proves you did the work (the watch, if
+you kept it). With none, the match is what it is today. A found-all run unlocks
+one extra post-win beat: **Nadia asks how you want the debt written** (a choice,
+see 8.4), which becomes a line in the ending film's settlement statement.
+
+### 8.2 Kit: the rival who answers to how you treat him
+
+Kit is a sneer on the dock, a door ahead, a broken man at Lumina. The player is
+only ever a witness. Make them a cause. Three tracked decisions, each a flag:
+
+1. **Riverbend (`kit-on-the-dock`): the dare.** Choice: take Cass's money to
+   prove him wrong / refuse it. Kit remembers which.
+2. **Palm Cay (`kit-palmcay`): the head-to-head.** New: Kit challenges you to a
+   heads-up side match for his share of Bernard (an optional table, `walkIns: []`,
+   like a boss's match: buy-in against buy-in). Win and he's rattled and short;
+   lose and he leaves richer and lighter-spoken. Neither blocks the ladder.
+3. **Neon Mesa (`kit-mesa`): the debt.** He is eleven short and going to Lumina
+   anyway. Choice: stake him (needs cash, sets `stakedKit` earlier than the
+   aftermath), tip off Mr. Lowe, or say nothing.
+
+**Where it lands (`kit-lumina`, and the tournament):**
+
+- Staked at the Mesa → Kit stands at the rail at the final, pays you back whatever
+  happens, and says Wen's real terms (the clue that completes 8.1 even if you
+  missed one).
+- Left alone → Kit takes Wen's money and is **a seat at the tournament's final
+  table**, playing worse than he is: a rival you can *beat*, and it costs you
+  something to.
+- Tipped off the collector → Kit is hunted, and `kit-after` changes: he asks for
+  nothing.
+
+The aftermath's existing stake choice (`kit-after`) stays, so a run that never
+helped him still has the door open.
+
+### 8.3 A boss who is a person in each town
+
+Each of the five bosses already has a table and a private room. Give each **one
+beat before the match (their room's door) and one after (a line in the street)**,
+each tied to the Nadia file so the match is also a conversation. Clue numbers
+refer to 8.1, which these can carry in place of the named speaker if the town's
+face is busy.
+
+| Town | Boss | Before | After |
+|---|---|---|---|
+| Silver Creek | Lou Brannigan | He calls Nadia "that girl with the ring" — he was at the table (clue 2 can be his) | He shakes your hand and gives you his seat at the Starlite rail |
+| Riverbend | Odette | Odette plays Cass's debt like a hobby and tells you the rope is how they pick who to watch | She cuts your debt interest by half if you owe her sponsor (a one-time perk) |
+| Crescent Harbor | Bellamy | "Hal sends me his best pupils. Then they stop writing." | Hal's tells lesson is unlocked free |
+| Palm Cay | Inés Calloway | Honeymoon comped by the Consortium — she knows who pays the Invitational (clue 5 can be hers) | She sends a note to the Mesa ahead of you: the Fixer's price drops |
+| Neon Mesa | Solomon Vale | He says the Consortium has a champion and it is not Nadia's name on the cheque | He tells you where Kit is hiding and whether you are on the list |
+
+### 8.4 Marcus's phone: the voice that keeps you honest
+
+The ending already ends on Marcus's call, unanswered. Make the whole game that
+phone ringing. **One short voicemail from Marcus at the end of each town's boss
+match**, queued as a `cinematic`-style line on the next morning's wake (one
+event per town, a few lines each, every line waits for a press).
+
+- He reacts to what you did (won the boss, owed a sponsor, staked Kit, kept the
+  watch) using the same flags the cast already reads, so two runs hear different
+  messages.
+- He never gives advice about poker. He talks about the street, the kitchen
+  table, and a small running joke the player will recognise by the third
+  message.
+- The sixth voicemail, at Lumina's arrival, is the one the player has been
+  waiting for. The ending's *unanswered* call at first light then lands, because
+  the player has answered every other.
+
+**The last choice (post-win, only if every clue was found):** Nadia offers to
+hand over the debt, and you pick how to carry it: *settle it with the prize*,
+*let Wen hold it and keep the penthouse*, or *give Kit's stake the penthouse's
+name*. One line each in the settlement statement; no new mechanics.
+
+### 8.5 Build order (smallest first)
+
+1. Marcus's voicemails (5 events) — pure data, immediate payoff.
+2. The clue flags, the six clue events, the Jobs/Goals "Nadia file" line.
+3. The five boss beats (10 events).
+4. Kit's three choices and the two Lumina variants (including Kit's seat at the
+   tournament's final table — the only beat that needs a content-model check:
+   can an event seat a named character in a tournament?).
+5. Dana's reveal and Nadia's opening lines varying by clue count; the final
+   debt choice and its line in `world/ending.ts`.
+
+Open questions for you: (a) is "the penthouse is Wen's collateral" the answer you
+want, or should Nadia's secret be something personal? (b) Is a debt settlement
+choice too bleak for the ending you have, which currently reads as a cost of
+fame? (c) Should Kit's seat at the final table be a real opponent or a cameo?
