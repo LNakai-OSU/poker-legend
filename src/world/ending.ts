@@ -201,3 +201,35 @@ export const ENDING_FILM: EndingFilm = {
     ],
   },
 }
+
+/** What you did about Wen's paper on the penthouse (`final-won`), if you found out about it. */
+export type PenthouseDebt = 'settled' | 'wen' | 'fund'
+
+/** The settlement statement, changed by what you did about the penthouse's debt. */
+export function ledgerFor(debt?: PenthouseDebt): EndingFilm['ledger'] {
+  const base = ENDING_FILM.ledger
+  if (debt === 'settled') {
+    return {
+      ...base,
+      lines: [...base.lines, { text: 'One more row, which you chose: the paper Madame Wen held on the room, paid in full. The penthouse is in your name alone.' }],
+      deductions: [...base.deductions, { label: 'Madame Wen, paper on the penthouse', amount: 150000 }],
+      footnote: 'Paid in full. Funds release on signature of the respondent.',
+    }
+  }
+  if (debt === 'wen') {
+    return {
+      ...base,
+      lines: [...base.lines, { text: 'At the foot, in small type: the penthouse is held against a prior charge. Madame Wen has the pen. You have the keys.' }],
+      footnote: 'Penthouse held as collateral: M. Wen. Funds release on signature of the respondent.',
+    }
+  }
+  if (debt === 'fund') {
+    return {
+      ...base,
+      lines: [...base.lines, { text: 'A row you chose: a fund, in the room’s name, for whoever is short next. It is the only line on the page you do not mind.' }],
+      deductions: [...base.deductions, { label: 'The Penthouse Stake, opening balance', amount: 50000 }],
+      footnote: 'Open to any player, any town. Funds release on signature of the respondent.',
+    }
+  }
+  return base
+}

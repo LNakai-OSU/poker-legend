@@ -839,7 +839,7 @@ export function GameApp({ playtest = false }: { playtest?: boolean }) {
       {events.stage.cinematic?.scene === 'retry' && <PlayAgain key={events.stage.cinematic.id} onDone={events.cinematicDone} />}
       {events.stage.cinematic?.scene === 'slide' && <SlideMontage key={events.stage.cinematic.id} onDone={events.cinematicDone} />}
       {events.stage.cinematic?.scene === 'bad-beat' && <BadBeatIntro key={events.stage.cinematic.id} onDone={events.cinematicDone} />}
-      {events.stage.cinematic?.scene === 'ending' && <EndingFilm key={events.stage.cinematic.id} onDone={events.cinematicDone} />}
+      {events.stage.cinematic?.scene === 'ending' && <EndingFilm key={events.stage.cinematic.id} onDone={events.cinematicDone} debt={state.flags.penthouseSettled ? 'settled' : state.flags.penthouseWen ? 'wen' : state.flags.penthouseFund ? 'fund' : undefined} />}
       {events.stage.reel && (
         <ReelScene
           key={events.stage.reel.id}

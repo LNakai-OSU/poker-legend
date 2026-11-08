@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ENDING_FILM, type EndingLine, type EndingMessage } from '../world/ending'
+import { ENDING_FILM, ledgerFor, type EndingLine, type EndingMessage, type PenthouseDebt } from '../world/ending'
 import { HERO_FIGURE } from '../overworld/casting'
 import { drawPerson, type Figure, type WalkFrame } from '../overworld/characterArt'
 import { figureForCharacter, lookFromId } from '../overworld/casting'
@@ -53,6 +53,8 @@ export type EndingShot = 'stage' | 'montage' | 'walk' | 'photo' | 'papers' | 'le
 const GOLD = '#c9a14a'
 const THEME = TABLE_THEMES.finale
 const FILM = ENDING_FILM
+// The settlement statement as this run earned it; set when the film mounts.
+let LEDGER = FILM.ledger
 const START_X = 24
 const END_X = 500
 const SPEED = 64 // art pixels a second
@@ -1265,7 +1267,7 @@ function drawMontageShot(c: Ctx, t: number, beat: number, since: number) {
 }
 
 function drawLedgerShot(c: Ctx, t: number, since: number) {
-  const L = FILM.ledger
+  const L = LEDGER
   deskScene(c, t)
   const W = 204
   const x = 58
@@ -1395,7 +1397,8 @@ function drawAfterShot(c: Ctx, t: number, beat: number, since: number) {
 
 // ---------------------------------------------------------------------------
 
-export function EndingFilm({ onDone, startAt = 'stage' }: { onDone: (skipped?: boolean) => void; startAt?: EndingShot }) {
+export function EndingFilm({ onDone, startAt = 'stage', debt }: { onDone: (skipped?: boolean) => void; startAt?: EndingShot; debt?: PenthouseDebt }) {
+  LEDGER = ledgerFor(debt)
   const canvas = useRef<HTMLCanvasElement>(null)
   const isTop = useKeyLayer(true)
   const touch = useTouchFirst()
@@ -1442,7 +1445,7 @@ export function EndingFilm({ onDone, startAt = 'stage' }: { onDone: (skipped?: b
     creditsEnd.current = null
     if (s === 'stage') setLine(FILM.stage[0])
     if (s === 'montage') setLine(FILM.montage[0])
-    if (s === 'ledger') setLine(FILM.ledger.lines[0])
+    if (s === 'ledger') setLine(LEDGER.lines[0])
     if (s === 'credits') setLine(null)
     if (s === 'after') setLine(FILM.after.lines[0])
     if (s === 'photo') setLine(FILM.photo[0])
@@ -1482,9 +1485,9 @@ export function EndingFilm({ onDone, startAt = 'stage' }: { onDone: (skipped?: b
       beatT0.current = performance.now()
       setLine(FILM.montage[next])
     } else if (s === 'ledger') {
-      if (next >= FILM.ledger.lines.length) return cutTo('phone')
+      if (next >= LEDGER.lines.length) return cutTo('phone')
       beat.current = next
-      setLine(FILM.ledger.lines[next])
+      setLine(LEDGER.lines[next])
     } else if (s === 'credits') {
       creditsY.current += 36
     } else if (s === 'after') {
