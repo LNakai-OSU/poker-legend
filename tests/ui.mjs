@@ -3394,14 +3394,18 @@ await test('arena: bet on a bout, at any hour, and watch it fought', async () =>
   await page.locator('[data-testid="boxing-stake-50"]').click()
   if (process.env.SHOT_DIR) await page.screenshot({ path: `${process.env.SHOT_DIR}/boxing-card.png` })
   await page.locator('[data-testid="boxing-go"]').click()
-  await page.waitForTimeout(2000)
-  if (process.env.SHOT_DIR) await page.screenshot({ path: `${process.env.SHOT_DIR}/boxing-corner.png` })
+  await page.waitForTimeout(2500)
+  if (process.env.SHOT_DIR) await page.screenshot({ path: `${process.env.SHOT_DIR}/boxing-intro.png` })
   assert((await page.locator('[data-testid="ring-girl"]').count()) === 1, 'no ring girl')
-  await page.waitForTimeout(5500)
-  if (process.env.SHOT_DIR) await page.screenshot({ path: `${process.env.SHOT_DIR}/boxing-fight.png` })
-  const hp = await page.locator('[data-testid="boxing-hp-0"]').evaluate((el) => el.style.width)
-  const hp1 = await page.locator('[data-testid="boxing-hp-1"]').evaluate((el) => el.style.width)
-  assert(hp !== '100%' || hp1 !== '100%', `nobody has been hit after six seconds: ${hp} ${hp1}`)
+  // The fight is long; watch the first bell at speed.
+  await page.locator('[data-testid="boxing-speed"]').click()
+  await page.waitForFunction(() => document.querySelector('[data-testid="boxing-hp-0"]')?.style.width !== '100%' || document.querySelector('[data-testid="boxing-hp-1"]')?.style.width !== '100%', null, { timeout: 40000 })
+  if (process.env.SHOT_DIR) {
+    for (let i = 0; i < 6; i++) {
+      await page.waitForTimeout(1100)
+      await page.screenshot({ path: `${process.env.SHOT_DIR}/boxing-fight-${i}.png`, clip: { x: 300, y: 100, width: 500, height: 330 } })
+    }
+  }
   await page.waitForFunction(() => document.querySelector('[data-testid="boxing-message"]')?.getAttribute('data-phase') === 'card' && document.querySelector('[data-testid="boxing-message"]')?.getAttribute('data-outcome'), null, { timeout: 150000 })
   if (process.env.SHOT_DIR) await page.screenshot({ path: `${process.env.SHOT_DIR}/boxing-done.png` })
   const said = await page.locator('[data-testid="boxing-message"]').innerText()

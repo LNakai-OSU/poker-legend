@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { audio } from '../audio/audio'
 import {
   FIELD_SIZE,
   TAKEOUT,
@@ -10,7 +11,11 @@ import {
   ordinal,
   planRace,
   progressAt,
+  runningOrder,
+  callsFor,
+  isPhotoFinish,
   settleBet,
+  type RaceCall,
   type BetKind,
   type Horse,
   type RunnerPlan,
@@ -20,11 +25,10 @@ import { playSound } from '../audio/audio'
 import { CasinoStage, centreY, place, themeOfTown } from './CasinoStage'
 import { CoinBurst } from './CasinoFx'
 import { ChipRow } from './CasinoControls'
-import { ArtCanvas } from './TableStage'
 import { Panel, PxButton } from './pixel/ui'
 import { PixelText } from './pixel/PixelText'
 import { INK } from './pixel/ink'
-import { CW, FAR_PARALLAX, FAR_W, FAR_H, SPR_H, SPR_W, START_X, TRACK_H, WORLD_W, horseLeft, horseRaster, horseTop, laneTop, paintFar, paintNear } from './horseArt'
+import { CW, FINISH_X, MAX_VIEW, START_X, Stadium, VIEW_H, WORLD_W, type RaceFrame } from './horseStadium'
 import type { GameState } from './state'
 
 const STAKES = [10, 50, 200, 1000]
@@ -35,9 +39,12 @@ const KINDS: Array<{ kind: BetKind; label: string; hint: string }> = [
 ]
 
 const ROW_H = 12
-const HORSES_FIT = [{ w: CW + 8, h: TRACK_H + 30 + FIELD_SIZE * (ROW_H + 1) + 3 * 18 + 8 }]
+const HORSES_FIT = [{ w: CW + 8, h: VIEW_H + 30 + FIELD_SIZE * (ROW_H + 1) + 3 * 18 + 8 }]
 
-type Dust = { x: number; y: number; vx: number; age: number; size: number }
+/** Where a horse's middle is round the track: at the gate it is in the stall, at 1 its nose is on the line. */
+const STALL_X = START_X + 22
+const xOf = (p: number) => STALL_X + Math.min(1, p) * (FINISH_X - 20 - STALL_X) + (p > 1 ? 70 * (1 - Math.exp(-(p - 1) * 9)) : 0)
+const ease = (u: number) => u * u * (3 - 2 * u)
 
 type Phase = 'betting' | 'running' | 'result'
 
@@ -72,49 +79,63 @@ export function HorseRaceScene({
   const [burst, setBurst] = useState(0)
   const [run, setRun] = useState<Run | null>(null)
   const [board, setBoard] = useState<number[] | null>(null)
-  const sprites = useRef<Array<HTMLCanvasElement | null>>([])
-  const frames = useRef<number[]>([])
-  const nearRef = useRef<HTMLDivElement | null>(null)
-  const farRef = useRef<HTMLDivElement | null>(null)
-  const dustRef = useRef<HTMLCanvasElement | null>(null)
-  const dust = useRef<Dust[]>([])
-  const cam = useRef(0)
-  /** CSS pixels per art pixel, kept for the race loop that moves sprites outside React's render. */
-  const scaleRef = useRef(1)
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const markers = useRef<Array<HTMLSpanElement | null>>([])
+  /** Everything the picture loop reads and writes without going through React. */
+  const live = useRef({
+    cam: 0,
+    vw: CW,
+    raceMs: -1,
+    lastWall: 0,
+    fieldAt: 0,
+    xs: [] as number[],
+    speeds: [] as number[],
+    excite: 0.18,
+    shake: 0,
+    flash: 0,
+    banner: null as { text: string; until: number } | null,
+    verdict: -1 as -1 | 0 | 1,
+    verdictAt: 0,
+    mine: null as number | null,
+    gateOpen: 0,
+    calls: [] as RaceCall[],
+    nextCall: 0,
+    photoAt: -1,
+    nextHoof: 0,
+    ambience: null as ReturnType<typeof audio.ambience>,
+  })
 
-  const far = useMemo(() => paintFar(), [])
-  const near = useMemo(() => paintNear(), [])
-  const rasters = useMemo(() => field.map((h) => [0, 1, 2, 3].map((f) => horseRaster(h, f))), [field])
+  const stadium = useMemo(() => new Stadium(field, state.period), [field, state.period])
   const odds = useMemo(() => chances(field), [field])
+  const runRef = useRef<Run | null>(null)
+  runRef.current = run
 
-  const draw = (post: number, frame: number) => {
-    const canvas = sprites.current[post]
-    if (canvas) rasters[post][frame].paint(canvas)
-    frames.current[post] = frame
-  }
-
-  /** Puts the world where the camera is: the track, the grandstand behind it, every horse. */
-  const layout = (lefts: number[]) => {
-    const P = scaleRef.current
-    if (nearRef.current) nearRef.current.style.left = `${-Math.round(cam.current) * P}px`
-    if (farRef.current) farRef.current.style.left = `${-Math.round(cam.current * FAR_PARALLAX) * P}px`
-    lefts.forEach((x, post) => {
-      const el = sprites.current[post]
-      if (el) {
-        el.style.left = `${Math.round(x - cam.current) * P}px`
-        el.dataset.world = String(Math.round(x))
-      }
-    })
-  }
-
-  // Every new field: the horses stand at the gate and the camera is at the start.
+  // Every new field: the horses walk in from the paddock to their stalls.
   useEffect(() => {
-    cam.current = 0
-    dust.current = []
-    field.forEach((h) => draw(h.post, 0))
-    layout(field.map(() => horseLeft(0)))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const l = live.current
+    l.fieldAt = performance.now()
+    l.cam = 0
+    l.raceMs = -1
+    l.gateOpen = 0
+    l.verdict = -1
+    l.banner = null
+    l.xs = field.map(() => xOf(0) - 70)
+    l.speeds = field.map(() => 22)
   }, [field])
+
+  // The crowd, for as long as you are in the stand.
+  useEffect(() => {
+    const l = live.current
+    l.ambience = audio.ambience()
+    return () => {
+      l.ambience?.stop()
+      l.ambience = null
+    }
+  }, [])
+
+  useEffect(() => {
+    live.current.mine = phase === 'betting' ? pick : run?.post ?? pick
+  }, [pick, phase, run])
 
   const affordable = STAKES.filter((s) => s <= Math.max(state.cash, STAKES[0]))
   const betting = phase === 'betting'
@@ -126,68 +147,143 @@ export function HorseRaceScene({
     const plans = planRace(finish, defaultRng)
     onResult(-stake)
     playSound('chip')
+    playSound('bugle')
+    const l = live.current
+    l.calls = callsFor(field, plans)
+    l.nextCall = 0
+    l.photoAt = -1
+    l.raceMs = -1
+    l.gateOpen = 0
+    l.ambience?.swell(0.4)
     setOutcome(null)
     setBoard(null)
-    setMessage(`$${stake.toLocaleString()} to ${KINDS.find((k) => k.kind === kind)?.label.toLowerCase()} on ${field[pick].name}. They’re at the gate…`)
-    setRun({ startedAt: performance.now() + 900, plans, finish, stake, kind, post: pick })
+    setMessage(`$${stake.toLocaleString()} to ${KINDS.find((k) => k.kind === kind)?.label.toLowerCase()} on ${field[pick].name}. The bugle sounds — they’re at the gate…`)
+    setRun({ startedAt: performance.now() + 2600, plans, finish, stake, kind, post: pick })
     setPhase('running')
   }
 
+  // The picture loop: runs the whole time you are watching, race or no race.
   useEffect(() => {
-    if (!run || phase !== 'running') return
-    const lastFinish = Math.max(...run.plans.map((p) => p.finishMs))
     let raf = 0
-    let called = 0
+    const l = live.current
+    l.lastWall = performance.now()
     const frame = (now: number) => {
-      const ms = now - run.startedAt
-      const lefts: number[] = []
-      run.plans.forEach((plan) => {
-        lefts[plan.post] = ms <= 0 ? horseLeft(0) : horseLeft(progressAt(plan, ms))
-        const f = ms <= 0 ? 0 : Math.floor(Math.max(0, ms) / 62 + plan.post) % 4
-        if (frames.current[plan.post] !== f) draw(plan.post, f)
+      const dt = Math.min(64, now - l.lastWall)
+      l.lastWall = now
+      const r = runRef.current
+      const lastFinish = r ? Math.max(...r.plans.map((p) => p.finishMs)) : 0
+      const firstFinish = r ? Math.min(...r.plans.map((p) => p.finishMs)) : 0
+      const photo = r ? isPhotoFinish(r.plans) : false
+      const prog: number[] = field.map(() => 0)
+      let rate = 1
+      if (r) {
+        if (l.raceMs < 0 && now >= r.startedAt) {
+          l.raceMs = 0
+          l.gateOpen = 0
+          l.shake = 0.9
+          playSound('gate')
+          l.ambience?.swell(0.7)
+        }
+        if (l.raceMs >= 0) {
+          // The last stretch of a close one runs in slow motion.
+          if (photo && l.raceMs > firstFinish - 350 && l.raceMs < firstFinish + 900) rate = 0.35
+          l.raceMs += dt * rate
+        }
+      }
+      const ms = l.raceMs
+      // Where everybody is.
+      field.forEach((h) => {
+        const post = h.post
+        let x: number
+        if (r && ms >= 0) {
+          prog[post] = progressAt(r.plans[post], ms)
+          x = xOf(prog[post])
+        } else if (r) {
+          x = xOf(0)
+        } else if (l.verdict >= 0) {
+          x = l.xs[post]
+        } else {
+          const e = ease(Math.min(1, Math.max(0, (now - l.fieldAt - post * 140) / 2400)))
+          x = xOf(0) - 70 * (1 - e)
+        }
+        const inst = ((x - (l.xs[post] ?? x)) / Math.max(1, dt)) * 1000
+        const target = !r && l.verdict < 0 && now - l.fieldAt - post * 140 < 2400 ? 22 : Math.max(0, inst)
+        l.speeds[post] = (l.speeds[post] ?? 0) * 0.7 + target * 0.3
+        if (l.speeds[post] < 2) l.speeds[post] = 0
+        l.xs[post] = x
       })
-      // The camera follows the leader, keeping him a little ahead of centre, and stops at the line.
-      const leaderX = Math.max(...lefts)
-      const target = Math.min(WORLD_W - CW, Math.max(0, leaderX - 120))
-      cam.current += (target - cam.current) * 0.14
-      layout(lefts)
-      const ctx = dustRef.current?.getContext('2d')
-      if (ctx && dustRef.current) {
-        const Pp = scaleRef.current
-        ctx.clearRect(0, 0, dustRef.current.width, dustRef.current.height)
-        if (ms > 0) {
-          for (const plan of run.plans) {
-            if (progressAt(plan, ms) < 1.02 && Math.random() < 0.55) {
-              dust.current.push({ x: lefts[plan.post] + 2, y: laneTop(plan.post) + 11 + Math.random() * 2, vx: -0.4 - Math.random() * 0.6, age: 0, size: 2 + Math.floor(Math.random() * 2) })
-            }
-          }
+      const order = runningOrder(r?.plans ?? field.map((h) => ({ post: h.post, finishMs: 1, surge: 0, waves: 2, style: 'stalker' as const, bias: 0, drift: 0 })), ms >= 0 ? ms : 0)
+      const leadX = Math.max(...l.xs)
+      // The camera: wide on the gate, then after the leader, easing to a stop past the line.
+      const target = Math.min(WORLD_W - l.vw, Math.max(0, (r && ms >= 0) || l.verdict >= 0 ? leadX - l.vw * 0.5 : 0))
+      l.cam += (target - l.cam) * (ms >= 0 || l.verdict >= 0 ? 0.1 : 0.2)
+      if (l.cam < 0.2) l.cam = 0
+      const leadProg = Math.max(...prog)
+      let excite: number
+      if (r && ms >= 0) excite = 0.3 + 0.7 * ease(Math.min(1, Math.max(0, (leadProg - 0.5) / 0.45)))
+      else if (r) excite = 0.35
+      else if (l.verdict === 1) excite = Math.max(0.5, 1 - (now - l.verdictAt) / 9000)
+      else if (l.verdict === 0) excite = 0.12
+      else excite = 0.18
+      l.excite += (excite - l.excite) * 0.06
+      l.shake = Math.max(0, l.shake - dt / 700)
+      l.flash = Math.max(0, l.flash - dt / 450)
+      if (l.gateOpen < 1 && ms >= 0) l.gateOpen = Math.min(1, ms / 280)
+      if (r && ms >= 0 && now >= l.nextHoof && ms < lastFinish) {
+        l.nextHoof = now + 170
+        playSound('hoof')
+      }
+      // The announcer.
+      if (r && ms >= 0) {
+        while (l.nextCall < l.calls.length && l.calls[l.nextCall].at <= ms) {
+          const call = l.calls[l.nextCall++]
+          setMessage(call.text)
+          l.ambience?.swell(call.excite * 0.6)
         }
-        dust.current = dust.current.filter((d) => d.age < 22)
-        for (const d of dust.current) {
-          d.x += d.vx
-          d.y -= 0.12
-          d.age++
-          ctx.fillStyle = `rgba(214, 186, 140, ${0.5 * (1 - d.age / 22)})`
-          ctx.fillRect(Math.round(d.x - cam.current) * Pp, Math.round(d.y) * Pp, d.size * Pp, d.size * Pp)
+        if (photo && l.photoAt < 0 && ms >= firstFinish) {
+          l.photoAt = ms
+          l.flash = 0.95
+          l.shake = 0.5
+          l.banner = { text: 'PHOTO FINISH', until: now + 2400 }
+          playSound('flash')
         }
       }
-      if (ms > 0 && called === 0) {
-        called = 1
-        playSound('deal')
-        setMessage('And they’re off!')
+      const place = field.map((h) => {
+        if (!r || ms < 0) return -1
+        const plan = r.plans[h.post]
+        return ms >= plan.finishMs ? r.finish.indexOf(h.post) : -1
+      })
+      const banner = l.banner && now < l.banner.until ? l.banner.text : null
+      const frameData: RaceFrame = {
+        w: l.vw,
+        t: now,
+        xs: l.xs,
+        speeds: l.speeds,
+        cam: l.cam,
+        gateOpen: l.gateOpen,
+        excite: l.excite,
+        stretch: leadProg > 0.72 && !!r,
+        order,
+        progress: prog,
+        place,
+        mine: l.mine,
+        running: !!r && ms >= 0,
+        verdict: l.verdict,
+        flash: l.flash,
+        banner,
+        shake: l.shake,
+        since: (now - l.verdictAt) / 1000,
       }
-      if (ms > lastFinish * 0.45 && called === 1) {
-        called = 2
-        const lead = [...run.plans].sort((a, b) => progressAt(b, ms) - progressAt(a, ms))[0]
-        setMessage(`${field[lead.post].name} leads at the half.`)
-      }
-      if (ms > lastFinish * 0.85 && called === 2) {
-        called = 3
-        const lead = [...run.plans].sort((a, b) => progressAt(b, ms) - progressAt(a, ms))[0]
-        setMessage(`Into the stretch — ${field[lead.post].name} in front!`)
-      }
-      if (ms > lastFinish + 900) {
-        done(run)
+      const canvas = canvasRef.current
+      const ctx = canvas?.getContext('2d')
+      if (ctx) stadium.draw(ctx, frameData)
+      field.forEach((h) => {
+        const m = markers.current[h.post]
+        if (m) m.dataset.world = String(Math.round(l.xs[h.post]))
+      })
+      if (r && ms > lastFinish + 1100) {
+        done(r)
+        raf = requestAnimationFrame(frame)
         return
       }
       raf = requestAnimationFrame(frame)
@@ -195,23 +291,33 @@ export function HorseRaceScene({
     raf = requestAnimationFrame(frame)
     return () => cancelAnimationFrame(raf)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [run, phase])
+  }, [field, stadium])
 
   const done = (r: Run) => {
+    const l = live.current
     const result = settleBet(field, { kind: r.kind, post: r.post }, r.stake, r.finish)
+    const winner = field[r.finish[0]]
+    l.raceMs = -1
+    l.verdictAt = performance.now()
+    l.banner = { text: `${winner.name.toUpperCase()} WINS`, until: performance.now() + 3200 }
     setBoard(r.finish)
     setPhase('result')
     setRun(null)
+    runRef.current = null
     if (result.won) {
+      l.verdict = 1
       onResult(result.returned)
       setOutcome('win')
       setBurst((b) => b + 1)
       playSound('win')
+      l.ambience?.swell(1)
+      playSound('roar')
       setMessage(`${field[r.post].name} came in ${ordinal(r.finish.indexOf(r.post))}. Pays $${result.returned.toLocaleString()}.`)
     } else {
+      l.verdict = 0
       setOutcome('lose')
       playSound('lose')
-      setMessage(`${field[r.post].name} finished ${ordinal(r.finish.indexOf(r.post))}. Ticket’s no good.`)
+      setMessage(`${field[r.post].name} finished ${ordinal(r.finish.indexOf(r.post))}. Ticket’s no good — ${winner.name} took it.`)
     }
   }
 
@@ -238,31 +344,35 @@ export function HorseRaceScene({
     >
       {(stage) => {
         const { P, W } = stage
-        scaleRef.current = P
+        const vw = Math.max(CW, Math.min(W - 2, MAX_VIEW))
+        live.current.vw = vw
         const tx = Math.round((W - CW) / 2)
-        const ty = centreY(stage, TRACK_H + 4 + 24 + 3 + FIELD_SIZE * (ROW_H + 1) + 3 * 18)
+        const vx = Math.round((W - vw) / 2)
+        const ty = centreY(stage, VIEW_H + 4 + 24 + 3 + FIELD_SIZE * (ROW_H + 1) + 3 * 18)
         const btnH = stage.coarse ? Math.ceil(44 / P) : 16
         const rowH = stage.coarse ? Math.ceil(40 / P) : ROW_H
-        const dock = ty + TRACK_H + 4
+        const dock = ty + VIEW_H + 4
         return (
           <>
-            <div style={{ ...place(P, tx, ty, CW, TRACK_H), overflow: 'hidden' }} data-testid="horses-track">
-              <div ref={farRef} style={{ position: 'absolute', left: 0, top: 0, width: FAR_W * P, height: FAR_H * P }}>
-                <ArtCanvas width={FAR_W} height={FAR_H} scale={P} paint={(c) => far.paint(c)} />
-              </div>
-              <div ref={nearRef} style={{ position: 'absolute', left: 0, top: 0, width: WORLD_W * P, height: TRACK_H * P }}>
-                <ArtCanvas width={WORLD_W} height={TRACK_H} scale={P} paint={(c) => near.paint(c)} />
-              </div>
-              {field.map((h) => (
-                <ScaledSprite key={h.post} post={h.post} P={P} sprites={sprites} />
-              ))}
+            <div style={{ ...place(P, vx, ty, vw, VIEW_H), overflow: 'hidden', outline: `${P}px solid #14101c` }} data-testid="horses-track">
               <canvas
-                ref={dustRef}
+                ref={canvasRef}
+                width={vw}
+                height={VIEW_H}
                 aria-hidden="true"
-                width={CW * P}
-                height={TRACK_H * P}
-                style={{ position: 'absolute', left: 0, top: 0, width: CW * P, height: TRACK_H * P, pointerEvents: 'none', zIndex: 30 }}
+                style={{ width: vw * P, height: VIEW_H * P, imageRendering: 'pixelated', display: 'block' }}
               />
+              {field.map((h) => (
+                <span
+                  key={h.post}
+                  ref={(el) => {
+                    markers.current[h.post] = el
+                  }}
+                  data-testid={`horse-${h.post}`}
+                  aria-hidden="true"
+                  style={{ position: 'absolute', left: 0, top: 0, width: 0, height: 0 }}
+                />
+              ))}
             </div>
             <Panel
               theme={theme}
@@ -344,7 +454,7 @@ export function HorseRaceScene({
                 <PxButton lines={['Next race']} scale={P} role="barCall" height={btnH} width={CW} testId="horses-next" onClick={nextRace} />
               ) : null}
             </div>
-            <CoinBurst burst={burst} W={W} H={stage.H} P={P} x={tx + CW / 2} y={ty + TRACK_H / 2} kind="chips" count={30} />
+            <CoinBurst burst={burst} W={W} H={stage.H} P={P} x={vx + vw / 2} y={ty + VIEW_H / 2} kind="chips" count={30} />
           </>
         )
       }}
@@ -352,18 +462,3 @@ export function HorseRaceScene({
   )
 }
 
-/** One runner's canvas, moved by the race loop a whole art pixel at a time. */
-function ScaledSprite({ post, P, sprites }: { post: number; P: number; sprites: React.MutableRefObject<Array<HTMLCanvasElement | null>> }) {
-  return (
-    <canvas
-      ref={(el) => {
-        sprites.current[post] = el
-      }}
-      data-testid={`horse-${post}`}
-      aria-hidden="true"
-      width={SPR_W}
-      height={SPR_H}
-      style={{ position: 'absolute', left: (START_X - 1) * P, top: horseTop(post) * P, width: SPR_W * P, height: SPR_H * P, imageRendering: 'pixelated', zIndex: 10 + post }}
-    />
-  )
-}

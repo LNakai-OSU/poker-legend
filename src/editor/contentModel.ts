@@ -77,6 +77,19 @@ export const SOUNDS = keysOf<SoundName>({
   dialogue: true,
   alarm: true,
   cash: true,
+  bugle: true,
+  gate: true,
+  hoof: true,
+  bell: true,
+  jab: true,
+  punch: true,
+  heavy: true,
+  block: true,
+  whoosh: true,
+  roar: true,
+  cheer: true,
+  flash: true,
+  thud: true,
 })
 
 export const TRIGGER_KINDS = keysOf<EventTrigger['kind']>({ talkTo: true, interact: true, enterArea: true, standOn: true, caught: true, finaleWon: true, finaleLost: true, tournamentWon: true, tournamentLost: true })

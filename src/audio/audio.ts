@@ -17,6 +17,26 @@ export type SoundName =
   | 'dialogue'
   | 'alarm'
   | 'cash'
+  | 'bugle'
+  | 'gate'
+  | 'hoof'
+  | 'bell'
+  | 'jab'
+  | 'punch'
+  | 'heavy'
+  | 'block'
+  | 'whoosh'
+  | 'roar'
+  | 'cheer'
+  | 'flash'
+  | 'thud'
+
+/** The murmur of a crowd: `level` 0..1 is how worked up it is; `swell` is a roar that rises and falls away. */
+export interface AmbienceVoice {
+  set(level: number): void
+  swell(strength: number): void
+  stop(): void
+}
 
 /** The sound of a car: see `AudioEngine.engine`. */
 export interface EngineVoice {
@@ -284,6 +304,74 @@ class AudioEngine {
     }
   }
 
+  /**
+   * A crowd for as long as a scene lasts: two bands of looped noise, a low murmur and a
+   * brighter shout, whose loudness follows `level`. Returns null where there is no audio.
+   */
+  ambience(): AmbienceVoice | null {
+    const ctx = this.ensureContext()
+    if (!ctx || !this.master || !this.noiseBuffer) return null
+    if (ctx.state === 'suspended') void ctx.resume()
+    const master = this.master
+    const band = (type: BiquadFilterType, freq: number, q: number) => {
+      const src = ctx.createBufferSource()
+      src.buffer = this.noiseBuffer
+      src.loop = true
+      src.playbackRate.value = 0.6 + Math.random() * 0.3
+      const filter = ctx.createBiquadFilter()
+      filter.type = type
+      filter.frequency.value = freq
+      filter.Q.value = q
+      const gain = ctx.createGain()
+      gain.gain.value = 0.0001
+      src.connect(filter)
+      filter.connect(gain)
+      gain.connect(master)
+      src.start()
+      return { src, gain }
+    }
+    const murmur = band('bandpass', 420, 0.6)
+    const shout = band('bandpass', 1500, 0.5)
+    let stopped = false
+    let swellLevel = 0
+    let level = 0.2
+    const apply = () => {
+      if (stopped) return
+      const t = ctx.currentTime
+      const l = Math.min(1, level + swellLevel)
+      murmur.gain.gain.setTargetAtTime(0.012 + l * 0.05, t, 0.15)
+      shout.gain.gain.setTargetAtTime(0.002 + l * l * 0.06, t, 0.12)
+    }
+    apply()
+    return {
+      set: (v) => {
+        level = v
+        apply()
+      },
+      swell: (strength) => {
+        swellLevel = Math.max(swellLevel, strength)
+        apply()
+        window.setTimeout(() => {
+          swellLevel = 0
+          apply()
+        }, 700 + strength * 900)
+      },
+      stop: () => {
+        if (stopped) return
+        stopped = true
+        const t = ctx.currentTime
+        for (const n of [murmur, shout]) {
+          n.gain.gain.setTargetAtTime(0.0001, t, 0.2)
+          try {
+            n.src.stop(t + 1)
+          } catch {
+            // Already stopped.
+          }
+        }
+      },
+    }
+  }
+
   play(name: SoundName) {
     if (this.muted) return
     const ctx = this.ensureContext()
@@ -299,6 +387,61 @@ class AudioEngine {
         // Two clay chips knocking together.
         this.tone(ctx, out, { freq: 900, endFreq: 500, type: 'triangle', duration: 0.07, gain: 0.18 })
         this.noise(ctx, out, { duration: 0.05, gain: 0.1, filterFreq: 5000 })
+        break
+      case 'bugle': {
+        // The call to post: the first bars of a cavalry charge.
+        const notes: Array<[number, number, number]> = [[392, 0, 0.16], [392, 0.18, 0.1], [523, 0.3, 0.16], [659, 0.5, 0.16], [784, 0.7, 0.45], [659, 1.2, 0.14], [784, 1.36, 0.6]]
+        for (const [f, d, dur] of notes) {
+          this.tone(ctx, out, { freq: f, type: 'sawtooth', duration: dur, gain: 0.12, delay: d })
+          this.tone(ctx, out, { freq: f * 2, type: 'square', duration: dur, gain: 0.03, delay: d })
+        }
+        break
+      }
+      case 'gate':
+        this.tone(ctx, out, { freq: 180, endFreq: 60, type: 'square', duration: 0.18, gain: 0.22 })
+        this.noise(ctx, out, { duration: 0.25, gain: 0.3, filterFreq: 900 })
+        this.tone(ctx, out, { freq: 1900, endFreq: 1500, type: 'triangle', duration: 0.5, gain: 0.07, delay: 0.1 })
+        break
+      case 'hoof':
+        this.noise(ctx, out, { duration: 0.05, gain: 0.12, filterFreq: 260 })
+        this.noise(ctx, out, { duration: 0.05, gain: 0.1, filterFreq: 300, delay: 0.09 })
+        break
+      case 'bell':
+        for (const [f, g] of [[1320, 0.18], [1980, 0.1], [2640, 0.06]] as const) this.tone(ctx, out, { freq: f, type: 'sine', duration: 1.3, gain: g })
+        break
+      case 'jab':
+        this.noise(ctx, out, { duration: 0.06, gain: 0.3, filterFreq: 1200 })
+        this.tone(ctx, out, { freq: 160, endFreq: 90, type: 'triangle', duration: 0.07, gain: 0.2 })
+        break
+      case 'punch':
+        this.noise(ctx, out, { duration: 0.1, gain: 0.42, filterFreq: 700 })
+        this.tone(ctx, out, { freq: 120, endFreq: 55, type: 'triangle', duration: 0.12, gain: 0.35 })
+        break
+      case 'heavy':
+        this.noise(ctx, out, { duration: 0.28, gain: 0.6, filterFreq: 420 })
+        this.tone(ctx, out, { freq: 90, endFreq: 32, type: 'square', duration: 0.3, gain: 0.34 })
+        this.noise(ctx, out, { duration: 0.5, gain: 0.12, filterFreq: 1800, delay: 0.05 })
+        break
+      case 'block':
+        this.noise(ctx, out, { duration: 0.07, gain: 0.2, filterFreq: 500 })
+        this.tone(ctx, out, { freq: 200, endFreq: 140, type: 'triangle', duration: 0.06, gain: 0.12 })
+        break
+      case 'whoosh':
+        this.noise(ctx, out, { duration: 0.14, gain: 0.1, filterFreq: 2600 })
+        break
+      case 'roar':
+        this.noise(ctx, out, { duration: 1.6, gain: 0.3, filterFreq: 1100 })
+        this.noise(ctx, out, { duration: 1.8, gain: 0.18, filterFreq: 2400, delay: 0.1 })
+        break
+      case 'cheer':
+        this.noise(ctx, out, { duration: 0.8, gain: 0.2, filterFreq: 1600 })
+        break
+      case 'flash':
+        this.tone(ctx, out, { freq: 3200, endFreq: 800, type: 'sine', duration: 0.05, gain: 0.04 })
+        break
+      case 'thud':
+        this.tone(ctx, out, { freq: 70, endFreq: 28, type: 'sine', duration: 0.4, gain: 0.5 })
+        this.noise(ctx, out, { duration: 0.3, gain: 0.3, filterFreq: 240 })
         break
       case 'check':
         this.noise(ctx, out, { duration: 0.06, gain: 0.12, filterFreq: 900 })

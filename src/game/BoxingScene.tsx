@@ -18,17 +18,15 @@ import {
 } from '../engine/boxing'
 import { TIME_PERIODS } from './time'
 import { defaultRng } from '../engine/rng'
-import { playSound } from '../audio/audio'
+import { audio, playSound } from '../audio/audio'
 import { CasinoStage, centreY, place, themeOfTown } from './CasinoStage'
 import { CoinBurst } from './CasinoFx'
 import { ChipRow } from './CasinoControls'
-import { ArtCanvas } from './TableStage'
 import { Panel, PxButton } from './pixel/ui'
 import { PixelText } from './pixel/PixelText'
-import { INK } from './pixel/ink'
-import { Raster } from './pixel/raster'
-import { CW, FIG_H, FIG_W, RING_H, SPR_H, SPR_W, POSES, boxerRaster, figureRaster, feetOf, paintRing, type FigureKind, type FigurePose, type Pose } from './boxingArt'
-import { buildRun, frameAt, type Frame, type Run } from './boxingChoreo'
+import { CW, RING_H } from './boxingArt'
+import { buildRun, frameAt, idleFrame, type Run } from './boxingChoreo'
+import { Arena } from './boxingRender'
 import type { GameState } from './state'
 
 const STAKES = [10, 50, 200, 1000]
@@ -69,100 +67,49 @@ export function BoxingScene({
   const [run, setRun] = useState<Run | null>(null)
   const [hp, setHp] = useState<[number, number]>([100, 100])
   const [roundNo, setRoundNo] = useState(0)
-  const [clockText, setClockText] = useState('3:00')
+  const [speed, setSpeed] = useState<1 | 3>(1)
   const [message, setMessage] = useState('Pick a bout, a bet and a stake — or just watch.')
   const [outcome, setOutcome] = useState<'win' | 'lose' | null>(null)
   const [burst, setBurst] = useState(0)
   const committed = useRef(false)
-  const sprites = useRef<Record<string, HTMLCanvasElement | null>>({})
-  const holders = useRef<Record<string, HTMLDivElement | null>>({})
-  const shown = useRef<Record<string, string>>({})
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const lastText = useRef<string | null>(null)
-  const scaleRef = useRef(1)
-  const [girlRound, setGirlRound] = useState(1)
-
-  const ring = useMemo(() => paintRing(), [])
+  const speedRef = useRef<1 | 3>(1)
+  speedRef.current = speed
   const bout = card[Math.min(sel, card.length - 1)]
-  const rasters = useMemo(
-    () => card.map((b) => [b.a, b.b].map((f) => Object.fromEntries(POSES.map((p) => [p, boxerRaster(f, p)])) as Record<Pose, Raster>)),
-    [card],
-  )
-  const figures = useMemo(() => {
-    const out: Record<string, Raster> = {}
-    for (const kind of ['ref', 'trainerA', 'trainerB', 'girl'] as FigureKind[]) for (const pose of [0, 1, 2] as FigurePose[]) out[`${kind}${pose}`] = figureRaster(kind, pose)
-    return out
-  }, [])
-
-  /** Puts a sprite on its canvas once; the same picture is not painted twice. */
-  const paintSprite = (key: string, id: string, make: () => Raster, flip = false) => {
-    const canvas = sprites.current[key]
-    if (!canvas || shown.current[key] === id) return
-    const src = make()
-    const out = new Raster(src.width, src.height)
-    out.blit(src, 0, 0, flip)
-    out.paint(canvas)
-    shown.current[key] = id
-  }
-
-  const place2 = (key: string, x: number, feet: number, h: number, z: number) => {
-    const el = holders.current[key]
-    if (!el) return
-    const P = scaleRef.current
-    el.style.left = `${Math.round(x) * P}px`
-    el.style.top = `${Math.round(feet - h + 1) * P}px`
-    el.style.zIndex = String(Math.round(z * 10))
-  }
-
-  /** Draws a frame of the fight: the men, the referee, the trainers and the ring girl. */
-  const applyFrame = (f: Frame, index: number) => {
-    paintSprite('a', `${index}${f.a}`, () => rasters[index][0][f.a])
-    paintSprite('b', `${index}${f.b}`, () => rasters[index][1][f.b], true)
-    place2('a', f.pos.ax, feetOf(f.pos.ay), SPR_H, feetOf(f.pos.ay))
-    place2('b', f.pos.bx, feetOf(f.pos.by), SPR_H, feetOf(f.pos.by))
-    paintSprite('ref', `ref${f.ref.pose}`, () => figures[`ref${f.ref.pose}`])
-    place2('ref', f.ref.x, feetOf(f.ref.y), FIG_H, feetOf(f.ref.y) - 0.5)
-    const lean: FigurePose = f.corner ? 2 : 0
-    paintSprite('tA', `tA${lean}`, () => figures[`trainerA${lean}`])
-    paintSprite('tB', `tB${lean}`, () => figures[`trainerB${lean}`])
-    const g = holders.current.girl
-    if (g) {
-      g.style.display = f.girl ? 'block' : 'none'
-      if (f.girl) {
-        place2('girl', f.girl.x, 130, FIG_H, 200)
-        paintSprite('girl', `girl${Math.floor(performance.now() / 260) % 2}`, () => figures[`girl${Math.floor(performance.now() / 260) % 2}`])
-        setGirlRound((r) => (r === f.girl!.round ? r : f.girl!.round))
-      }
-    }
-  }
-
-  // Standing in their corners while the card is on the board.
-  useEffect(() => {
-    if (run) return
-    shown.current = {}
-    const idle: Frame = {
-      a: 'guard0',
-      b: 'guard0',
-      pos: { ax: 80, bx: 122, ay: 0.5, by: 0.5 },
-      hp: [100, 100],
-      round: 0,
-      ref: { x: 109, y: 0.1, pose: 0 },
-      girl: null,
-      corner: false,
-      clock: '3:00',
-      text: null,
-      over: false,
-    }
-    applyFrame(idle, sel)
-    setHp([100, 100])
-    setRoundNo(0)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sel, run])
+  const arenas = useMemo(() => card.map((b) => new Arena(b)), [card])
 
   const chances = useMemo(() => (bout ? boutChances(bout) : null), [bout])
   const fought = done[sel] !== undefined
   const allDone = Object.keys(done).length === card.length
   const affordable = STAKES.filter((s) => s <= Math.max(state.cash, STAKES[0]))
   const canBet = open && phase === 'card' && !fought && state.cash >= stake
+
+  // Standing in their corners while the card is on the board; the crowd murmurs.
+  useEffect(() => {
+    if (run) return
+    let raf = 0
+    const arena = arenas[Math.min(sel, arenas.length - 1)]
+    const frame = (now: number) => {
+      const ctx = canvasRef.current?.getContext('2d')
+      if (ctx && bout) arena.draw(ctx, idleFrame(bout, now), now, [])
+      raf = requestAnimationFrame(frame)
+    }
+    raf = requestAnimationFrame(frame)
+    setHp([100, 100])
+    setRoundNo(0)
+    return () => cancelAnimationFrame(raf)
+  }, [sel, run, arenas, bout])
+
+  // The crowd's noise, for as long as you are in the arena.
+  const ambience = useRef<ReturnType<typeof audio.ambience>>(null)
+  useEffect(() => {
+    ambience.current = audio.ambience()
+    return () => {
+      ambience.current?.stop()
+      ambience.current = null
+    }
+  }, [])
 
   const start = (withBet: boolean) => {
     if (!open || phase !== 'card' || fought) return
@@ -189,17 +136,43 @@ export function BoxingScene({
   useEffect(() => {
     if (!run) return
     let raf = 0
+    const arena = arenas[run.index]
+    const cards = run.plan.cards.map((c): [number, number] => [c.a, c.b])
+    // The fight has a clock of its own: it runs slow for the moment of a heavy shot, and fast if you ask.
+    let v = -400
+    let wall = performance.now()
+    let heard = -1e9
+    let level = 0
+    const cam = { z: 1, x: CW / 2, y: 78 }
     const frame = (now: number) => {
-      const f = frameAt(run, now - run.startedAt)
-      applyFrame(f, run.index)
+      const dt = Math.min(64, now - wall)
+      wall = now
+      const f = frameAt(run, v)
+      const prev = v
+      v += dt * f.slow * speedRef.current
+      for (const e of run.events) {
+        if (e.at > prev && e.at <= v) {
+          if (e.sfx) playSound(e.sfx)
+          if (e.swell) ambience.current?.swell(e.swell)
+        }
+      }
+      if (now - level > 250) {
+        level = now
+        ambience.current?.set(0.15 + f.excite * 0.6)
+      }
+      const ctx = canvasRef.current?.getContext('2d')
+      // The camera eases to wherever the shot wants it, never jumps.
+      cam.z += (f.zoom - cam.z) * 0.1
+      cam.x += (f.focus.x - cam.x) * 0.12
+      cam.y += (f.focus.y - cam.y) * 0.12
+      if (ctx) arena.draw(ctx, { ...f, zoom: cam.z, focus: { x: cam.x, y: cam.y } }, now, cards)
       setHp((h) => (h[0] === f.hp[0] && h[1] === f.hp[1] ? h : f.hp))
       setRoundNo((n) => (n === f.round ? n : f.round))
-      setClockText((c) => (c === f.clock ? c : f.clock))
       if (f.text && f.text !== lastText.current) {
         lastText.current = f.text
         setMessage(f.text)
-        playSound(/DOWN/.test(f.text) ? 'lose' : /Round|Seconds/.test(f.text) ? 'deal' : 'check')
       }
+      void heard
       if (f.over) {
         finish(run)
         return
@@ -213,7 +186,7 @@ export function BoxingScene({
 
   const finish = (r: Run) => {
     let net = 0
-    let text = verdict(r.bout, r.result)
+    let text = verdict(r.bout, r.result, r.plan)
     let result: 'win' | 'lose' | null = null
     if (r.bet) {
       const s = settleBet(r.bout, r.bet.kind, r.bet.stake, r.result)
@@ -264,90 +237,30 @@ export function BoxingScene({
     >
       {(stage) => {
         const { P, W } = stage
-        scaleRef.current = P
         const tx = Math.round((W - CW) / 2)
         const ty = centreY(stage, FIT[0].h)
         const btnH = stage.coarse ? Math.ceil(44 / P) : 16
         const rowH = stage.coarse ? Math.ceil(40 / P) : BOUT_ROW
         const below = ty + RING_H + 4
-        const barW = 84
         return (
           <>
-            <div style={place(P, tx, ty, CW, RING_H)} data-testid="boxing-ring" data-round={roundNo} data-phase={phase}>
-              <ArtCanvas width={CW} height={RING_H} scale={P} paint={(c) => ring.back.paint(c)} />
-              {(
-                [
-                  ['tA', 0, 100, FIG_W, FIG_H],
-                  ['tB', CW - FIG_W, 100, FIG_W, FIG_H],
-                  ['ref', 109, 62, FIG_W, FIG_H],
-                  ['a', 80, 72, SPR_W, SPR_H],
-                  ['b', 122, 72, SPR_W, SPR_H],
-                ] as const
-              ).map(([key, x, feet, w, h]) => (
-                <div
-                  key={key}
-                  ref={(el) => {
-                    holders.current[key] = el
-                  }}
-                  style={{ position: 'absolute', left: x * P, top: (feet - h + 1) * P, width: w * P, height: h * P, pointerEvents: 'none' }}
-                >
-                  <div style={{ position: 'absolute', left: (w * 0.15) * P, bottom: -1 * P, width: w * 0.7 * P, height: 5 * P, borderRadius: '50%', background: 'rgba(0,0,0,0.3)' }} />
-                  <canvas
-                    ref={(el) => {
-                      sprites.current[key] = el
-                    }}
-                    data-testid={key === 'a' ? 'boxer-0' : key === 'b' ? 'boxer-1' : `fig-${key}`}
-                    aria-hidden="true"
-                    width={w}
-                    height={h}
-                    style={{ width: w * P, height: h * P, imageRendering: 'pixelated', display: 'block', position: 'relative' }}
-                  />
-                </div>
-              ))}
-              <div style={{ position: 'absolute', left: 0, top: 0, zIndex: 1500, pointerEvents: 'none' }}>
-                <ArtCanvas width={CW} height={RING_H} scale={P} paint={(c) => ring.front.paint(c)} />
-              </div>
-              <div
-                ref={(el) => {
-                  holders.current.girl = el
-                }}
-                data-testid="ring-girl"
-                style={{ position: 'absolute', display: 'none', width: FIG_W * P, height: FIG_H * P, pointerEvents: 'none' }}
-              >
-                <div style={{ position: 'absolute', left: -15 * P, top: -12 * P, width: 46 * P, height: 11 * P, background: '#f4f0e4', border: `${P}px solid #14101c`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <PixelText text={`ROUND ${girlRound}`} scale={P} ink={{ color: '#a82828', shadow: null }} />
-                </div>
-                <canvas
-                  ref={(el) => {
-                    sprites.current.girl = el
-                  }}
-                  aria-hidden="true"
-                  width={FIG_W}
-                  height={FIG_H}
-                  style={{ width: FIG_W * P, height: FIG_H * P, imageRendering: 'pixelated', display: 'block' }}
-                />
-              </div>
+            <div style={{ ...place(P, tx, ty, CW, RING_H), outline: `${P}px solid #14101c` }} data-testid="boxing-ring" data-round={roundNo} data-phase={phase}>
+              <canvas
+                ref={canvasRef}
+                width={CW}
+                height={RING_H}
+                aria-hidden="true"
+                data-testid="boxing-canvas"
+                style={{ width: CW * P, height: RING_H * P, imageRendering: 'pixelated', display: 'block' }}
+              />
               {bout
                 ? ([bout.a, bout.b] as const).map((f, side) => (
-                    <div key={f.id} style={{ position: 'absolute', top: 2 * P, zIndex: 3000, [side === 0 ? 'left' : 'right']: 4 * P, width: barW * P }}>
-                      <PixelText text={f.name} scale={P} ink={INK.light} />
-                      <div style={{ marginTop: P, height: 5 * P, background: '#14101c', border: `${P}px solid #f4f0e4` }}>
-                        <div
-                          data-testid={`boxing-hp-${side}`}
-                          style={{
-                            width: `${hp[side]}%`,
-                            height: '100%',
-                            marginLeft: side === 1 ? 'auto' : 0,
-                            background: hp[side] > 55 ? '#3ac860' : hp[side] > 25 ? '#f2c84a' : '#e83a3a',
-                          }}
-                        />
-                      </div>
+                    <div key={f.id} style={{ position: 'absolute', left: 0, top: 0, width: 0, height: 0, overflow: 'hidden' }}>
+                      <div data-testid={`boxing-hp-${side}`} style={{ width: `${hp[side]}%`, height: 1 }} />
                     </div>
                   ))
                 : null}
-              <div style={{ position: 'absolute', top: 125 * P, left: 0, zIndex: 3000, width: CW * P, display: 'flex', justifyContent: 'center', pointerEvents: 'none' }}>
-                <PixelText text={roundNo > 0 ? `RD ${roundNo}  ${clockText}` : ''} scale={P} ink={INK.gold} />
-              </div>
+              <span data-testid="ring-girl" aria-hidden="true" style={{ position: 'absolute', left: 0, top: 0, width: 0, height: 0 }} />
             </div>
             <Panel
               theme={theme}
@@ -390,6 +303,9 @@ export function BoxingScene({
                   })}
                 </div>
                 <div style={{ ...place(P, tx, below + 27 + BOUTS * (rowH + 1) + 3, CW), display: 'flex', flexDirection: 'column', gap: 2 * P }}>
+                  {phase === 'fight' ? (
+                    <PxButton lines={[speed === 1 ? 'Speed up ×3' : 'Normal speed']} scale={P} role="plain" height={btnH} width={CW} testId="boxing-speed" onClick={() => setSpeed((s) => (s === 1 ? 3 : 1))} />
+                  ) : null}
                   {phase === 'card' && !allDone && !fought && chances ? (
                     <>
                       <div style={{ display: 'flex', gap: 2 * P }}>

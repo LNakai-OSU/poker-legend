@@ -812,7 +812,7 @@ Lumina floors) opens a six-horse race you bet on: win, place (top two) or show
 (top three). `engine/horses.ts` draws each horse's hidden strength and the
 finishing order from it, and the board pays the fair price less a 15% takeout,
 rounded down to the nickel — `horses.test.ts` checks that every bet on every
-horse loses to the house. The race is staged on a long course the camera follows the leader along: a grandstand sliding slowly behind the rail, furlong poles counting down, a starting gate and a chequered line, and four-beat galloping horses with jockeys in their silks and dust at the heels (`game/horseArt.ts`). A race costs no time and counts for nothing toward a
+horse loses to the house. The race is staged as a night at the track, drawn live by `game/horseStadium.ts`: a packed grandstand across the dirt whose crowd stands up, waves flags and roars as the field turns for home, an infield with a tote board that keeps the running order, a starting gate the horses walk into and burst out of, a map and running-order strip in the corner, and your own row of the stand along the bottom edge. The view is as wide as the window. Horses and jockeys are drawn from joints each frame (a four-beat gait locked to speed over the ground, whips out in the stretch, dust and clods at the heels). Every horse has a run style (`front`, `stalker`, `closer`) so the lead changes hands the way real races do, and `callsFor` writes the announcer's call from the plans: the break, each pole, lead changes, the wire. A finish under 150 ms is a photo finish: slow motion at the line, a flash and a PHOTO FINISH banner. The crowd's noise is synthesised (`audio.ambience()`) and swells with the call. A race costs no time and counts for nothing toward a
 boss's `winTarget`, like the other pit games.
 
 ### Scratchers, the lottery, hustlers and the arena
@@ -846,10 +846,7 @@ toward a boss's `winTarget` and none of which can be a way past the ladder.
   leaves both men standing. Each exchange has footwork (advance, circle, back off), a
   string of one to three punches from jab, cross, hook, uppercut and body shot, and
   a miss is answered with a block, slip, parry, duck or clinch. Some fights have a
-  knockdown the man gets up from. The ring is drawn from above as an isometric diamond (crowd on all sides, ropes on four, near ropes in front of the men) and rounds run twelve exchanges with a three-minute clock. The ring has a referee (who counts), a trainer in
-  each corner, stools the men sit on between rounds, and a ring girl who walks the
-  round card across. `game/boxingChoreo.ts` turns the plan into a timeline and
-  `boxingArt.ts` draws it.
+  knockdown the man gets up from. The ring is drawn from above as an isometric diamond and the camera punches in on the men during a fight. Fighters are drawn from joints, not bitmaps (`game/boxingRig.ts`): a pose is where the head, shoulders, hips, gloves and feet are, and a punch is a blend from the load to the arrival to the recovery, so jabs, crosses, hooks, uppercuts and body shots all look different, and so do the slip, the block, the parry, the duck and the clinch. The plan (`planFight`) now has counters off a slip, heavy shots, men rocked and followed in on, cuts and swelling, body damage that costs stamina, knockdowns (usually of the loser, sometimes of the winner, who gets up), and a TKO as well as a count of ten. A decision is read from three judges' cards on the ten-point must system (10-9, 10-8 for a knockdown), unanimous or split, always with the winner on at least two. A bout opens with the ring announcer introducing each fighter, then the bell; between rounds the men sit on stools while a cornerman talks and the ring girl carries the round card; hits stop the clock for a heartbeat, a knockdown slows it and zooms in, and there is a ×3 button for the impatient. `game/boxingChoreo.ts` turns the plan into a timeline and `boxingRender.ts` draws the arena (a crowd that leans in, spotlights, the big board, the timekeeper's bell and the judges).
 
 ---
 

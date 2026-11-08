@@ -192,10 +192,29 @@ export interface Exchange {
   finisher?: boolean
   /** The hit puts the other man on the canvas; he is up again before the next. */
   knockdown?: boolean
+  /** Thrown straight off a slip or a parry: a counter. */
+  counter?: boolean
+  /** A hit that lands where it says: the head or the body. */
+  target?: 'head' | 'body'
+  /** A heavy shot: the man feels it. */
+  power?: boolean
+  /** The hit rocks him: his legs go and the other man follows in. */
+  stagger?: boolean
+  /** The hit opens a cut. */
+  cut?: boolean
 }
 
 export interface RoundPlan {
   exchanges: Exchange[]
+}
+
+/** One judge's card. */
+export interface ScoreCard {
+  judge: string
+  /** Each round as [red, blue], on the ten-point must system. */
+  rounds: Array<[number, number]>
+  a: number
+  b: number
 }
 
 export interface FightPlan {
@@ -203,22 +222,103 @@ export interface FightPlan {
   /** What each man has left at the end, out of 100. */
   endA: number
   endB: number
+  /** The three judges' cards, over the rounds fought. */
+  cards: ScoreCard[]
+  /** How the fight was stopped if it was: counted out, or waved off by the referee. */
+  stoppage?: 'ko' | 'tko'
 }
 
 const PUNCHES: Punch[] = ['jab', 'jab', 'jab', 'cross', 'cross', 'hook', 'hook', 'uppercut', 'body', 'body']
 const DEFENSES: Defense[] = ['block', 'block', 'slip', 'slip', 'parry', 'duck', 'clinch']
 const STEPS: Footwork[] = ['advance', 'advance', 'circle', 'circle', 'retreat', 'hold']
-/** Exchanges in a round: about eight seconds of a three-minute round, staged. */
-const PER_ROUND = 12
+/** Exchanges in a round: about a quarter of a three-minute round, staged. */
+export const PER_ROUND = 16
 
 const pick = <T,>(items: T[], rng: Rng): T => items[Math.floor(rng() * items.length)]
+
+export type FightStyle = 'slugger' | 'boxer' | 'swarmer' | 'counter'
+
+/** How a man fights, from what he is: the hard hitters walk forward, the tall and the lean box from range. */
+export function styleOf(f: Fighter): FightStyle {
+  if (f.power >= 4 && f.chin <= 3) return 'slugger'
+  if (f.build === 'stocky') return 'swarmer'
+  if (f.build === 'lean' && f.power <= 3) return 'counter'
+  return 'boxer'
+}
+
+/** Southpaw or orthodox, settled by the name so that it is the same man every night. */
+export function southpaw(f: Fighter): boolean {
+  let h = 0
+  for (const ch of f.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0
+  return h % 4 === 0
+}
+
+const JUDGES = ['J. Harlan', 'M. Okonkwo', 'P. Strand', 'L. Duarte', 'K. Ebert', 'R. Villanueva']
+
+/**
+ * Three cards on the ten-point must system: the round goes to whoever did the
+ * damage, 10-9 and now and then 10-10 when it is too close to call, 10-8 when
+ * there was a knockdown and 10-7 for two. Judges see rounds differently, so a
+ * close fight can be split, but the winner is always on the winning end of at
+ * least two cards, because the result was drawn first.
+ */
+export function scoreFight(rounds: RoundPlan[], winner: 'a' | 'b', method: Method, rng: Rng): ScoreCard[] {
+  const per = rounds.map((r) => {
+    let a = 0
+    let b = 0
+    let downsA = 0
+    let downsB = 0
+    for (const e of r.exchanges) {
+      if (!e.landed) continue
+      if (e.by === 'a') {
+        a += e.damage
+        if (e.knockdown) downsB++
+      } else {
+        b += e.damage
+        if (e.knockdown) downsA++
+      }
+    }
+    return { diff: a - b, downsA, downsB }
+  })
+  const names = [...JUDGES]
+  const cards: ScoreCard[] = [0, 1, 2].map(() => {
+    const judge = names.splice(Math.floor(rng() * names.length), 1)[0]
+    const rs: Array<[number, number]> = per.map((p) => {
+      const d = p.diff + (rng() - 0.5) * 9
+      if (Math.abs(d) < 0.8 && rng() < 0.35) return [10, 10]
+      const win = d > 0 ? 'a' : 'b'
+      const downs = win === 'a' ? p.downsB : p.downsA
+      const loserPts = downs >= 2 ? 7 : downs === 1 ? 8 : 9
+      return win === 'a' ? [10, loserPts] : [loserPts, 10]
+    })
+    return { judge, rounds: rs, a: 0, b: 0 }
+  })
+  const total = (c: ScoreCard) => {
+    c.a = c.rounds.reduce((s, r) => s + r[0], 0)
+    c.b = c.rounds.reduce((s, r) => s + r[1], 0)
+  }
+  cards.forEach(total)
+  if (method === 'decision') {
+    const ours = (c: ScoreCard) => (winner === 'a' ? c.a - c.b : c.b - c.a)
+    // Pull the cards the right way, turning the closest round in the loser's favour, until two of three agree with the result.
+    for (let pass = 0; pass < 12 && cards.filter((c) => ours(c) > 0).length < 2; pass++) {
+      const c = [...cards].filter((x) => ours(x) <= 0).sort((x, y) => ours(y) - ours(x))[0]
+      const idx = c.rounds.findIndex((r) => (winner === 'a' ? r[0] <= r[1] : r[1] <= r[0]))
+      if (idx < 0) break
+      c.rounds[idx] = winner === 'a' ? [10, 9] : [9, 10]
+      total(c)
+    }
+  }
+  return cards
+}
 
 /**
  * A fight that fits the result: the winner lands the better punches, a knockout
  * ends on a landed hook in its round, and a decision leaves both men standing
  * with the winner less hurt. Along the way there is footwork, combinations,
- * blocks, slips and clinches for a miss, and now and then a knockdown the other
- * man gets up from.
+ * blocks, slips and clinches for a miss, counters off the slips, the body shots
+ * that slow a man down, a man rocked and followed in on, and now and then a
+ * knockdown — usually of the loser, occasionally of the winner, who gets up.
  */
 export function planFight(result: Result, rng: Rng): FightPlan {
   const win = result.winner
@@ -226,8 +326,10 @@ export function planFight(result: Result, rng: Rng): FightPlan {
   const roundsRun = result.method === 'ko' ? result.round : ROUNDS
   const total = roundsRun * PER_ROUND
   const ex: Exchange[] = []
+  // Some rounds belong to the loser: a man who is going to lose can still have his good three minutes.
+  const bias = Array.from({ length: roundsRun }, () => 0.62 + (rng() - 0.5) * 0.36)
   for (let i = 0; i < total; i++) {
-    const byWinner = rng() < 0.62
+    const byWinner = rng() < bias[Math.floor(i / PER_ROUND)]
     const landed = rng() < (byWinner ? 0.66 : 0.42)
     const comboLen = rng() < 0.3 ? 1 + Math.floor(rng() * 2) : 0
     ex.push({
@@ -239,6 +341,21 @@ export function planFight(result: Result, rng: Rng): FightPlan {
       step: pick(STEPS, rng),
       damage: 0,
     })
+  }
+  // A counter: the man who slipped or parried answers straight away.
+  for (let i = 1; i < total - 1; i++) {
+    const prev = ex[i - 1]
+    if (!prev.landed && (prev.defense === 'slip' || prev.defense === 'parry' || prev.defense === 'duck') && rng() < 0.55) {
+      const e = ex[i]
+      e.by = prev.by === 'a' ? 'b' : 'a'
+      e.counter = true
+      e.punch = prev.defense === 'duck' ? pick(['body', 'hook', 'uppercut'], rng) : pick(['cross', 'hook', 'jab'], rng)
+      e.combo = []
+      if (!e.landed && rng() < 0.55) {
+        e.landed = true
+        e.defense = undefined
+      }
+    }
   }
   const landedBy = (by: 'a' | 'b') => ex.filter((e) => e.by === by && e.landed)
   const land = (e: Exchange) => {
@@ -265,6 +382,7 @@ export function planFight(result: Result, rng: Rng): FightPlan {
     }
   }
   ensure(win, 4)
+  let stoppage: FightPlan['stoppage']
   if (result.method === 'ko') {
     const end = ex[ex.length - 1]
     end.by = win
@@ -272,13 +390,23 @@ export function planFight(result: Result, rng: Rng): FightPlan {
     end.punch = rng() < 0.5 ? 'hook' : 'uppercut'
     end.combo = []
     end.finisher = true
+    end.counter = false
+    stoppage = rng() < 0.4 ? 'tko' : 'ko'
   }
   ensure(lose, 2)
 
   const loserLeft = result.method === 'ko' ? 0 : 12 + Math.floor(rng() * 24)
   const winnerLeft = Math.max(loserLeft + 12, 40 + Math.floor(rng() * 45))
   const spend = (by: 'a' | 'b', amount: number) => {
-    const hits = landedBy(by)
+    // A man cannot land more punches than he has damage to give: the surplus are blocked or missed.
+    let hits = landedBy(by)
+    while (hits.length > amount) {
+      const spare = hits.filter((h) => !h.finisher)
+      const e = spare[Math.floor(rng() * spare.length)]
+      e.landed = false
+      e.defense = pick(DEFENSES, rng)
+      hits = landedBy(by)
+    }
     let remaining = amount
     hits.forEach((h, i) => {
       const weights = hits.length - i
@@ -290,15 +418,39 @@ export function planFight(result: Result, rng: Rng): FightPlan {
   spend(win, 100 - loserLeft)
   spend(lose, 100 - winnerLeft)
 
-  // One knockdown in some fights: a heavy shot from the winner past the first round.
+  // Where the hits land, and which of them are heavy, rock a man or open a cut.
+  const cutDone = { a: false, b: false }
+  ex.forEach((e, i) => {
+    if (!e.landed) return
+    e.target = e.punch === 'body' || (e.combo.length === 0 && e.punch === 'hook' && rng() < 0.12) ? 'body' : 'head'
+    if (!e.combo.length && e.target === 'body') e.punch = 'body'
+    const hurt = e.by === win ? 100 - loserLeft : 100 - winnerLeft
+    const avg = hurt / Math.max(1, landedBy(e.by).length)
+    e.power = e.damage >= Math.max(3, avg * 1.2)
+    if (e.power && !e.finisher && e.target === 'head' && i < total - 2 && rng() < 0.7) e.stagger = true
+    const victim = e.by === 'a' ? 'b' : 'a'
+    if (e.power && e.target === 'head' && !cutDone[victim] && i >= PER_ROUND && !e.finisher && rng() < 0.35) {
+      e.cut = true
+      cutDone[victim] = true
+    }
+  })
+
+  // A knockdown in some fights: a heavy shot past the first round. Mostly the winner's, sometimes the loser's.
+  const downBy = rng() < 0.15 ? lose : win
   if (rng() < 0.3) {
-    const candidates = ex.filter((e, i) => e.by === win && e.landed && !e.finisher && i >= PER_ROUND && i < ex.length - 3 && e.damage >= 4)
-    if (candidates.length > 0) pick(candidates, rng).knockdown = true
+    const candidates = ex.filter((e, i) => e.by === downBy && e.landed && !e.finisher && i >= PER_ROUND && i < ex.length - 3 && e.damage >= 4)
+    if (candidates.length > 0) {
+      const e = pick(candidates, rng)
+      e.knockdown = true
+      e.power = true
+      e.target = 'head'
+      e.stagger = false
+    }
   }
 
   const rounds: RoundPlan[] = []
   for (let r = 0; r < roundsRun; r++) rounds.push({ exchanges: ex.slice(r * PER_ROUND, (r + 1) * PER_ROUND) })
-  return { rounds, endA: win === 'a' ? winnerLeft : loserLeft, endB: win === 'a' ? loserLeft : winnerLeft }
+  return { rounds, endA: win === 'a' ? winnerLeft : loserLeft, endB: win === 'a' ? loserLeft : winnerLeft, cards: scoreFight(rounds, win, result.method, rng), stoppage }
 }
 
 /** The fighter's record as it reads on the poster. */
@@ -306,9 +458,16 @@ export function recordOf(f: Fighter): string {
   return `${f.wins}-${f.losses}, ${f.kos} KO`
 }
 
+/** The cards in the announcer's words: "58-56, 57-57, 59-55". */
+export function readCards(cards: ScoreCard[], winner: 'a' | 'b'): string {
+  return cards.map((c) => (winner === 'a' ? `${c.a}-${c.b}` : `${c.b}-${c.a}`)).join(', ')
+}
+
 /** A line the ring announcer reads, for the result. */
-export function verdict(bout: Bout, r: Result): string {
+export function verdict(bout: Bout, r: Result, plan?: FightPlan): string {
   const w = r.winner === 'a' ? bout.a : bout.b
-  if (r.method === 'ko') return `${w.name} wins by knockout in round ${r.round}.`
-  return `${w.name} wins on the judges’ cards after ${ROUNDS}.`
+  if (r.method === 'ko') return `${w.name} wins by ${plan?.stoppage === 'tko' ? 'TKO' : 'knockout'} in round ${r.round}.`
+  if (!plan) return `${w.name} wins on the judges’ cards after ${ROUNDS}.`
+  const votes = plan.cards.filter((c) => (r.winner === 'a' ? c.a > c.b : c.b > c.a)).length
+  return `${w.name} wins by ${votes === 3 ? 'unanimous' : 'split'} decision: ${readCards(plan.cards, r.winner)}.`
 }

@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+  callsFor,
+  isPhotoFinish,
+  margin,
+  runningOrder,
   FIELD_SIZE,
   MIN_RETURN,
   TAKEOUT,
@@ -122,5 +126,35 @@ describe('horse racing', () => {
       const byTime = [...plans].sort((a, b) => a.finishMs - b.finishMs).map((p) => p.post)
       expect(byTime).toEqual(finish)
     }
+  })
+})
+
+describe('the call of the race', () => {
+  it('has a break, the poles and a finish, in order, and every run style turns up', () => {
+    const styles = new Set<string>()
+    let photos = 0
+    for (let seed = 1; seed < 200; seed++) {
+      const rng = mulberry32(seed)
+      const field = drawField(rng)
+      const plans = planRace(drawFinish(field, rng), rng)
+      plans.forEach((p) => styles.add(p.style))
+      if (isPhotoFinish(plans)) photos++
+      const calls = callsFor(field, plans)
+      expect(calls[0].text).toMatch(/off/)
+      expect(calls.length).toBeGreaterThanOrEqual(5)
+      expect(calls.map((c) => c.at)).toEqual(calls.map((c) => c.at).sort((x, y) => x - y))
+      const lastCall = calls[calls.length - 1]
+      expect(lastCall.at).toBe(Math.min(...plans.map((p) => p.finishMs)))
+      expect(runningOrder(plans, plans[0].finishMs * 3)).toHaveLength(6)
+    }
+    expect(styles.size).toBe(3)
+    expect(photos).toBeGreaterThan(10)
+    expect(photos).toBeLessThan(120)
+  })
+
+  it('names a margin in racing words', () => {
+    expect(margin(0.001)).toBe('a nose')
+    expect(margin(0.03)).toBe('a length')
+    expect(margin(0.2)).toBe('6 lengths')
   })
 })

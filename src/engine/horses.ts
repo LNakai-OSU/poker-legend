@@ -177,32 +177,47 @@ export function ordinal(place: number): string {
 // The running of the race
 // ---------------------------------------------------------------------------
 
+/** How a horse likes to run: on the pace, just off it, or from the back. */
+export type RunStyle = 'front' | 'stalker' | 'closer'
+
 export interface RunnerPlan {
   post: number
   /** When the horse crosses the line, in milliseconds. */
   finishMs: number
-  /** How hard it surges and fades on the way, 0..0.7, and how many times. */
+  /** How hard it surges and fades on the way, 0..0.45, and how many times. */
   surge: number
   waves: number
+  style: RunStyle
+  /** Early speed (+) or a late kick (-): the size of the one long swell the style adds. */
+  bias: number
+  /** Where in the stretch a horse drifts to, 0 (hugging the rail) .. 1 (wide), for the picture. */
+  drift: number
 }
 
-export const RACE_MS = 9000
+export const RACE_MS = 14000
 
 /**
  * Who crosses the line when. The order is the drawn finish and the gaps between
  * horses are a nose to a few lengths; in between they swap the lead as they
- * surge and fade, so the favourite can be last at the half and still win.
+ * surge and fade, so the favourite can be last at the half and still win. Each
+ * horse has a style: front runners are out and gone and fade, closers sit at the
+ * back and come with a run in the stretch.
  */
 export function planRace(finish: number[], rng: Rng): RunnerPlan[] {
   let t = RACE_MS
   const plans: RunnerPlan[] = []
   finish.forEach((post, rank) => {
     if (rank > 0) t += 90 + Math.floor(rng() * (rank === 1 ? 260 : 520))
+    const style: RunStyle = (['front', 'stalker', 'closer'] as const)[Math.floor(rng() * 3)]
+    const mag = 0.05 + rng() * 0.1
     plans[post] = {
       post,
       finishMs: t,
-      surge: 0.25 + rng() * 0.45,
+      surge: 0.15 + rng() * 0.3,
       waves: 2 + Math.floor(rng() * 4),
+      style,
+      bias: style === 'front' ? mag : style === 'closer' ? -mag : 0,
+      drift: rng(),
     }
   })
   return plans
@@ -210,11 +225,81 @@ export function planRace(finish: number[], rng: Rng): RunnerPlan[] {
 
 /**
  * How far round the track a runner is, 0..1, `ms` after the gates open.
- * u + (a / pi m) sin(pi m u) is 0 at the gate, 1 at the line, and always going
- * forward (its slope is 1 + a cos(...), and a < 1), whatever the surges.
+ * u + (a / pi m) sin(pi m u) + b sin(pi u) is 0 at the gate, 1 at the line, and
+ * always going forward: its slope is 1 + a cos(pi m u) + b pi cos(pi u), and
+ * a + |b| pi < 1, whatever the surges and the style.
  */
 export function progressAt(plan: RunnerPlan, ms: number): number {
   const u = Math.min(1, Math.max(0, ms / plan.finishMs))
   if (u >= 1) return 1 + (ms - plan.finishMs) / plan.finishMs
-  return u + (plan.surge / (Math.PI * plan.waves)) * Math.sin(Math.PI * plan.waves * u)
+  return u + (plan.surge / (Math.PI * plan.waves)) * Math.sin(Math.PI * plan.waves * u) + plan.bias * Math.sin(Math.PI * u)
+}
+
+/** Post positions from the front of the field to the back, `ms` after the gates open. */
+export function runningOrder(plans: RunnerPlan[], ms: number): number[] {
+  return plans.map((p) => ({ post: p.post, x: progressAt(p, ms) })).sort((a, b) => b.x - a.x).map((p) => p.post)
+}
+
+/** The gap between the first two home is small enough that the stewards go to the photograph. */
+export const PHOTO_MS = 150
+export function isPhotoFinish(plans: RunnerPlan[]): boolean {
+  const t = plans.map((p) => p.finishMs).sort((a, b) => a - b)
+  return t[1] - t[0] < PHOTO_MS
+}
+
+/** A margin in the racing words: "a nose", "a neck", "2 lengths". `gap` is a fraction of the track. */
+export function margin(gap: number): string {
+  const lengths = gap * 29
+  if (lengths < 0.15) return 'a nose'
+  if (lengths < 0.4) return 'a head'
+  if (lengths < 0.8) return 'a neck'
+  if (lengths < 1.3) return 'a length'
+  return `${Math.round(lengths)} lengths`
+}
+
+export interface RaceCall {
+  at: number
+  text: string
+  /** 0..1: how loud the track announcer is, and the crowd with him. */
+  excite: number
+}
+
+/** What the track announcer says and when, from the plans: the break, the lead changing hands, each pole, the wire. */
+export function callsFor(field: Horse[], plans: RunnerPlan[]): RaceCall[] {
+  const name = (post: number) => field[post].name
+  const end = Math.max(...plans.map((p) => p.finishMs))
+  const calls: RaceCall[] = [{ at: 0, text: 'And they’re off!', excite: 0.5 }]
+  let leader = runningOrder(plans, 700)[0]
+  let lastAt = 0
+  const poles: Array<[number, (a: number, b: number, gap: number) => string, number]> = [
+    [0.22, (a, b, g) => `Quarter pole: ${name(a)} by ${margin(g)} from ${name(b)}.`, 0.45],
+    [0.5, (a, b) => `Halfway — ${name(a)} in front, ${name(b)} close behind.`, 0.55],
+    [0.74, (a, b) => `Turning for home! ${name(a)} and ${name(b)}!`, 0.75],
+    [0.9, (a, b) => `Down to the wire — ${name(a)}, ${name(b)}, it’s tight!`, 0.95],
+  ]
+  let nextPole = 0
+  for (let ms = 400; ms <= end; ms += 100) {
+    const order = runningOrder(plans, ms)
+    const [a, b] = order
+    const gap = progressAt(plans[a], ms) - progressAt(plans[b], ms)
+    if (nextPole < poles.length && progressAt(plans[a], ms) >= poles[nextPole][0]) {
+      const [, say, excite] = poles[nextPole++]
+      calls.push({ at: ms, text: say(a, b, gap), excite })
+      leader = a
+      lastAt = ms
+      continue
+    }
+    if (a !== leader && ms - lastAt > 1500 && progressAt(plans[a], ms) < 0.88) {
+      calls.push({ at: ms, text: `${name(a)} takes the lead!`, excite: 0.6 })
+      lastAt = ms
+    }
+    leader = a
+  }
+  const first = plans.find((p) => p.finishMs === Math.min(...plans.map((q) => q.finishMs)))!
+  calls.push({
+    at: first.finishMs,
+    text: isPhotoFinish(plans) ? 'Too close to call — a photo finish!' : `${name(first.post)} wins it!`,
+    excite: 1,
+  })
+  return calls.sort((x, y) => x.at - y.at)
 }
