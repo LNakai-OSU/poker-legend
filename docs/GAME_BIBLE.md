@@ -718,10 +718,11 @@ town, and the content tests hold it so. [STORYBOARD.md](STORYBOARD.md) is the
 run act by act.
 
 **The risk axis.** Sponsors stake you. A stake is a loan with a deadline in
-days. Miss it and collectors hunt you in the town you are standing in. Skipping
-town sets a grace period before they pick the trail back up, and a shakedown
-buys three more days. Getting caught costs three quarters of your bankroll —
-enough to hurt, not enough to end the run with nothing to rebuy with.
+days. Miss it and collectors hunt you in the town you are standing in, and
+skipping town does not help: step off a bus while a stake is past due and they
+are waiting (`arrivalAmbush`). Getting caught costs every possession you own and
+all your cash but a $20 bus fare; the debt stands. A shakedown buys three days
+of grace, so you are not stripped again on the next arrival.
 
 Every sponsor names its `collector`, a character: the face that stands beside
 the sponsor while you owe on time, chases you down the street once the stake

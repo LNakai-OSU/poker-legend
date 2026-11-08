@@ -232,7 +232,7 @@ and the people who got you there.
 
 Losing is part of the run, not the end of it. Every setback is noticed by
 somebody who knows you, costs something real (the mechanics are unchanged: a
-shakedown takes three quarters and leaves the debt; a lost match keeps the
+shakedown takes everything you own but a bus fare and leaves the debt; a lost match keeps the
 buy-in and makes you wait a week), and leaves a **next goal and a way back**.
 Nothing soft-locks: the content tests hold the kitchen table open in every
 chapter, and the bus home is free.
@@ -249,8 +249,8 @@ missed and collected on.
 | **Broke** — below the cheapest seat ($100) | the roll | Ray (Silver Creek), Dana (Silver Creek), Marcus (wherever he is) | win the kitchen table | Marcus deals his home game again: the bus home is free, and the win is a roll to climb from |
 | **Short for the room** — Harbor Room needs $1,000 | the town you are in | Hal | twenty buy-ins | back down to the riverboat ($300), climb again |
 | **Owing** — a stake running | days | the sponsor, and their collector standing beside them | pay before the day | pay at the sponsor |
-| **A stake missed** | the hunt | the sponsor ("he is out looking for you") | pay, or skip town | paying calls the hunt off; skipping town buys a day |
-| **Caught** | three quarters of what you carry; the debt stands | the sponsor's collector, in person | the debt, three days of grace | rebuild, pay; the sponsor notices you paid late |
+| **A stake missed** | the hunt | the sponsor ("he is out looking for you") | pay (skipping town does not help: they ambush you on arrival) | paying calls the hunt off |
+| **Caught** | every possession and all cash but a $20 fare; the debt stands | the sponsor's collector, in person | the debt, three days of grace | rebuild, pay; the sponsor notices you paid late |
 | **The match lost** | the $120,000, and a week | Nadia, Marcus, Dana, Hal, Kit | $120,000 again and seven days | the rematch; win it and Marcus tells the comeback |
 | **The first poker night lost** | nothing but pride | Marcus | win it | he deals you back in, as often as it takes |
 
@@ -317,7 +317,7 @@ Kit is what the debt looks like when it happens to somebody. His arc now ends
 whichever way the match goes:
 
 - **Before the match**, after `kit-lumina`: the Consortium's men caught him off
-  the boat — three quarters of everything, and the debt did not move
+  the boat — everything, and the debt did not move
   (`kit-caught`). The mechanic, shown on somebody else first.
 - **You lose**: his warning about Madame Wen pays off both ways — heeded
   (`kit-after-the-loss`) or not (`kit-told-you`).
