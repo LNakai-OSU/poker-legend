@@ -1433,6 +1433,8 @@ export const EVENTS: GameEvent[] = [
               'Marcus: I am not saying it is you. I am saying I want to be at the rail if it is.',
             ],
           },
+          { kind: 'dialogue', speaker: 'marcus', lines: ['Marcus: She came through Basin once, years back. Sat at my kitchen table, won, and left her watch under the sugar bowl. I have kept it.'] },
+          { kind: 'setFlag', flag: 'clueWatch' },
         ],
       },
       { kind: 'dialogue', lines: ['Silver Creek. A casino at the end of the reservation road, and a dollar-two game inside it.'] },
@@ -1572,6 +1574,15 @@ export const EVENTS: GameEvent[] = [
         when: [{ kind: 'eventDone', eventId: 'marcus-rides-out-with-you' }],
         then: [{ kind: 'dialogue', speaker: 'ray', lines: ['Ray: Saw your friend walk you in. Overalls. Hang on to him. This room eats friends.'] }],
       },
+      {
+        kind: 'dialogue',
+        speaker: 'ray',
+        lines: [
+          'Ray: There was a girl, years back. Bought her first stack with her mother’s ring, and lost it twice in one night.',
+          'Ray: Third time she did not lose. Somebody had paid for the third stack. A Mr. W. I never saw his face.',
+        ],
+      },
+      { kind: 'setFlag', flag: 'clueRing' },
     ],
   },
   {
@@ -1801,6 +1812,15 @@ export const EVENTS: GameEvent[] = [
           'Deb: You want to be taken seriously here, come and find me in the diner.',
         ],
       },
+      {
+        kind: 'dialogue',
+        speaker: 'deb',
+        lines: [
+          'Deb: Cass will tell you the rope is a kindness. It is a way of choosing who to watch.',
+          'Deb: Everybody up that river owes somebody. The woman at the top just owes the biggest.',
+        ],
+      },
+      { kind: 'setFlag', flag: 'clueRope' },
     ],
   },
   {
@@ -2038,6 +2058,15 @@ export const EVENTS: GameEvent[] = [
           'Hal: Start with position. Acting last is worth more than any card I could sell you.',
         ],
       },
+      {
+        kind: 'dialogue',
+        speaker: 'hal',
+        lines: [
+          'Hal: She could read a room before she could read a book. I taught her not to stop.',
+          'Hal: That was the mistake. She never found the place where you are allowed to stop. She took the penthouse for a table that never closes.',
+        ],
+      },
+      { kind: 'setFlag', flag: 'clueTable' },
     ],
   },
   {
@@ -2219,6 +2248,15 @@ export const EVENTS: GameEvent[] = [
           'Marcus: Lumina is two stops from here. I am not saying anything. I am just saying it is two stops.',
         ],
       },
+      {
+        kind: 'dialogue',
+        speaker: 'marcus',
+        lines: [
+          'Marcus: I read the programme on the plane. The Invitational prize is paid by a Consortium.',
+          'Marcus: Nobody has ever seen the champion spend it. Four years. Not a car, not a coat. Think about that.',
+        ],
+      },
+      { kind: 'setFlag', flag: 'clueConsortium' },
     ],
   },
   {
@@ -2418,6 +2456,15 @@ export const EVENTS: GameEvent[] = [
           'Dana: Somebody is going to want to meet you soon. Do not ask who. You know who.',
         ],
       },
+      {
+        kind: 'dialogue',
+        speaker: 'dana',
+        lines: [
+          'Dana: Since you will hear it anyway: I am not Nadia’s friend. I am her scout, and I was given a brief.',
+          'Dana: Find somebody who plays fair under pressure. Somebody she cannot buy and cannot fix. She would not say why.',
+        ],
+      },
+      { kind: 'setFlag', flag: 'clueScout' },
     ],
   },
   {
@@ -2735,6 +2782,38 @@ export const EVENTS: GameEvent[] = [
       },
       {
         kind: 'if',
+        when: [
+          { kind: 'flag', flag: 'clueWatch' },
+          { kind: 'flag', flag: 'clueRing' },
+          { kind: 'flag', flag: 'clueRope' },
+          { kind: 'flag', flag: 'clueTable' },
+          { kind: 'flag', flag: 'clueConsortium' },
+          { kind: 'flag', flag: 'clueScout' },
+        ],
+        then: [
+          {
+            kind: 'dialogue',
+            speaker: 'dana',
+            lines: [
+              'Dana: You have been asking round. Marcus, Ray, Deb, Hal. You have most of it already, so here is the rest.',
+              'Dana: The penthouse is not hers. Madame Wen paid for Nadia’s first stack, and Nadia has been paying her back ever since. She holds that room as Wen’s collateral.',
+              'Dana: She cannot lose on purpose. Wen would take the room, and her with it. She needs somebody to beat her clean, in front of everyone, so nobody can call it a gift.',
+              'Dana: That was my brief. Not a scout. Somebody she cannot buy and cannot fix.',
+            ],
+          },
+        ],
+        else: [
+          {
+            kind: 'dialogue',
+            speaker: 'dana',
+            lines: [
+              'Dana: There is more to her than I can say here. Keep asking and somebody will tell you.',
+            ],
+          },
+        ],
+      },
+      {
+        kind: 'if',
         when: [{ kind: 'flag', flag: 'askedNadiaWho' }],
         then: [{ kind: 'dialogue', speaker: 'dana', lines: ['Dana: She told you to ask me. She always makes me say it myself.'] }],
       },
@@ -2902,6 +2981,45 @@ export const EVENTS: GameEvent[] = [
               },
             ],
             else: [{ kind: 'dialogue', speaker: 'dana', lines: ['Dana: I could write to you about them. If you like.'] }],
+          },
+        ],
+      },
+      {
+        kind: 'if',
+        when: [{ kind: 'flag', flag: 'penthouseSettled' }],
+        then: [
+          {
+            kind: 'dialogue',
+            speaker: 'dana',
+            lines: [
+              'Dana: You paid Wen from the prize. It is in the book as a debt cleared. I have never written that column before.',
+            ],
+          },
+        ],
+      },
+      {
+        kind: 'if',
+        when: [{ kind: 'flag', flag: 'penthouseWen' }],
+        then: [
+          {
+            kind: 'dialogue',
+            speaker: 'dana',
+            lines: [
+              'Dana: Wen rang the desk this morning to ask after the room. Politely. That is how it starts.',
+            ],
+          },
+        ],
+      },
+      {
+        kind: 'if',
+        when: [{ kind: 'flag', flag: 'penthouseFund' }],
+        then: [
+          {
+            kind: 'dialogue',
+            speaker: 'dana',
+            lines: [
+              'Dana: Three letters already, asking about the fund. One of them is in Kit’s handwriting.',
+            ],
           },
         ],
       },
@@ -5145,6 +5263,74 @@ export const EVENTS: GameEvent[] = [
       // The penthouse is the prize, however the film is reached (the playtest panel plays it on demand).
       { kind: 'setFlag', flag: 'hasPenthouse' },
       { kind: 'setFlag', flag: 'beatFinalRival' },
+      {
+        kind: 'if',
+        when: [
+          { kind: 'flag', flag: 'clueWatch' },
+          { kind: 'flag', flag: 'clueRing' },
+          { kind: 'flag', flag: 'clueRope' },
+          { kind: 'flag', flag: 'clueTable' },
+          { kind: 'flag', flag: 'clueConsortium' },
+          { kind: 'flag', flag: 'clueScout' },
+        ],
+        then: [
+          {
+            kind: 'dialogue',
+            speaker: 'nadia',
+            lines: [
+              'Nadia: Well played. Nobody can say I lost it on purpose. Not Wen, not the room.',
+              'Nadia: Marcus still has my watch, I hear. Under a sugar bowl. Tell him he can keep it.',
+              'Nadia: Now you know what comes with the room. Wen holds the paper. It is not a gift, it is a ledger.',
+            ],
+          },
+          {
+            kind: 'choice',
+            speaker: 'nadia',
+            prompt: 'What do you do about Wen’s paper?',
+            options: [
+              {
+                label: 'Settle it from the prize',
+                then: [
+                  { kind: 'setFlag', flag: 'penthouseSettled' },
+                  {
+                    kind: 'dialogue',
+                    speaker: 'nadia',
+                    lines: [
+                      'Nadia: Then it is yours and nobody else’s. You will not feel what it cost until the statement comes.',
+                    ],
+                  },
+                ],
+              },
+              {
+                label: 'Leave it with Wen',
+                then: [
+                  { kind: 'setFlag', flag: 'penthouseWen' },
+                  {
+                    kind: 'dialogue',
+                    speaker: 'nadia',
+                    lines: [
+                      'Nadia: Then you keep the keys and she keeps the pen. Mind the hours she calls.',
+                    ],
+                  },
+                ],
+              },
+              {
+                label: 'Open a stake fund in the room’s name',
+                then: [
+                  { kind: 'setFlag', flag: 'penthouseFund' },
+                  {
+                    kind: 'dialogue',
+                    speaker: 'nadia',
+                    lines: [
+                      'Nadia: A stake for the next one who is short. Kit would laugh. Then he would ask for a loan.',
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
       { kind: 'fade', to: 'out' },
       { kind: 'cinematic', id: 'ending' },
       // After the credits you are home: forty-one floors up, by the lift.

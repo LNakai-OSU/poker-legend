@@ -118,6 +118,44 @@ export const STORY_FLAGS = {
     clear: 'you have not staked Kit',
   },
 
+  // The Okonkwo question (docs/STORYBOARD.md §8): six clues, one per stop, and what you do about the penthouse's debt.
+  clueWatch: {
+    set: 'Marcus told you Nadia once left her watch at his kitchen table',
+    clear: 'you have not heard about the watch',
+  },
+  clueRing: {
+    set: 'Ray told you about the girl who paid for her first stack with a ring, and Mr. W',
+    clear: 'you have not heard Ray’s story of the girl',
+  },
+  clueRope: {
+    set: 'Deb told you everybody on the river owes somebody',
+    clear: 'you have not heard Deb on who owes whom',
+  },
+  clueTable: {
+    set: 'Hal told you why Nadia never stopped reading rooms',
+    clear: 'you have not heard why Hal and Nadia parted',
+  },
+  clueConsortium: {
+    set: 'Marcus told you nobody has seen the champion spend the prize',
+    clear: 'you have not heard who pays the Invitational',
+  },
+  clueScout: {
+    set: 'Dana told you what her brief from Nadia was',
+    clear: 'you have not heard what Dana was told to find',
+  },
+  penthouseSettled: {
+    set: 'you paid Wen’s paper on the penthouse from the prize',
+    clear: 'you have not settled Wen’s paper',
+  },
+  penthouseWen: {
+    set: 'you left Wen’s paper on the penthouse with Wen',
+    clear: 'you have not left Wen’s paper with her',
+  },
+  penthouseFund: {
+    set: 'you opened a stake fund in the penthouse’s name',
+    clear: 'you have not opened the stake fund',
+  },
+
   // The errands (`errands.ts`): small jobs round each town. Each is a choice the
   // client and the afterword remember.
   errandPatelRaised: {
