@@ -524,9 +524,9 @@ Hal teaches the nerd's side of the game; Dr. Anand is the nerd on the air.
 
 ---
 
-## 8. The Okonkwo question — a mystery, a rival, a boss each town (proposed, 2026-11-07)
+## 8. The Okonkwo question — a mystery, a rival, a boss each town (built, 2026-11-07)
 
-Status: **proposed**. Nothing here is built. Everything is data — events, flags,
+Status: **built** except where marked. Decisions: the penthouse is Wen's collateral, the debt choice stays, and Kit is a real opponent at the final table. Everything is data — events, flags,
 character chapters, a Jobs/Goals line — and fits the content model in the Bible.
 Bosses named below (Lou Brannigan, Odette, Bellamy, Inés Calloway, Solomon Vale)
 are from `goals.ts`; their lines should be fitted to the voices already in
@@ -654,3 +654,37 @@ Open questions for you: (a) is "the penthouse is Wen's collateral" the answer yo
 want, or should Nadia's secret be something personal? (b) Is a debt settlement
 choice too bleak for the ending you have, which currently reads as a cost of
 fame? (c) Should Kit's seat at the final table be a real opponent or a cameo?
+
+### 8.6 As built
+
+- **Voicemails.** Not a new trigger: each is an `if` at the head of the arrival
+  beat (`arrive-riverbend` … `arrive-lumina`), played when the previous town's
+  boss is beaten. They read `trustsDana`/`cutDanaOff` (Riverbend), the Cass debt
+  (Harbor), any overdue debt (Palm Cay), any debt (Mesa). The ice joke runs one
+  bag → a cooler → a second freezer → the baker's walk-in → "I'm bringing the ice."
+- **Clues.** Flags `clueWatch` (Marcus on the 14), `clueRing` (Ray), `clueRope`
+  (Deb, not Cass: sponsors have no talk beat), `clueTable` (Hal), `clueConsortium`
+  (Marcus on holiday), `clueScout` (Dana at the Mesa). Four are also set by the
+  boss beats below, so a save that skipped the first speaker still gets them.
+  Saves that skipped Marcus's ride (`clueWatch`) cannot reach six of six.
+- **The Nadia file** is `nadiaFile` in `game/progression.ts`, shown on the Jobs
+  page from the first clue.
+- **Dana's reveal** (`dana-reveal`) tells the whole Wen story with six clues and
+  a hint with fewer. The **debt choice** is in `final-won`, before the ending
+  film, with six clues only: settle (`penthouseSettled`), leave it with Wen
+  (`penthouseWen`), or open a stake fund (`penthouseFund`). `ledgerFor` in
+  `world/ending.ts` changes the settlement statement; `dana-after` reads the flag.
+  The fund option reads "open a stake fund in the room's name" (what "give Kit's
+  stake the penthouse's name" turned into): it makes you the sponsor.
+- **Kit.** Riverbend: a choice sets `tookKitsDare`, read by `kit-palmcay`. Palm
+  Cay: an optional cash game at `palmcay-kit` (heads up, $5,000, you may rebuy or
+  stand up; no outcome flag because tables have no result trigger). Mesa: stake
+  him $10,000 (`stakedKit`), tip off Mr. Lowe (`tippedOffKit`) or say nothing
+  (`ignoredKit`). At Lumina each has its own beat (`kit-lumina-staked` …); staked
+  Kit is repaid at the aftermath; `ignoredKit` seats him at the tournament's
+  final table (`guestId` in `stepTournament`, in the shortest chair, once);
+  tipped-off Kit asks for nothing (`kit-after-hunted`).
+- **Bosses.** Not new events: lines folded into the existing `*-boss-door` (before)
+  and `*-boss-sendoff` (after) beats. The "after" perks in §8.3 (debt interest
+  halved, Hal's lesson free, the Fixer's price) are **not built**, because each
+  needs mechanics, not data; they are lines only.
