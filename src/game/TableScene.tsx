@@ -1102,12 +1102,12 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
                   scale={P}
                   testId="end-popup-card"
                   style={{
-                    padding: 5 * P,
+                    padding: 7 * P,
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     gap: 3 * P,
-                    width: 'min(100%, ' + Math.round(150 * P) + 'px)',
+                    width: 'min(100%, ' + Math.round(210 * P) + 'px)',
                     maxHeight: '100%',
                     overflowY: 'auto',
                     boxSizing: 'border-box',
@@ -1188,8 +1188,8 @@ function EndPanel({
       data-testid={ending}
       style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 * P, textAlign: 'center', width: '100%' }}
     >
-      <h2 style={{ margin: 0, lineHeight: 0 }}>
-        <PixelText text={title} scale={P} ink={{ color: theme.ui.outline, shadow: theme.ui.band }} />
+      <h2 style={{ margin: 0, lineHeight: 0, width: '100%' }}>
+        <PixelText text={title} scale={P} wrap align="center" ink={{ color: theme.ui.outline, shadow: theme.ui.band }} />
       </h2>
       {children}
     </div>
