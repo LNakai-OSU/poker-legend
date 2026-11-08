@@ -1702,6 +1702,55 @@ export const EVENTS: GameEvent[] = [
     about: 'Arriving at Riverbend: the boat, the bankroll that buys the Harbor, and somebody asking after you. Then you walk in to its table.',
     trigger: { kind: 'enterArea', areaId: 'rb-street' },
     actions: [
+      {
+        kind: 'if',
+        when: [{ kind: 'casino', cityId: 'silverCreek', status: 'bossBeaten' }],
+        then: [
+            { kind: 'dialogue', lines: ['Your phone buzzes. A voicemail, from Marcus.'] },
+            {
+              kind: 'dialogue',
+              speaker: 'marcus',
+              lines: [
+                'Marcus: It’s me. Ray called the house. Ray, who has not called anyone since 1994. He says you took Lou’s chair.',
+              ],
+            },
+            {
+              kind: 'if',
+              when: [{ kind: 'flag', flag: 'trustsDana' }],
+              then: [
+              {
+                kind: 'dialogue',
+                speaker: 'marcus',
+                lines: [
+                  'Marcus: Dana rang as well. She says hello. She says it a lot, for somebody who only watches.',
+                ],
+              },
+              ],
+              else: [
+              {
+                kind: 'if',
+                when: [{ kind: 'flag', flag: 'cutDanaOff' }],
+                then: [
+                {
+                  kind: 'dialogue',
+                  speaker: 'marcus',
+                  lines: [
+                    'Marcus: Dana asked where you’d gone. I said I didn’t know. I think she knew I was lying.',
+                  ],
+                },
+                ],
+              },
+              ],
+            },
+            {
+              kind: 'dialogue',
+              speaker: 'marcus',
+              lines: [
+                'Marcus: Update. I bought a bag of ice for the penthouse. It’s in my freezer. One bag. Tell the penthouse.',
+              ],
+            },
+        ],
+      },
       { kind: 'dialogue', lines: ['Riverbend Landing. A riverboat that has not moved in eleven years, and a two-five game that never stops.'] },
       {
         kind: 'dialogue',
@@ -1882,6 +1931,79 @@ export const EVENTS: GameEvent[] = [
     about: 'Arriving at Crescent Harbor: a name, a suit, and the room behind the room. Then you walk in to its table.',
     trigger: { kind: 'enterArea', areaId: 'ch-street' },
     actions: [
+      {
+        kind: 'if',
+        when: [{ kind: 'casino', cityId: 'riverbend', status: 'bossBeaten' }],
+        then: [
+            { kind: 'dialogue', lines: ['Your phone buzzes. A voicemail, from Marcus.'] },
+            {
+              kind: 'dialogue',
+              speaker: 'marcus',
+              lines: [
+                'Marcus: Deb rang. Deb, who has run a boat for eleven years, rang me to say you’re fine. I have never been so frightened.',
+              ],
+            },
+              {
+                kind: 'if',
+                when: [{ kind: 'debt', sponsorId: 'cass', status: 'overdue' }],
+                then: [
+                {
+                  kind: 'dialogue',
+                  speaker: 'marcus',
+                  lines: [
+                    'Marcus: A man called Dutch asked after you at Patel’s. Patel told him the dollar was a fake. It’s the bravest thing Patel has done.',
+                  ],
+                },
+                ],
+                else: [
+                {
+                  kind: 'if',
+                  when: [{ kind: 'debt', sponsorId: 'cass', status: 'owing' }],
+                  then: [
+                  {
+                    kind: 'dialogue',
+                    speaker: 'marcus',
+                    lines: [
+                      'Marcus: I hear you owe Cass. Pay people early. It’s cheaper than apologising.',
+                    ],
+                  },
+                  ],
+                  else: [
+              {
+                kind: 'if',
+                when: [{ kind: 'count', of: 'repaid', sponsorId: 'cass' }],
+                then: [
+                {
+                  kind: 'dialogue',
+                  speaker: 'marcus',
+                  lines: [
+                    'Marcus: I hear you paid Cass back. I’d have lent you the money. I’d have lent you the kitchen.',
+                  ],
+                },
+                ],
+                else: [
+                  {
+                    kind: 'dialogue',
+                    speaker: 'marcus',
+                    lines: [
+                      'Marcus: You didn’t take Cass’s money. Good. Or stubborn. In my experience it’s the same thing wearing a coat.',
+                    ],
+                  },
+                ],
+              },
+                  ],
+                },
+                ],
+              },
+            {
+              kind: 'dialogue',
+              speaker: 'marcus',
+              lines: [
+                'Marcus: Ice. Two bags now, and a cooler to keep them in. The cooler has a note on it. The note says PENTHOUSE.',
+              ],
+            },
+        ],
+      },
       { kind: 'dialogue', lines: ['Crescent Harbor. Card rooms with carpet, and doors that open for people the room already knows.'] },
       {
         kind: 'dialogue',
@@ -2026,6 +2148,41 @@ export const EVENTS: GameEvent[] = [
     about: 'Arriving at Palm Cay: the soft money, the bankroll that buys the Mesa, and a face from home. Then you walk in to its table.',
     trigger: { kind: 'enterArea', areaId: 'pc-street' },
     actions: [
+      {
+        kind: 'if',
+        when: [{ kind: 'casino', cityId: 'crescentHarbor', status: 'bossBeaten' }],
+        then: [
+            { kind: 'dialogue', lines: ['Your phone buzzes. A voicemail, from Marcus.'] },
+            {
+              kind: 'dialogue',
+              speaker: 'marcus',
+              lines: [
+                'Marcus: It’s me. I’m at an airport. I’m not telling you which one, and I’m not going anywhere you’re going. Don’t read into it.',
+                'Marcus: I bought a hat for the trip. I’m told it’s terrible.',
+              ],
+            },
+            {
+              kind: 'if',
+              when: [{ kind: 'debt', status: 'overdue' }],
+              then: [
+              {
+                kind: 'dialogue',
+                speaker: 'marcus',
+                lines: [
+                  'Marcus: A man in a good coat knocked on the bakery. I said I’d never heard of you. He said he’d come back. I said that was fine. It wasn’t fine.',
+                ],
+              },
+              ],
+            },
+            {
+              kind: 'dialogue',
+              speaker: 'marcus',
+              lines: [
+                'Marcus: The ice is in a second freezer now, because the first freezer was full of the first ice. This isn’t a joke any more. Tell the penthouse it’s getting serious.',
+              ],
+            },
+        ],
+      },
       { kind: 'dialogue', lines: ['Palm Cay. Linen, rum, and people who have forgotten what day it is, playing ten-twenty-five.'] },
       {
         kind: 'dialogue',
@@ -2158,6 +2315,41 @@ export const EVENTS: GameEvent[] = [
     about: 'Arriving at Neon Mesa: the studied money, and the bankroll that buys the plane to Lumina. Then you walk in to its table.',
     trigger: { kind: 'enterArea', areaId: 'nm-street' },
     actions: [
+      {
+        kind: 'if',
+        when: [{ kind: 'casino', cityId: 'palmCay', status: 'bossBeaten' }],
+        then: [
+            { kind: 'dialogue', lines: ['Your phone buzzes. A voicemail, from Marcus.'] },
+            {
+              kind: 'dialogue',
+              speaker: 'marcus',
+              lines: [
+                'Marcus: I got home from the Cay and the kitchen was smaller. I don’t mean that sadly. I mean I measured it.',
+                'Marcus: They’re saying Inés Calloway lost to a kid in a plain shirt. Nobody here knows it’s you. I’ve told everybody.',
+              ],
+            },
+            {
+              kind: 'if',
+              when: [{ kind: 'debt', status: ['owing', 'overdue'] }],
+              then: [
+              {
+                kind: 'dialogue',
+                speaker: 'marcus',
+                lines: [
+                  'Marcus: Pay what you owe before you reach Lumina. Whatever you do up there, do it owing nobody. That’s my only advice and it isn’t about poker.',
+                ],
+              },
+              ],
+            },
+            {
+              kind: 'dialogue',
+              speaker: 'marcus',
+              lines: [
+                'Marcus: The ice has outgrown the freezers. The baker downstairs lent me the walk-in. He wants rent in ice. I’m beginning to think the ice has a plan.',
+              ],
+            },
+        ],
+      },
       { kind: 'dialogue', lines: ['Neon Mesa. Everything lit, everybody studied, and nobody at the tables twitches for free.'] },
       {
         kind: 'dialogue',
@@ -2295,6 +2487,29 @@ export const EVENTS: GameEvent[] = [
     about: 'Arriving at Porto Lumina: the nosebleed, the tournament, and the man who photographs the winner. Then you walk in to the casino, where Nadia is waiting at the foyer rope (`nadia-names-the-match`).',
     trigger: { kind: 'enterArea', areaId: 'pl-street' },
     actions: [
+      {
+        kind: 'if',
+        when: [{ kind: 'casino', cityId: 'neonMesa', status: 'bossBeaten' }],
+        then: [
+            { kind: 'dialogue', lines: ['Your phone buzzes. A voicemail, from Marcus.'] },
+            {
+              kind: 'dialogue',
+              speaker: 'marcus',
+              lines: [
+                'Marcus: A car has come for me. A black car, with a driver. He says Ms. Okonkwo sent it, and he knew my name.',
+                'Marcus: I haven’t said yes. I’m sitting in the back with the door shut. The seats are heated. I want you to know I’m not enjoying it.',
+              ],
+            },
+            {
+              kind: 'dialogue',
+              speaker: 'marcus',
+              lines: [
+                'Marcus: I’m bringing the ice. All of it. The baker wants his walk-in back on Tuesday.',
+                'Marcus: Pick up when you can. I’ll be at the rail.',
+              ],
+            },
+        ],
+      },
       {
         kind: 'dialogue',
         lines: ['Porto Lumina. A waterfront, a tower lit from the base, and forty-one floors above the casino, a penthouse.'],
