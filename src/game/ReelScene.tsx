@@ -117,7 +117,7 @@ export function ReelScene({
             gap: 12,
           }}
         >
-          <span>● LIVE · LEGENDS INVITATIONAL</span>
+          <span>{panel.bug ?? '● LIVE · LEGENDS INVITATIONAL'}</span>
           <span>{panel.ticker}</span>
         </div>
       )}

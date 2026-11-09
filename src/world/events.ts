@@ -160,6 +160,8 @@ export interface ReelPanel {
   caption?: string
   /** The broadcast's lower third: a stack, a blind level, a score. */
   ticker?: string
+  /** The red label at the left of the ticker; the live broadcast's by default. A tape says so. */
+  bug?: string
   /** What the phone shows: one lock-screen card each, in the order they arrive. */
   notifications?: { from: string; text: string }[]
   lines: ReelLine[]
@@ -714,6 +716,162 @@ export function arrivalClashes(events: GameEvent[]): Array<[GameEvent, GameEvent
 }
 
 /**
+ * The refresher on offer before the first poker night: the commentators, still
+ * on air during the blackout at Porto Lumina, put out an old tape of Hal's to
+ * buy time. It covers the game as the tables here play it — hold'em: the hands,
+ * the seats, the sizes of a bet, the bluff. Free, skippable, and never gates
+ * anything; the paid lessons (`hal-first-lesson`) go further than this.
+ */
+const REFRESHER_TAPE: EventAction[] = [
+  { kind: 'fade', to: 'out' },
+  {
+    kind: 'reel',
+    title: 'Live from Porto Lumina',
+    panels: [
+      {
+        scene: 'booth',
+        ticker: 'TECHNICAL DIFFICULTY · PLEASE STAND BY',
+        lines: [
+          { who: 'Chip', text: 'Folks, the rig is still down, and the engineers tell me "ten minutes". They said that an hour ago.' },
+          { who: 'Dr. Anand', text: 'The archive has sent over a tape. I am told it is educational. I am also told it is the only thing we have.' },
+          { who: 'Chip', text: 'Hal\'s Hold\'em Handbook! Filmed in a rented hall, in what looks like a sweater he still owns. Roll it!' },
+        ],
+      },
+      {
+        scene: 'studio',
+        ticker: 'TAPE 1 · THE GAME',
+        bug: '▶ ARCHIVE · HAL\'S HOLD\'EM HANDBOOK',
+        caption: 'Grainy tape. A man at a card table, much younger, still wearing the glasses.',
+        lines: [
+          { who: 'hal', text: 'Hal: Welcome. Sit. Everything here is Texas hold\'em, and it takes a minute to learn and a lifetime to stop learning.' },
+          { who: 'hal', text: 'Hal: You get two cards of your own, face down. Five more go in the middle, face up, and everybody shares them.' },
+          { who: 'hal', text: 'Hal: Your hand is the best five cards you can make from those seven. Use both of yours, one, or none.' },
+          { who: 'hal', text: 'Hal: Four rounds of betting. Before the flop, with only your two cards. The flop, three shared cards. The turn, a fourth. The river, the fifth. Then the showdown.' },
+        ],
+      },
+      {
+        scene: 'studio',
+        ticker: 'TAPE 2 · THE HANDS, BEST TO WORST',
+        bug: '▶ ARCHIVE · HAL\'S HOLD\'EM HANDBOOK',
+        lines: [
+          { who: 'hal', text: 'Hal: Best first. Royal flush: ten to ace, one suit. Then a straight flush: five in a row, one suit.' },
+          { who: 'hal', text: 'Hal: Four of a kind. Then a full house: three of one rank and two of another. Then a flush: five of one suit, any order.' },
+          { who: 'hal', text: 'Hal: A straight: five in a row, any suits. The ace goes high or low. Then three of a kind, two pair, one pair.' },
+          { who: 'hal', text: 'Hal: And if you have none of those, the highest card plays. When two hands match, the kicker, the next-highest card, decides it. Kickers break more hearts than any bluff.' },
+        ],
+      },
+      {
+        scene: 'booth',
+        ticker: 'STILL OFF AIR · PLEASE STAND BY',
+        lines: [
+          { who: 'Dr. Anand', text: 'For viewers keeping score: a flush beats a straight. A full house beats a flush. I mention it because it is the thing people get wrong on television.' },
+          { who: 'Chip', text: 'And the lights are STILL out, folks! Back to Hal!' },
+        ],
+      },
+      {
+        scene: 'studio',
+        ticker: 'TAPE 3 · POSITION',
+        bug: '▶ ARCHIVE · HAL\'S HOLD\'EM HANDBOOK',
+        caption: 'Hal draws a circle of chairs on a chalkboard and taps one.',
+        lines: [
+          { who: 'hal', text: 'Hal: A marker called the button moves one seat left every hand. Whoever has it deals. That seat is the best seat at the table.' },
+          { who: 'hal', text: 'Hal: Two seats to its left post forced bets, the blinds, so there is always something to play for. The small blind first, the big blind next.' },
+          { who: 'hal', text: 'Hal: After the flop, the first player to act is the one just left of the button. The button acts last. Acting last means you see what everyone does before you decide.' },
+          { who: 'hal', text: 'Hal: Early seats, the ones that act first, play only strong hands. Late seats, the cutoff and the button, can play more. Position is worth more than any card I could sell you.' },
+        ],
+      },
+      {
+        scene: 'studio',
+        ticker: 'TAPE 4 · BETTING AND ITS SIZES',
+        bug: '▶ ARCHIVE · HAL\'S HOLD\'EM HANDBOOK',
+        lines: [
+          { who: 'hal', text: 'Hal: When it is your turn you may fold, give up your hand and put in nothing more. Check, if nobody has bet, and stay in free. Call, match the bet. Or bet or raise.' },
+          { who: 'hal', text: 'Hal: A raise has to be at least as big as the bet it is raising. And all-in means everything you have, and you can never lose more than that.' },
+          { who: 'hal', text: 'Hal: Size your bets against the pot, the money in the middle. A third of the pot is a small bet: cheap, and it says "I might have it". Half to two-thirds is the bet you will make most.' },
+          { who: 'hal', text: 'Hal: A full pot-sized bet is the big one: it makes a draw pay the most to see a card, and it makes a bluff look like strength. Over the pot is for when you are certain, or when you are not afraid.' },
+          { who: 'hal', text: 'Hal: And do the sum on a call. Someone bets half the pot: you need to win about one time in four to break even. Bet the full pot, one in three. The price a call asks decides whether it is a good one.' },
+        ],
+      },
+      {
+        scene: 'booth',
+        ticker: 'STILL OFF AIR · PLEASE STAND BY',
+        lines: [
+          { who: 'Dr. Anand', text: 'He has just described pot odds. I have waited eleven years to hear someone do it without a whiteboard.' },
+          { who: 'Chip', text: 'The man is a natural, folks! Hal, take us home!' },
+        ],
+      },
+      {
+        scene: 'studio',
+        ticker: 'TAPE 5 · THE BLUFF',
+        bug: '▶ ARCHIVE · HAL\'S HOLD\'EM HANDBOOK',
+        caption: 'Hal shuffles a deck one-handed. The tape jumps.',
+        lines: [
+          { who: 'hal', text: 'Hal: A bluff is a bet with a worse hand, made to get a better one to fold. It is a story. It has to make sense from the first street to the last.' },
+          { who: 'hal', text: 'Hal: Ask yourself: what hand would I have if I played it this way? If the answer is a strong one, bet. If you would have checked it, do not suddenly bet big on the river.' },
+          { who: 'hal', text: 'Hal: Bluff the player who can fold. Do not bluff a calling station, a man who calls with anything. You cannot scare someone who does not look at his cards.' },
+          { who: 'hal', text: 'Hal: Better than a pure bluff is the semi-bluff: a bet with a hand that is not there yet, four cards to a flush, say. If they fold you win now. If they call, you can still hit.' },
+          { who: 'hal', text: 'Hal: And watch them. Everybody has a tell: the hand that shakes, the breath held, the chips stacked too carefully. Do not rely on one. Collect them.' },
+        ],
+      },
+      {
+        scene: 'studio',
+        ticker: 'TAPE 6 · LAST THINGS',
+        bug: '▶ ARCHIVE · HAL\'S HOLD\'EM HANDBOOK',
+        lines: [
+          { who: 'hal', text: 'Hal: Fold more than you think you should. Most hands are not worth the money to see them. Patience is the first skill and it is the last one too.' },
+          { who: 'hal', text: 'Hal: Never play money you cannot lose. And when you lose a hand you played right, go on to the next one as if nothing happened. The cards do not owe you anything.' },
+          { who: 'hal', text: 'Hal: That is the lot. Now go and play, and bring me the stories. That is the only fee I charge on this tape.' },
+        ],
+      },
+      {
+        scene: 'booth',
+        ticker: 'POKER LEGENDS · THE LIGHTS RETURN',
+        lines: [
+          { who: 'Chip', text: 'And that was Hal, folks! A legend, if you only count the people who listened!' },
+          { who: 'Dr. Anand', text: 'I took notes. For the record, I am the only one in this booth who did.' },
+        ],
+      },
+    ],
+  },
+  { kind: 'fade', to: 'in' },
+  {
+    kind: 'dialogue',
+    speaker: 'marcus',
+    lines: [
+      'Marcus: Hal made that? In a sweater like that? I have been watching that tape on and off since I was twenty-six.',
+      'Marcus: Position, pot odds, do not bluff the man who does not look. It is all there. Now deal.',
+    ],
+  },
+]
+
+/**
+ * Asked at Marcus's table before the first deal: sit down, or get the refresher
+ * first. Either way the event carries on to the deal after it.
+ */
+const REFRESHER_CHOICE: EventAction = {
+  kind: 'choice',
+  speaker: 'marcus',
+  prompt: 'Do you want a refresher on how the game is played before we deal?',
+  options: [
+    {
+      label: 'Deal me in',
+      then: [{ kind: 'dialogue', speaker: 'marcus', lines: ['Marcus: Confident. I like it. It will not last.'] }],
+    },
+    {
+      label: 'Give me a refresher',
+      then: [
+        {
+          kind: 'dialogue',
+          speaker: 'marcus',
+          lines: ['Marcus: Sure, sure. I taped the night the lights went out at your final. They filled the time with this.'],
+        },
+        ...REFRESHER_TAPE,
+      ],
+    },
+  ],
+}
+
+/**
  * Every scripted beat in the game.
  *
  * Ordered roughly as the player meets them. An event fires on its trigger when
@@ -743,6 +901,7 @@ export const EVENTS: GameEvent[] = [
           'Marcus: You in?',
         ],
       },
+      REFRESHER_CHOICE,
       { kind: 'startPokerNight' },
     ],
   },
@@ -930,6 +1089,7 @@ export const EVENTS: GameEvent[] = [
                   'Dana: I am always in the big chair.',
                 ],
               },
+              REFRESHER_CHOICE,
               { kind: 'startPokerNight' },
             ],
           },
@@ -1089,6 +1249,7 @@ export const EVENTS: GameEvent[] = [
           'Dana: I am always in the big chair.',
         ],
       },
+      REFRESHER_CHOICE,
       { kind: 'startPokerNight' },
     ],
   },
@@ -1209,6 +1370,7 @@ export const EVENTS: GameEvent[] = [
           'Dana: I am always in the big chair.',
         ],
       },
+      REFRESHER_CHOICE,
       { kind: 'startPokerNight' },
     ],
   },
