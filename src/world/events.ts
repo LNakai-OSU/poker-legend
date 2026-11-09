@@ -1,5 +1,6 @@
 import type { TimePeriod } from '../game/time'
 import type { StoryFlag } from './flags'
+import type { TapeExhibit } from './tape'
 import { ERRAND_EVENTS } from './errands'
 import {
   challengeStatus,
@@ -143,6 +144,8 @@ export type ReelScene =
   | 'sink'
   | 'rail'
   | 'night'
+  /** Hal's old tape: a chalkboard, a desk, and whatever his line puts up on the board. Drawn by `TapePanel`. */
+  | 'tape'
 
 /** The scripted scenes `cinematic` can play. */
 export type CinematicId = 'bad-beat' | 'ending' | 'slide' | 'retry'
@@ -151,6 +154,8 @@ export type CinematicId = 'bad-beat' | 'ending' | 'slide' | 'retry'
 export interface ReelLine {
   who: string
   text: string
+  /** Put this on the board from this line on (a `tape` panel); the last one stays up until another replaces it. */
+  show?: TapeExhibit
 }
 
 /** A set and what is said in front of it. */
@@ -160,8 +165,6 @@ export interface ReelPanel {
   caption?: string
   /** The broadcast's lower third: a stack, a blind level, a score. */
   ticker?: string
-  /** The red label at the left of the ticker; the live broadcast's by default. A tape says so. */
-  bug?: string
   /** What the phone shows: one lock-screen card each, in the order they arrive. */
   notifications?: { from: string; text: string }[]
   lines: ReelLine[]
@@ -734,62 +737,250 @@ const REFRESHER_TAPE: EventAction[] = [
         lines: [
           { who: 'Chip', text: 'Folks, the rig is still down, and the engineers tell me "ten minutes". They said that an hour ago.' },
           { who: 'Dr. Anand', text: 'The archive has sent over a tape. I am told it is educational. I am also told it is the only thing we have.' },
-          { who: 'Chip', text: 'Hal\'s Hold\'em Handbook! Filmed in a rented hall, in what looks like a sweater he still owns. Roll it!' },
+          { who: 'Chip', text: 'Hal\'s Hold\'em Handbook! Filmed in a rented hall, in a sweater he still owns. Roll it!' },
         ],
       },
       {
-        scene: 'studio',
+        scene: 'tape',
         ticker: 'TAPE 1 · THE GAME',
-        bug: '▶ ARCHIVE · HAL\'S HOLD\'EM HANDBOOK',
-        caption: 'Grainy tape. A man at a card table, much younger, still wearing the glasses.',
         lines: [
-          { who: 'hal', text: 'Hal: Welcome. Sit. Everything here is Texas hold\'em, and it takes a minute to learn and a lifetime to stop learning.' },
-          { who: 'hal', text: 'Hal: You get two cards of your own, face down. Five more go in the middle, face up, and everybody shares them.' },
-          { who: 'hal', text: 'Hal: Your hand is the best five cards you can make from those seven. Use both of yours, one, or none.' },
-          { who: 'hal', text: 'Hal: Four rounds of betting. Before the flop, with only your two cards. The flop, three shared cards. The turn, a fourth. The river, the fifth. Then the showdown.' },
+          {
+            who: 'hal',
+            text: 'Hal: Welcome. Texas hold\'em. You get two cards of your own, face down: your hole cards.',
+            show: { kind: 'board', hole: 'As Kd', board: '', note: 'YOUR HOLE CARDS. NOBODY ELSE SEES THEM.' },
+          },
+          {
+            who: 'hal',
+            text: 'Hal: Then cards go in the middle, face up, for everybody. Three first. That is the flop.',
+            show: { kind: 'board', hole: 'As Kd', board: 'Ks 7c 2d', note: 'THE FLOP · KING OF SPADES PAIRS YOUR KING' },
+          },
+          {
+            who: 'hal',
+            text: 'Hal: A fourth card, the turn. A fifth, the river. There is a round of betting after every step.',
+            show: { kind: 'board', hole: 'As Kd', board: 'Ks 7c 2d 9h 4s', note: 'THE TURN, THEN THE RIVER' },
+          },
+          {
+            who: 'hal',
+            text: 'Hal: Your hand is the best five cards out of those seven. Here: a pair of kings, ace kicker.',
+            show: { kind: 'board', hole: 'As Kd', board: 'Ks 7c 2d 9h 4s', make: 'As Kd Ks 9h 7c', rank: 'Pair', note: 'THE BEST FIVE OF THE SEVEN PLAY' },
+          },
+          {
+            who: 'hal',
+            text: 'Hal: Use both of your cards, one of them, or neither. Here the board is a royal flush and everyone splits it.',
+            show: { kind: 'board', hole: '2c 3d', board: 'As Ks Qs Js 10s', make: 'As Ks Qs Js 10s', rank: 'Straight Flush', note: 'PLAYING THE BOARD' },
+          },
         ],
       },
       {
-        scene: 'studio',
-        ticker: 'TAPE 2 · THE HANDS, BEST TO WORST',
-        bug: '▶ ARCHIVE · HAL\'S HOLD\'EM HANDBOOK',
+        scene: 'tape',
+        ticker: 'TAPE 2 · THE HANDS',
         lines: [
-          { who: 'hal', text: 'Hal: Best first. Royal flush: ten to ace, one suit. Then a straight flush: five in a row, one suit.' },
-          { who: 'hal', text: 'Hal: Four of a kind. Then a full house: three of one rank and two of another. Then a flush: five of one suit, any order.' },
-          { who: 'hal', text: 'Hal: A straight: five in a row, any suits. The ace goes high or low. Then three of a kind, two pair, one pair.' },
-          { who: 'hal', text: 'Hal: And if you have none of those, the highest card plays. When two hands match, the kicker, the next-highest card, decides it. Kickers break more hearts than any bluff.' },
+          {
+            who: 'hal',
+            text: 'Hal: Best of all, the straight flush: five in a row, one suit. Ace-high is the royal flush. Nobody beats it.',
+            show: {
+              kind: 'hands',
+              hands: [
+                { title: 'ROYAL FLUSH', sub: 'ten to ace', cards: 'As Ks Qs Js 10s', rank: 'Straight Flush' },
+                { title: 'STRAIGHT FLUSH', sub: 'run of one suit', cards: '9h 8h 7h 6h 5h', rank: 'Straight Flush' },
+              ],
+            },
+          },
+          {
+            who: 'hal',
+            text: 'Hal: Four of a kind. Then the full house: three of one rank and a pair of another.',
+            show: {
+              kind: 'hands',
+              hands: [
+                { title: 'FOUR OF A KIND', sub: 'four of one rank', cards: '9s 9h 9d 9c Kd', make: '9s 9h 9d 9c', rank: 'Four of a Kind' },
+                { title: 'FULL HOUSE', sub: 'three and two', cards: 'Kd Kh Ks 4c 4d', rank: 'Full House' },
+              ],
+            },
+          },
+          {
+            who: 'hal',
+            text: 'Hal: A flush is any five of one suit. A straight is five in a row, any suits. The flush is the better one.',
+            show: {
+              kind: 'hands',
+              hands: [
+                { title: 'FLUSH', sub: 'five of one suit', cards: 'Ah Jh 8h 6h 3h', rank: 'Flush', verdict: 'wins' },
+                { title: 'STRAIGHT', sub: 'five in a row', cards: '9c 8d 7h 6s 5c', rank: 'Straight', verdict: 'loses' },
+              ],
+            },
+          },
+          {
+            who: 'hal',
+            text: 'Hal: The ace plays high or low. Ace to five is the smallest straight, the wheel. Still a straight.',
+            show: {
+              kind: 'hands',
+              hands: [
+                { title: 'BROADWAY', sub: 'ace high', cards: 'As Kh Qd Jc 10h', rank: 'Straight' },
+                { title: 'THE WHEEL', sub: 'ace low', cards: 'Ah 2c 3d 4s 5h', rank: 'Straight' },
+              ],
+            },
+          },
+          {
+            who: 'hal',
+            text: 'Hal: Three of a kind. Two pair. One pair. Count the pairs, and watch the cards left over.',
+            show: {
+              kind: 'hands',
+              hands: [
+                { title: 'THREE OF A KIND', sub: 'three alike', cards: '7s 7h 7d Kc 2c', make: '7s 7h 7d', rank: 'Three of a Kind' },
+                { title: 'TWO PAIR', sub: 'two and two', cards: 'Jh Jd 4s 4c Ad', make: 'Jh Jd 4s 4c', rank: 'Two Pair' },
+              ],
+            },
+          },
+          {
+            who: 'hal',
+            text: 'Hal: One pair. And with nothing at all, your highest card plays. That is the bottom of the ladder.',
+            show: {
+              kind: 'hands',
+              hands: [
+                { title: 'ONE PAIR', sub: 'two alike', cards: 'Qs Qd 9h 6c 3d', make: 'Qs Qd', rank: 'Pair' },
+                { title: 'HIGH CARD', sub: 'the ace plays', cards: 'Ac Jd 8h 5s 3c', make: 'Ac', rank: 'High Card' },
+              ],
+            },
+          },
+          {
+            who: 'hal',
+            text: 'Hal: Same hand on both sides? Then the next-highest card, the kicker, decides it. Kickers break more hearts than bluffs do.',
+            show: {
+              kind: 'hands',
+              hands: [
+                { title: 'PAIR OF KINGS', sub: 'ace kicker', cards: 'Ks Kh Ad 8d 5c', make: 'Ks Kh Ad', rank: 'Pair', verdict: 'wins' },
+                { title: 'PAIR OF KINGS', sub: 'queen kicker', cards: 'Kc Kd Qd 8h 5s', make: 'Kc Kd Qd', rank: 'Pair', verdict: 'loses' },
+              ],
+            },
+          },
         ],
       },
       {
         scene: 'booth',
         ticker: 'STILL OFF AIR · PLEASE STAND BY',
         lines: [
-          { who: 'Dr. Anand', text: 'For viewers keeping score: a flush beats a straight. A full house beats a flush. I mention it because it is the thing people get wrong on television.' },
+          { who: 'Dr. Anand', text: 'For viewers keeping score: a flush beats a straight, and a full house beats a flush. People get that wrong on television.' },
           { who: 'Chip', text: 'And the lights are STILL out, folks! Back to Hal!' },
         ],
       },
       {
-        scene: 'studio',
+        scene: 'tape',
         ticker: 'TAPE 3 · POSITION',
-        bug: '▶ ARCHIVE · HAL\'S HOLD\'EM HANDBOOK',
-        caption: 'Hal draws a circle of chairs on a chalkboard and taps one.',
         lines: [
-          { who: 'hal', text: 'Hal: A marker called the button moves one seat left every hand. Whoever has it deals. That seat is the best seat at the table.' },
-          { who: 'hal', text: 'Hal: Two seats to its left post forced bets, the blinds, so there is always something to play for. The small blind first, the big blind next.' },
-          { who: 'hal', text: 'Hal: After the flop, the first player to act is the one just left of the button. The button acts last. Acting last means you see what everyone does before you decide.' },
-          { who: 'hal', text: 'Hal: Early seats, the ones that act first, play only strong hands. Late seats, the cutoff and the button, can play more. Position is worth more than any card I could sell you.' },
+          {
+            who: 'hal',
+            text: 'Hal: A marker called the button moves one seat to the left every hand. Whoever has it deals.',
+            show: { kind: 'seats', mark: ['btn'], note: 'THE BUTTON MOVES LEFT EACH HAND' },
+          },
+          {
+            who: 'hal',
+            text: 'Hal: The two seats after it post forced bets, the blinds, so there is always something to win.',
+            show: { kind: 'seats', mark: ['sb', 'bb'], note: 'SMALL BLIND THEN BIG BLIND: FORCED BETS' },
+          },
+          {
+            who: 'hal',
+            text: 'Hal: Before the flop, the seat after the big blind starts. The blinds act last.',
+            show: { kind: 'seats', order: 'preflop', note: 'BEFORE THE FLOP · NUMBERS = ORDER OF PLAY' },
+          },
+          {
+            who: 'hal',
+            text: 'Hal: After the flop it flips. The small blind starts, and the button acts last, every round.',
+            show: { kind: 'seats', order: 'flop', mark: ['btn'], note: 'AFTER THE FLOP · THE BUTTON ACTS LAST' },
+          },
+          {
+            who: 'hal',
+            text: 'Hal: Acting last is worth more than any card. You see what everyone does before you decide.',
+            show: { kind: 'seats', zones: true, note: 'THE LATER YOUR SEAT, THE MORE HANDS YOU PLAY' },
+          },
+          {
+            who: 'hal',
+            text: 'Hal: So early, play only the strong hands. From the button, you can play more.',
+            show: {
+              kind: 'hands',
+              hands: [
+                { title: 'EARLY SEAT', sub: 'strong hands', cards: 'As Ah' },
+                { title: 'THE BUTTON', sub: 'play wider', cards: '9h 8h' },
+              ],
+              note: 'A HAND IS WORTH MORE FROM A LATE SEAT',
+            },
+          },
         ],
       },
       {
-        scene: 'studio',
-        ticker: 'TAPE 4 · BETTING AND ITS SIZES',
-        bug: '▶ ARCHIVE · HAL\'S HOLD\'EM HANDBOOK',
+        scene: 'tape',
+        ticker: 'TAPE 4 · BETTING',
         lines: [
-          { who: 'hal', text: 'Hal: When it is your turn you may fold, give up your hand and put in nothing more. Check, if nobody has bet, and stay in free. Call, match the bet. Or bet or raise.' },
-          { who: 'hal', text: 'Hal: A raise has to be at least as big as the bet it is raising. And all-in means everything you have, and you can never lose more than that.' },
-          { who: 'hal', text: 'Hal: Size your bets against the pot, the money in the middle. A third of the pot is a small bet: cheap, and it says "I might have it". Half to two-thirds is the bet you will make most.' },
-          { who: 'hal', text: 'Hal: A full pot-sized bet is the big one: it makes a draw pay the most to see a card, and it makes a bluff look like strength. Over the pot is for when you are certain, or when you are not afraid.' },
-          { who: 'hal', text: 'Hal: And do the sum on a call. Someone bets half the pot: you need to win about one time in four to break even. Bet the full pot, one in three. The price a call asks decides whether it is a good one.' },
+          {
+            who: 'hal',
+            text: 'Hal: Everything people bet goes to the middle: the pot. The winner takes it.',
+            show: { kind: 'bets', pot: 6, bets: [], note: 'THE POT · 6 CHIPS' },
+          },
+          {
+            who: 'hal',
+            text: 'Hal: On your turn you fold, check if nobody has bet, call to match a bet, or raise it.',
+            show: {
+              kind: 'bets',
+              pot: 6,
+              bets: [
+                { label: 'BET', chips: 3, tone: 'bet' },
+                { label: 'CALL', chips: 3, tone: 'call' },
+                { label: 'RAISE TO', chips: 9, tone: 'raise' },
+              ],
+              note: 'A RAISE MUST BE AT LEAST THE BET BEFORE IT',
+            },
+          },
+          {
+            who: 'hal',
+            text: 'Hal: Size a bet against the pot. A third is small and cheap. Half to two-thirds is the bet you make most.',
+            show: {
+              kind: 'bets',
+              pot: 6,
+              bets: [
+                { label: '1/3 POT', chips: 2, tone: 'bet' },
+                { label: '1/2 POT', chips: 3, tone: 'bet' },
+                { label: '2/3 POT', chips: 4, tone: 'bet' },
+              ],
+              note: 'SMALL BETS: CHEAP, AND "I MIGHT HAVE IT"',
+            },
+          },
+          {
+            who: 'hal',
+            text: 'Hal: A full pot is the big one. It makes a draw pay the most. More than the pot is for when you are not afraid.',
+            show: {
+              kind: 'bets',
+              pot: 6,
+              bets: [
+                { label: 'POT', chips: 6, tone: 'raise' },
+                { label: 'OVERBET', chips: 9, tone: 'raise' },
+              ],
+              note: 'ALL-IN = ALL YOU HAVE · NEVER LOSE MORE',
+            },
+          },
+          {
+            who: 'hal',
+            text: 'Hal: Do the sum on a call. Half the pot costs you three to win nine: you need to win one time in four.',
+            show: {
+              kind: 'bets',
+              pot: 6,
+              bets: [
+                { label: 'THEIR BET', chips: 3, tone: 'bet' },
+                { label: 'YOUR CALL', chips: 3, tone: 'call' },
+              ],
+              note: 'PAY 3 TO WIN 9 · YOU NEED TO WIN 1 IN 4',
+            },
+          },
+          {
+            who: 'hal',
+            text: 'Hal: Against a full-pot bet you need one in three. The price of the call decides if it is a good call.',
+            show: {
+              kind: 'bets',
+              pot: 6,
+              bets: [
+                { label: 'THEIR BET', chips: 6, tone: 'raise' },
+                { label: 'YOUR CALL', chips: 6, tone: 'call' },
+              ],
+              note: 'PAY 6 TO WIN 12 · YOU NEED TO WIN 1 IN 3',
+            },
+          },
         ],
       },
       {
@@ -797,30 +988,72 @@ const REFRESHER_TAPE: EventAction[] = [
         ticker: 'STILL OFF AIR · PLEASE STAND BY',
         lines: [
           { who: 'Dr. Anand', text: 'He has just described pot odds. I have waited eleven years to hear someone do it without a whiteboard.' },
-          { who: 'Chip', text: 'The man is a natural, folks! Hal, take us home!' },
+          { who: 'Chip', text: 'A natural, folks! Hal, take us home!' },
         ],
       },
       {
-        scene: 'studio',
+        scene: 'tape',
         ticker: 'TAPE 5 · THE BLUFF',
-        bug: '▶ ARCHIVE · HAL\'S HOLD\'EM HANDBOOK',
-        caption: 'Hal shuffles a deck one-handed. The tape jumps.',
         lines: [
-          { who: 'hal', text: 'Hal: A bluff is a bet with a worse hand, made to get a better one to fold. It is a story. It has to make sense from the first street to the last.' },
-          { who: 'hal', text: 'Hal: Ask yourself: what hand would I have if I played it this way? If the answer is a strong one, bet. If you would have checked it, do not suddenly bet big on the river.' },
-          { who: 'hal', text: 'Hal: Bluff the player who can fold. Do not bluff a calling station, a man who calls with anything. You cannot scare someone who does not look at his cards.' },
-          { who: 'hal', text: 'Hal: Better than a pure bluff is the semi-bluff: a bet with a hand that is not there yet, four cards to a flush, say. If they fold you win now. If they call, you can still hit.' },
-          { who: 'hal', text: 'Hal: And watch them. Everybody has a tell: the hand that shakes, the breath held, the chips stacked too carefully. Do not rely on one. Collect them.' },
+          {
+            who: 'hal',
+            text: 'Hal: A bluff is a bet with a worse hand, to make a better one fold. Here you hold nothing. The board shows an ace.',
+            show: { kind: 'board', hole: 'Qc 5d', board: 'As 8d 3c', note: 'NOTHING IN HAND · THE BOARD SHOWS AN ACE' },
+          },
+          {
+            who: 'hal',
+            text: 'Hal: A bluff is a story. If you have the ace, you bet the flop, you bet the turn, and you bet the river. So tell it.',
+            show: { kind: 'board', hole: 'Qc 5d', board: 'As 8d 3c Kd 2h', rank: 'High Card', note: 'THE STORY: "I HAVE THE ACE"' },
+          },
+          {
+            who: 'hal',
+            text: 'Hal: Ask: what would I have, to play it this way? If the answer is a strong hand, bet. If not, give it up.',
+            show: { kind: 'board', hole: 'Qc 5d', board: 'As 8d 3c Kd 2h', rank: 'High Card', note: 'WOULD A REAL ACE PLAY IT LIKE THIS?' },
+          },
+          {
+            who: 'hal',
+            text: 'Hal: Bluff the man who can fold. Never the calling station, who calls with anything. He does not look at his cards.',
+            show: {
+              kind: 'hands',
+              hands: [
+                { title: 'THE FOLDER', sub: 'bluff him', cards: '7c 2d', verdict: 'wins' },
+                { title: 'CALLING STATION', sub: 'do not bluff', cards: 'Js 4h', verdict: 'loses' },
+              ],
+              note: 'BLUFF THE ONES WHO CAN LAY A HAND DOWN',
+            },
+          },
+          {
+            who: 'hal',
+            text: 'Hal: Better is the semi-bluff. You bet a hand that is not there yet. Four hearts, and a straight draw as well.',
+            show: { kind: 'board', hole: '9h 8h', board: 'Kh 7h 2c', make: '9h 8h Kh 7h', rank: 'High Card', note: 'FLUSH DRAW + STRAIGHT DRAW · 15 OUTS' },
+          },
+          {
+            who: 'hal',
+            text: 'Hal: If they fold, you win now. If they call, you can still hit. Fifteen cards in the deck help you.',
+          },
+          {
+            who: 'hal',
+            text: 'Hal: And watch them. Everybody has a tell: a held breath, a shaking hand, chips stacked too carefully. Collect them.',
+          },
         ],
       },
       {
-        scene: 'studio',
+        scene: 'tape',
         ticker: 'TAPE 6 · LAST THINGS',
-        bug: '▶ ARCHIVE · HAL\'S HOLD\'EM HANDBOOK',
         lines: [
-          { who: 'hal', text: 'Hal: Fold more than you think you should. Most hands are not worth the money to see them. Patience is the first skill and it is the last one too.' },
-          { who: 'hal', text: 'Hal: Never play money you cannot lose. And when you lose a hand you played right, go on to the next one as if nothing happened. The cards do not owe you anything.' },
-          { who: 'hal', text: 'Hal: That is the lot. Now go and play, and bring me the stories. That is the only fee I charge on this tape.' },
+          {
+            who: 'hal',
+            text: 'Hal: Fold more than you think you should. Most hands are not worth the money to see them. This is the worst one.',
+            show: { kind: 'board', hole: '7c 2d', board: '', note: 'SEVEN-DEUCE · THE WORST START · FOLD IT' },
+          },
+          {
+            who: 'hal',
+            text: 'Hal: Never play money you cannot lose. And when you lose a hand you played right, go on to the next as if nothing happened.',
+          },
+          {
+            who: 'hal',
+            text: 'Hal: That is the lot. Go and play, and bring me the stories. That is the only fee I charge on this tape.',
+          },
         ],
       },
       {
@@ -838,7 +1071,7 @@ const REFRESHER_TAPE: EventAction[] = [
     kind: 'dialogue',
     speaker: 'marcus',
     lines: [
-      'Marcus: Hal made that? In a sweater like that? I have been watching that tape on and off since I was twenty-six.',
+      'Marcus: Hal made that? In a sweater like that? I have watched that tape on and off since I was twenty-six.',
       'Marcus: Position, pot odds, do not bluff the man who does not look. It is all there. Now deal.',
     ],
   },

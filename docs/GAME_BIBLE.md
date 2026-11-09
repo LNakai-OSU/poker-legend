@@ -334,6 +334,15 @@ the stop and a lost first night, to Marcus at your door). No two may hold at onc
 skips the whole film: the reels, scenes and pauses straight after it. What follows
 the film still happens.
 
+**Hal's tape.** Before the first poker night Marcus offers a refresher: the commentators fill the
+blackout with Hal's old tape (`REFRESHER_TAPE` in `events.ts`). Its panels use the `tape` reel
+scene (`game/TapePanel.tsx`): a chalkboard on worn film. A line's `show` puts an *exhibit* on the
+board until another line replaces it (types in `world/tape.ts`): `hands` (rows of real cards, ticked
+or crossed when compared), `board` (hole cards and the shared five, with the best five lifted),
+`seats` (six seats, order of play, early/late zones) and `bets` (stacks of chips sized to the pot).
+Cards are written `'As 10h'`; `tape.test.ts` checks every named hand against the engine's evaluator
+and that every note and label fits the board.
+
 **The ending film.** Winning the heads-up match plays `EndingFilm` (`game/EndingFilm.tsx`) before
 the summary card, drawn like the opening, and it is a bummer on purpose: sour success. Ten
 shots: the stage after the last hand (Marcus, Dana and the stands cheering the screen, confetti on
