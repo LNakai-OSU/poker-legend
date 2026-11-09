@@ -214,6 +214,31 @@ export function PlaytestPanel({
           })}
         </div>
 
+        {section('Marcus’s first poker night: mark it beaten without playing, or undo')}
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {(() => {
+            const won = !!state.flags.wonPokerNight
+            return (
+              <button
+                type="button"
+                data-testid="poker-night-mark"
+                style={{ ...button, borderColor: won ? '#4a4a66' : GOLD, color: won ? DIM : GOLD }}
+                onClick={() =>
+                  setState((s) => ({
+                    ...s,
+                    flags: { ...s.flags, wonPokerNight: !won },
+                    completedEventIds: won
+                      ? s.completedEventIds.filter((e) => e !== 'poker-night')
+                      : [...new Set([...s.completedEventIds, 'poker-night'])],
+                  }))
+                }
+              >
+                {won ? 'Unmark first poker night' : 'Mark first poker night beaten'}
+              </button>
+            )
+          })()}
+        </div>
+
         {section('Bosses: sit down against them now, or mark one beaten (opens the room) without playing')}
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {TOWN_ORDER.filter((id) => CASINO_GOALS[id]).map((id) => {
