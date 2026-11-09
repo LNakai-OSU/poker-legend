@@ -361,6 +361,11 @@ export function CityScene({
             </div>
           )}
           {next?.progress && (
+            <div data-testid="goal-profit" style={{ color: '#4ac878' }}>
+              Casino profit: ${next.progress.won.toLocaleString()} / ${next.progress.target.toLocaleString()}
+            </div>
+          )}
+          {next?.progress && (
             <div
               data-testid="goal-total"
               title={`$${next.progress.won.toLocaleString()} of $${next.progress.target.toLocaleString()}`}

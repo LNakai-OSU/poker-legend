@@ -1840,6 +1840,17 @@ export const EVENTS: GameEvent[] = [
       { kind: 'fade', to: 'in' },
       { kind: 'dialogue', speaker: 'marcus', lines: ['Marcus: Pit boss, top left. He seats the low-stakes table. A hundred to sit.'] },
       {
+        kind: 'dialogue',
+        speaker: 'marcus',
+        lines: [
+          'Marcus: Now the part that matters. Lou Brannigan owns this place, and he has a private room out back.',
+          'Marcus: He will only play someone who has taken money off his floor. Win $400 at the poker tables here and the door opens.',
+          'Marcus: It is profit, not chips. Your winnings minus your losses, added up over every sitting.',
+          'Marcus: And it only counts once you have stood up and left the table. Win big mid-session and it does not show until you cash out.',
+          'Marcus: Slots and craps do not count. Poker only. Top left of your screen keeps the tally.',
+        ],
+      },
+      {
         kind: 'if',
         when: [{ kind: 'cashAtLeast', amount: 600 }],
         then: [
