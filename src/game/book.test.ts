@@ -83,15 +83,15 @@ describe('the book', () => {
   })
 
   it('will not commit to a reading on a couple of showdowns', () => {
-    expect(cueVerdict({ won: 2, lost: 0 })).toBe('unknown')
+    expect(cueVerdict({ won: 4, lost: 0 })).toBe('unknown')
     expect(cueVerdict({ won: 4, lost: 1 })).toBe('strong')
-    expect(cueVerdict({ won: 0, lost: 4 })).toBe('weak')
-    expect(cueVerdict({ won: 2, lost: 2 })).toBe('unclear')
+    expect(cueVerdict({ won: 0, lost: 5 })).toBe('weak')
+    expect(cueVerdict({ won: 3, lost: 2 })).toBe('unclear')
   })
 
   it('writes a page for people you have met, in cue words the table uses', () => {
     const id = Object.keys(CHARACTERS).find((c) => CHARACTERS[c].seat)!
-    const entries = bookEntries({ [id]: { ...emptyNotes(), hands: 4, cues: { 'chip-tap': { won: 3, lost: 0 } } }, stranger: emptyNotes() })
+    const entries = bookEntries({ [id]: { ...emptyNotes(), hands: 4, cues: { 'chip-tap': { won: 5, lost: 0 } } }, stranger: emptyNotes() })
     expect(entries).toHaveLength(1)
     expect(entries[0].lines.some((l) => l.text.includes('strong'))).toBe(true)
   })

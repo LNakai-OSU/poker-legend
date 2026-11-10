@@ -1848,6 +1848,7 @@ export const EVENTS: GameEvent[] = [
           'Marcus: It is profit, not chips. Your winnings minus your losses, added up over every sitting.',
           'Marcus: And it only counts once you have stood up and left the table. Win big mid-session and it does not show until you cash out.',
           'Marcus: Slots and craps do not count. Poker only. Top left of your screen keeps the tally.',
+          'Marcus: Some tables have a night, when somebody worth watching turns up. The menu’s This week page lists them. The Book of Reads next to it is where you write down what people give away.',
         ],
       },
       {

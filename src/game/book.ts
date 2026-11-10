@@ -234,7 +234,7 @@ export class SessionTracker {
 export type CueVerdict = 'strong' | 'weak' | 'unclear' | 'unknown'
 
 /** Showdowns before the book will commit to a reading. */
-export const CUE_SAMPLES = 3
+export const CUE_SAMPLES = 5
 
 export function cueVerdict(record: CueRecord | undefined): CueVerdict {
   if (!record) return 'unknown'

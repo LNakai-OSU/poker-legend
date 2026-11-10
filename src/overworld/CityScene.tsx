@@ -3,6 +3,7 @@ import { AREAS, CITIES, MISSIONS, SPONSORS, collectorSpawn, findArea } from '../
 import { isWalkable } from './tileRenderer'
 import { missionStatus, privateRoomOpen } from '../game/progression'
 import { CASINO_GOALS } from '../world/goals'
+import { weekAhead } from '../world/weekCalendar'
 import { weekdayShort } from '../world/week'
 import { daysUntilDue, huntingSponsorId, totalOwed, type GameState, type StoryFlag } from '../game/state'
 import type { PoiAction, PoiDef } from '../world/types'
@@ -68,6 +69,8 @@ export function CityScene({
   const area = located?.area ?? city.areas[city.entryAreaId]
   const areaId = area.id
   const hunted = state.huntedInCityId === city.id
+  // A night on at one of this town's tables right now, so it can be seen without opening the menu.
+  const tonight = weekAhead(state).find((e) => e.now && e.townName === city.name)
   useAmbientMusic(hunted ? 'tense' : 'overworld')
   const viewport = useViewport()
 
@@ -353,6 +356,11 @@ export function CityScene({
             <div style={{ color: due !== null && due < 0 ? '#e05a5a' : '#f2c14e' }}>
               Owed: ${owed.toLocaleString()}
               {due !== null && (due < 0 ? ' — OVERDUE' : ` — due in ${due} day${due === 1 ? '' : 's'}`)}
+            </div>
+          )}
+          {tonight && (
+            <div data-testid="hud-night" style={{ color: '#f2c14e' }}>
+              On now: {tonight.night.title}, {tonight.tableName}
             </div>
           )}
           {hunted && <div style={{ color: '#e05a5a' }}>They sent someone. Get out of town or pay up.</div>}

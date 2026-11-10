@@ -3,11 +3,12 @@ import type { Rng } from './rng'
 import type { Archetype, Card, Habit, SkillTier, TellSignal } from './types'
 
 /**
- * The cue vocabulary is split, so the cue itself is the signal: a player who
- * pays attention can learn that a chip-tap or a sudden freeze means strength,
- * while fidgeting means weakness. Without this split `kind` was picked
- * uniformly and reads were pure noise — nothing to learn, and the "Spotting
- * Tells" lesson bought only a CSS opacity change.
+ * The default cue vocabulary is split, so the cue itself is the signal: a chip-tap
+ * or a sudden freeze means strength, fidgeting means weakness. That is only the
+ * fallback. Named opponents have a `Habit` of their own (see `generateTell`), so
+ * their cue for strength can be anyone else's cue for weakness, and what a player
+ * can learn about one says nothing about the next. The Book of Reads is where
+ * that gets written down.
  */
 export const STRONG_TELL_KINDS: TellSignal['kind'][] = ['chip-tap', 'stillness']
 export const WEAK_TELL_KINDS: TellSignal['kind'][] = ['arm-shift', 'lip-twitch', 'glance']

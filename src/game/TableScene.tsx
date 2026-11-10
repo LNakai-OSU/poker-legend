@@ -247,6 +247,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
 
   /** Which of each boss's phases hold, so a turn in the match is announced once. */
   const phasesRef = useRef<Record<string, string>>({})
+  const phasesCalled = useRef(new Set<string>())
   /**
    * Between hands: a boss who has been winning gets loose, one who is losing digs
    * in, one who has been reading you starts using it (`world/phases.ts`).
@@ -267,13 +268,23 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
       if (key === before) continue
       phasesRef.current[seat.id] = key
       engine.restyle(seat.id, style)
+      // Every phase that has just started and has not been called out yet: the
+      // banner and the line can come from different ones (two can start in the
+      // same hand), and a stack that swings back and forth over a threshold
+      // changes the play each time but is only announced the first.
       const had = before.split(',')
-      const turn = style.active.filter((i) => !had.includes(String(i))).map((i) => seat.phases![i]).find((phase) => phase.says || phase.announce)
-      if (!turn) continue
-      if (turn.announce) announce({ key: `phase-${seat.id}-${key}`, text: turn.announce, tone: 'tense' }, 3200)
-      if (turn.says) {
+      const fresh = style.active
+        .filter((i) => !had.includes(String(i)) && !phasesCalled.current.has(`${seat.id}:${i}`))
+        .map((i) => {
+          phasesCalled.current.add(`${seat.id}:${i}`)
+          return seat.phases![i]
+        })
+      const banner = fresh.find((phase) => phase.announce)
+      const line = fresh.find((phase) => phase.says)
+      if (banner) announce({ key: `phase-${seat.id}-${key}`, text: banner.announce!, tone: 'tense' }, 3200)
+      if (line) {
         if (speechTimer.current) window.clearTimeout(speechTimer.current)
-        setSpeech({ playerId: seat.id, text: turn.says[Math.floor(Math.random() * turn.says.length)] })
+        setSpeech({ playerId: seat.id, text: line.says![Math.floor(Math.random() * line.says!.length)] })
         speechTimer.current = window.setTimeout(() => setSpeech(null), SPEECH_MS * 2)
       }
     }
@@ -285,19 +296,27 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
    * What somebody remembers about you — a big pot from last time, or this
    * sitting's third run-off — said once each. Only when nothing else is due.
    */
+  const lastMemoryHand = useRef(-1)
+  const knowYouSaid = useRef(false)
   const sayMemory = (): boolean => {
-    for (const seat of seats) {
-      if (memorySaid.current.has(seat.id) || !players.some((p) => p.id === seat.id)) continue
-      const kind = memoryOf(state.book[seat.id], tracker.notesOn(seat.id))
-      if (!kind) continue
-      memorySaid.current.add(seat.id)
-      if (speechTimer.current) window.clearTimeout(speechTimer.current)
-      const name = personalityFor(seat.id, personas[seat.id]).name
-      setSpeech({ playerId: seat.id, text: `${name}: ${memoryLine(seat.id, seat.archetype, kind)}` })
-      speechTimer.current = window.setTimeout(() => setSpeech(null), SPEECH_MS * 2)
-      return true
-    }
-    return false
+    // One a hand, and the rare ones first: a grudge or a run-off outranks plain
+    // familiarity, and only one person a sitting says they know you.
+    if (lastMemoryHand.current === publicState.handNumber) return false
+    const due = seats
+      .filter((seat) => !memorySaid.current.has(seat.id) && players.some((p) => p.id === seat.id))
+      .map((seat) => ({ seat, kind: memoryOf(state.book[seat.id], tracker.notesOn(seat.id)) }))
+      .filter((m): m is { seat: (typeof seats)[number]; kind: NonNullable<ReturnType<typeof memoryOf>> } => m.kind !== null && !(m.kind === 'knowYou' && knowYouSaid.current))
+      .sort((a, b) => Number(a.kind === 'knowYou') - Number(b.kind === 'knowYou'))
+    const pick = due[0]
+    if (!pick) return false
+    memorySaid.current.add(pick.seat.id)
+    if (pick.kind === 'knowYou') knowYouSaid.current = true
+    lastMemoryHand.current = publicState.handNumber
+    if (speechTimer.current) window.clearTimeout(speechTimer.current)
+    const name = personalityFor(pick.seat.id, personas[pick.seat.id]).name
+    setSpeech({ playerId: pick.seat.id, text: `${name}: ${memoryLine(pick.seat.id, pick.seat.archetype, pick.kind)}` })
+    speechTimer.current = window.setTimeout(() => setSpeech(null), SPEECH_MS * 2)
+    return true
   }
   /** What you did for the town comes up at the table, one line a moment, once a sitting each. */
   const sayHint = (): boolean => {
@@ -672,23 +691,21 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
     tellClarity: tellClarity(state) + perkClarity(table.id, (c) => conditionHolds(c, state)),
   }
 
-  // Equity is a Monte Carlo run, so only compute it when the read is actually
-  // on screen and the inputs have changed.
-  const opponentsInHand = publicState.players.filter((p) => p.id !== 'you' && !p.folded).length
-  const handRead = useMemo(() => {
-    if (!state.lessonIds.includes('hand-reading')) return null
-    if (!publicState.handInProgress || yourHole.length < 2) return null
-    // Against the range implied by the bet in front of you, not against random
-    // cards. The lesson that unlocks this panel says "ask what they'd play this
-    // way — that's a range, not a hand", and the panel used to do exactly the
-    // thing the lesson warns about: with A-5 on T-6-3 facing a raise it read 51%,
-    // which is the number that talks a player into calling off.
-    const equity = estimateEquity(
+  /**
+   * Your equity against the range the bet in front of you implies, not against
+   * random cards. The lesson that unlocks the hand read says "ask what they'd
+   * play this way — that's a range, not a hand", and the panel used to do the
+   * thing the lesson warns about: with A-5 on T-6-3 facing a raise it read 51%,
+   * which is the number that talks a player into calling off. Hal's notes at the
+   * end of a sitting judge by the same number, so the two never disagree.
+   */
+  const rangeEquity = (samples: number) =>
+    estimateEquity(
       yourHole,
       publicState.board,
       Math.max(1, opponentsInHand),
       defaultRng,
-      200,
+      samples,
       {
         opponentRangePercentile: inferredRangePercentile(
           {
@@ -707,6 +724,14 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
         ),
       },
     )
+
+  // Equity is a Monte Carlo run, so only compute it when the read is actually
+  // on screen and the inputs have changed.
+  const opponentsInHand = publicState.players.filter((p) => p.id !== 'you' && !p.folded).length
+  const handRead = useMemo(() => {
+    if (!state.lessonIds.includes('hand-reading')) return null
+    if (!publicState.handInProgress || yourHole.length < 2) return null
+    const equity = rangeEquity(200)
     const made =
       publicState.board.length >= 3
         ? HAND_CATEGORY_NAMES[bestHand([...yourHole, ...publicState.board]).category]
@@ -779,7 +804,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
         action: type,
         toCall: Math.min(toCall, you.stack),
         pot: publicState.pot,
-        equity: estimateEquity(yourHole, publicState.board, Math.max(1, opponentsInHand), defaultRng, 300),
+        equity: rangeEquity(300),
         bigBlind: blinds.big,
       })
     }

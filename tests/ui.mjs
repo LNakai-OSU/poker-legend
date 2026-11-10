@@ -880,7 +880,11 @@ await test('broke, Marcus deals you back in at the kitchen table', async () => {
   const said = await dialogueText(page)
   assert(/first night/.test(said), `Marcus did not notice you are broke (saw: ${said.slice(0, 120)})`)
   await talkThrough(page)
-  await answer(page, 1)
+  if (await choiceBox(page).isVisible().catch(() => false)) await answer(page, 1)
+  await page.waitForTimeout(600)
+  // Marcus asks about the refresher before the first deal.
+  const refresher = page.locator('button', { hasText: /Deal me in/ })
+  if (await refresher.isVisible().catch(() => false)) await refresher.click()
   await page.waitForTimeout(600)
   assert((await page.locator('[data-testid="overworld"]').count()) === 0, 'still in the street: the game never started')
   assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
@@ -1147,7 +1151,7 @@ async function winPokerNight(page, budget = 150000) {
       await headOut.click()
       return hands
     }
-    for (const label of [/^All in/, /^Call /, /^Check$/, /^Next hand/, /^Deal me back in/, /Continue|Let's go/]) {
+    for (const label of [/^All in/, /^Call /, /^Check$/, /^Next hand/, /^Deal me back in/, /Deal me in/, /Continue|Let's go/]) {
       const button = page.locator('button', { hasText: label }).first()
       if (await button.isVisible().catch(() => false)) {
         if (String(label).includes('Next hand')) hands++

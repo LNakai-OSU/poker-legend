@@ -8,10 +8,10 @@ import type { Street } from '../engine/types'
  * numbers are the standard ones — pot odds against equity — so anything it
  * calls a mistake is one on paper, and it is careful which way it leans:
  *
- * - Equity is measured against *random* hands. A bettor holds better than
- *   random, so a call that is wrong even by that generous measure is wrong.
- *   A fold that is "wrong" by it might be right against a real range, so only
- *   a fold of a huge favourite is called one.
+ * - Equity is measured against the range the bet implies, the same number the
+ *   hand-read panel shows at the table, so Hal never contradicts what the
+ *   player was looking at. It is still a model of the range, not their cards,
+ *   so a mistake has to be clear of the margins before it is called one.
  */
 export interface Decision {
   hand: number
@@ -20,7 +20,7 @@ export interface Decision {
   /** What it cost to stay in, and what was in the middle before you did. */
   toCall: number
   pot: number
-  /** Your chance of winning, against random hands, 0 to 1. */
+  /** Your chance of winning against the range their bet implies, 0 to 1. */
   equity: number
   bigBlind: number
 }
@@ -93,9 +93,9 @@ export function halsNotes(recap: Recap): string[] {
     const d = w.decision
     const when = STREET_WORD[d.street] ?? 'in a hand'
     if (w.kind === 'bad-call') {
-      lines.push(`Hand ${d.hand}, ${when}: you called ${money(d.toCall)} into ${money(d.pot)}. You needed ${pct(w.needed)} to break even and had about ${pct(d.equity)}, and that is against random cards. About ${money(w.cost)} down the drain.`)
+      lines.push(`Hand ${d.hand}, ${when}: you called ${money(d.toCall)} into ${money(d.pot)}. You needed ${pct(w.needed)} to break even and had about ${pct(d.equity)}, against the hands that bet usually means. About ${money(w.cost)} down the drain.`)
     } else {
-      lines.push(`Hand ${d.hand}, ${when}: you folded to ${money(d.toCall)} into ${money(d.pot)} holding about ${pct(d.equity)} when ${pct(w.needed)} was enough. A hand that strong is worth the call. That was roughly ${money(w.cost)} on the table.`)
+      lines.push(`Hand ${d.hand}, ${when}: you folded to ${money(d.toCall)} into ${money(d.pot)} holding about ${pct(d.equity)} against the hands that bet usually means, when ${pct(w.needed)} was enough. That was a call. That was roughly ${money(w.cost)} on the table.`)
     }
   }
   if (recap.badCalls > 1) lines.push(`${recap.badCalls} calls were against the price. Pot odds are cheap to check: the call divided by the pot plus the call. If your hand does not win that often, let it go.`)
