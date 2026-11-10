@@ -1,5 +1,5 @@
 import type { Accessory, AvatarLook, HairStyle } from '../game/avatars'
-import type { Archetype, SkillTier } from '../engine/types'
+import type { Archetype, SkillTier, TellKind } from '../engine/types'
 import { TOWN_ORDER, type ChallengeStatus, type CountOf, type DebtStatus, type StoryFlag } from '../game/state'
 import { STORY_FLAGS as FLAG_MEANING, STORY_FLAG_IDS } from '../world/flags'
 import type { SoundName } from '../audio/audio'
@@ -50,6 +50,17 @@ export const TABLE_LINE_HELP: Record<keyof TableLines, string> = {
 
 export const SKILL_TIERS = keysOf<SkillTier>({ novice: true, amateur: true, competent: true, sharp: true, elite: true })
 export const ARCHETYPES = keysOf<Archetype>({ regular: true, nit: true, station: true, maniac: true, whale: true })
+export const TELL_KINDS = keysOf<TellKind>({ 'arm-shift': true, 'lip-twitch': true, glance: true, stillness: true, 'chip-tap': true })
+
+/** A person's own tells: what they do with a good hand and with a bad one. */
+function habitProblems(habit: unknown, at: string, problems: Problems): void {
+  if (!isObj(habit)) return void problems.push(`${at} should say what they do with a good hand and a bad one`)
+  keys(habit, at, ['strong', 'weak'], [], problems)
+  oneOf(habit.strong, TELL_KINDS, `${at}.strong`, problems)
+  oneOf(habit.weak, TELL_KINDS, `${at}.weak`, problems)
+  if (habit.strong === habit.weak) problems.push(`${at}: a good hand and a bad one look the same`)
+}
+
 export const HAIR_STYLES = keysOf<HairStyle>({ short: true, long: true, bald: true, tied: true })
 export const ACCESSORIES = keysOf<Accessory>({
   none: true,
@@ -518,12 +529,37 @@ export function characterShapeProblems(value: unknown, path = 'character'): Prob
     if (!isObj(value.seat)) problems.push(`${path}.seat should be a seat`)
     else {
       const seat = value.seat
-      keys(seat, `${path}.seat`, ['skillTier'], ['archetype', 'stackMultiplier'], problems)
+      keys(seat, `${path}.seat`, ['skillTier'], ['archetype', 'stackMultiplier', 'habit', 'phases'], problems)
       oneOf(seat.skillTier, SKILL_TIERS, `${path}.seat.skillTier`, problems)
       if (seat.archetype !== undefined) oneOf(seat.archetype, ARCHETYPES, `${path}.seat.archetype`, problems)
       if (seat.stackMultiplier !== undefined) {
         const m = seat.stackMultiplier
         if (typeof m !== 'number' || !Number.isFinite(m) || m <= 0) problems.push(`${path}.seat.stackMultiplier should be a positive number`)
+      }
+      if (seat.habit !== undefined) habitProblems(seat.habit, `${path}.seat.habit`, problems)
+      if (seat.phases !== undefined) {
+        if (!Array.isArray(seat.phases)) problems.push(`${path}.seat.phases should be a list of phases`)
+        else {
+          seat.phases.forEach((phase, i) => {
+            const at = `${path}.seat.phases[${i}]`
+            if (!isObj(phase)) return void problems.push(`${at} should be a phase`)
+            keys(phase, at, ['when', 'set'], ['says', 'announce'], problems)
+            if (isObj(phase.when)) {
+              keys(phase.when, `${at}.when`, [], ['stackBelow', 'stackAbove', 'afterHand', 'youAggressionAbove', 'youAggressionBelow'], problems)
+              if (Object.keys(phase.when).length === 0) problems.push(`${at}.when is empty, so it would always hold`)
+              for (const [k, v] of Object.entries(phase.when)) if (typeof v !== 'number' || !Number.isFinite(v)) problems.push(`${at}.when.${k} should be a number`)
+            } else problems.push(`${at}.when should say when it holds`)
+            if (isObj(phase.set)) {
+              keys(phase.set, `${at}.set`, [], ['archetype', 'skillTier', 'habit'], problems)
+              if (phase.set.archetype !== undefined) oneOf(phase.set.archetype, ARCHETYPES, `${at}.set.archetype`, problems)
+              if (phase.set.skillTier !== undefined) oneOf(phase.set.skillTier, SKILL_TIERS, `${at}.set.skillTier`, problems)
+              if (phase.set.habit !== undefined) habitProblems(phase.set.habit, `${at}.set.habit`, problems)
+              if (Object.keys(phase.set).length === 0) problems.push(`${at}.set changes nothing`)
+            } else problems.push(`${at}.set should say what changes`)
+            if (phase.says !== undefined && (!Array.isArray(phase.says) || phase.says.some((l) => typeof l !== 'string'))) problems.push(`${at}.says should be a list of lines`)
+            if (phase.announce !== undefined && typeof phase.announce !== 'string') problems.push(`${at}.announce should be text`)
+          })
+        }
       }
     }
   }

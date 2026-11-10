@@ -123,6 +123,24 @@ deb: {
   so Hal's two lesson stools share his face.
 - A table seats characters by id: `opponents: ['deb', 'mack', 'tiny']`, or
   `{ character: 'vance', persona: 'headsUp' }`.
+- **Everybody but a whale has their own tell.** `seat.habit: { strong, weak }`
+  names the cue they show with a good hand and with a bad one, out of the five
+  cues in `engine/tells.ts`. Two people can show the same cue and mean opposite
+  things, so a read on Mack is not a read on Deb and the Spotting Tells lesson
+  buys a clearer view, not the answer. Whales have none: they broadcast
+  honestly with the shared vocabulary. A test holds both rules.
+- **Bosses change as the match goes.** `seat.phases` (`world/phases.ts`) is a
+  list of turns: when their stack is low or high, after so many hands, or
+  once you have been betting and raising often (or seldom) enough that they have
+  noticed (`youAggressionAbove` / `Below`, needs ten of your decisions). A phase
+  sets their `archetype`, `skillTier` or `habit` and may say something and
+  announce itself over the felt. Later phases override earlier ones; applied
+  between hands (`TexasHoldEmTable.restyle`). Rule 2 holds: it changes how they
+  play, never the cards. Every boss has at least one (a test).
+- **They remember you** (`world/memory.ts`). A big pot (20 big blinds) from the
+  last sitting, a long acquaintance, or this sitting's third run-off makes
+  somebody say a line, once each, in their own voice (`MEMORY_OF_YOU`) or their
+  kind's (`MEMORY_LINES`). Flavour only.
 
 ### Maps — `src/world/cities.ts`
 
@@ -671,6 +689,22 @@ clock runs round at an even pace, so the character meets mornings, afternoons,
 evenings and nights equally often. Only `advanceDay` (being caught, an event that
 says so) jumps to the next morning.
 
+**The week** (`world/week.ts`). Day 1 is a Friday and the week turns over every
+seven days. An open table can have `nights`: hours of the week when a named
+guest is certain to be at it (`lineupFor` seats them; the hours elsewhere are as
+before). A night is on the table's data, not code:
+
+```ts
+nights: [{ id: 'silvercreek-payday', title: 'Payday Friday', blurb: '…',
+           days: [4], periods: ['evening', 'night'], guests: ['dale'] }]
+```
+
+Menu → **This week** lists every night in the towns you have reached, with
+when it is next on. A night announces itself when you sit down. The point is
+that *which day you arrive* is a decision, since days are the scarce resource.
+Nothing about the cards changes; the guest is a whale or a regular who is
+simply there.
+
 A character's `schedule` says where they are at each period. It is looked up per
 area and per hour, not simulated: a schedule is a statement about where somebody
 *is*, not a model of them walking there. It costs nothing while you are not
@@ -748,6 +782,24 @@ meet it. The content tests hold the kitchen table open in every chapter.
 
 **The help.** A mentor sells lessons in real, standard poker strategy — pot
 odds, position, hand reading. They are teaching, not flavour.
+
+---
+
+### The table, as a place to learn
+
+- **Book of Reads** (menu): what you have *seen* each opponent do (`game/book.ts`,
+  `bookView.ts`). A cue only goes in once it has been followed by a showdown;
+  nothing is told to the player. Counts persist in `state.book`.
+- **Hal's notes** (`game/review.ts`): standing up from a cash game shows what the
+  sitting came to and Hal's read of the pot odds on the bets you faced. Calls are
+  judged against equity versus *random* hands (generous to the caller, so a
+  flagged call is wrong), and a fold is only called a mistake when it threw away a
+  huge favourite. Tournaments, bosses and the final skip it.
+- **All-in runouts**: when everyone left is all in with cards to come the table
+  stops (`stagedRunout`), turns the hands face up and deals a street at a time
+  with each hand's exact chance (`engine/equity.ts`) and a call from the
+  commentators (`game/runoutCall.ts`). The cards are the ones the shuffle already
+  held; staging changes only when they are shown. Space deals on.
 
 ---
 

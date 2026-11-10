@@ -691,7 +691,8 @@ export const LESSONS: Record<string, LessonDef> = {
     price: 6000,
     teaching: [
       'Hal: A tell is a change, not a behaviour. You need their baseline first.',
-      'Hal: Weak players get loud when they’re weak and quiet when they’re strong. It really is that crude.',
+      'Hal: Everybody has their own. Tourists are honest: loud when weak, quiet when strong. Anyone who plays for a living has a habit, and it is theirs alone.',
+      'Hal: One man taps a chip when he is strong. The next taps it to scare you. Notice the cue, then see what he turns over. Your Book of Reads keeps the score.',
       'Hal: Good players know all of that, so up there a tell is as likely to be bait. Weight it, don’t obey it.',
     ],
     unlocks: 'You now notice fainter reads that you’d otherwise miss.',

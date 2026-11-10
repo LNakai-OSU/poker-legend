@@ -464,7 +464,7 @@ async function talkTo(page, name) {
 
 async function talkThrough(page) {
   for (let i = 0; i < 6; i++) {
-    const btn = page.locator('button', { hasText: /Continue|Let's go/ })
+    const btn = page.locator('button', { hasText: /Continue|Let's go|Deal me in/ })
     if (await btn.isVisible().catch(() => false)) {
       await btn.click()
       await page.waitForTimeout(180)
@@ -819,7 +819,8 @@ await test('the collector who catches you has a face, and says their piece befor
   await page.waitForTimeout(600)
   const body = await page.locator('body').innerText()
   const left = await cash()
-  assert(left === '$250', `they did not take three quarters (saw: ${left})`)
+  // A shakedown takes everything but the bus fare (`CAUGHT_CASH_LEFT`).
+  assert(left === '$20', `they did not leave only the bus fare (saw: ${left})`)
   assert(/Owed: \$1,875/.test(body), 'the debt moved when they caught you')
   assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
 })
@@ -1022,6 +1023,16 @@ await test('the opening: Dana runs to you and walks you to the 14 and rides it w
   await page.waitForTimeout(450)
   await page.keyboard.press(' ')
   await page.waitForTimeout(1500)
+  // Before the first deal Marcus asks whether you want the refresher: this is the player who knows the game.
+  for (let i = 0; i < 10 && !(await page.locator('[data-testid="felt"]').isVisible().catch(() => false)); i++) {
+    const deal = page.locator('button', { hasText: /Deal me in/ })
+    if (await deal.isVisible().catch(() => false)) await deal.click().catch(() => {})
+    else {
+      await page.waitForTimeout(450)
+      await page.keyboard.press(' ')
+    }
+    await page.waitForTimeout(700)
+  }
   assert(await page.locator('[data-testid="felt"]').isVisible(), `the game did not start (saw: ${(await page.locator('body').innerText()).slice(0, 200)})`)
 
   // The beat is saved when the night is over, as a beat that ends at a table always is.

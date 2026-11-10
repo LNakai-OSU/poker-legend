@@ -199,3 +199,18 @@ behalf that you might want to revisit.
 
 - [x] **Narrative pull (2026-11-07).** Build [STORYBOARD.md §8](STORYBOARD.md): the Okonkwo mystery (six clues, Nadia file on Jobs), Kit as a rival who answers to your choices, a before/after beat for each of the five bosses, and Marcus's voicemail at the end of each town. Build order is §8.5; answer §8.5's three open questions first.
   Built as described in STORYBOARD §8.6. Decided for you: clue 3 comes from Deb (Cass has no talk beat); the boss beats live inside the existing door and send-off events; the boss "after" perks are lines only. Full unit suite passes (668). Checked in a browser: the Nadia file on the Jobs page. Not checked: the ending's settlement statement, the browser suite, and a playthrough of the voicemails and Kit's choices.
+
+## Marcus explains the casino goal, playtest poker-night button (2026-11-08)
+- [x] When Marcus takes you to Silver Creek he explains the win target, how it adds up, and that it only counts once you have left the table; show the casino profit towards the boss at the top left with the goals.
+  - Marcus's lines are in `marcus-rides-out-with-you`; the HUD shows "Casino profit: $X / $Y" over the progress bar. *Decided:* only the opening ride says it; saves from before it do not hear it.
+- [x] Playtest tools: mark the first poker night beaten. Under Bosses, "Mark first poker night beaten" / "Unmark". *Decided:* sets the flag and the completed event, not the cash.
+
+## Making the table worth sitting at (2026-11-09)
+- [x] "Think hard about what is lacking and add what would make it an amazing playing experience; keep the quality high." Six additions, built in this order:
+  - **Personal tells + Book of Reads.** Every non-whale has `seat.habit` (their own good-hand and bad-hand cue, 45 seats); the menu has a Book of Reads page filled from showdowns (`game/book.ts`). *Decided:* the book counts, it never says "this means strong" before three showdowns; whales stay honest.
+  - **Bosses that turn.** `seat.phases` on all five bosses (Lou digs in or cuts loose by stack; Odette goes wild when short; Bellamy reads your aggression and counters it; Inés pulls up or piles on; Vale heats up, swaps his tell at hand 14, then goes quiet). Needs the boss's `restyle` between hands.
+  - **Hal's notes.** Stand up from a cash game and the sitting's recap shows the costliest pot-odds mistake and what was done well. *Decided:* the recap is skipped for the tournament, bosses and the final, which have their own endings.
+  - **Opponents remember you.** `world/memory.ts`; 15 people have their own lines, everyone else speaks as their kind. *Decided:* fires through the existing table-hint hook so it never talks over a story hint.
+  - **All-in runouts.** Cards face up, board a street at a time, real odds, commentators. *Decided:* the engine option `stagedRunout` is on at every table of the main game and off in the kitchen-table scene.
+  - **The week.** Day 1 is a Friday; six open tables have a night with a guaranteed guest (a new character, Big Dale, joins Silver Creek's Payday Friday); Menu → This week lists them; the HUD shows the weekday. *Decided:* whale nights only, so there is a reward for planning; a harder "sharks" night would need a reward to be a real choice, and I did not invent one.
+  - *Not done:* the browser suite was run for the new and touched scenarios, not whole; the new scenes want a person's eye for feel (pacing of the runout, the recap's wording).
