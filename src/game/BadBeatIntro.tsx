@@ -171,6 +171,7 @@ function stateOf(f: Frame, handNumber: number): { state: PublicState; result: Ha
     isEliminated: false,
   }))
   const state: PublicState = {
+    runout: false,
     street: f.street,
     board: BOARD.slice(0, f.boardCount),
     pot: f.pot,

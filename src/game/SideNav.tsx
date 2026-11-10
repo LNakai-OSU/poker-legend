@@ -8,6 +8,8 @@ import { PERIOD_LABEL } from './time'
 import { challengeLines, goalStatus, missionStatus, nadiaFile, standing } from './progression'
 import { GOAL_ORDER } from '../world/goals'
 import { bookEntries } from './bookView'
+import { weekAhead, whenText } from '../world/weekCalendar'
+import { weekdayName } from '../world/week'
 import { totalOwed, type GameState } from './state'
 import { PxButton } from './pixel/ui'
 import { PixelText } from './pixel/PixelText'
@@ -38,7 +40,7 @@ import type { SaveOutcome } from './save'
  * their way into it by accident.
  */
 
-type Page = 'main' | 'bag' | 'jobs' | 'goals' | 'record' | 'book'
+type Page = 'main' | 'bag' | 'jobs' | 'goals' | 'record' | 'book' | 'week'
 
 /**
  * What the broadcast has told you about the people at the final table. True at
@@ -250,6 +252,24 @@ export function SideNav({
         })}
       </>
     )
+  } else if (page === 'week') {
+    const entries = weekAhead(state)
+    body = (
+      <>
+        {item('nav-back', '< Back', () => setPage('main'))}
+        {heading('This week')}
+        {line(`Today is ${weekdayName(state.day)}. Some nights a particular person sits in at a table, and those are the nights worth planning around.`, INK.dim)}
+        {entries.length === 0 ? line('Nothing yet. Get to a casino town.', INK.dim) : null}
+        {entries.map((e) => (
+          <div key={e.night.id} data-testid={`night-${e.night.id}`} style={{ display: 'grid', gap: scale }}>
+            {rule}
+            {line(`${e.night.title} · ${e.townName}`, e.now ? INK.green : INK.gold)}
+            {line(whenText(e), e.now ? INK.green : INK.light)}
+            {line(`${e.tableName}. ${e.guests.join(' and ')} ${e.guests.length === 1 ? 'sits' : 'sit'} in.`, INK.dim)}
+          </div>
+        ))}
+      </>
+    )
   } else if (page === 'book') {
     const entries = bookEntries(state.book)
     const ink = { plain: INK.light, good: INK.green, bad: INK.red, dim: INK.dim } as const
@@ -309,6 +329,7 @@ export function SideNav({
         {item('nav-jobs', 'Jobs', () => setPage('jobs'))}
         {item('nav-record', 'Record', () => setPage('record'))}
         {item('nav-book', 'Book of Reads', () => setPage('book'))}
+        {item('nav-week', 'This week', () => setPage('week'))}
         {item('nav-goals', 'Goals', () => setPage('goals'))}
         {item('nav-world-map', 'World map', onWorldMap)}
         {onPlaytest && item('nav-playtest', 'Playtest tools', onPlaytest)}
@@ -379,7 +400,7 @@ export function SideNav({
     )
   }
 
-  const title = page === 'main' ? 'Menu' : page === 'bag' ? 'Bag' : page === 'jobs' ? 'Jobs' : page === 'goals' ? 'Goals' : page === 'book' ? 'Book of Reads' : 'Record'
+  const title = page === 'main' ? 'Menu' : page === 'bag' ? 'Bag' : page === 'jobs' ? 'Jobs' : page === 'goals' ? 'Goals' : page === 'book' ? 'Book of Reads' : page === 'week' ? 'This week' : 'Record'
 
   return (
     <div data-testid="side-nav" className={closing ? 'side-nav closing' : 'side-nav'} style={{ position: 'fixed', inset: 0, zIndex: 100 }}>

@@ -630,6 +630,20 @@ export const CHARACTERS: Record<string, CharacterDef> = {
       lose: ['Tiny: Ohh, that is beautiful. Deal again!'],
     },
   },
+  dale: {
+    name: 'Big Dale',
+    style: 'Cashes his cheque on Fridays. Plays all of it.',
+    look: { skin: '#d49a74', hair: '#5a3a22', hairStyle: 'short', shirt: '#3f6a4a', accessory: 'cap' },
+    seat: { skillTier: 'novice', archetype: 'whale', stackMultiplier: 3 },
+    lines: {
+      greeting: ['Dale: Friday! Cheque is cashed and I feel lucky.'],
+      raise: ['Dale: Let us put a little more in the middle.', 'Dale: Up! It is payday, it is meant to be spent.'],
+      call: ['Dale: I will pay to see it. Always pay to see it.', 'Dale: Call. I did not drive out here to fold.'],
+      fold: ['Dale: Ah. Next one is mine.'],
+      win: ['Dale: Told you! Friday luck!'],
+      lose: ['Dale: That is the rent, that was. Deal.'],
+    },
+  },
   corinne: {
     name: 'Corinne',
     style: 'Does this for a living.',

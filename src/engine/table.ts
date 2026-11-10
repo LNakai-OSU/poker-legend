@@ -59,12 +59,22 @@ export interface PublicState {
   actingPlayerId: string | null
   handInProgress: boolean
   handNumber: number
+  /** Everyone left is all in and the board is being dealt a street at a time (`dealRunoutStreet`). */
+  runout: boolean
 }
 
 export interface TableOptions {
   smallBlind: number
   bigBlind: number
   rng?: Rng
+  /**
+   * When everyone left is all in with cards still to come, stop and wait for
+   * `dealRunoutStreet()` instead of dealing the rest at once. The deck was
+   * shuffled before the hand: the cards that come are the cards that were always
+   * going to, so nothing about the poker changes — only that a table can show
+   * them a street at a time, with the hands face up and the odds moving.
+   */
+  stagedRunout?: boolean
 }
 
 export class TexasHoldEmTable {
@@ -82,6 +92,9 @@ export class TexasHoldEmTable {
   private handNumber = 0
   private lastResult: HandResult | null = null
   private handInProgress = false
+  /** Waiting for the rest of an all-in board to be dealt a street at a time. */
+  private runoutPending = false
+  private stagedRunout: boolean
   /** Who made the last aggressive action on the current street, if anyone. */
   private streetAggressorId: string | null = null
   /** Who made the last aggressive action on the street before this one. */
@@ -113,6 +126,7 @@ export class TexasHoldEmTable {
     this.smallBlind = options.smallBlind
     this.bigBlind = options.bigBlind
     this.rng = options.rng ?? defaultRng
+    this.stagedRunout = options.stagedRunout ?? false
   }
 
   /**
@@ -338,6 +352,7 @@ export class TexasHoldEmTable {
       minRaiseTo: this.currentBet + this.lastRaiseSize,
       handInProgress: this.handInProgress,
       handNumber: this.handNumber,
+      runout: this.runoutPending,
       actingPlayerId: actingPlayer?.id ?? null,
       players: this.roster.map((p, idx) => ({
         id: p.id,
@@ -590,12 +605,29 @@ export class TexasHoldEmTable {
   }
 
   private runOutBoardAndShowdown(inHand: PlayerRuntime[]) {
+    if (this.stagedRunout && this.street !== 'river' && this.street !== 'showdown' && inHand.length >= 2) {
+      this.runoutPending = true
+      this.actingIndex = null
+      return
+    }
     while (this.street !== 'river' && this.street !== 'showdown') {
       if (this.street === 'preflop') this.board.push(this.deck.pop()!, this.deck.pop()!, this.deck.pop()!)
       else this.board.push(this.deck.pop()!)
       this.street = this.street === 'preflop' ? 'flop' : this.street === 'flop' ? 'turn' : 'river'
     }
     this.showdown(inHand)
+  }
+
+  /** Deals the next street of a staged runout; the river goes straight to the showdown. */
+  dealRunoutStreet(): void {
+    if (!this.runoutPending) throw new Error('no board is waiting to be dealt')
+    if (this.street === 'preflop') this.board.push(this.deck.pop()!, this.deck.pop()!, this.deck.pop()!)
+    else this.board.push(this.deck.pop()!)
+    this.street = this.street === 'preflop' ? 'flop' : this.street === 'flop' ? 'turn' : 'river'
+    if (this.street === 'river') {
+      this.runoutPending = false
+      this.showdown(this.roster.filter((p) => !p.folded))
+    }
   }
 
   private finishHandByFold(winner: PlayerRuntime | null) {

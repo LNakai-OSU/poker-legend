@@ -3,6 +3,7 @@ import { AREAS, CITIES, MISSIONS, SPONSORS, collectorSpawn, findArea } from '../
 import { isWalkable } from './tileRenderer'
 import { missionStatus, privateRoomOpen } from '../game/progression'
 import { CASINO_GOALS } from '../world/goals'
+import { weekdayShort } from '../world/week'
 import { daysUntilDue, huntingSponsorId, totalOwed, type GameState, type StoryFlag } from '../game/state'
 import type { PoiAction, PoiDef } from '../world/types'
 import type { NpcArt } from './Npc'
@@ -345,7 +346,7 @@ export function CityScene({
         <>
           {/* One line: where, when, and what you have. A phone has room for the last two. */}
           <div data-testid="hud-status" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {viewport.w >= 600 ? `${area.name} · ` : ''}Day {state.day}, {PERIOD_LABEL[state.period]} ·{' '}
+            {viewport.w >= 600 ? `${area.name} · ` : ''}{weekdayShort(state.day)} · Day {state.day}, {PERIOD_LABEL[state.period]} ·{' '}
             <span data-testid="hud-cash">${state.cash.toLocaleString()}</span>
           </div>
           {owed > 0 && (

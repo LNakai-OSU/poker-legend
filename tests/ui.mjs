@@ -2853,6 +2853,49 @@ await test('leaving a cash game shows Hal\'s notes and fills the book', async ()
   await page.close()
 })
 
+// When everyone left is all in the cards go face up and the board comes a
+// street at a time, with each hand's real chance beside it; then the hand ends.
+await test('an all-in runs out street by street with the odds showing', async () => {
+  const page = await newPage(baseSave())
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(500)
+  await enterDoor(page, 'Casino')
+  await talkTo(page, 'Pit Boss')
+  await page.waitForSelector('[data-testid="pot-value"]', { timeout: 20000 })
+  let seen = false
+  for (let i = 0; i < 400 && !seen; i++) {
+    if (await page.locator('[data-testid="runout-panel"]').isVisible().catch(() => false)) { seen = true; break }
+    const next = page.locator('button', { hasText: /Next hand/ })
+    if (await next.isVisible().catch(() => false)) { await next.click(); continue }
+    // Shove: open the raise sizes and take all-in, or the all-in button itself.
+    const toggle = page.locator('[data-testid="raise-toggle"]')
+    if (await toggle.isVisible().catch(() => false)) {
+      await toggle.click().catch(() => {})
+      const allin = page.locator('[data-testid="raise-all-in"]')
+      if (await allin.isVisible().catch(() => false)) { await allin.click().catch(() => {}); await page.waitForTimeout(150) }
+      const go = page.locator('button', { hasText: /^(Raise to|All in)/ }).first()
+      if (await go.isVisible().catch(() => false)) await go.click().catch(() => {})
+    }
+    await page.waitForTimeout(200)
+  }
+  assert(seen, 'never saw the runout panel after shoving')
+  const first = await page.locator('[data-testid="runout-panel"]').innerText()
+  assert(/\d+%/.test(first), `no odds in the panel: ${first}`)
+  const rows = await page.locator('[data-testid^="runout-"]:not([data-testid="runout-call"]):not([data-testid="runout-panel"]):not([data-testid="runout-deal"])').allInnerTexts()
+  const pcts = rows.map((r) => +(r.match(/(\d+)%/)?.[1] ?? NaN))
+  assert(pcts.length >= 2 && pcts.reduce((a, b) => a + b, 0) >= 98 && pcts.reduce((a, b) => a + b, 0) <= 102, `the odds do not add up: ${pcts}`)
+  assert((await page.locator('[data-testid="runout-call"]').innerText()).includes(':'), 'the broadcast said nothing')
+  // Deal on by hand until the hand ends.
+  for (let i = 0; i < 8 && (await page.locator('[data-testid="runout-panel"]').isVisible().catch(() => false)); i++) {
+    await page.locator('[data-testid="runout-deal"]').click().catch(() => {})
+    await page.waitForTimeout(250)
+  }
+  assert(!(await page.locator('[data-testid="runout-panel"]').isVisible().catch(() => false)), 'the runout never ended')
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+})
+
 // Pressed keys used to be sampled once per Pixi frame, so a keydown+keyup that
 // both landed between two frames was thrown away: 20 taps moved the player zero
 // tiles. Taps are buffered now, and one press must be exactly one step.

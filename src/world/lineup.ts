@@ -1,5 +1,6 @@
 import type { TimePeriod } from '../game/time'
 import type { SeatRef, TableDef } from './types'
+import { activeNight } from './week'
 
 /**
  * Who is at an open cash game right now.
@@ -33,12 +34,31 @@ function seeded(seed: string): () => number {
   }
 }
 
+const idOf = (ref: SeatRef): string => (typeof ref === 'string' ? ref : ref.character)
+
 /** The seats at a table at this hour: all of `opponents` unless it is an open game. */
 export function lineupFor(table: TableDef, period: TimePeriod, day: number): SeatRef[] {
   if (!table.walkIns) return table.opponents
   const pool = [...table.opponents, ...table.walkIns]
   const next = seeded(`${table.id}|${day}|${period}`)
   const { min, max } = PERIOD_CROWD[period]
+  // A night with a guest: the guest is in, and the rest is whoever else is about,
+  // as many as the hour would have brought (and always at least one, to play).
+  const guests = activeNight(table, day, period)?.guests ?? []
+  if (guests.length > 0) {
+    const guestIds = new Set(guests.map(idOf))
+    const others = pool.filter((ref) => !guestIds.has(idOf(ref)))
+    const lowest = Math.min(5, Math.max(min, guests.length + 1))
+    const highest = Math.min(5, Math.max(max, guests.length + 1))
+    const total = lowest + Math.floor(next() * (highest - lowest + 1))
+    const chosen = others
+      .map((ref, index) => ({ ref, index, order: next() }))
+      .sort((a, b) => a.order - b.order)
+      .slice(0, Math.min(others.length, total - guests.length))
+      .sort((a, b) => a.index - b.index)
+      .map((p) => p.ref)
+    return [...chosen, ...guests]
+  }
   const count = Math.min(pool.length, min + Math.floor(next() * (max - min + 1)))
   // A shuffle, then the first few. Keep the pool's own order for who sits where.
   const picked = pool

@@ -15,6 +15,16 @@ export const TABLES: Record<string, TableDef> = {
     buyIn: 100,
     opponents: ['ray', 'sully'],
     walkIns: ['bobbi', 'walt', 'dottie'],
+    nights: [
+      {
+        id: 'silvercreek-payday',
+        title: 'Payday Friday',
+        blurb: 'The cheques are cashed. Big Dale has come in off the reservation road with all of his.',
+        days: [4],
+        periods: ['evening', 'night'],
+        guests: ['dale'],
+      },
+    ],
   },
   'riverbend-mid': {
     id: 'riverbend-mid',
@@ -25,6 +35,16 @@ export const TABLES: Record<string, TableDef> = {
     buyIn: 300,
     opponents: ['deb', 'mack', 'tiny', 'gus', 'pearl'],
     walkIns: [],
+    nights: [
+      {
+        id: 'riverbend-tiny',
+        title: 'Tiny’s Saturday',
+        blurb: 'Saturday is the one night Tiny is on the boat from the first bell to the last.',
+        days: [5],
+        periods: ['evening', 'night'],
+        guests: ['tiny'],
+      },
+    ],
   },
   'crescent-main': {
     id: 'crescent-main',
@@ -35,6 +55,16 @@ export const TABLES: Record<string, TableDef> = {
     buyIn: 1000,
     opponents: ['corinne', 'vance', 'hollis', 'omar', 'bette'],
     walkIns: [],
+    nights: [
+      {
+        id: 'crescent-regatta',
+        title: 'Regatta Saturday',
+        blurb: 'The sailing club has come ashore, and Hollis is on his third buy-in before the first hand.',
+        days: [5],
+        periods: ['evening', 'night'],
+        guests: ['hollis'],
+      },
+    ],
   },
   'palmcay-high': {
     id: 'palmcay-high',
@@ -45,6 +75,16 @@ export const TABLES: Record<string, TableDef> = {
     buyIn: 2500,
     opponents: ['adaeze', 'kit'],
     walkIns: ['lucien', 'sloane', 'ferris'],
+    nights: [
+      {
+        id: 'palmcay-cruise',
+        title: 'Cruise Ship Sunday',
+        blurb: 'The ship is in until midnight. Two of its passengers have wandered upstairs with their holiday money.',
+        days: [6],
+        periods: ['afternoon', 'evening'],
+        guests: ['maud', 'hector'],
+      },
+    ],
   },
   'palmcay-tourist': {
     id: 'palmcay-tourist',
@@ -65,6 +105,16 @@ export const TABLES: Record<string, TableDef> = {
     buyIn: 10000,
     opponents: ['lorna', 'dmitri', 'whitaker', 'teo', 'junie'],
     walkIns: [],
+    nights: [
+      {
+        id: 'mesa-convention',
+        title: 'Convention Weekend',
+        blurb: 'Three thousand dentists are in town, and Whitaker is hosting the ones who play.',
+        days: [5, 6],
+        periods: ['evening', 'night'],
+        guests: ['whitaker'],
+      },
+    ],
   },
   'mesa-highroller': {
     id: 'mesa-highroller',
@@ -87,6 +137,16 @@ export const TABLES: Record<string, TableDef> = {
     dressCode: 3,
     opponents: ['xue', 'marchetti', 'kingsley'],
     walkIns: ['anselm', 'tamsin'],
+    nights: [
+      {
+        id: 'lumina-gala',
+        title: 'Gala Night',
+        blurb: 'The benefit is upstairs. Kingsley came to be photographed losing, and he will lose a lot.',
+        days: [4],
+        periods: ['night'],
+        guests: ['kingsley'],
+      },
+    ],
   },
   'crescent-headsup': {
     id: 'crescent-headsup',

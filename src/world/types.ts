@@ -3,6 +3,7 @@ import type { NpcArt } from '../overworld/Npc'
 import type { NpcRole, PersonLook } from '../overworld/characterArt'
 import type { Archetype, Habit, SkillTier } from '../engine/types'
 import type { PlayPhase } from './phases'
+import type { TableNight } from './week'
 import type { TournamentRules } from '../engine/tournament'
 import type { CityId } from '../game/state'
 import type { PlacedStamp } from './stamps'
@@ -62,6 +63,8 @@ export interface TableDef {
    * `opponents` is already a full table.
    */
   walkIns?: SeatRef[]
+  /** Hours of the week when somebody in particular sits in (`world/week.ts`). */
+  nights?: TableNight[]
   /** Minimum dress-code level the room enforces (see ITEM dressCode effects). */
   dressCode?: number
   /** Heads-up finale tables end the game rather than being a normal cash game. */

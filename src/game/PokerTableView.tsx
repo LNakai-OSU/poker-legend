@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { useCallback, useMemo, useRef, useEffect, useState, type CSSProperties } from 'react'
 import type { HandResult, PublicState } from '../engine/table'
 import { bestHand, HAND_CATEGORY_NAMES } from '../engine/handRank'
@@ -49,6 +50,10 @@ interface PokerTableViewProps {
   actionTags?: Record<string, ActionKind>
   /** Turn a fold-win winner's cards face up, which the player asked to see. */
   showHeld?: boolean
+  /** Hands turned face up before the hand is over: everyone all in, the board still to come. */
+  exposed?: Record<string, CardData[]>
+  /** The broadcast graphic over the felt below the board: the odds, while everyone is all in. */
+  broadcast?: ReactNode
   /** Where everything goes, and how big a pixel is. */
   layout: SceneLayout
   /** The room the table is in. */
@@ -312,6 +317,8 @@ export function PokerTableView({
   onDismissAnnouncement,
   blinds,
   showHeld,
+  exposed,
+  broadcast,
   actionTags,
   layout,
   theme,
@@ -340,7 +347,9 @@ export function PokerTableView({
         const revealed = handOver
           ? (lastResult.revealed.find((r) => r.playerId === p.id) ??
             (showHeld ? lastResult.held?.find((h) => h.playerId === p.id) : undefined))
-          : undefined
+          : exposed?.[p.id]
+            ? { holeCards: exposed[p.id] }
+            : undefined
         const personality = personalityFor(p.id, personas?.[p.id])
         const expression: Expression = expressionFor({
           tellKind: p.tell && !p.folded ? (p.tell.kind as Expression) : null,
@@ -544,6 +553,24 @@ export function PokerTableView({
         </span>
       </div>
       <HandAnnouncer announcement={announcement ?? null} scale={P} theme={theme} band={t.band} onDismiss={onDismissAnnouncement} />
+
+      {broadcast ? (
+        <Panel
+          theme={theme}
+          scale={P}
+          testId="broadcast"
+          style={{
+            ...at({ x: Math.max(2, t.board.x - 30), y: t.board.y + t.board.h + 3, w: Math.min(t.w - 4, t.board.w + 60), h: 0 }, P),
+            height: 'auto',
+            padding: 3 * P,
+            boxSizing: 'border-box',
+            zIndex: 6,
+            pointerEvents: 'none',
+          }}
+        >
+          {broadcast}
+        </Panel>
+      ) : null}
 
       <div data-testid="board" style={{ ...at(t.board, P), display: 'flex', gap: BOARD.gap * P }}>
         {state.board.map((c, i) => (

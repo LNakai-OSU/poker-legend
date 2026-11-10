@@ -12,6 +12,10 @@ import { tellCue } from './tellFlavor'
 import { SessionTracker, type Book } from './book'
 import { resolveStyle } from '../world/phases'
 import { memoryLine, memoryOf } from '../world/memory'
+import { activeNight } from '../world/week'
+import { knownEquities } from '../engine/equity'
+import { cardText } from './Card'
+import { runoutCall, type RunoutStreet } from './runoutCall'
 import { summarise, type Decision, type Recap } from './review'
 import { RecapPopup } from './RecapPopup'
 import { bestHand, HAND_CATEGORY_NAMES } from '../engine/handRank'
@@ -173,6 +177,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
       smallBlind: table.smallBlind,
       bigBlind: table.bigBlind,
       rng: defaultRng,
+      stagedRunout: true,
     }),
   )
   const [tick, setTick] = useState(0)
@@ -564,6 +569,55 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
       for (const p of publicState.players) if (p.id !== 'you' && p.tell && !p.folded) tracker.tell(p.id, p.tell.kind)
     }
   }, [tick])
+
+  // A night with somebody in particular: the room says so, once, as you sit down.
+  useEffect(() => {
+    const night = activeNight(table, state.day, state.period)
+    if (!night) return
+    const timer = window.setTimeout(() => announce({ key: `night-${night.id}`, text: night.title.toUpperCase(), detail: night.blurb, tone: 'good' }, 5200), 900)
+    return () => window.clearTimeout(timer)
+  }, [])
+
+  // Everyone is all in: the cards are turned face up and the rest of the board is
+  // dealt a street at a time, with the real odds beside it. Space deals on.
+  const dealOn = () => {
+    if (!engine.getState().runout) return
+    engine.dealRunoutStreet()
+    playSound('deal')
+    rerender()
+  }
+  useEffect(() => {
+    if (!publicState.runout) return
+    const timer = window.setTimeout(dealOn, publicState.board.length === 0 ? 2600 : 2200)
+    return () => window.clearTimeout(timer)
+  }, [tick, publicState.runout, publicState.board.length])
+  /** Each live player's chance of winning with the cards on the felt, and the last time, for the call. */
+  const runoutPrevRef = useRef<{ hand: number; equities: number[] } | null>(null)
+  const runoutView = useMemo(() => {
+    if (!publicState.runout) return null
+    const live = publicState.players.filter((p) => !p.folded)
+    const holes = live.map((p) => engine.getHoleCards(p.id))
+    const equities = knownEquities(holes, publicState.board, defaultRng)
+    const previous = runoutPrevRef.current?.hand === publicState.handNumber ? runoutPrevRef.current.equities : null
+    const street = publicState.street as RunoutStreet
+    const names = live.map((p) => p.name)
+    const call = runoutCall(names, equities, previous, street)
+    return { live, holes, equities, call, previous }
+  }, [publicState.runout, publicState.handNumber, publicState.board.length])
+  useEffect(() => {
+    if (runoutView) runoutPrevRef.current = { hand: publicState.handNumber, equities: runoutView.equities }
+  }, [runoutView])
+  useEffect(() => {
+    if (!publicState.runout) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === ' ' || e.key === 'Enter' || e.key === 'e' || e.key === 'x') {
+        e.preventDefault()
+        dealOn()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [publicState.runout, publicState.board.length])
 
   useEffect(() => {
     if (!publicState.handInProgress || !publicState.actingPlayerId || aiBusyRef.current) return
@@ -1005,7 +1059,20 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
           {tipsPanel}
         </>
       )
-      if (!canAct) {
+      if (!canAct && runoutView) {
+        // The broadcast graphic: everyone's cards, their chance, and the call.
+        body = null
+        hint = (
+          <div data-testid="action-log" style={{ display: 'none' }}>
+            {log.join(' ')}
+          </div>
+        )
+        barRow = (
+          <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+            {barButton('Deal on (space)', 'barCall', dealOn, { zoom: 1.5, testId: 'runout-deal' })}
+          </div>
+        )
+      } else if (!canAct) {
         body = handRead || potOdds ? info : null
         hint = (
           <div data-testid="action-log" style={{ display: 'none' }}>
@@ -1276,6 +1343,27 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
           announcement={announcement}
           blinds={blinds}
           showHeld={showHeld}
+          exposed={runoutView ? Object.fromEntries(runoutView.live.map((p, i) => [p.id, runoutView.holes[i]])) : undefined}
+          broadcast={
+            runoutView ? (
+              <div data-testid="runout-panel" style={{ display: 'flex', flexDirection: 'column', gap: 2 * layout.scale }}>
+                {runoutView.live
+                  .map((p, i) => ({ p, i }))
+                  .sort((a, b) => runoutView.equities[b.i] - runoutView.equities[a.i])
+                  .map(({ p, i }, rank) => (
+                    <PxLine
+                      key={p.id}
+                      scale={layout.scale}
+                      align="left"
+                      ink={rank === 0 ? INK.green : INK.dark}
+                      testId={`runout-${p.id}`}
+                      text={`${p.name}  ${runoutView.holes[i].map(cardText).join(' ')}  ${Math.round(runoutView.equities[i] * 100)}%`}
+                    />
+                  ))}
+                {runoutView.call ? <PxLine scale={layout.scale} wrap align="left" ink={INK.dark} testId="runout-call" text={runoutView.call} /> : null}
+              </div>
+            ) : undefined
+          }
           actionTags={actionTags}
           layout={layout}
           theme={theme}
