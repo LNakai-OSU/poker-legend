@@ -11,6 +11,7 @@ import { TableCaption } from './TableCaption'
 import { tellCue } from './tellFlavor'
 import { SessionTracker, type Book } from './book'
 import { resolveStyle } from '../world/phases'
+import { memoryLine, memoryOf } from '../world/memory'
 import { summarise, type Decision, type Recap } from './review'
 import { RecapPopup } from './RecapPopup'
 import { bestHand, HAND_CATEGORY_NAMES } from '../engine/handRank'
@@ -274,6 +275,25 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
   }
 
   const hintsSaid = useRef(new Set<string>())
+  const memorySaid = useRef(new Set<string>())
+  /**
+   * What somebody remembers about you — a big pot from last time, or this
+   * sitting's third run-off — said once each. Only when nothing else is due.
+   */
+  const sayMemory = (): boolean => {
+    for (const seat of seats) {
+      if (memorySaid.current.has(seat.id) || !players.some((p) => p.id === seat.id)) continue
+      const kind = memoryOf(state.book[seat.id], tracker.notesOn(seat.id))
+      if (!kind) continue
+      memorySaid.current.add(seat.id)
+      if (speechTimer.current) window.clearTimeout(speechTimer.current)
+      const name = personalityFor(seat.id, personas[seat.id]).name
+      setSpeech({ playerId: seat.id, text: `${name}: ${memoryLine(seat.id, seat.archetype, kind)}` })
+      speechTimer.current = window.setTimeout(() => setSpeech(null), SPEECH_MS * 2)
+      return true
+    }
+    return false
+  }
   /** What you did for the town comes up at the table, one line a moment, once a sitting each. */
   const sayHint = (): boolean => {
     const hint = TABLE_HINTS.find(
@@ -283,7 +303,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
         players.some((p) => p.id === h.speaker) &&
         h.when.every((c) => conditionHolds(c, state)),
     )
-    if (!hint) return false
+    if (!hint) return sayMemory()
     hintsSaid.current.add(hint.id)
     if (speechTimer.current) window.clearTimeout(speechTimer.current)
     const name = personalityFor(hint.speaker, personas[hint.speaker]).name
