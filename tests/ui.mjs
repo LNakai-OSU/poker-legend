@@ -2808,8 +2808,47 @@ await test('can sit down, play, and leave a cash game', async () => {
     await page.waitForTimeout(220)
   }
   assert(left, 'could not leave the table')
+  // Hal's notes come first, once at least a hand has been played.
+  await page.locator('[data-testid="recap-continue"]').click({ timeout: 5000 }).catch(() => {})
   await page.waitForTimeout(500)
   assert((await page.locator('body').innerText()).includes('Silver Creek'), 'did not return to the city')
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+  await page.close()
+})
+
+// Standing up shows what the sitting came to and Hal's notes; the people dealt
+// in with are then in the Book of Reads.
+await test('leaving a cash game shows Hal\'s notes and fills the book', async () => {
+  const page = await newPage(baseSave())
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(400)
+  await enterDoor(page, 'Casino')
+  await talkTo(page, 'Pit Boss')
+  await page.waitForSelector('[data-testid="pot-value"]', { timeout: 20000 })
+  let hands = 0
+  for (let i = 0; i < 120 && hands < 4; i++) {
+    const next = page.locator('button', { hasText: /Next hand/ })
+    if (await next.isVisible().catch(() => false)) { hands++; await next.click() }
+    else for (const label of ['Check', /^Call/]) {
+      const btn = page.locator('button', { hasText: label })
+      if (await btn.first().isVisible().catch(() => false)) { await btn.first().click().catch(() => {}); break }
+    }
+    await page.waitForTimeout(250)
+  }
+  await page.locator('button', { hasText: /Leave table/ }).first().click()
+  await page.locator('[data-testid="recap-popup"]').waitFor({ state: 'visible', timeout: 5000 })
+  const text = await page.locator('[data-testid="recap-card"]').innerText()
+  assert(/Hal/.test(text), 'the recap does not carry Hal\'s notes')
+  assert((await page.locator('[data-testid="recap-note"]').count()) >= 1, 'Hal said nothing')
+  const box = await page.locator('[data-testid="recap-card"]').boundingBox()
+  const view = page.viewportSize()
+  assert(box && box.y >= 0 && box.y + box.height <= view.height + 1, 'the recap card does not fit the window')
+  await page.locator('[data-testid="recap-continue"]').click()
+  await page.waitForTimeout(600)
+  await page.keyboard.press('Escape')
+  await page.locator('[data-testid="nav-book"]').click()
+  await page.locator('[data-testid^="book-"]').first().waitFor({ state: 'visible', timeout: 5000 })
   assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
   await page.close()
 })

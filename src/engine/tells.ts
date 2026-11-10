@@ -1,6 +1,6 @@
 import { estimateEquity } from './ai'
 import type { Rng } from './rng'
-import type { Archetype, Card, SkillTier, TellSignal } from './types'
+import type { Archetype, Card, Habit, SkillTier, TellSignal } from './types'
 
 /**
  * The cue vocabulary is split, so the cue itself is the signal: a player who
@@ -76,6 +76,8 @@ export function generateTell(
    * against three — was labelled strong at a four-handed table.
    */
   opponentsInHand = 1,
+  /** Their own cues, if they have them; otherwise the shared vocabulary. */
+  habit?: Habit,
 ): TellSignal | null {
   const isWhale = archetype === 'whale'
   const frequency = isWhale ? WHALE_FREQUENCY : TELL_FREQUENCY[skillTier]
@@ -98,7 +100,7 @@ export function generateTell(
   // hand strength it is pretending to have — which is exactly what makes a
   // better player unreliable to read rather than simply unreadable.
   const kinds = meansStrongHand ? STRONG_TELL_KINDS : WEAK_TELL_KINDS
-  const kind = kinds[Math.floor(rng() * kinds.length)]
+  const kind = habit ? (meansStrongHand ? habit.strong : habit.weak) : kinds[Math.floor(rng() * kinds.length)]
   // How far the hand is from neutral also drives how hard it is to hide, so a
   // monster or a complete airball leaks more than a marginal holding.
   const polarisation = Math.min(1, Math.abs(equity - evenShare) / 0.4)

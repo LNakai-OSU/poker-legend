@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { TexasHoldEmTable, type HandResult } from '../engine/table'
 import { decideAiAction, estimateEquity, inferredRangePercentile } from '../engine/ai'
-import { bestHand, HAND_CATEGORY_NAMES } from '../engine/handRank'
 import { defaultRng } from '../engine/rng'
 import { isFinalTable, roundOfNextHand } from '../engine/tournament'
 import { stepTournament } from './tournamentFlow'
@@ -10,6 +9,12 @@ import type { OpponentDef, TableDef } from '../world/types'
 import { PokerTableView, ShowdownSummary, handTakings, madeHand, potWinnerIds, tellAlphaOf, type SeatSpeech } from './PokerTableView'
 import { TableCaption } from './TableCaption'
 import { tellCue } from './tellFlavor'
+import { SessionTracker, type Book } from './book'
+import { resolveStyle } from '../world/phases'
+import { summarise, type Decision, type Recap } from './review'
+import { RecapPopup } from './RecapPopup'
+import { bestHand, HAND_CATEGORY_NAMES } from '../engine/handRank'
+import { actionKind } from './actionTag'
 import type { Announcement } from './HandAnnouncer'
 import { personalityFor, seatsOf } from '../world/characters'
 import { lineupFor } from '../world/lineup'
@@ -41,6 +46,8 @@ export interface SessionResult {
   finaleWon?: boolean
   /** Only set for a tournament: you are the last one standing at its final table. */
   tournamentWon?: boolean
+  /** What you saw each opponent do this sitting, for the Book of Reads. */
+  notes?: Book
 }
 
 interface TableSceneProps {
@@ -136,6 +143,7 @@ function buildPlayers(table: TableDef, seats: OpponentDef[]): PlayerConfig[] {
       isHuman: false,
       skillTier: opponent.skillTier,
       archetype: opponent.archetype,
+      habit: opponent.habit,
       startingStack: Math.round(table.buyIn * (opponent.stackMultiplier ?? 1)),
     })),
   ]
@@ -181,6 +189,18 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
   const handsWonRef = useRef(0)
   const biggestPotRef = useRef(0)
   const countedHandRef = useRef(0)
+  /** What this sitting shows about each opponent: the Book of Reads, and what they will say next time. */
+  const trackerRef = useRef<SessionTracker | null>(null)
+  if (trackerRef.current === null) trackerRef.current = new SessionTracker(table.bigBlind)
+  const tracker = trackerRef.current
+  const trackedHandRef = useRef(0)
+  /** Every bet you faced and called or folded, for Hal to look over. */
+  const decisionsRef = useRef<Decision[]>([])
+  /** Your best showdown hand this sitting, as a rank and its name. */
+  const bestShownRef = useRef<{ rank: number; name: string } | null>(null)
+  /** Chips put on the table so far: the first buy-in and every rebuy. */
+  const investedRef = useRef(Math.round(table.buyIn * (table.yourStack ?? 1)))
+  const [recap, setRecap] = useState<{ recap: Recap; leave: () => void } | null>(null)
 
   useAmbientMusic('table')
 
@@ -218,6 +238,40 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
     },
     [],
   )
+
+  /** Which of each boss's phases hold, so a turn in the match is announced once. */
+  const phasesRef = useRef<Record<string, string>>({})
+  /**
+   * Between hands: a boss who has been winning gets loose, one who is losing digs
+   * in, one who has been reading you starts using it (`world/phases.ts`).
+   */
+  const applyPhases = () => {
+    for (const seat of seats) {
+      if (!seat.phases?.length) continue
+      const me = engine.getState().players.find((p) => p.id === seat.id)
+      if (!me) continue
+      const sat = Math.round(table.buyIn * (seat.stackMultiplier ?? 1))
+      const style = resolveStyle(seat, seat.phases, {
+        stackRatio: me.stack / sat,
+        hands: engine.getState().handNumber,
+        youAggression: tracker.youAggression(),
+      })
+      const key = style.active.join(',')
+      const before = phasesRef.current[seat.id] ?? ''
+      if (key === before) continue
+      phasesRef.current[seat.id] = key
+      engine.restyle(seat.id, style)
+      const had = before.split(',')
+      const turn = style.active.filter((i) => !had.includes(String(i))).map((i) => seat.phases![i]).find((phase) => phase.says || phase.announce)
+      if (!turn) continue
+      if (turn.announce) announce({ key: `phase-${seat.id}-${key}`, text: turn.announce, tone: 'tense' }, 3200)
+      if (turn.says) {
+        if (speechTimer.current) window.clearTimeout(speechTimer.current)
+        setSpeech({ playerId: seat.id, text: turn.says[Math.floor(Math.random() * turn.says.length)] })
+        speechTimer.current = window.setTimeout(() => setSpeech(null), SPEECH_MS * 2)
+      }
+    }
+  }
 
   const hintsSaid = useRef(new Set<string>())
   /** What you did for the town comes up at the table, one line a moment, once a sitting each. */
@@ -345,6 +399,12 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
       }
     }
     playSound(wonAnything ? 'win' : 'lose')
+    tracker.endHand(lastResult)
+    const shown = lastResult.revealed.find((r) => r.playerId === 'you')
+    if (shown) {
+      const rank = bestHand([...shown.holeCards, ...lastResult.board]).category
+      if (!bestShownRef.current || rank > bestShownRef.current.rank) bestShownRef.current = { rank, name: HAND_CATEGORY_NAMES[rank] }
+    }
 
     announce(resultAnnouncement(lastResult, publicState.handNumber, players), RESULT_MS)
 
@@ -409,6 +469,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
   const dealNextHand = () => {
     rebuyOpponents()
     tournamentBetweenHands()
+    applyPhases()
     engine.startNewHand()
     setLog([])
     playSound('deal')
@@ -472,6 +533,18 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
     }
   }, [])
 
+  // A hand has begun: note who is in it. A cue on somebody's face is noted as it shows.
+  useEffect(() => {
+    tracker.setBigBlind(blinds.big)
+    if (publicState.handInProgress && trackedHandRef.current !== publicState.handNumber) {
+      trackedHandRef.current = publicState.handNumber
+      tracker.startHand(publicState.players.filter((p) => p.id !== 'you' && !p.isEliminated && !p.folded).map((p) => p.id))
+    }
+    if (publicState.handInProgress) {
+      for (const p of publicState.players) if (p.id !== 'you' && p.tell && !p.folded) tracker.tell(p.id, p.tell.kind)
+    }
+  }, [tick])
+
   useEffect(() => {
     if (!publicState.handInProgress || !publicState.actingPlayerId || aiBusyRef.current) return
     const actingPlayer = players.find((p) => p.id === publicState.actingPlayerId)
@@ -490,6 +563,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
         else if (action.type === 'fold') say(actingPlayer.id, 'fold')
         note(describeAction(actingPlayer.name, action, ctx))
         recordAction(actingPlayer.id, action, ctx)
+        tracker.action(actingPlayer.id, actionKind(action, ctx))
         engine.submitAction(actingPlayer.id, action)
       }
       aiBusyRef.current = false
@@ -623,9 +697,22 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
 
   const act = (type: 'fold' | 'check' | 'call') => {
     setRaiseSheet(false)
+    // Facing a bet and staying in or not: Hal will want to see the price.
+    if ((type === 'fold' || type === 'call') && toCall > 0 && publicState.pot > 0) {
+      decisionsRef.current.push({
+        hand: publicState.handNumber,
+        street: publicState.street,
+        action: type,
+        toCall: Math.min(toCall, you.stack),
+        pot: publicState.pot,
+        equity: estimateEquity(yourHole, publicState.board, Math.max(1, opponentsInHand), defaultRng, 300),
+        bigBlind: blinds.big,
+      })
+    }
     playSound(type === 'call' ? 'chip' : type)
     note(describeAction('You', { type }, { toCall, allInTo }))
     recordAction('you', { type }, { toCall, allInTo })
+    tracker.action('you', actionKind({ type }, { toCall, allInTo }))
     engine.submitAction('you', { type })
     if (type === 'fold') window.setTimeout(() => remark('youFold'), 400)
     rerender()
@@ -635,18 +722,36 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
     playSound('chip')
     note(describeAction('You', { type: 'raise', to }, { toCall, allInTo }))
     recordAction('you', { type: 'raise', to }, { toCall, allInTo })
+    tracker.action('you', actionKind({ type: 'raise', to }, { toCall, allInTo }))
     engine.submitAction('you', { type: 'raise', to })
     window.setTimeout(() => remark(to >= allInTo ? 'shove' : 'youRaise'), 450)
     rerender()
   }
 
-  const leaveWith = (chips: number, finaleWon?: boolean, tournamentWon?: boolean) =>
+  /**
+   * Standing up from a cash game or a boss match shows Hal's notes first. A
+   * tournament and the final are story and carry on straight away.
+   */
+  const leaveWith = (chips: number, finaleWon?: boolean, tournamentWon?: boolean) => {
+    if (rules || isFinale || handsPlayed < 1 || recap) return finishWith(chips, finaleWon, tournamentWon)
+    setRecap({
+      leave: () => finishWith(chips, finaleWon, tournamentWon),
+      recap: summarise(decisionsRef.current, {
+        net: chips - investedRef.current,
+        hands: handsPlayed,
+        potsWon: handsWonRef.current,
+        bestHand: bestShownRef.current?.name ?? null,
+      }),
+    })
+  }
+  const finishWith = (chips: number, finaleWon?: boolean, tournamentWon?: boolean) =>
     onLeave({
       tournamentWon,
       chipsCashedOut: chips,
       handsWon: handsWonRef.current,
       biggestPot: biggestPotRef.current,
       finaleWon,
+      notes: tracker.snapshot(),
     })
 
   // --- End-of-session panel -------------------------------------------------
@@ -809,6 +914,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
                       engine.rebuy('you', table.buyIn)
                       rebuyOpponents()
                       engine.startNewHand()
+                      investedRef.current += table.buyIn
                       onRebuy(table.buyIn)
                       rerender()
                     }}
@@ -1079,6 +1185,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
               />
             )}
             {hint}
+            {recap ? <RecapPopup theme={theme} P={P} recap={recap.recap} onContinue={recap.leave} /> : null}
             {body && ending ? (
               <div
                 data-testid="end-popup"

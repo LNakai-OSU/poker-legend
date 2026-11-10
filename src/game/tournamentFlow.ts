@@ -50,7 +50,7 @@ export function stepTournament(
       const [guest] = seatsOf(table, [guestId])
       const stack = replacementStack(rng, engine.getState().players.filter((p) => p.id !== out.id).map((p) => p.stack), blinds.big)
       everSeated.add(guest.id)
-      engine.replacePlayer(out.id, { id: guest.id, name: guest.name, isHuman: false, skillTier: guest.skillTier, archetype: guest.archetype, startingStack: stack })
+      engine.replacePlayer(out.id, { id: guest.id, name: guest.name, isHuman: false, skillTier: guest.skillTier, archetype: guest.archetype, habit: guest.habit, startingStack: stack })
       step.replaced.push({ outId: out.id, outName: out.name, newcomer: guest, stack })
     }
     return step
@@ -79,6 +79,7 @@ export function stepTournament(
       isHuman: false,
       skillTier: newcomer.skillTier,
       archetype: newcomer.archetype,
+      habit: newcomer.habit,
       startingStack: stack,
     })
     step.replaced.push({ outId: out.id, outName: out.name, newcomer, stack })

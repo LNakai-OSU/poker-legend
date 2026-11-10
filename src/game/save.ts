@@ -1,4 +1,5 @@
 import { emptyRecord, initialState, TOWN_ORDER, type CasinoProgress, type GameState, type RunRecord } from './state'
+import { cleanBook } from './book'
 import { pull, push, tokenFor } from './cloud'
 import { TIME_PERIODS, type TimePeriod } from './time'
 
@@ -74,6 +75,7 @@ function reconcile(parsed: unknown): GameState | null {
     flags: { ...base.flags, ...(saved.flags ?? {}) },
     completedEventIds: Array.isArray(saved.completedEventIds) ? saved.completedEventIds : base.completedEventIds,
     record: reconcileRecord(saved),
+    book: cleanBook(saved.book),
     casino: reconcileCasino(saved),
     stats: { ...base.stats, ...(saved.stats ?? {}) },
   }

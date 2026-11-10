@@ -3,7 +3,7 @@ import { bestHand, compareHandStrength } from './handRank'
 import { calculatePots, type PotLayer } from './pots'
 import type { Rng } from './rng'
 import { defaultRng } from './rng'
-import type { Action, Card, PlayerConfig, Street, TellSignal } from './types'
+import type { Action, Archetype, Card, Habit, PlayerConfig, SkillTier, Street, TellSignal } from './types'
 import { generateTell } from './tells'
 import type { AiDecisionContext, OpponentRead } from './ai'
 
@@ -176,6 +176,7 @@ export class TexasHoldEmTable {
         this.rng,
         p.archetype,
         opponentsInHand,
+        p.habit,
       )
       if (tell) this.tellCache.set(p.id, tell)
     }
@@ -226,6 +227,21 @@ export class TexasHoldEmTable {
     }
     this.actionCounts.delete(oldId)
     this.tellCache.delete(oldId)
+  }
+
+  /**
+   * Changes how somebody plays from the next decision on. For a boss who turns
+   * as the match goes (`world/phases.ts`): the style, the skill and the tell are
+   * theirs to change, the deck never is. Not mid-hand, so nobody is two people
+   * in one pot.
+   */
+  restyle(playerId: string, style: { archetype?: Archetype; skillTier?: SkillTier; habit?: Habit }): void {
+    if (this.handInProgress) throw new Error('cannot change how somebody plays mid-hand')
+    const p = this.roster.find((pl) => pl.id === playerId)
+    if (!p) throw new Error(`unknown player ${playerId}`)
+    p.archetype = style.archetype
+    if (style.skillTier) p.skillTier = style.skillTier
+    p.habit = style.habit
   }
 
   private seatsInHandOrder(): number[] {

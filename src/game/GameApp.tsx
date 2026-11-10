@@ -1,3 +1,4 @@
+import { mergeBook, type Book } from './book'
 import { useEffect, useRef, useState } from 'react'
 import { CityScene } from '../overworld/CityScene'
 import { PokerNightScene } from './PokerNightScene'
@@ -335,6 +336,8 @@ export function GameApp({ playtest = false, showGuide = playtest }: { playtest?:
   }
 
   const handleLeaveTable = (table: (typeof TABLES)[string], result: SessionResult) => {
+    // What you saw them do this sitting goes in the book whichever way it ended.
+    const withBook = <S extends { book: Book }>(s: S): S => ({ ...s, book: mergeBook(s.book, result.notes ?? {}) })
     // The tournament: the entry fee is spent either way, and the prize is the seat at the Invitational.
     if (table.tournament) {
       const won = result.tournamentWon === true
@@ -344,7 +347,7 @@ export function GameApp({ playtest = false, showGuide = playtest }: { playtest?:
         biggestPot: Math.max(state.stats.biggestPot, result.biggestPot),
         tablesPlayed: state.stats.tablesPlayed + 1,
       }
-      const settled = endSession({ ...state, stats, flags: won ? { ...state.flags, wonTournament: true } : state.flags })
+      const settled = endSession(withBook({ ...state, stats, flags: won ? { ...state.flags, wonTournament: true } : state.flags }))
       setState(() => (won || settled.cash >= BUST_LINE ? settled : recordBust(settled)))
       getUpFromTable()
       playSound(won ? 'cash' : 'lose')
@@ -358,15 +361,17 @@ export function GameApp({ playtest = false, showGuide = playtest }: { playtest?:
       const goal = CASINO_GOALS[table.bossOf]
       const boss = CHARACTERS[goal.bossId]
       const won = result.finaleWon === true
-      const settled = endSession({
-        ...state,
-        cash: state.cash + (won ? result.chipsCashedOut : 0),
-        stats: {
-          handsWon: state.stats.handsWon + result.handsWon,
-          biggestPot: Math.max(state.stats.biggestPot, result.biggestPot),
-          tablesPlayed: state.stats.tablesPlayed + 1,
-        },
-      })
+      const settled = endSession(
+        withBook({
+          ...state,
+          cash: state.cash + (won ? result.chipsCashedOut : 0),
+          stats: {
+            handsWon: state.stats.handsWon + result.handsWon,
+            biggestPot: Math.max(state.stats.biggestPot, result.biggestPot),
+            tablesPlayed: state.stats.tablesPlayed + 1,
+          },
+        }),
+      )
       const after = won ? recordBossBeaten(settled, table.bossOf) : settled.cash < BUST_LINE ? recordBust(settled) : settled
       setState(() => after)
       getUpFromTable()
@@ -381,7 +386,7 @@ export function GameApp({ playtest = false, showGuide = playtest }: { playtest?:
     setState((s) => {
       const counted = table.isFinale ? s : recordCasinoSession(s, s.cityId, net, CASINO_GOALS[s.cityId]?.winTarget)
       const next = endSession({
-        ...counted,
+        ...withBook(counted),
         cash: s.cash + result.chipsCashedOut,
         stats: {
           handsWon: s.stats.handsWon + result.handsWon,

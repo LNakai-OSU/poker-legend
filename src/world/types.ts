@@ -1,7 +1,8 @@
 import type { TileGrid } from '../overworld/tileRenderer'
 import type { NpcArt } from '../overworld/Npc'
 import type { NpcRole, PersonLook } from '../overworld/characterArt'
-import type { Archetype, SkillTier } from '../engine/types'
+import type { Archetype, Habit, SkillTier } from '../engine/types'
+import type { PlayPhase } from './phases'
 import type { TournamentRules } from '../engine/tournament'
 import type { CityId } from '../game/state'
 import type { PlacedStamp } from './stamps'
@@ -26,6 +27,8 @@ export interface OpponentDef {
   stackMultiplier?: number
   /** Which of the character's personas is sitting here, if not their usual one. */
   persona?: string
+  habit?: Habit
+  phases?: PlayPhase[]
 }
 
 /**

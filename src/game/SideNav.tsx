@@ -7,6 +7,7 @@ import { LESSONS, MISSIONS, findItem } from '../world/content'
 import { PERIOD_LABEL } from './time'
 import { challengeLines, goalStatus, missionStatus, nadiaFile, standing } from './progression'
 import { GOAL_ORDER } from '../world/goals'
+import { bookEntries } from './bookView'
 import { totalOwed, type GameState } from './state'
 import { PxButton } from './pixel/ui'
 import { PixelText } from './pixel/PixelText'
@@ -37,7 +38,7 @@ import type { SaveOutcome } from './save'
  * their way into it by accident.
  */
 
-type Page = 'main' | 'bag' | 'jobs' | 'goals' | 'record'
+type Page = 'main' | 'bag' | 'jobs' | 'goals' | 'record' | 'book'
 
 /**
  * What the broadcast has told you about the people at the final table. True at
@@ -249,6 +250,26 @@ export function SideNav({
         })}
       </>
     )
+  } else if (page === 'book') {
+    const entries = bookEntries(state.book)
+    const ink = { plain: INK.light, good: INK.green, bad: INK.red, dim: INK.dim } as const
+    body = (
+      <>
+        {item('nav-back', '< Back', () => setPage('main'))}
+        {heading('Book of Reads')}
+        {line('What you have seen them do. Every cue is only worth what the showdowns say it is.', INK.dim)}
+        {entries.length === 0 ? line('Nobody yet. Sit down at a table and watch.', INK.dim) : null}
+        {entries.map((entry) => (
+          <div key={entry.id} data-testid={`book-${entry.id}`} style={{ display: 'grid', gap: scale }}>
+            {rule}
+            {line(`${entry.name} · ${entry.blurb}`, INK.gold)}
+            {entry.lines.map((l, i) => (
+              <div key={i}>{line(l.text, ink[l.tone])}</div>
+            ))}
+          </div>
+        ))}
+      </>
+    )
   } else if (page === 'record') {
     body = (
       <>
@@ -287,6 +308,7 @@ export function SideNav({
         {item('nav-bag', 'Bag', () => setPage('bag'))}
         {item('nav-jobs', 'Jobs', () => setPage('jobs'))}
         {item('nav-record', 'Record', () => setPage('record'))}
+        {item('nav-book', 'Book of Reads', () => setPage('book'))}
         {item('nav-goals', 'Goals', () => setPage('goals'))}
         {item('nav-world-map', 'World map', onWorldMap)}
         {onPlaytest && item('nav-playtest', 'Playtest tools', onPlaytest)}
@@ -357,7 +379,7 @@ export function SideNav({
     )
   }
 
-  const title = page === 'main' ? 'Menu' : page === 'bag' ? 'Bag' : page === 'jobs' ? 'Jobs' : page === 'goals' ? 'Goals' : 'Record'
+  const title = page === 'main' ? 'Menu' : page === 'bag' ? 'Bag' : page === 'jobs' ? 'Jobs' : page === 'goals' ? 'Goals' : page === 'book' ? 'Book of Reads' : 'Record'
 
   return (
     <div data-testid="side-nav" className={closing ? 'side-nav closing' : 'side-nav'} style={{ position: 'fixed', inset: 0, zIndex: 100 }}>

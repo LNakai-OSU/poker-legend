@@ -1,5 +1,6 @@
 import { periodAfter, type TimePeriod } from './time'
 import { clearFlags, type StoryFlag } from '../world/flags'
+import type { Book } from './book'
 
 /**
  * Something true about the world that content can ask about. The list is data,
@@ -167,6 +168,8 @@ export interface GameState {
    */
   completedEventIds: string[]
   record: RunRecord
+  /** What you have seen each opponent do (`game/book.ts`). */
+  book: Book
   stats: {
     handsWon: number
     biggestPot: number
@@ -241,6 +244,7 @@ export function initialState(): GameState {
     casino: emptyCasino(),
     completedEventIds: [],
     record: emptyRecord(),
+    book: {},
     stats: { handsWon: 0, biggestPot: 0, tablesPlayed: 0 },
   }
 }

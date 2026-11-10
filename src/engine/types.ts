@@ -68,6 +68,20 @@ export interface PlayerConfig {
   skillTier: SkillTier
   startingStack: number
   archetype?: Archetype
+  /** Their own tells. Without one they give off the shared cues (`STRONG_TELL_KINDS`). */
+  habit?: Habit
+}
+
+export type TellKind = 'arm-shift' | 'lip-twitch' | 'glance' | 'stillness' | 'chip-tap'
+
+/**
+ * What one person does with a good hand and with a bad one. Everybody has a
+ * different pair, so a read on Mack is not a read on Deb: it has to be earned
+ * at the table, one showdown at a time.
+ */
+export interface Habit {
+  strong: TellKind
+  weak: TellKind
 }
 
 export interface TellSignal {
@@ -76,5 +90,5 @@ export interface TellSignal {
   visibility: number
   /** True tell correlates with strength; a decoy is a deliberately misleading tell (bluff). */
   meansStrongHand: boolean
-  kind: 'arm-shift' | 'lip-twitch' | 'glance' | 'stillness' | 'chip-tap'
+  kind: TellKind
 }

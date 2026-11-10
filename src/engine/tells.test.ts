@@ -121,3 +121,31 @@ describe('generateTell', () => {
     expect(['arm-shift', 'lip-twitch', 'glance', 'stillness', 'chip-tap']).toContain(tell!.kind)
   })
 })
+
+describe('a habit', () => {
+  const habit = { strong: 'glance', weak: 'chip-tap' } as const
+
+  it('is the only pair of cues that person ever shows', () => {
+    const rng = mulberry32(5)
+    const kinds = { strong: new Set<string>(), weak: new Set<string>() }
+    for (let i = 0; i < 600; i++) {
+      for (const hole of [POCKET_ACES, TRASH]) {
+        const tell = generateTell('mack', hole, [], 'novice', rng, 'regular', 1, habit)
+        if (tell) kinds[tell.meansStrongHand ? 'strong' : 'weak'].add(tell.kind)
+      }
+    }
+    expect([...kinds.strong]).toEqual(['glance'])
+    expect([...kinds.weak]).toEqual(['chip-tap'])
+  })
+
+  it('can run against the usual meaning of a cue', () => {
+    // Chip-tap is a strong cue for everybody else; for this person it is a bluff.
+    const rng = mulberry32(5)
+    let taps = 0
+    for (let i = 0; i < 600; i++) {
+      const tell = generateTell('mack', TRASH, [], 'novice', rng, 'regular', 1, habit)
+      if (tell?.kind === 'chip-tap') taps++
+    }
+    expect(taps).toBeGreaterThan(0)
+  })
+})

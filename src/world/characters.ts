@@ -1,5 +1,6 @@
 import type { AvatarLook } from '../game/avatars'
-import type { Archetype, SkillTier } from '../engine/types'
+import type { Archetype, Habit, SkillTier } from '../engine/types'
+import type { PlayPhase } from './phases'
 import type { OpponentDef, SeatRef, TableDef } from './types'
 import type { NpcArt } from '../overworld/Npc'
 import type { NpcRole, PersonLook } from '../overworld/characterArt'
@@ -43,6 +44,14 @@ export interface Seat {
   archetype?: Archetype
   /** Whales sit down deeper than everyone else. */
   stackMultiplier?: number
+  /**
+   * What they do with a good hand and with a bad one. Whales have none: they
+   * broadcast honestly, with the cues everybody shares. Everybody else is their
+   * own puzzle, which the Book of Reads fills in as you watch them show down.
+   */
+  habit?: Habit
+  /** Turns in the match: they change how they play as it goes (`world/phases.ts`). */
+  phases?: PlayPhase[]
 }
 
 /**
@@ -158,7 +167,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Gus',
     style: 'Talks through every hand.',
     look: { skin: '#d8a878', hair: '#8a6a3a', hairStyle: 'short', shirt: '#4a7a8b', accessory: 'none' },
-    seat: { skillTier: 'novice', archetype: 'station' },
+    seat: { skillTier: 'novice', archetype: 'station', habit: { strong: 'chip-tap', weak: 'lip-twitch' } },
     lines: {
       greeting: ['Gus: New blood. Good, good.'],
       bet: ['Gus: I will lead out here.', 'Gus: Let me put a bet in.'],
@@ -174,7 +183,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Pearl',
     style: 'Never looks at her cards twice.',
     look: { skin: '#6b4226', hair: '#1a1a1a', hairStyle: 'tied', shirt: '#b5739a', accessory: 'earring' },
-    seat: { skillTier: 'competent', archetype: 'regular' },
+    seat: { skillTier: 'competent', archetype: 'regular', habit: { strong: 'stillness', weak: 'chip-tap' } },
     lines: {
       greeting: ['Pearl: Sit down then.'],
       bet: ['Pearl: Bet.'],
@@ -190,7 +199,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Omar',
     style: 'Here straight from a night shift.',
     look: { skin: '#a9743f', hair: '#2a1d14', hairStyle: 'short', shirt: '#5a6a4a', accessory: 'cap' },
-    seat: { skillTier: 'amateur', archetype: 'maniac' },
+    seat: { skillTier: 'amateur', archetype: 'maniac', habit: { strong: 'glance', weak: 'chip-tap' } },
     lines: {
       greeting: ['Omar: Two hours then I am going to bed.'],
       bet: ['Omar: Bet. Let us speed this up.'],
@@ -206,7 +215,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Bette',
     style: 'Counts the pot out loud.',
     look: { skin: '#eac3a0', hair: '#9a9a9a', hairStyle: 'short', shirt: '#7a5a9a', accessory: 'glasses' },
-    seat: { skillTier: 'competent', archetype: 'nit' },
+    seat: { skillTier: 'competent', archetype: 'nit', habit: { strong: 'chip-tap', weak: 'glance' } },
     lines: {
       greeting: ['Bette: Forty years I have played this game.'],
       bet: ['Bette: Four hundred in there, so — bet.'],
@@ -222,7 +231,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Teo',
     style: 'Youngest at the table, by a lot.',
     look: { skin: '#c08552', hair: '#141414', hairStyle: 'long', shirt: '#2f6ea8', accessory: 'shades' },
-    seat: { skillTier: 'competent', archetype: 'maniac' },
+    seat: { skillTier: 'competent', archetype: 'maniac', habit: { strong: 'lip-twitch', weak: 'chip-tap' } },
     lines: {
       greeting: ['Teo: Let us run it up.'],
       bet: ['Teo: Betting.', 'Teo: Pressure.'],
@@ -238,7 +247,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Junie',
     style: 'Plays the people, not the cards.',
     look: { skin: '#f0d0b0', hair: '#c04a2a', hairStyle: 'long', shirt: '#3a9d5c', accessory: 'none' },
-    seat: { skillTier: 'sharp', archetype: 'regular' },
+    seat: { skillTier: 'sharp', archetype: 'regular', habit: { strong: 'lip-twitch', weak: 'stillness' } },
     lines: {
       greeting: ['Junie: I like watching new people play.'],
       bet: ['Junie: Bet. See what you do.'],
@@ -502,7 +511,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Ray',
     style: 'Plays every hand he is dealt.',
     look: { skin: '#c78a5e', hair: '#7a7a7a', hairStyle: 'bald', shirt: '#7a8b5a', accessory: 'cap' },
-    seat: { skillTier: 'novice', archetype: 'station' },
+    seat: { skillTier: 'novice', archetype: 'station', habit: { strong: 'chip-tap', weak: 'stillness' } },
     lines: {
       greeting: ['Ray: I am due. I can feel it.'],
       raise: ['Ray: Why not!', 'Ray: Let us find out.'],
@@ -533,7 +542,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Sully',
     style: 'Grinds small pots.',
     look: { skin: '#6f4429', hair: '#191919', hairStyle: 'short', shirt: '#4a6b8a', accessory: 'glasses' },
-    seat: { skillTier: 'amateur', archetype: 'nit' },
+    seat: { skillTier: 'amateur', archetype: 'nit', habit: { strong: 'arm-shift', weak: 'chip-tap' } },
     lines: {
       greeting: ['Sully: Evening.'],
       raise: ['Sully: Bump it.'],
@@ -559,7 +568,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Deb',
     style: 'Been here longer than you.',
     look: { skin: '#d8a077', hair: '#8a5a2b', hairStyle: 'long', shirt: '#9c6644', accessory: 'earring' },
-    seat: { skillTier: 'amateur', archetype: 'regular' },
+    seat: { skillTier: 'amateur', archetype: 'regular', habit: { strong: 'stillness', weak: 'glance' } },
     lines: {
       greeting: ['Deb: You are new. That is fine. Everyone is, once.'],
       raise: ['Deb: Raise, sweetheart.'],
@@ -585,7 +594,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Mack',
     style: 'Tight. Waits for a hand.',
     look: { skin: '#c08a5e', hair: '#2b2118', hairStyle: 'short', shirt: '#3d4a5c', accessory: 'none' },
-    seat: { skillTier: 'competent', archetype: 'nit' },
+    seat: { skillTier: 'competent', archetype: 'nit', habit: { strong: 'arm-shift', weak: 'lip-twitch' } },
     lines: {
       greeting: ['Mack: Let us keep it civil.'],
       raise: ['Mack: Raise.'],
@@ -625,7 +634,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Corinne',
     style: 'Does this for a living.',
     look: { skin: '#e3bb95', hair: '#3b2a1c', hairStyle: 'tied', shirt: '#5c5470', accessory: 'none' },
-    seat: { skillTier: 'competent', archetype: 'regular' },
+    seat: { skillTier: 'competent', archetype: 'regular', habit: { strong: 'glance', weak: 'lip-twitch' } },
     lines: {
       greeting: ['Corinne: You are in my game now.'],
       raise: ['Corinne: Raise.', 'Corinne: I do not mind a bigger pot.'],
@@ -639,7 +648,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Vance',
     style: 'Thinks about it too long.',
     look: { skin: '#a8673f', hair: '#1c1c1c', hairStyle: 'short', shirt: '#2f6b5c', accessory: 'glasses' },
-    seat: { skillTier: 'competent', archetype: 'station' },
+    seat: { skillTier: 'competent', archetype: 'station', habit: { strong: 'lip-twitch', weak: 'glance' } },
     lines: {
       greeting: ['Vance: Give me a second to settle in.'],
       raise: ['Vance: ...raise.'],
@@ -690,7 +699,24 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     look: { skin: '#d9a47a', hair: '#8a8a8a', hairStyle: 'short', shirt: '#7a2e2e', accessory: 'cap' },
     // In the back room: a big man in a saloon keeper's waistcoat, his hat on and his cigar lit.
     streetLook: { build: 'heavy', hat: 'cowboy', hatColor: '#c8a878', prop: 'cigar', garment: 'vest', garmentColor: '#2a2a2e' },
-    seat: { skillTier: 'novice', archetype: 'station' },
+    seat: {
+      skillTier: 'novice', archetype: 'station',
+      habit: { strong: 'chip-tap', weak: 'arm-shift' },
+      phases: [
+        {
+          when: { stackAbove: 1.5 },
+          set: { archetype: 'maniac' },
+          says: ['Lou: Now we are cooking, son. Now we are cooking.'],
+          announce: 'LOU SMELLS BLOOD',
+        },
+        {
+          when: { stackBelow: 0.5 },
+          set: { archetype: 'nit' },
+          says: ['Lou: Hm. Thirty years. I know when I am being hunted. Careful now.'],
+          announce: 'LOU DIGS IN',
+        },
+      ],
+    },
     lines: {
       greeting: ['Lou: Sit. Thirty years I have been waiting for somebody worth the chair.'],
       raise: ['Lou: Up she goes.'],
@@ -707,7 +733,24 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     look: { skin: '#c68a62', hair: '#2a2a3a', hairStyle: 'tied', shirt: '#1d2f55', accessory: 'cap' },
     // In the cabin: her master's cap and her pipe.
     streetLook: { hat: 'captain', prop: 'pipe', garment: 'jacket', garmentColor: '#16203c', trousers: '#16203c' },
-    seat: { skillTier: 'amateur', archetype: 'nit' },
+    seat: {
+      skillTier: 'amateur', archetype: 'nit',
+      habit: { strong: 'glance', weak: 'arm-shift' },
+      phases: [
+        {
+          when: { stackBelow: 0.5 },
+          set: { archetype: 'maniac', skillTier: 'competent' },
+          says: ['Odette: Overboard, then. Every hand from here. Hold on to something.'],
+          announce: 'THE CAPTAIN GOES WILD',
+        },
+        {
+          when: { stackAbove: 1.6 },
+          set: { archetype: 'regular' },
+          says: ['Odette: Fair winds. I can afford to play a hand or two.'],
+          announce: 'SHE LOOSENS UP',
+        },
+      ],
+    },
     lines: {
       greeting: ['Odette: The river keeps the ones who play badly. Sit down.'],
       raise: ['Odette: Raise. Mind the current.'],
@@ -724,7 +767,30 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     look: { skin: '#e7bd96', hair: '#3a3a3a', hairStyle: 'short', shirt: '#243a2e', accessory: 'glasses' },
     // Long, dark and buttoned up, a rose in the lapel.
     streetLook: { build: 'tall', hat: 'bowler', prop: 'rose', garment: 'jacket', garmentColor: '#1e1e24' },
-    seat: { skillTier: 'competent', archetype: 'regular' },
+    seat: {
+      skillTier: 'competent', archetype: 'regular',
+      habit: { strong: 'stillness', weak: 'lip-twitch' },
+      phases: [
+        {
+          when: { afterHand: 10 },
+          set: { skillTier: 'sharp' },
+          says: ['Bellamy: I have finished the introduction. Now the chapters.'],
+          announce: 'MR. BELLAMY STOPS READING AND STARTS PLAYING',
+        },
+        {
+          when: { youAggressionAbove: 0.45 },
+          set: { archetype: 'nit' },
+          says: ['Bellamy: You raise when you are nervous. Chapter nine. I will wait.'],
+          announce: 'HE HAS YOUR NUMBER',
+        },
+        {
+          when: { youAggressionBelow: 0.22 },
+          set: { archetype: 'maniac' },
+          says: ['Bellamy: You fold when it costs you. Chapter four. Allow me.'],
+          announce: 'HE HAS YOUR NUMBER',
+        },
+      ],
+    },
     lines: {
       greeting: ['Bellamy: Please. Sit. I have read about you. It was brief.'],
       raise: ['Bellamy: A modest increase.'],
@@ -741,7 +807,24 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     look: { skin: '#b9794f', hair: '#6b1d2a', hairStyle: 'long', shirt: '#0f6f6a', accessory: 'shades' },
     // A hibiscus behind her ear.
     streetLook: { prop: 'flower', propColor: '#f05a3a', lower: 'skirt', trousers: '#0f6f6a' },
-    seat: { skillTier: 'sharp', archetype: 'maniac' },
+    seat: {
+      skillTier: 'sharp', archetype: 'maniac',
+      habit: { strong: 'arm-shift', weak: 'stillness' },
+      phases: [
+        {
+          when: { stackBelow: 0.6 },
+          set: { archetype: 'regular' },
+          says: ['Inés: Darling, I can count too. Let us slow down.'],
+          announce: 'INÉS PULLS UP',
+        },
+        {
+          when: { stackAbove: 1.5 },
+          set: { archetype: 'maniac', skillTier: 'elite' },
+          says: ['Inés: Oh, this is fun. Do keep up.'],
+          announce: 'INÉS PILES ON',
+        },
+      ],
+    },
     lines: {
       greeting: ['Inés: Darling. Sit. I do hope you brought enough.'],
       raise: ['Inés: Up, up, up!'],
@@ -758,7 +841,33 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     look: { skin: '#8a5a3a', hair: '#e6e6e6', hairStyle: 'bald', shirt: '#1a1a24', accessory: 'shades' },
     // The old man in the white suit and the white top hat, on a cane.
     streetLook: { build: 'elder', hat: 'tophat', hatColor: '#e8e4dc', garment: 'jacket', garmentColor: '#e8e4dc', trousers: '#e8e4dc' },
-    seat: { skillTier: 'elite', archetype: 'regular' },
+    seat: {
+      skillTier: 'elite', archetype: 'regular',
+      habit: { strong: 'arm-shift', weak: 'glance' },
+      phases: [
+        {
+          when: { afterHand: 8 },
+          set: { archetype: 'maniac' },
+          says: ['Vale: Let us see how you hold up when it costs you.'],
+          announce: 'THE MESA TURNS UP THE HEAT',
+        },
+        {
+          when: { afterHand: 14 },
+          set: { habit: { strong: 'glance', weak: 'arm-shift' } },
+          says: ['Vale: You have been watching my hands. Good. I would.'],
+        },
+        {
+          when: { afterHand: 18 },
+          set: { archetype: 'nit' },
+          says: ['Vale: And now we wait.'],
+          announce: 'VALE GOES QUIET',
+        },
+        {
+          when: { afterHand: 26 },
+          set: { archetype: 'regular' },
+        },
+      ],
+    },
     lines: {
       greeting: ['Vale: Sit. The cameras are off. I like to see how people actually play.'],
       raise: ['Vale: Raise.'],
@@ -773,7 +882,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Delphine',
     style: 'Runs the back room.',
     look: { skin: '#7a4b2e', hair: '#141414', hairStyle: 'long', shirt: '#1f1f2e', accessory: 'earring' },
-    seat: { skillTier: 'sharp', archetype: 'regular' },
+    seat: { skillTier: 'sharp', archetype: 'regular', habit: { strong: 'stillness', weak: 'arm-shift' } },
     lines: {
       greeting: ['Delphine: I invited you. Do not embarrass me.'],
       raise: ['Delphine: Raise.'],
@@ -801,7 +910,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Adaeze',
     style: 'Patient. Punishes mistakes.',
     look: { skin: '#66402a', hair: '#141414', hairStyle: 'tied', shirt: '#2f7a6b', accessory: 'none' },
-    seat: { skillTier: 'competent', archetype: 'nit' },
+    seat: { skillTier: 'competent', archetype: 'nit', habit: { strong: 'lip-twitch', weak: 'arm-shift' } },
     lines: {
       greeting: ['Adaeze: Take your time. I have all week.'],
       raise: ['Adaeze: Raise.'],
@@ -815,7 +924,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Kit',
     style: 'Aggressive. Very good.',
     look: { skin: '#eac6a0', hair: '#c9a227', hairStyle: 'short', shirt: '#1f1f2e', accessory: 'shades' },
-    seat: { skillTier: 'sharp', archetype: 'maniac' },
+    seat: { skillTier: 'sharp', archetype: 'maniac', habit: { strong: 'glance', weak: 'stillness' } },
     lines: {
       greeting: ['Kit: Let us not waste each other’s afternoon.'],
       raise: ['Kit: Raise.', 'Kit: Pressure.'],
@@ -894,7 +1003,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Rosa',
     style: 'Knows everyone on the island.',
     look: { skin: '#c98b5f', hair: '#4a2c1a', hairStyle: 'long', shirt: '#d96c6c', accessory: 'none' },
-    seat: { skillTier: 'amateur', archetype: 'regular' },
+    seat: { skillTier: 'amateur', archetype: 'regular', habit: { strong: 'chip-tap', weak: 'lip-twitch' } },
     lines: {
       greeting: ['Rosa: Bernard is the one you want. Not me.'],
       raise: ['Rosa: Raise.'],
@@ -922,7 +1031,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Lorna',
     style: 'Studied. Relentless.',
     look: { skin: '#e6c0a0', hair: '#2a2a2a', hairStyle: 'short', shirt: '#3a3a56', accessory: 'none' },
-    seat: { skillTier: 'sharp', archetype: 'regular' },
+    seat: { skillTier: 'sharp', archetype: 'regular', habit: { strong: 'stillness', weak: 'chip-tap' } },
     lines: {
       greeting: ['Lorna: Solver line or feel? We will find out.'],
       raise: ['Lorna: Raise.'],
@@ -946,7 +1055,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Dmitri',
     style: 'Silent. Enormous stack.',
     look: { skin: '#d9b48f', hair: '#3a2a1a', hairStyle: 'short', shirt: '#22222e', accessory: 'shades' },
-    seat: { skillTier: 'sharp', archetype: 'nit' },
+    seat: { skillTier: 'sharp', archetype: 'nit', habit: { strong: 'glance', weak: 'chip-tap' } },
     lines: {
       greeting: ['Dmitri: ...'],
       raise: ['Dmitri: Raise.'],
@@ -974,7 +1083,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Saul',
     style: 'Old school. Sharp.',
     look: { skin: '#c99a6e', hair: '#c8c8c8', hairStyle: 'bald', shirt: '#4a4a5c', accessory: 'glasses' },
-    seat: { skillTier: 'sharp', archetype: 'nit' },
+    seat: { skillTier: 'sharp', archetype: 'nit', habit: { strong: 'chip-tap', weak: 'glance' } },
     lines: {
       greeting: ['Saul: Forty years I have sat in this seat.'],
       raise: ['Saul: Raise.'],
@@ -988,7 +1097,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Priya',
     style: 'Best player in the room.',
     look: { skin: '#8a5a38', hair: '#141414', hairStyle: 'long', shirt: '#2f2f4a', accessory: 'none' },
-    seat: { skillTier: 'elite', archetype: 'regular' },
+    seat: { skillTier: 'elite', archetype: 'regular', habit: { strong: 'lip-twitch', weak: 'chip-tap' } },
     lines: {
       greeting: ['Priya: I will be honest, I have looked you up.'],
       raise: ['Priya: Raise.'],
@@ -1002,7 +1111,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'August',
     style: 'Runs the invitational.',
     look: { skin: '#e0b48c', hair: '#5a5a5a', hairStyle: 'short', shirt: '#1a1a28', accessory: 'none' },
-    seat: { skillTier: 'elite', archetype: 'nit' },
+    seat: { skillTier: 'elite', archetype: 'nit', habit: { strong: 'lip-twitch', weak: 'stillness' } },
     lines: {
       greeting: ['August: You are here because someone vouched. Remember that.'],
       raise: ['August: Raise.'],
@@ -1030,7 +1139,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Xue',
     style: 'Nosebleed regular.',
     look: { skin: '#e8c09a', hair: '#141414', hairStyle: 'short', shirt: '#1f2e3a', accessory: 'none' },
-    seat: { skillTier: 'elite', archetype: 'maniac' },
+    seat: { skillTier: 'elite', archetype: 'maniac', habit: { strong: 'chip-tap', weak: 'stillness' } },
     lines: {
       greeting: ['Xue: We play big here. I hope you understand that.'],
       raise: ['Xue: Raise.'],
@@ -1044,7 +1153,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Marchetti',
     style: 'Never shows a hand.',
     look: { skin: '#d0a070', hair: '#2a2018', hairStyle: 'short', shirt: '#2a2a2a', accessory: 'shades' },
-    seat: { skillTier: 'elite', archetype: 'nit' },
+    seat: { skillTier: 'elite', archetype: 'nit', habit: { strong: 'arm-shift', weak: 'chip-tap' } },
     lines: {
       greeting: ['Marchetti: Pleasure.'],
       raise: ['Marchetti: Raise.'],
@@ -1256,7 +1365,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Lucky Dolores',
     style: 'Has a system. It is a rabbit foot.',
     look: { skin: '#e0b894', hair: '#d8d8dc', hairStyle: 'tied', shirt: '#a8486a', accessory: 'glasses' },
-    seat: { skillTier: 'novice', archetype: 'station' },
+    seat: { skillTier: 'novice', archetype: 'station', habit: { strong: 'stillness', weak: 'glance' } },
     lines: {
       greeting: ['Dolores: Do not sit in the blue chair, honey. The blue chair took my husband.'],
       raise: ['Dolores: The foot says raise.', 'Dolores: Hold my cigarette.'],
@@ -1285,7 +1394,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Gaines',
     style: 'The Reverend. Tithes ten percent of every pot.',
     look: { skin: '#7a4a2e', hair: '#1a1a1a', hairStyle: 'short', shirt: '#2a2a32', accessory: 'none' },
-    seat: { skillTier: 'competent', archetype: 'nit', stackMultiplier: 1.2 },
+    seat: { skillTier: 'competent', archetype: 'nit', stackMultiplier: 1.2, habit: { strong: 'arm-shift', weak: 'lip-twitch' } },
     lines: {
       greeting: ['Gaines: The Lord provides. I just need the flop.'],
       raise: ['Gaines: Let us pray over this one.', 'Gaines: I am led to raise.'],
@@ -1312,7 +1421,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Contessa Valmont',
     style: 'The accent comes and goes.',
     look: { skin: '#f0d0b8', hair: '#6a2a18', hairStyle: 'long', shirt: '#2a2a62', accessory: 'shades' },
-    seat: { skillTier: 'sharp', archetype: 'maniac' },
+    seat: { skillTier: 'sharp', archetype: 'maniac', habit: { strong: 'glance', weak: 'lip-twitch' } },
     lines: {
       greeting: ['Contessa: Darling. Contessa Valmont. Of the Lyon Valmonts. Or Leeds.'],
       raise: ['Contessa: Raise, darling. We are not here to be liked.', 'Contessa: Oh, I do not THINK so.'],
@@ -1339,7 +1448,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Zeke "KingPin"',
     style: 'Streams every hand. Mute for the river.',
     look: { skin: '#d8a880', hair: '#f0c820', hairStyle: 'short', shirt: '#c82060', accessory: 'earring' },
-    seat: { skillTier: 'competent', archetype: 'regular' },
+    seat: { skillTier: 'competent', archetype: 'regular', habit: { strong: 'lip-twitch', weak: 'glance' } },
     lines: {
       greeting: ['Zeke: Chat, say hi to the new donk. Say hi, chat. Chat? Chat.'],
       raise: ['Zeke: Chat, he is not going to call. Watch this.', 'Zeke: Smash that raise button.'],
@@ -1370,7 +1479,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     look: { skin: '#5e3a22', hair: '#0f0f0f', hairStyle: 'tied', shirt: '#101018', accessory: 'none' },
     // A white dinner jacket and a gold bow tie: four years of dressing for the penthouse.
     streetLook: { build: 'tall', prop: 'bowtie', propColor: '#d8b040', garment: 'jacket', garmentColor: '#e8e4dc' },
-    seat: { skillTier: 'elite', archetype: 'regular' },
+    seat: { skillTier: 'elite', archetype: 'regular', habit: { strong: 'chip-tap', weak: 'arm-shift' } },
     lines: {
       greeting: [
         'Nadia: I have watched you come up. It has been a pleasure.',
@@ -1387,7 +1496,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Bobbi',
     style: 'Here for the free coffee.',
     look: { skin: '#d9a67c', hair: '#5a3a22', hairStyle: 'tied', shirt: '#b0506a', accessory: 'none' },
-    seat: { skillTier: 'novice', archetype: 'station' },
+    seat: { skillTier: 'novice', archetype: 'station', habit: { strong: 'glance', weak: 'arm-shift' } },
     lines: {
       greeting: ['Bobbi: Is it my turn? It is my turn.'],
       raise: ['Bobbi: Oh, why not.'],
@@ -1401,7 +1510,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Walt',
     style: 'Retired. Counts every chip twice.',
     look: { skin: '#e0b894', hair: '#cfcfcf', hairStyle: 'bald', shirt: '#6a7a6a', accessory: 'glasses' },
-    seat: { skillTier: 'amateur', archetype: 'nit' },
+    seat: { skillTier: 'amateur', archetype: 'nit', habit: { strong: 'stillness', weak: 'lip-twitch' } },
     lines: {
       greeting: ['Walt: Evening. Do not rush me.'],
       raise: ['Walt: I have the hand.'],
@@ -1415,7 +1524,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Dottie',
     style: 'Knits between hands.',
     look: { skin: '#c58f68', hair: '#9a9a9a', hairStyle: 'tied', shirt: '#8a4a7a', accessory: 'glasses' },
-    seat: { skillTier: 'amateur', archetype: 'regular' },
+    seat: { skillTier: 'amateur', archetype: 'regular', habit: { strong: 'arm-shift', weak: 'stillness' } },
     lines: {
       greeting: ['Dottie: Do not mind the yarn, dear.'],
       raise: ['Dottie: Up it goes.'],
@@ -1429,7 +1538,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Lucien',
     style: 'Tips the dealer in advance.',
     look: { skin: '#d8a982', hair: '#1e1e22', hairStyle: 'short', shirt: '#2a3a5a', accessory: 'shades' },
-    seat: { skillTier: 'competent', archetype: 'regular' },
+    seat: { skillTier: 'competent', archetype: 'regular', habit: { strong: 'arm-shift', weak: 'glance' } },
     lines: {
       greeting: ['Lucien: Deal me in.'],
       raise: ['Lucien: Make it interesting.'],
@@ -1443,7 +1552,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Sloane',
     style: 'Quiet, and always ahead.',
     look: { skin: '#f0c8a4', hair: '#a8483a', hairStyle: 'long', shirt: '#3a3a44', accessory: 'none' },
-    seat: { skillTier: 'sharp', archetype: 'nit' },
+    seat: { skillTier: 'sharp', archetype: 'nit', habit: { strong: 'stillness', weak: 'arm-shift' } },
     lines: {
       greeting: ['Sloane: Good evening.'],
       raise: ['Sloane: Raise.'],
@@ -1457,7 +1566,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Ferris',
     style: 'Plays like the money is not his.',
     look: { skin: '#b88660', hair: '#3a2a1a', hairStyle: 'short', shirt: '#c8a24a', accessory: 'cap' },
-    seat: { skillTier: 'competent', archetype: 'maniac' },
+    seat: { skillTier: 'competent', archetype: 'maniac', habit: { strong: 'lip-twitch', weak: 'arm-shift' } },
     lines: {
       greeting: ['Ferris: Big game! Let us go.'],
       raise: ['Ferris: Pot-sized. Why not.'],
@@ -1485,7 +1594,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Hector',
     style: 'Won a trip, lost the plot.',
     look: { skin: '#a87450', hair: '#1a1a1a', hairStyle: 'short', shirt: '#4a9aa8', accessory: 'shades' },
-    seat: { skillTier: 'novice', archetype: 'station' },
+    seat: { skillTier: 'novice', archetype: 'station', habit: { strong: 'glance', weak: 'stillness' } },
     lines: {
       greeting: ['Hector: First time in a casino!'],
       raise: ['Hector: Everything on the line!'],
@@ -1499,7 +1608,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Cassius',
     style: 'Never looks at his own cards twice.',
     look: { skin: '#6f4429', hair: '#1a1a1a', hairStyle: 'bald', shirt: '#1e1e26', accessory: 'shades' },
-    seat: { skillTier: 'elite', archetype: 'regular' },
+    seat: { skillTier: 'elite', archetype: 'regular', habit: { strong: 'chip-tap', weak: 'lip-twitch' } },
     lines: {
       greeting: ['Cassius: Let us begin.'],
       raise: ['Cassius: Higher.'],
@@ -1513,7 +1622,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Ilse',
     style: 'Stacks chips like a bank teller.',
     look: { skin: '#f0d0b0', hair: '#e8e0c8', hairStyle: 'tied', shirt: '#5a6a8a', accessory: 'glasses' },
-    seat: { skillTier: 'sharp', archetype: 'nit' },
+    seat: { skillTier: 'sharp', archetype: 'nit', habit: { strong: 'stillness', weak: 'chip-tap' } },
     lines: {
       greeting: ['Ilse: Shall we?'],
       raise: ['Ilse: Raise, precisely.'],
@@ -1527,7 +1636,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Rourke',
     style: 'Owns three of the machines upstairs.',
     look: { skin: '#c58f68', hair: '#7a5a3a', hairStyle: 'short', shirt: '#7a2a2a', accessory: 'none' },
-    seat: { skillTier: 'sharp', archetype: 'maniac' },
+    seat: { skillTier: 'sharp', archetype: 'maniac', habit: { strong: 'glance', weak: 'chip-tap' } },
     lines: {
       greeting: ['Rourke: Table’s hot. Good.'],
       raise: ['Rourke: Put it all out there.'],
@@ -1541,7 +1650,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Anselm',
     style: 'Speaks only in odds.',
     look: { skin: '#e0b894', hair: '#2a2a2a', hairStyle: 'short', shirt: '#4a4a6a', accessory: 'glasses' },
-    seat: { skillTier: 'elite', archetype: 'nit' },
+    seat: { skillTier: 'elite', archetype: 'nit', habit: { strong: 'chip-tap', weak: 'glance' } },
     lines: {
       greeting: ['Anselm: Nineteen percent, I think.'],
       raise: ['Anselm: Raise.'],
@@ -1555,7 +1664,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Tamsin',
     style: 'Came for one hand. Stayed for the night.',
     look: { skin: '#d8a077', hair: '#101018', hairStyle: 'long', shirt: '#8a2a5a', accessory: 'earring' },
-    seat: { skillTier: 'elite', archetype: 'maniac' },
+    seat: { skillTier: 'elite', archetype: 'maniac', habit: { strong: 'lip-twitch', weak: 'chip-tap' } },
     lines: {
       greeting: ['Tamsin: One hand. Maybe two.'],
       raise: ['Tamsin: Up, up, up.'],
