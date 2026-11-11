@@ -30,6 +30,18 @@ describe('TexasHoldEmTable heads-up hand', () => {
     expect(state.pot).toBe(15) // sb + bb
   })
 
+  it('has the dealer (small blind) act first preflop and the big blind first after the flop', () => {
+    const table = new TexasHoldEmTable(makePlayers(2, 500), { smallBlind: 5, bigBlind: 10, rng: mulberry32(1) })
+    table.startNewHand()
+    const pre = table.getState()
+    const dealer = pre.players.find((p) => p.isDealer)!
+    expect(pre.actingPlayerId).toBe(dealer.id)
+    table.submitAction(dealer.id, { type: 'call' })
+    const bb = pre.players.find((p) => !p.isDealer)!
+    table.submitAction(bb.id, { type: 'check' })
+    expect(table.getState().actingPlayerId).toBe(bb.id)
+  })
+
   it('awards the pot to the last player standing when everyone else folds', () => {
     const players = makePlayers(2, 500)
     const table = new TexasHoldEmTable(players, { smallBlind: 5, bigBlind: 10, rng: mulberry32(1) })

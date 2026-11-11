@@ -327,7 +327,8 @@ export class TexasHoldEmTable {
 
     this.refreshTells()
 
-    const firstToAct = order.length === 2 ? order[1] : this.nextToAct(bbIdx)
+    // Heads-up this wraps round to the dealer, who is the small blind and acts first preflop.
+    const firstToAct = this.nextToAct(bbIdx)
     this.actingIndex = firstToAct
     this.maybeAutoAdvance()
   }
