@@ -69,6 +69,8 @@ describe('restyling at the table', () => {
     const table = new TexasHoldEmTable([...players], { smallBlind: 1, bigBlind: 2 })
     table.restyle('lou', { archetype: 'maniac', skillTier: 'sharp' })
     table.startNewHand()
+    // Heads-up the dealer (You) is the small blind and acts first, so Lou is up after the call.
+    table.submitAction('you', { type: 'call' })
     expect(table.getAiContext('lou')).toMatchObject({ archetype: 'maniac', skillTier: 'sharp' })
     expect(() => table.restyle('lou', { archetype: 'nit' })).toThrow(/mid-hand/)
   })
