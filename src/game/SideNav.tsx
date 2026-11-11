@@ -18,6 +18,7 @@ import { frameStyle, type FrameSpec } from './pixel/frame'
 import { chipTopUrl } from './pixel/chips'
 import { buttonHeight } from './tableLayout'
 import { useViewport } from './useViewport'
+import { recapEnabled, setRecapEnabled } from './prefs'
 import { swallowDoubleClick, useMenuKeys } from './keys'
 import { useTouchFirst } from './device'
 import type { SaveOutcome } from './save'
@@ -94,6 +95,7 @@ export function SideNav({
   const [closing, setClosing] = useState(false)
   const [volume, setVolume] = useState(audio.getVolume())
   const [muted, setMuted] = useState(audio.isMuted())
+  const [recapOn, setRecapOn] = useState(recapEnabled())
   const [confirming, setConfirming] = useState(false)
   const panel = useRef<HTMLDivElement>(null)
 
@@ -357,6 +359,10 @@ export function SideNav({
           audio.unlock()
           audio.setMuted(!muted)
           if (muted) audio.play('ui')
+        })}
+        {item('nav-recap', recapOn ? "Hal's tips after a sitting: on" : "Hal's tips after a sitting: off", () => {
+          setRecapEnabled(!recapOn)
+          setRecapOn(!recapOn)
         })}
         <label
           htmlFor="volume"

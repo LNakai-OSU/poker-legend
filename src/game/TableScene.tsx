@@ -18,6 +18,7 @@ import { cardText } from './Card'
 import { runoutCall, type RunoutStreet } from './runoutCall'
 import { summarise, type Decision, type Recap } from './review'
 import { RecapPopup } from './RecapPopup'
+import { recapEnabled } from './prefs'
 import { bestHand, HAND_CATEGORY_NAMES } from '../engine/handRank'
 import { actionKind } from './actionTag'
 import type { Announcement } from './HandAnnouncer'
@@ -832,7 +833,7 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
    * tournament and the final are story and carry on straight away.
    */
   const leaveWith = (chips: number, finaleWon?: boolean, tournamentWon?: boolean) => {
-    if (rules || isFinale || handsPlayed < 1 || recap) return finishWith(chips, finaleWon, tournamentWon)
+    if (rules || isFinale || handsPlayed < 1 || recap || !recapEnabled()) return finishWith(chips, finaleWon, tournamentWon)
     setRecap({
       leave: () => finishWith(chips, finaleWon, tournamentWon),
       recap: summarise(decisionsRef.current, {
