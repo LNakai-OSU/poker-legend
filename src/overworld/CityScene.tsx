@@ -370,8 +370,8 @@ export function CityScene({
             </div>
           )}
           {next?.progress && (
-            <div data-testid="goal-profit" style={{ color: '#4ac878' }}>
-              Casino profit: ${next.progress.won.toLocaleString()} / ${next.progress.target.toLocaleString()}
+            <div data-testid="goal-profit" style={{ color: next.progress.won < 0 ? '#e05a5a' : '#4ac878' }}>
+              Casino profit: {next.progress.won < 0 ? '-' : ''}${Math.abs(next.progress.won).toLocaleString()} / ${next.progress.target.toLocaleString()}
             </div>
           )}
           {next?.progress && (

@@ -114,7 +114,7 @@ export function nextHeading(state: GameState, cityId: CityId = state.cityId): He
   const status = goalStatus(state, cityId)
   if (status?.phase === 'win') {
     const won = state.casino.net[cityId] ?? 0
-    const more = won > 0 ? `$${(status.goal.winTarget - won).toLocaleString()} more` : `$${status.goal.winTarget.toLocaleString()}`
+    const more = `$${(status.goal.winTarget - won).toLocaleString()}${won === 0 ? '' : ' more'}`
     return {
       hud: `win ${more} at ${theCasino(status.goal.casino)}`,
       goTo: { areaId: status.goal.floorAreaId },
