@@ -37,14 +37,19 @@ export interface Destination {
   poiId?: string
 }
 
-const gameNotPlayed: EventCondition = { kind: 'eventDone', eventId: 'poker-night', done: false }
+// The win is what counts: a game that opened through another event (the opening's
+// Dana beats, a second chance) never completes `poker-night` itself.
+const gameNotPlayed: EventCondition[] = [
+  { kind: 'eventDone', eventId: 'poker-night', done: false },
+  { kind: 'flag', flag: 'wonPokerNight', set: false },
+]
 const gamePlayed: EventCondition = { kind: 'eventDone', eventId: 'poker-night' }
 
 export const NEXT_STEPS: NextStep[] = [
   {
     id: 'go-outside',
     // A new game, after the film: Dana is at the end of your street.
-    when: [{ kind: 'flag', flag: 'metDana', set: false }, gameNotPlayed],
+    when: [{ kind: 'flag', flag: 'metDana', set: false }, ...gameNotPlayed],
     line: 'Go outside. Someone is looking for you.',
     hud: 'go outside',
     goTo: { areaId: 'basin' },
@@ -52,14 +57,14 @@ export const NEXT_STEPS: NextStep[] = [
   {
     id: 'dana-at-the-stop',
     // You told Dana you had a stop to make first (`dana-walks-you-to-the-bus`).
-    when: [{ kind: 'flag', flag: 'metDana' }, { kind: 'flag', flag: 'danaAtTheStop' }, gameNotPlayed],
+    when: [{ kind: 'flag', flag: 'metDana' }, { kind: 'flag', flag: 'danaAtTheStop' }, ...gameNotPlayed],
     line: 'Dana is waiting at the bus stop: east along Seventh Street, at the depot. The 14 goes to Marcus’s game.',
     hud: 'Dana, at the bus depot',
     goTo: { areaId: 'depot' },
   },
   {
     id: 'marcus-game',
-    when: [{ kind: 'flag', flag: 'metDana' }, { kind: 'flag', flag: 'danaAtTheStop', set: false }, gameNotPlayed],
+    when: [{ kind: 'flag', flag: 'metDana' }, { kind: 'flag', flag: 'danaAtTheStop', set: false }, ...gameNotPlayed],
     line: 'Marcus’s game: north of the bus depot in Eastgate, the middle door. Talk to Marcus to sit down.',
     hud: 'Marcus’s poker game, Eastgate',
     goTo: { areaId: 'marcus-house', characterId: 'marcus' },
@@ -76,7 +81,6 @@ export const NEXT_STEPS: NextStep[] = [
     id: 'marcus-at-the-door',
     // The morning after the win (`dana-walks-you-home`), till he leaves you in Silver Creek.
     when: [
-      gamePlayed,
       { kind: 'flag', flag: 'wonPokerNight' },
       { kind: 'flag', flag: 'marcusSeesYouOff' },
       { kind: 'chapter', cityId: 'apartment' },

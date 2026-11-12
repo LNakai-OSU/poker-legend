@@ -4,6 +4,14 @@ import { PixelText } from './pixel/PixelText'
 import { INK } from './pixel/ink'
 import type { TableTheme } from './tableThemes'
 
+/** The panel is pale, so the table's light-on-dark inks vanish on it: these are their darker counterparts. */
+const PALE = {
+  gold: { color: '#8a5a00', shadow: '#e8dcc0' },
+  green: { color: '#1c7a3a', shadow: '#d0e4cc' },
+  red: { color: '#b02020', shadow: '#ecd0cc' },
+  dim: { color: '#5a5a6a', shadow: '#e0dccc' },
+}
+
 const money = (n: number) => `${n < 0 ? '-' : ''}$${Math.abs(n).toLocaleString()}`
 
 /**
@@ -45,13 +53,13 @@ export function RecapPopup({ theme, P, recap, onContinue }: { theme: TableTheme;
           boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
         }}
       >
-        <PixelText text="The sitting" scale={P} ink={INK.gold} />
-        <PixelText text={`${money(recap.net)} · ${recap.hands} hand${recap.hands === 1 ? '' : 's'} · ${recap.potsWon} pot${recap.potsWon === 1 ? '' : 's'} won`} scale={P} ink={recap.net >= 0 ? INK.green : INK.red} wrap />
-        {recap.bestHand ? <PixelText text={`Best hand: ${recap.bestHand}`} scale={P} ink={INK.dim} wrap /> : null}
-        <PixelText text="Hal's notes" scale={P} ink={INK.gold} />
+        <PixelText text="The sitting" scale={P} ink={PALE.gold} />
+        <PixelText text={`${money(recap.net)} · ${recap.hands} hand${recap.hands === 1 ? '' : 's'} · ${recap.potsWon} pot${recap.potsWon === 1 ? '' : 's'} won`} scale={P} ink={recap.net >= 0 ? PALE.green : PALE.red} wrap />
+        {recap.bestHand ? <PixelText text={`Best hand: ${recap.bestHand}`} scale={P} ink={PALE.dim} wrap /> : null}
+        <PixelText text="Hal's notes" scale={P} ink={PALE.gold} />
         {notes.map((line, i) => (
           <div key={i} data-testid="recap-note">
-            <PixelText text={line} scale={P} ink={INK.light} wrap />
+            <PixelText text={line} scale={P} ink={INK.dark} wrap />
           </div>
         ))}
         <PxButton lines={['Done']} scale={P} role="raise" width={Math.round(90 * P)} height={Math.round(16 * P)} onClick={onContinue} testId="recap-continue" />

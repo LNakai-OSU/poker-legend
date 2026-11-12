@@ -1693,6 +1693,10 @@ export const EVENTS: GameEvent[] = [
       { kind: 'eventDone', eventId: 'marcus-sends-you-off', done: false },
     ],
     actions: [
+      // Getting up puts you back in the doorway; the win happened at the table,
+      // where Dana is, so you are put back in your chair rather than her running
+      // the length of the room to you.
+      { kind: 'teleport', areaId: 'marcus-house', col: 9, row: 6 },
       { kind: 'wait', ms: 400 },
       { kind: 'dialogue', lines: ['The last chip slides across. Marcus stares at it like it owes him rent.'] },
       { kind: 'moveNpc', characterId: 'marcus', to: 'player' },

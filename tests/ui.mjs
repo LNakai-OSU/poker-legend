@@ -2853,6 +2853,7 @@ await test('leaving a cash game shows Hal\'s notes and fills the book', async ()
   }
   await page.locator('button', { hasText: /Leave table/ }).first().click()
   await page.locator('[data-testid="recap-popup"]').waitFor({ state: 'visible', timeout: 5000 })
+  await shot(page, 'recap-popup')
   const text = await page.locator('[data-testid="recap-card"]').innerText()
   assert(/Hal/.test(text), 'the recap does not carry Hal\'s notes')
   assert((await page.locator('[data-testid="recap-note"]').count()) >= 1, 'Hal said nothing')
