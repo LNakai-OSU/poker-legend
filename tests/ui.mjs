@@ -2834,7 +2834,7 @@ await test('can sit down, play, and leave a cash game', async () => {
 // Standing up shows what the sitting came to and Hal's notes; the people dealt
 // in with are then in the Book of Reads.
 await test('leaving a cash game shows Hal\'s notes and fills the book', async () => {
-  const page = await newPage(baseSave())
+  const page = await newPage(baseSave({ lessonIds: ['pot-odds'] }))
   await page.goto(BASE)
   await page.waitForSelector('canvas')
   await page.waitForTimeout(400)

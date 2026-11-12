@@ -833,7 +833,9 @@ export function TableScene({ table, state, onRebuy, onLeave }: TableSceneProps) 
    * tournament and the final are story and carry on straight away.
    */
   const leaveWith = (chips: number, finaleWon?: boolean, tournamentWon?: boolean) => {
-    if (rules || isFinale || handsPlayed < 1 || recap || !recapEnabled()) return finishWith(chips, finaleWon, tournamentWon)
+    // Hal's notes are part of what his lessons buy (hand reading, pot odds).
+    const hasHalsLesson = state.lessonIds.includes('hand-reading') || state.lessonIds.includes('pot-odds')
+    if (rules || isFinale || handsPlayed < 1 || recap || !hasHalsLesson || !recapEnabled()) return finishWith(chips, finaleWon, tournamentWon)
     setRecap({
       leave: () => finishWith(chips, finaleWon, tournamentWon),
       recap: summarise(decisionsRef.current, {
