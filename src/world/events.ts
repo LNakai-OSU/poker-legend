@@ -3800,14 +3800,14 @@ export const EVENTS: GameEvent[] = [
       { kind: 'casino', cityId: 'silverCreek', status: 'bossBeaten', set: false },
     ],
     actions: [
-      { kind: 'wait', ms: 300 },
+      { kind: 'dialogue', lines: ['Somebody is approaching from the private room.'] },
       { kind: 'moveNpc', characterId: 'lou', from: { col: 28, row: 20 }, to: 'player' },
       { kind: 'dialogue', speaker: 'lou', lines: [
           'Lou: Four hundred off my floor. Nobody does that and sits down after.',
           'Lou: Come on. I do not hold the door for just anyone, and I am not holding it twice.',
           'Lou: Mind the humidor. My nephew is not allowed near it either.',
         ] },
-      { kind: 'moveNpc', characterId: 'lou', to: { col: 28, row: 20 }, youFollow: true },
+      { kind: 'moveNpc', characterId: 'lou', to: { col: 34, row: 20 }, youFollow: true },
       { kind: 'fade', to: 'out' },
       { kind: 'teleport', areaId: 'sc-private', col: 7, row: 8, with: ['lou'] },
       { kind: 'fade', to: 'in' },
