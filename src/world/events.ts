@@ -1801,6 +1801,22 @@ export const EVENTS: GameEvent[] = [
       // He lets himself in and lays out the whole run, so the player knows what the
       // game is asking before the first casino: win the floor, beat the boss, ride on.
       { kind: 'moveNpc', characterId: 'marcus', from: { col: 6, row: 9 }, to: 'player' },
+      // A beat to sit with before the map: he says why he is here, and what he saw
+      // last night, so the plan reads as his idea and not as a menu popping up.
+      { kind: 'wait', ms: 600 },
+      {
+        kind: 'dialogue',
+        speaker: 'marcus',
+        lines: [
+          'Marcus: Sit. Just for a minute. The bus can wait, and so can the coat.',
+          'Marcus: I could not get to sleep last night. I kept seeing that last hand.',
+          'Marcus: Watching you play made me realize you might be able to do this for real. And win REAL money.',
+          'Marcus: I have run that game on Fridays for years. I know what a player looks like. You, I did not expect.',
+          'Marcus: So I did what I do when I cannot sleep. I wrote it down. Every town, every casino, every man you have to beat.',
+          'Marcus: Let me show you. It is easier to see than to hear. Watch the map.',
+        ],
+      },
+      { kind: 'wait', ms: 500 },
       {
         kind: 'reel',
         title: 'Marcus’s plan',

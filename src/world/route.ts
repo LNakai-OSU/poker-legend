@@ -20,6 +20,20 @@ export interface RouteStop {
   boss?: string
   /** The bankroll that gets the bus to take you here. */
   bankroll: number
+  /** What you will know the town by: its buildings and sights, as Marcus names them on the map. */
+  landmarks: string[]
+  /** The boss's character id, so the map can show their face beside the town. */
+  bossId?: string
+}
+
+const LANDMARKS: Record<string, string[]> = {
+  apartment: ['The flat above the bakery', 'Marcus’s kitchen table'],
+  silverCreek: ['Silver Creek Casino saloon', 'The diner', 'The gift shop'],
+  riverbend: ['The paddle-steamer Riverboat', 'The dock and outfitters', 'The Captain’s cabin'],
+  crescentHarbor: ['The Harbour Room', 'Marina Motors', 'The boutiques on the quay'],
+  palmCay: ['The Cay Room', 'Shoreline Grill', 'Palm-lined promenade'],
+  neonMesa: ['The Mesa Casino', 'Mesa Arena', 'Ultraviolet and the Strip'],
+  portoLumina: ['The grand foyer and its rope', 'The Supper Club', 'The penthouse tower'],
 }
 
 export const ROUTE: RouteStop[] = TOWN_ORDER.map((id) => {
@@ -32,5 +46,7 @@ export const ROUTE: RouteStop[] = TOWN_ORDER.map((id) => {
     winTarget: goal?.winTarget ?? 0,
     boss: goal ? CHARACTERS[goal.bossId]?.name : undefined,
     bankroll: city.unlockCash,
+    landmarks: LANDMARKS[id] ?? [],
+    bossId: goal?.bossId,
   }
 })
