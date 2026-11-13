@@ -86,6 +86,10 @@ const SCENES: Record<ReelScene, (c: Ctx, t: number, notes?: Notification[]) => v
   tape(c) {
     rect(c, '#05040a', 0, 0, REEL_W, REEL_H)
   },
+  // Marcus's map is its own component (`RoutePanel`); this is only what is behind it.
+  route(c) {
+    rect(c, '#05040a', 0, 0, REEL_W, REEL_H)
+  },
   // The kitchen table and the mail is its own component (`MailTable`).
   mail(c) {
     rect(c, '#05040a', 0, 0, REEL_W, REEL_H)

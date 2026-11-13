@@ -6,6 +6,7 @@ import { STAMPS, type PlacedStamp } from './stamps'
 import type { CityId } from '../game/state'
 import type { TimePeriod } from '../game/time'
 import { errandPois } from './errands'
+import { FINAL_SIGN, roadSign } from './roadSign'
 import { OUTSKIRTS, OUTSKIRTS_GAPS } from './outskirts'
 
 /**
@@ -1275,7 +1276,7 @@ const apartmentCity: CityDef = {
           row: 1,
           color: COLORS.travel,
           art: 'sign',
-          lines: ['The 14 runs east all night. The route map lists towns you have never visited.'],
+          lines: ['The 14 runs east all night. The route map lists towns you have never visited.', roadSign('apartment')],
           action: { kind: 'travel' },
           // Out-of-town fares need a reason to leave, and Marcus's game is it.
           // The local service runs regardless — that is how you get to his game.
@@ -1466,7 +1467,7 @@ const silverCreek: CityDef = {
           row: 12,
           color: COLORS.travel,
           art: 'sign',
-          lines: ['Departures twice a day, and a timetable nobody has updated.'],
+          lines: ['Departures twice a day, and a timetable nobody has updated.', roadSign('silverCreek')],
           action: { kind: 'travel' },
         },
         local(
@@ -1689,7 +1690,7 @@ const riverbend: CityDef = {
           row: 12,
           color: COLORS.travel,
           art: 'sign',
-          lines: ['Buses and boats, both running late.'],
+          lines: ['Buses and boats, both running late.', roadSign('riverbend')],
           action: { kind: 'travel' },
         },
         {
@@ -1940,7 +1941,7 @@ const crescentHarbor: CityDef = {
           row: 12,
           color: COLORS.travel,
           art: 'sign',
-          lines: ['Departure boards for half the coast.'],
+          lines: ['Departure boards for half the coast.', roadSign('crescentHarbor')],
           action: { kind: 'travel' },
         },
         {
@@ -2267,7 +2268,7 @@ const palmCay: CityDef = {
           row: 12,
           color: COLORS.travel,
           art: 'sign',
-          lines: ['The ferry runs to the mainland twice a day.'],
+          lines: ['The ferry runs to the mainland twice a day.', roadSign('palmCay')],
           action: { kind: 'travel' },
         },
         {
@@ -2570,7 +2571,7 @@ const neonMesa: CityDef = {
           row: 15,
           color: COLORS.travel,
           art: 'sign',
-          lines: ['International departures, one gate.'],
+          lines: ['International departures, one gate.', roadSign('neonMesa')],
           action: { kind: 'travel' },
         },
         {
@@ -2983,7 +2984,7 @@ const portoLumina: CityDef = {
           row: 14,
           color: COLORS.travel,
           art: 'sign',
-          lines: ['Everywhere you have ever played, listed on one board.'],
+          lines: ['Everywhere you have ever played, listed on one board.', FINAL_SIGN],
           action: { kind: 'travel' },
         },
         {

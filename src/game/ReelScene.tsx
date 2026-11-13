@@ -4,6 +4,7 @@ import { CHARACTERS } from '../world/characters'
 import { DialogueBox } from './DialogueBox'
 import { BoothPanel } from './BoothPanel'
 import { TapePanel } from './TapePanel'
+import { RoutePanel } from './RoutePanel'
 import { LogoFlash } from './LogoFlash'
 import { MailTable } from './MailTable'
 import { useCrispScale } from './useCrispScale'
@@ -18,7 +19,7 @@ import { TYPE, UI_FONT } from './pixel/webFont'
  * replayed final should not make the player sit through the road again.
  */
 /** Scenes that are components of their own and bring their own lines, rather than a still with a text box. */
-const CUSTOM_SCENES = new Set<ReelPanel['scene']>(['booth', 'corridor', 'chase', 'logo', 'mail', 'tape'])
+const CUSTOM_SCENES = new Set<ReelPanel['scene']>(['booth', 'corridor', 'chase', 'logo', 'mail', 'tape', 'route'])
 
 export function ReelScene({
   title,
@@ -97,6 +98,7 @@ export function ReelScene({
     >
       {panel.scene === 'booth' && <BoothPanel key={at.panel} lines={panel.lines} ticker={panel.ticker} onDone={nextPanel} />}
       {panel.scene === 'tape' && <TapePanel key={at.panel} lines={panel.lines} ticker={panel.ticker} onDone={nextPanel} />}
+      {panel.scene === 'route' && <RoutePanel key={at.panel} lines={panel.lines} onDone={nextPanel} />}
       {panel.scene === 'mail' && <MailTable key={at.panel} lines={panel.lines} onDone={nextPanel} />}
       {panel.scene === 'logo' && <LogoFlash key={at.panel} onDone={nextPanel} />}
       {panel.scene === 'corridor' && <CorridorWalk key={at.panel} lines={panel.lines} onDone={nextPanel} />}

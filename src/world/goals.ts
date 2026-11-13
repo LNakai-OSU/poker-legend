@@ -22,6 +22,8 @@ export interface CasinoGoal {
   winTarget: number
   /** The boss: a character id. */
   bossId: string
+  /** The boss's name as signs and beats say it; `goals.test.ts` holds it to the character's own. */
+  bossName: string
   /** The one-on-one table in `TABLES`. */
   tableId: string
   /** The private room, an area of this town. */
@@ -44,6 +46,7 @@ export const CASINO_GOALS: Record<string, CasinoGoal> = {
     casino: 'Silver Creek Casino',
     winTarget: 400,
     bossId: 'lou',
+    bossName: 'Lou Brannigan',
     tableId: 'silvercreek-boss',
     roomAreaId: 'sc-private',
     floorAreaId: 'sc-floor',
@@ -61,6 +64,7 @@ export const CASINO_GOALS: Record<string, CasinoGoal> = {
     casino: 'The Riverboat',
     winTarget: 1200,
     bossId: 'odette',
+    bossName: 'Captain Odette Marsh',
     tableId: 'riverbend-boss',
     roomAreaId: 'rb-private',
     floorAreaId: 'rb-boat',
@@ -78,6 +82,7 @@ export const CASINO_GOALS: Record<string, CasinoGoal> = {
     casino: 'The Harbor Room',
     winTarget: 4000,
     bossId: 'bellamy',
+    bossName: 'Mr. Bellamy',
     tableId: 'crescent-boss',
     roomAreaId: 'ch-private',
     floorAreaId: 'ch-cardroom',
@@ -95,6 +100,7 @@ export const CASINO_GOALS: Record<string, CasinoGoal> = {
     casino: 'The Cay Room',
     winTarget: 12000,
     bossId: 'ines',
+    bossName: 'Inés Calloway',
     tableId: 'palmcay-boss',
     roomAreaId: 'pc-private',
     floorAreaId: 'pc-casino',
@@ -111,6 +117,7 @@ export const CASINO_GOALS: Record<string, CasinoGoal> = {
     casino: 'The Mesa Casino',
     winTarget: 40000,
     bossId: 'vale',
+    bossName: 'Solomon Vale',
     tableId: 'mesa-boss',
     roomAreaId: 'nm-private',
     floorAreaId: 'nm-casino',

@@ -23,6 +23,7 @@ describe('casino goals', () => {
     for (const goal of GOAL_ORDER) {
       const boss = CHARACTERS[goal.bossId]
       expect(boss, `${goal.cityId}: boss ${goal.bossId} is not a character`).toBeDefined()
+      expect(goal.bossName, `${goal.cityId}: bossName is not the character's name`).toBe(boss.name)
       const rank = TIERS.indexOf(boss.seat!.skillTier)
       expect(rank, `${boss.name} is no better than the boss before`).toBeGreaterThan(tier)
       tier = rank

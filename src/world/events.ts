@@ -2,6 +2,7 @@ import type { TimePeriod } from '../game/time'
 import type { StoryFlag } from './flags'
 import type { TapeExhibit } from './tape'
 import { ERRAND_EVENTS } from './errands'
+import { CASINO_GOALS, GOAL_ORDER } from './goals'
 import {
   challengeStatus,
   chapterOf,
@@ -144,6 +145,8 @@ export type ReelScene =
   | 'sink'
   | 'rail'
   | 'night'
+  /** Marcus's plan: the map of the six towns, drawn a stop at a time as the lines name them. Drawn by `RoutePanel`. */
+  | 'route'
   /** Hal's old tape: a chalkboard, a desk, and whatever his line puts up on the board. Drawn by `TapePanel`. */
   | 'tape'
 
@@ -156,6 +159,8 @@ export interface ReelLine {
   text: string
   /** Put this on the board from this line on (a `tape` panel); the last one stays up until another replaces it. */
   show?: TapeExhibit
+  /** Draw the route as far as this stop, from this line on (a `route` panel): 0 is home, 1 Silver Creek, up the ladder. */
+  stop?: number
 }
 
 /** A set and what is said in front of it. */
@@ -1110,6 +1115,17 @@ const REFRESHER_CHOICE: EventAction = {
  * Ordered roughly as the player meets them. An event fires on its trigger when
  * its conditions hold, and — unless it says otherwise — never again.
  */
+/** What somebody on a casino's floor says about it: win the target, beat the boss, ride on. From `CASINO_GOALS`, so it cannot drift. */
+function goalReminder(cityId: string, who: string): string[] {
+  const goal = CASINO_GOALS[cityId]
+  const next = GOAL_ORDER[GOAL_ORDER.indexOf(goal) + 1]
+  const boss = goal.bossName
+  return [
+    `${who}: Here is how it goes at ${goal.casino}. Take $${goal.winTarget.toLocaleString('en-US')} off the poker tables, and ${boss} will see you.`,
+    `${who}: Beat ${boss} and the bus to ${next ? next.casino : 'Porto Lumina'} runs for you. Not before. The Goals page in your menu keeps the tally.`,
+  ]
+}
+
 export const EVENTS: GameEvent[] = [
   {
     id: 'poker-night',
@@ -1782,6 +1798,32 @@ export const EVENTS: GameEvent[] = [
       { kind: 'fade', to: 'in' },
       { kind: 'dialogue', lines: ['Morning. Somebody is hammering on your door.'] },
       { kind: 'dialogue', speaker: 'marcus', lines: ['Marcus: I can hear you not getting up! Coat! Bus!'] },
+      // He lets himself in and lays out the whole run, so the player knows what the
+      // game is asking before the first casino: win the floor, beat the boss, ride on.
+      { kind: 'moveNpc', characterId: 'marcus', from: { col: 6, row: 9 }, to: 'player' },
+      {
+        kind: 'reel',
+        title: 'Marcus’s plan',
+        panels: [
+          {
+            scene: 'route',
+            lines: [
+              { who: 'marcus', text: 'Marcus: The door was open. It is always open. That is a separate conversation.', stop: 0 },
+              { who: 'marcus', text: 'Marcus: Rent is paid. Do not thank me. I have a plan, and you are in it.' },
+              { who: 'marcus', text: 'Marcus: You are not a Friday player any more. You are going to climb, casino by casino, all the way to Porto Lumina.' },
+              { who: 'marcus', text: 'Marcus: One. Silver Creek. Win $400 at the poker tables: profit, not chips. That opens Lou Brannigan’s back room. Beat Lou and the bus will let you leave.', stop: 1 },
+              { who: 'marcus', text: 'Marcus: Two. The Riverboat. You need $600 to board, and $1,200 of winnings to meet Captain Odette Marsh.', stop: 2 },
+              { who: 'marcus', text: 'Marcus: Three. Crescent Harbor. $2,500 to get in, $4,000 won to get past Mr. Bellamy.', stop: 3 },
+              { who: 'marcus', text: 'Marcus: Four. Palm Cay. $8,000 in your pocket, $12,000 won, and Inés Calloway across the felt.', stop: 4 },
+              { who: 'marcus', text: 'Marcus: Five. Neon Mesa. $30,000 to arrive, $40,000 won, and Solomon Vale, who does not smile.', stop: 5 },
+              { who: 'marcus', text: 'Marcus: And six. Porto Lumina. $90,000 at the door, then the Poker Legends Tournament. Win it and you sit at the final table, for the penthouse.', stop: 6 },
+              { who: 'marcus', text: 'Marcus: Every town is the same shape. Win money on the floor, beat the boss in the back room, take the bus. A bankroll alone gets you nowhere. The bosses are the gate.' },
+              { who: 'marcus', text: 'Marcus: The menu’s Goals page keeps the count, and so does the corner of your screen. Rent is on me. Now: coat. Bus.' },
+            ],
+          },
+        ],
+      },
+      { kind: 'moveNpc', characterId: 'marcus', to: { col: 6, row: 9 }, leaves: true },
     ],
   },
   {
@@ -2182,6 +2224,13 @@ export const EVENTS: GameEvent[] = [
           'Deckhand: Somebody on the dock was asking if Marcus’s friend had come upriver yet. Kit, they said.',
         ],
       },
+      // Whoever is nearest says what the floor is for, so the goal is heard from a
+      // person the first time it matters. The numbers are `CASINO_GOALS`'s.
+      {
+        kind: 'if',
+        when: [{ kind: 'casino', cityId: 'riverbend', status: 'bossBeaten', set: false }],
+        then: [{ kind: 'dialogue', speaker: 'Deckhand', lines: goalReminder('riverbend', 'Deckhand') }],
+      },
       // "Let's go" means in: off the last line you walk to the door of the boat
       // and through it, rather than being left at the stop to find it.
       { kind: 'movePlayer', to: { col: 9, row: 6 } },
@@ -2476,6 +2525,13 @@ export const EVENTS: GameEvent[] = [
           'Woman in a Suit: Get a real suit and the Harbour Room may send for you. Eight thousand and the ferry to Palm Cay will.',
         ],
       },
+      // Whoever is nearest says what the floor is for, so the goal is heard from a
+      // person the first time it matters. The numbers are `CASINO_GOALS`'s.
+      {
+        kind: 'if',
+        when: [{ kind: 'casino', cityId: 'crescentHarbor', status: 'bossBeaten', set: false }],
+        then: [{ kind: 'dialogue', speaker: 'Attendant', lines: goalReminder('crescentHarbor', 'Attendant') }],
+      },
       // "Let's go" means in: off the last line you walk to the door of the card room
       // and through it, rather than being left at the stop to find it.
       { kind: 'movePlayer', to: { col: 14, row: 5 } },
@@ -2663,6 +2719,13 @@ export const EVENTS: GameEvent[] = [
           'Lifeguard: Twenty-five hundred to sit in the Cay Room. Thirty thousand and you are Mesa money.',
           'Lifeguard: Somebody from your home town was asking for you on the promenade. Nice guy. Terrible hat.',
         ],
+      },
+      // Whoever is nearest says what the floor is for, so the goal is heard from a
+      // person the first time it matters. The numbers are `CASINO_GOALS`'s.
+      {
+        kind: 'if',
+        when: [{ kind: 'casino', cityId: 'palmCay', status: 'bossBeaten', set: false }],
+        then: [{ kind: 'dialogue', speaker: 'Bartender', lines: goalReminder('palmCay', 'Bartender') }],
       },
       // "Let's go" means in: off the last line you walk to the door of the Cay Room
       // and through it, rather than being left at the stop to find it.
@@ -2893,6 +2956,13 @@ export const EVENTS: GameEvent[] = [
           'Tout: Ten thousand for the main game. Ninety and they will put you on the plane to Lumina.',
           'Tout: And the high roller room looks at your shoes. I am serious about the shoes.',
         ],
+      },
+      // Whoever is nearest says what the floor is for, so the goal is heard from a
+      // person the first time it matters. The numbers are `CASINO_GOALS`'s.
+      {
+        kind: 'if',
+        when: [{ kind: 'casino', cityId: 'neonMesa', status: 'bossBeaten', set: false }],
+        then: [{ kind: 'dialogue', speaker: 'Floor Manager', lines: goalReminder('neonMesa', 'Floor Manager') }],
       },
       // "Let's go" means in: off the last line you walk to the door of the casino
       // and through it, rather than being left at the stop to find it.
