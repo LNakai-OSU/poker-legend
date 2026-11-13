@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useMemo } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { TownAtlas } from './WorldAtlas'
 import { CITIES } from '../world/cities'
 import { TOWN_ORDER, type GameState } from './state'
 import { useKeyLayer } from './keys'
@@ -82,6 +83,8 @@ export function WorldMap({
 
   const towns = useMemo(() => TOWN_ORDER.map((id) => layoutOf(CITIES[id])), [])
   const here = state.areaId
+  // Players see the atlas; the playtest account can flip back to the list of places.
+  const [style, setStyle] = useState<'list' | 'atlas'>(onGoTo ? 'list' : 'atlas')
 
   const chip = (a: AreaDef, tone: 'street' | 'casino' | 'room' | 'shop') => {
     const you = a.id === here
@@ -144,6 +147,19 @@ export function WorldMap({
           The road to the penthouse
           {onGoTo && <span style={{ color: '#c084fc', fontSize: TYPE.small }}> · playtest: click any place to go there</span>}
         </h2>
+        {onGoTo && (
+          <button
+            type="button"
+            data-testid="world-map-style"
+            onClick={(e) => {
+              e.stopPropagation()
+              setStyle((v) => (v === 'list' ? 'atlas' : 'list'))
+            }}
+            style={{ minHeight: 40, marginLeft: 'auto', marginRight: 8, padding: '0 12px', border: '1px solid #c084fc', background: '#10101a', color: '#c084fc', fontFamily: UI_FONT, fontSize: TYPE.small, cursor: 'pointer' }}
+          >
+            {style === 'list' ? 'Show atlas' : 'Show list'}
+          </button>
+        )}
         <button
           type="button"
           data-testid="world-map-close"
@@ -154,6 +170,33 @@ export function WorldMap({
           ✕
         </button>
       </div>
+      {style === 'atlas' ? (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0, minWidth: 'min-content' }}>
+          {towns.map((t, i) => {
+            const visited = state.unlockedCityIds.includes(t.city.id) || t.city.id === state.cityId
+            return (
+              <div key={t.city.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                {i > 0 && <div style={{ color: DIM, fontSize: TYPE.small, padding: '8px 0' }}>▼ bus ▼</div>}
+                <section
+                  data-testid={`map-town-${t.city.id}`}
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ padding: 10, borderRadius: 6, border: `1px solid ${t.city.id === state.cityId ? '#f2c14e' : '#2c3352'}`, background: '#0d0f1a', opacity: visited ? 1 : 0.55, display: 'flex', flexDirection: 'column', gap: 8 }}
+                >
+                  <h3 style={{ margin: 0, fontSize: TYPE.body, fontWeight: 'normal', color: visited ? GOLD : DIM }}>
+                    {i + 1}. {t.city.name}{' '}
+                    <span style={{ fontSize: TYPE.small, color: DIM }}>
+                      · {visited ? 'Reached' : 'Not reached yet'} · {t.city.unlockCash > 0 ? `$${t.city.unlockCash.toLocaleString()} to get in` : 'free to enter'}
+                    </span>
+                  </h3>
+                  <div style={{ paddingTop: 70 }}>
+                    <TownAtlas city={t.city} here={here} onGoTo={onGoTo} />
+                  </div>
+                </section>
+              </div>
+            )
+          })}
+        </div>
+      ) : (
       <div style={{ display: 'flex', gap: 0, alignItems: 'stretch', minWidth: 'min-content' }}>
         {towns.map((t, i) => {
           const visited = state.unlockedCityIds.includes(t.city.id) || t.city.id === state.cityId
@@ -213,6 +256,7 @@ export function WorldMap({
           )
         })}
       </div>
+      )}
     </div>
   )
 }

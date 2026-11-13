@@ -13,13 +13,14 @@ export function useAmbientMusic(mood: 'overworld' | 'table' | 'tense') {
 /** Resumes the audio context on the first gesture, which browsers require. */
 export function useAudioUnlock() {
   useEffect(() => {
-    const unlock = () => audio.unlock()
-    window.addEventListener('pointerdown', unlock)
-    window.addEventListener('keydown', unlock)
-    return () => {
-      window.removeEventListener('pointerdown', unlock)
-      window.removeEventListener('keydown', unlock)
+    // iOS only honours touchend/click as an audio-unlocking gesture, not pointerdown,
+    // and the context can still be suspended after the first try, so keep listening.
+    const events = ['pointerdown', 'touchend', 'click', 'keydown'] as const
+    const unlock = () => {
+      if (audio.unlock()) events.forEach((e) => window.removeEventListener(e, unlock))
     }
+    events.forEach((e) => window.addEventListener(e, unlock))
+    return () => events.forEach((e) => window.removeEventListener(e, unlock))
   }, [])
 }
 

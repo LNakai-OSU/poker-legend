@@ -128,9 +128,30 @@ class AudioEngine {
   }
 
   /** Called from a user gesture; safe to call repeatedly. */
-  unlock() {
+  unlock(): boolean {
+    // iOS Safari routes Web Audio through the ringer channel, so the silent switch
+    // mutes it; asking for a playback session (iOS 17+) opts out of that.
+    try {
+      const session = (navigator as unknown as { audioSession?: { type: string } }).audioSession
+      if (session) session.type = 'playback'
+    } catch {
+      // Not supported.
+    }
     const ctx = this.ensureContext()
-    if (ctx && ctx.state === 'suspended') void ctx.resume()
+    if (!ctx) return false
+    if (ctx.state !== 'running') {
+      void ctx.resume()
+      // A silent one-sample buffer played inside the gesture finishes the unlock on iOS.
+      try {
+        const src = ctx.createBufferSource()
+        src.buffer = ctx.createBuffer(1, 1, 22050)
+        src.connect(ctx.destination)
+        src.start(0)
+      } catch {
+        // Best-effort.
+      }
+    }
+    return ctx.state === 'running'
   }
 
   private ensureContext(): AudioContext | null {

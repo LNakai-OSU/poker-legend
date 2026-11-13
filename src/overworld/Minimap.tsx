@@ -18,7 +18,7 @@ import { TYPE, UI_FONT } from '../game/pixel/webFont'
  * the corner brings it back; the menu's World map is there all along.
  */
 
-const TILE_COLORS: Record<number, string> = {
+export const TILE_COLORS: Record<number, string> = {
   [WALL]: '#20242e',
   [FURNITURE]: '#2b3040',
   [WATER]: '#1d3a52',
@@ -27,7 +27,7 @@ const TILE_COLORS: Record<number, string> = {
   [GRASS]: '#2f4a38',
   [DOOR]: '#c8963c',
 }
-const DEFAULT_TILE = '#363c48'
+export const DEFAULT_TILE = '#363c48'
 
 /** Pixels per tile. Three keeps a 30-wide boulevard under 100px on a phone. */
 const SCALE = 3
