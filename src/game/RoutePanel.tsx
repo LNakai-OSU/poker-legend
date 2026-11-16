@@ -43,7 +43,7 @@ const GOLD = '#f0d27a'
 const INK = '#e8e8f0'
 const DIM = '#8d93ab'
 /** Height kept clear at the bottom for the dialogue box. */
-const DIALOGUE_ROOM = 170
+const DIALOGUE_ROOM = 92
 
 /** The ground under the road: sea along the south and east, a river, desert, hills, trees. */
 function Terrain() {
@@ -135,10 +135,12 @@ export function RoutePanel({ lines, onDone }: { lines: ReelLine[]; onDone: () =>
     <div
       data-testid="route-panel"
       data-reached={reached}
-      style={{ position: 'relative', width: 'min(98vw, 1100px)', height: '100%', boxSizing: 'border-box', padding: `34px 0 ${DIALOGUE_ROOM}px`, display: 'flex', flexDirection: 'column', gap: 6, fontFamily: UI_FONT, color: INK }}
+      style={{ position: 'relative', width: 'min(98vw, 1100px)', height: '100%', boxSizing: 'border-box', padding: `30px 0 ${DIALOGUE_ROOM}px`, display: 'flex', flexDirection: 'column', gap: 6, fontFamily: UI_FONT, color: INK }}
     >
       <div style={{ textAlign: 'center', color: GOLD, fontSize: TYPE.large }}>The road to the penthouse</div>
-      <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
+      <div style={{ position: 'relative', flex: 1, minHeight: 0, containerType: 'size', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {/* The map's own box: as large as fits, in the map's shape, so the card can sit inside it and never over a town. */}
+        <div style={{ position: 'relative', width: `min(100cqw, calc(100cqh * ${W} / ${H}))`, aspectRatio: `${W} / ${H}` }}>
         <svg
           viewBox={`0 0 ${W} ${H}`}
           preserveAspectRatio="xMidYMid meet"
@@ -217,9 +219,11 @@ export function RoutePanel({ lines, onDone }: { lines: ReelLine[]; onDone: () =>
           })}
         </svg>
         {/* what the stop in front of you asks, over the map's empty corner */}
+        {/* On a short screen there is no room for it that is not over a town; Marcus says the same. */}
+        {window.innerHeight >= 560 && (
         <div
           data-testid="route-card"
-          style={{ position: 'absolute', left: 8, top: 8, maxWidth: 'min(46%, 380px)', padding: '6px 10px', border: '1px solid #4a4a66', borderRadius: 6, background: '#0d0f1af0', fontSize: TYPE.small }}
+          style={{ position: 'absolute', left: 8, top: 8, maxWidth: '40%', padding: '6px 10px', border: '1px solid #4a4a66', borderRadius: 6, background: '#0d0f1af0', fontSize: TYPE.small }}
         >
           {focus === 0 ? (
             <span style={{ color: DIM }}>Basin. Home, for now.</span>
@@ -238,8 +242,10 @@ export function RoutePanel({ lines, onDone }: { lines: ReelLine[]; onDone: () =>
             </>
           )}
         </div>
+        )}
+        </div>
       </div>
-      <DialogueBox key={at} speaker={speaker} lines={[text]} onFinish={next} />
+      <DialogueBox key={at} speaker={speaker} lines={[text]} onFinish={next} compact />
     </div>
   )
 }

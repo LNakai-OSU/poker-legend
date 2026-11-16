@@ -9,9 +9,11 @@ interface DialogueBoxProps {
   speaker: string
   lines: string[]
   onFinish: () => void
+  /** Same type, less box: the speaker leads the line and the button sits beside it. For scenes whose picture needs the room. */
+  compact?: boolean
 }
 
-export function DialogueBox({ speaker, lines, onFinish }: DialogueBoxProps) {
+export function DialogueBox({ speaker, lines, onFinish, compact }: DialogueBoxProps) {
   const [index, setIndex] = useState(0)
   const isLast = index === lines.length - 1
   const isTop = useKeyLayer()
@@ -45,6 +47,62 @@ export function DialogueBox({ speaker, lines, onFinish }: DialogueBoxProps) {
     return () => window.removeEventListener('keydown', onKey)
   }, [index, isLast])
 
+  const button = (
+    <button
+      data-testid="dialogue-advance"
+      onClickCapture={swallowDoubleClick}
+      onClick={advance}
+      style={{
+        marginTop: compact ? 0 : 12,
+        flex: 'none',
+        background: '#3a9d5c',
+        color: '#fff',
+        border: 'none',
+        borderRadius: 4,
+        padding: '6px 14px',
+        fontFamily: UI_FONT,
+        fontSize: TYPE.body,
+        cursor: 'pointer',
+      }}
+    >
+      {isLast ? "Let's go" : 'Continue'}
+      {!touch && <span style={{ opacity: 0.7 }}> (space / E)</span>}
+    </button>
+  )
+
+  if (compact) {
+    return (
+      <div
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: 0,
+          margin: '0 auto',
+          zIndex: 10,
+          maxWidth: 960,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 14,
+          background: 'rgba(10, 10, 16, 0.92)',
+          border: '2px solid #4a4a66',
+          borderRadius: 8,
+          padding: '8px 14px',
+          color: '#e8e8f0',
+          fontFamily: UI_FONT,
+          fontSize: readingSize(view),
+          lineHeight: 1.2,
+        }}
+      >
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ color: '#f2c14e' }}>{speaker}: </span>
+          {lines[index]}
+        </div>
+        {button}
+      </div>
+    )
+  }
+
   return (
     <div
       style={{
@@ -68,25 +126,7 @@ export function DialogueBox({ speaker, lines, onFinish }: DialogueBoxProps) {
       <div style={{ color: '#f2c14e', marginBottom: 6 }}>{speaker}</div>
       {/* Two lines tall at least, so a short line doesn't make the box jump. */}
       <div style={{ minHeight: '2.4em' }}>{lines[index]}</div>
-      <button
-        data-testid="dialogue-advance"
-        onClickCapture={swallowDoubleClick}
-        onClick={advance}
-        style={{
-          marginTop: 12,
-          background: '#3a9d5c',
-          color: '#fff',
-          border: 'none',
-          borderRadius: 4,
-          padding: '6px 14px',
-          fontFamily: UI_FONT,
-          fontSize: TYPE.body,
-          cursor: 'pointer',
-        }}
-      >
-        {isLast ? "Let's go" : 'Continue'}
-        {!touch && <span style={{ opacity: 0.7 }}> (space / E)</span>}
-      </button>
+      {button}
     </div>
   )
 }
