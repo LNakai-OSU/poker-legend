@@ -1126,6 +1126,21 @@ function goalReminder(cityId: string, who: string): string[] {
   ]
 }
 
+/** Marcus's plan, one line per beat; a `stop` draws the road out to that town. Also what the playtest tool replays. */
+export const MARCUS_ROUTE_LINES: ReelLine[] = [
+    { who: 'marcus', text: 'Marcus: The door was open. It is always open. That is a separate conversation.', stop: 0 },
+    { who: 'marcus', text: 'Marcus: Rent is paid. Do not thank me. I have a plan, and you are in it.' },
+    { who: 'marcus', text: 'Marcus: You are not a Friday player any more. You are going to climb, casino by casino, all the way to Porto Lumina.' },
+    { who: 'marcus', text: 'Marcus: One. Silver Creek. Win $400 at the poker tables: profit, not chips. That opens Lou Brannigan’s back room. Beat Lou and the bus will let you leave.', stop: 1 },
+    { who: 'marcus', text: 'Marcus: Two. The Riverboat. You need $600 to board, and $1,200 of winnings to meet Captain Odette Marsh.', stop: 2 },
+    { who: 'marcus', text: 'Marcus: Three. Crescent Harbor. $2,500 to get in, $4,000 won to get past Mr. Bellamy.', stop: 3 },
+    { who: 'marcus', text: 'Marcus: Four. Palm Cay. $8,000 in your pocket, $12,000 won, and Inés Calloway across the felt.', stop: 4 },
+    { who: 'marcus', text: 'Marcus: Five. Neon Mesa. $30,000 to arrive, $40,000 won, and Solomon Vale, who does not smile.', stop: 5 },
+    { who: 'marcus', text: 'Marcus: And six. Porto Lumina. $90,000 at the door, then the Poker Legends Tournament. Win it and you sit at the final table, for the penthouse.', stop: 6 },
+    { who: 'marcus', text: 'Marcus: Every town is the same shape. Win money on the floor, beat the boss in the back room, take the bus. A bankroll alone gets you nowhere. The bosses are the gate.' },
+    { who: 'marcus', text: 'Marcus: The menu’s Goals page keeps the count, and so does the corner of your screen. Rent is on me. Now: coat. Bus.' },
+]
+
 export const EVENTS: GameEvent[] = [
   {
     id: 'poker-night',
@@ -1823,19 +1838,7 @@ export const EVENTS: GameEvent[] = [
         panels: [
           {
             scene: 'route',
-            lines: [
-              { who: 'marcus', text: 'Marcus: The door was open. It is always open. That is a separate conversation.', stop: 0 },
-              { who: 'marcus', text: 'Marcus: Rent is paid. Do not thank me. I have a plan, and you are in it.' },
-              { who: 'marcus', text: 'Marcus: You are not a Friday player any more. You are going to climb, casino by casino, all the way to Porto Lumina.' },
-              { who: 'marcus', text: 'Marcus: One. Silver Creek. Win $400 at the poker tables: profit, not chips. That opens Lou Brannigan’s back room. Beat Lou and the bus will let you leave.', stop: 1 },
-              { who: 'marcus', text: 'Marcus: Two. The Riverboat. You need $600 to board, and $1,200 of winnings to meet Captain Odette Marsh.', stop: 2 },
-              { who: 'marcus', text: 'Marcus: Three. Crescent Harbor. $2,500 to get in, $4,000 won to get past Mr. Bellamy.', stop: 3 },
-              { who: 'marcus', text: 'Marcus: Four. Palm Cay. $8,000 in your pocket, $12,000 won, and Inés Calloway across the felt.', stop: 4 },
-              { who: 'marcus', text: 'Marcus: Five. Neon Mesa. $30,000 to arrive, $40,000 won, and Solomon Vale, who does not smile.', stop: 5 },
-              { who: 'marcus', text: 'Marcus: And six. Porto Lumina. $90,000 at the door, then the Poker Legends Tournament. Win it and you sit at the final table, for the penthouse.', stop: 6 },
-              { who: 'marcus', text: 'Marcus: Every town is the same shape. Win money on the floor, beat the boss in the back room, take the bus. A bankroll alone gets you nowhere. The bosses are the gate.' },
-              { who: 'marcus', text: 'Marcus: The menu’s Goals page keeps the count, and so does the corner of your screen. Rent is on me. Now: coat. Bus.' },
-            ],
+            lines: MARCUS_ROUTE_LINES,
           },
         ],
       },

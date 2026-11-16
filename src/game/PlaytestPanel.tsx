@@ -39,6 +39,7 @@ export function PlaytestPanel({
   onPlayBoss,
   onPlayEvent,
   onWorldMap,
+  onRouteMap,
   onClose,
 }: {
   state: GameState
@@ -47,6 +48,7 @@ export function PlaytestPanel({
   onPlayBoss: (cityId: CityId) => void
   onPlayEvent: (event: GameEvent) => void
   onWorldMap: () => void
+  onRouteMap: () => void
   onClose: () => void
 }) {
   const isTop = useKeyLayer(true, 6)
@@ -170,6 +172,9 @@ export function PlaytestPanel({
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
           <button type="button" data-testid="playtest-world-map" style={button} onClick={onWorldMap}>
             World map: click any place to go there
+          </button>
+          <button type="button" data-testid="playtest-route-map" style={{ ...button, borderColor: GOLD, color: GOLD }} onClick={onRouteMap}>
+            Marcus’s route map: play the sequence
           </button>
         </div>
 

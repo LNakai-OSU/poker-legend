@@ -30,7 +30,8 @@ import { ReelScene } from './ReelScene'
 import { DialogueBox } from './DialogueBox'
 import { ChoiceBox } from './ChoiceBox'
 import { CHARACTERS } from '../world/characters'
-import { EVENTS, eventFor } from '../world/events'
+import { EVENTS, MARCUS_ROUTE_LINES, eventFor } from '../world/events'
+import { RoutePanel } from './RoutePanel'
 import { SoundToggle, useAudioUnlock } from '../audio/SoundToggle'
 import { playSound } from '../audio/audio'
 import {
@@ -123,6 +124,8 @@ export function GameApp({ playtest = false, showGuide = playtest }: { playtest?:
   const [menuOpen, setMenuOpen] = useState(false)
   const [worldMapOpen, setWorldMapOpen] = useState(false)
   const [playtestOpen, setPlaytestOpen] = useState(false)
+  /** Playtest account: Marcus's route map on its own, without playing to it. */
+  const [routePreview, setRoutePreview] = useState(false)
   /** Whose collectors it was, for the shakedown screen; the hunt is over by the time it shows. */
   const [caughtBy, setCaughtBy] = useState<string | null>(null)
   /** Stepped off a bus owing: the collectors play their scene as soon as the street is up. */
@@ -937,6 +940,23 @@ export function GameApp({ playtest = false, showGuide = playtest }: { playtest?:
       {worldMapOpen && (
         <WorldMap state={state} onClose={() => setWorldMapOpen(false)} onGoTo={playtest ? goTo : undefined} />
       )}
+      {playtest && routePreview && (
+        <div
+          data-testid="route-preview"
+          style={{ position: 'fixed', inset: 0, zIndex: 300, background: '#05040a', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
+        >
+          <RoutePanel lines={MARCUS_ROUTE_LINES} onDone={() => setRoutePreview(false)} />
+          <button
+            type="button"
+            data-testid="route-preview-close"
+            onClick={() => setRoutePreview(false)}
+            style={{ position: 'absolute', top: 10, right: 10, minHeight: 40, minWidth: 40, border: '1px solid #4a4a66', background: '#10101a', color: '#e8e8f0', cursor: 'pointer' }}
+            aria-label="Close route map"
+          >
+            ✕
+          </button>
+        </div>
+      )}
       {playtest && playtestOpen && (
         <PlaytestPanel
           state={state}
@@ -966,6 +986,10 @@ export function GameApp({ playtest = false, showGuide = playtest }: { playtest?:
             }))
             setPlaytestOpen(false)
             setView({ kind: 'finaleCommit', tableId: table.id })
+          }}
+          onRouteMap={() => {
+            setPlaytestOpen(false)
+            setRoutePreview(true)
           }}
           onPlayEvent={(event) => {
             setPlaytestOpen(false)
