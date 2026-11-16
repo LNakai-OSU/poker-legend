@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ReelLine } from '../world/events'
 import { CHARACTERS } from '../world/characters'
 import { ROUTE } from '../world/route'
@@ -45,32 +45,52 @@ const DIM = '#8d93ab'
 /** Height kept clear at the bottom for the dialogue box. */
 const DIALOGUE_ROOM = 92
 
-/** The ground under the road: sea along the south and east, a river, desert, hills, trees. */
-function Terrain() {
+/** Where the map is drawn: its size in map units, and how far the 640×360 layout is stretched to fill it. */
+interface Field {
+  vw: number
+  vh: number
+  kx: number
+  ky: number
+}
+const fieldFor = (w: number, h: number): Field => {
+  const aspect = w > 0 && h > 0 ? w / h : W / H
+  // Wider than the layout: more ground to the sides. Taller: more above and below.
+  const vw = Math.max(W, H * aspect)
+  const vh = Math.max(H, W / aspect)
+  return { vw, vh, kx: vw / W, ky: vh / H }
+}
+const place = (f: Field, [x, y]: [number, number]): [number, number] => [f.vw / 2 + (x - W / 2) * f.kx, f.vh / 2 + (y - H / 2) * f.ky]
+
+/** The ground under the road: sea along the south and east, a river, desert, hills, trees. Fills the whole field. */
+function Terrain({ f }: { f: Field }) {
+  const P = (x: number, y: number) => place(f, [x, y]).map((n) => n.toFixed(1)).join(' ')
+  const [cx, cy] = [(x: number, y: number) => place(f, [x, y])[0], (x: number, y: number) => place(f, [x, y])[1]]
   const tree = (x: number, y: number, k: number) => (
-    <g key={k}>
-      <rect x={x - 1} y={y + 4} width={2} height={4} fill="#4a3a28" />
-      <path d={`M${x - 5} ${y + 5} L${x} ${y - 7} L${x + 5} ${y + 5} Z`} fill="#2d6a46" />
+    <g key={k} transform={`translate(${cx(x, y)} ${cy(x, y)})`}>
+      <rect x={-1} y={4} width={2} height={4} fill="#4a3a28" />
+      <path d="M-5 5 L0 -7 L5 5 Z" fill="#2d6a46" />
     </g>
   )
   const hill = (x: number, y: number, w: number, k: number) => (
-    <path key={k} d={`M${x - w} ${y} Q${x} ${y - w * 0.8} ${x + w} ${y} Z`} fill="#27344a" stroke="#34456a" strokeWidth={1} />
+    <path key={k} transform={`translate(${cx(x, y)} ${cy(x, y)})`} d={`M${-w} 0 Q0 ${-w * 0.8} ${w} 0 Z`} fill="#27344a" stroke="#34456a" strokeWidth={1} />
   )
+  const river = `M${P(232, -40)} Q${P(250, 70)} ${P(226, 120)} T${P(260, 214)} Q${P(268, 250)} ${P(258, 286)} L${P(262, 400)}`
+  const seaTop = (y: number) => cy(0, y)
   return (
     <g aria-hidden>
-      <rect width={W} height={H} fill="#1a2238" />
-      {/* sea: the coast Crescent Harbor and Palm Cay sit on */}
-      <path d={`M0 ${H} L0 318 Q120 300 250 322 T470 322 Q560 316 ${W} 292 L${W} ${H} Z`} fill="#17405f" />
-      <path d={`M${W} 0 L${W} 22 Q612 24 600 40 L${W} 52 Z`} fill="#17405f" />
-      {[0, 1, 2, 3, 4, 5].map((i) => (
-        <path key={i} d={`M${24 + i * 100} ${338 + (i % 2) * 8} q6 -4 12 0 t12 0`} fill="none" stroke="#3a8fc0" strokeWidth={1.2} opacity={0.7} />
+      <rect x={-20} y={-20} width={f.vw + 40} height={f.vh + 40} fill="#1a2238" />
+      {/* sea: the coast Crescent Harbor and Palm Cay sit on, and the water off Porto Lumina */}
+      <path d={`M-20 ${f.vh + 20} L-20 ${seaTop(318)} Q${cx(120, 0)} ${seaTop(300)} ${cx(250, 0)} ${seaTop(322)} T${cx(470, 0)} ${seaTop(322)} Q${cx(560, 0)} ${seaTop(316)} ${f.vw + 20} ${seaTop(292)} L${f.vw + 20} ${f.vh + 20} Z`} fill="#17405f" />
+      <path d={`M${f.vw + 20} -20 L${f.vw + 20} ${cy(0, 52)} L${cx(600, 0)} ${cy(0, 40)} Q${cx(612, 0)} ${cy(0, 24)} ${cx(560, 0)} ${cy(0, 8)} L${cx(560, 0)} -20 Z`} fill="#17405f" />
+      {Array.from({ length: Math.ceil(f.vw / 100) + 1 }, (_, i) => (
+        <path key={i} transform={`translate(${24 + i * 100} ${Math.min(f.vh - 14, cy(0, 338)) + (i % 2) * 8})`} d="M0 0 q6 -4 12 0 t12 0" fill="none" stroke="#3a8fc0" strokeWidth={1.2} opacity={0.7} />
       ))}
       {/* desert around Silver Creek and Neon Mesa */}
-      <ellipse cx={150} cy={178} rx={92} ry={56} fill="#3a3326" opacity={0.55} />
-      <ellipse cx={540} cy={170} rx={80} ry={52} fill="#3a2f3a" opacity={0.5} />
+      <ellipse cx={cx(150, 178)} cy={cy(150, 178)} rx={92 * f.kx} ry={56 * f.ky} fill="#3a3326" opacity={0.55} />
+      <ellipse cx={cx(540, 170)} cy={cy(540, 170)} rx={80 * f.kx} ry={52 * f.ky} fill="#3a2f3a" opacity={0.5} />
       {/* the river that Riverbend Landing is named for */}
-      <path d={`M232 0 Q250 70 226 120 T260 214 Q268 250 258 286 L262 330`} fill="none" stroke="#1f5a80" strokeWidth={9} strokeLinecap="round" />
-      <path d={`M232 0 Q250 70 226 120 T260 214 Q268 250 258 286 L262 330`} fill="none" stroke="#2f7aa8" strokeWidth={2} strokeLinecap="round" opacity={0.6} />
+      <path d={river} fill="none" stroke="#1f5a80" strokeWidth={9} strokeLinecap="round" />
+      <path d={river} fill="none" stroke="#2f7aa8" strokeWidth={2} strokeLinecap="round" opacity={0.6} />
       {/* hills and mesas */}
       {hill(40, 120, 26, 0)}
       {hill(76, 108, 20, 1)}
@@ -78,12 +98,15 @@ function Terrain() {
       {hill(446, 100, 18, 3)}
       {hill(120, 52, 22, 4)}
       {hill(500, 232, 16, 5)}
+      {hill(-60, 200, 30, 6)}
+      {hill(700, 210, 30, 7)}
       {/* trees by the river and in the south-west */}
       {[
         [210, 70], [290, 90], [296, 190], [214, 238], [28, 220], [44, 238], [20, 250], [318, 230], [398, 226], [380, 54], [300, 40], [92, 306],
+        [-20, 90], [-40, 260], [680, 120], [700, 240], [610, 250], [470, 40],
       ].map(([x, y], k) => tree(x, y, k))}
       {/* compass */}
-      <g transform="translate(36 40)">
+      <g transform={`translate(36 ${f.vh - 36})`}>
         <circle r={16} fill="#0d0f1a" stroke="#4a4a66" />
         <path d="M0 -13 L4 0 L0 13 L-4 0 Z" fill="#6f86b8" />
         <path d="M0 -13 L4 0 L-4 0 Z" fill={GOLD} />
@@ -118,6 +141,20 @@ const money = (n: number) => `$${n.toLocaleString('en-US')}`
 
 export function RoutePanel({ lines, onDone }: { lines: ReelLine[]; onDone: () => void }) {
   const [at, setAt] = useState(0)
+  const boxRef = useRef<HTMLDivElement>(null)
+  const [box, setBox] = useState({ w: W, h: H })
+  // The map is as big as the room it is given, whatever shape that is.
+  useEffect(() => {
+    const el = boxRef.current
+    if (!el) return
+    const read = () => setBox({ w: el.clientWidth, h: el.clientHeight })
+    read()
+    const ro = new ResizeObserver(read)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  const field = fieldFor(box.w, box.h)
+  const pins = PINS.map((p) => place(field, p))
   const line = lines[at]
   // Drawn as far as any line so far has asked: the road never un-draws.
   const reached = useMemo(() => lines.slice(0, at + 1).reduce((far, l) => Math.max(far, l.stop ?? 0), 0), [lines, at])
@@ -130,27 +167,28 @@ export function RoutePanel({ lines, onDone }: { lines: ReelLine[]; onDone: () =>
   const text = line.text.startsWith(`${speaker}: `) ? line.text.slice(speaker.length + 2) : line.text
   const next = () => (at + 1 < lines.length ? setAt(at + 1) : onDone())
 
-  const road = PINS.map(([x, y], i) => ({ x, y, i }))
+  const road = pins.map(([x, y], i) => ({ x, y, i }))
   return (
     <div
       data-testid="route-panel"
       data-reached={reached}
-      style={{ position: 'relative', width: 'min(98vw, 1100px)', height: '100%', boxSizing: 'border-box', padding: `30px 0 ${DIALOGUE_ROOM}px`, display: 'flex', flexDirection: 'column', gap: 6, fontFamily: UI_FONT, color: INK }}
+      style={{ position: 'relative', width: '100vw', height: '100%', boxSizing: 'border-box', padding: `0 0 ${DIALOGUE_ROOM}px`, display: 'flex', flexDirection: 'column', fontFamily: UI_FONT, color: INK }}
     >
-      <div style={{ textAlign: 'center', color: GOLD, fontSize: TYPE.large }}>The road to the penthouse</div>
-      <div style={{ position: 'relative', flex: 1, minHeight: 0, containerType: 'size', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {/* The map's own box: as large as fits, in the map's shape, so the card can sit inside it and never over a town. */}
-        <div style={{ position: 'relative', width: `min(100cqw, calc(100cqh * ${W} / ${H}))`, aspectRatio: `${W} / ${H}` }}>
+      <div style={{ position: 'absolute', top: 8, left: 0, right: 0, zIndex: 2, textAlign: 'center', color: GOLD, fontSize: TYPE.large, textShadow: '0 0 6px #000, 0 0 6px #000', pointerEvents: 'none' }}>
+        The road to the penthouse
+      </div>
+      <div ref={boxRef} style={{ position: 'relative', flex: 1, minHeight: 0 }}>
+        <div style={{ position: 'absolute', inset: 0 }}>
         <svg
-          viewBox={`0 0 ${W} ${H}`}
+          viewBox={`0 0 ${field.vw} ${field.vh}`}
           preserveAspectRatio="xMidYMid meet"
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block', background: '#0d0f1a', border: '2px solid #4a4a66', borderRadius: 6, boxSizing: 'border-box' }}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block', background: '#1a2238' }}
           role="img"
           aria-label="Route map"
         >
-          <Terrain />
+          <Terrain f={field} />
           {road.slice(1).map(({ x, y, i }) => {
-            const a = PINS[i - 1]
+            const a = pins[i - 1]
             const d = roadPath(a, [x, y], i)
             const drawn = i <= reached
             const fare = ROUTE[i].bankroll
@@ -170,7 +208,7 @@ export function RoutePanel({ lines, onDone }: { lines: ReelLine[]; onDone: () =>
                   strokeWidth={2.5}
                   strokeDasharray="1"
                   strokeDashoffset={drawn ? 0 : 1}
-                  strokeLinecap="round"
+                  strokeLinecap={drawn ? 'round' : 'butt'}
                   style={{ transition: `stroke-dashoffset ${STEP_MS}ms ease-in-out` }}
                 />
                 {/* what the bus into this town asks, written on the road */}
@@ -223,7 +261,7 @@ export function RoutePanel({ lines, onDone }: { lines: ReelLine[]; onDone: () =>
         {window.innerHeight >= 560 && (
         <div
           data-testid="route-card"
-          style={{ position: 'absolute', left: 8, top: 8, maxWidth: '40%', padding: '6px 10px', border: '1px solid #4a4a66', borderRadius: 6, background: '#0d0f1af0', fontSize: TYPE.small }}
+          style={{ position: 'absolute', left: 8, top: 44, maxWidth: '40%', padding: '6px 10px', border: '1px solid #4a4a66', borderRadius: 6, background: '#0d0f1af0', fontSize: TYPE.small }}
         >
           {focus === 0 ? (
             <span style={{ color: DIM }}>Basin. Home, for now.</span>
