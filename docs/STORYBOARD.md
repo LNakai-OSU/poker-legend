@@ -705,7 +705,7 @@ no longer at Marcus's table.
 
 ## 9. The philosophy pass (proposed, 2026-11-17)
 
-Status: steps 1 to 3 of 9.7 are **built** (2026-11-17, branch `story-philosophy`): the single lines, the booth pairs, the losing paths, three reels on built sets and the lunatics' beats. Steps 4 and 5 (the reels that need new sets, and the extras) are still **proposed**. Silver Creek's night was built first (9.4). This carries
+Status: **built**, all five steps of 9.7. Steps 1 to 3 (2026-11-17, branch `story-philosophy`): the single lines, the booth pairs, the losing paths, three reels on built sets and the lunatics' beats. Steps 4 and 5 (2026-11-18, branch `story-philosophy-2`): the six new reel sets, the four reels on them, the workroom shelf, Bernard's hint and the leap moved into the lift. Silver Creek's night was built first (9.4). This carries
 the opening's philosophy up the whole ladder: each stop has one thinker, each of
 the cast has a worldview, and each town has one short existential `reel`, a night
 alone with a book. It all fits the content model: lines in built events, a few new
@@ -801,7 +801,7 @@ poker tie. Lines are drafts, to be fitted to the voices in `characters.ts`.
 - `cass-offers`, in the branch that takes the stake: **You:** "(Nietzsche says the oldest thing between people is a debt, and guilt came after. I have just shaken on mine by a bollard.)"
 - `riverbend-boss-door`: **Odette:** "The river is never the same twice. So I never play the same hand twice. Sit."
 
-(c) Reel **"The same river"**: new event `riverbend-deck-night` (`enterArea rb-boat`; `chapter riverbend`, `period night`). Set **`deck`** (new). Two variants by `if` on `debt cass owing`.
+(c) Reel **"The same river"**: **built**, new event `riverbend-deck-night` (`enterArea rb-boat` with `onLoad`, so standing up from the night session finds it too; `chapter riverbend`, `period night`, after `arrive-riverbend`, and while the private room is still shut, which keeps it apart from `riverbend-boss-door`). Set **`deck`**. Two variants by `if` on Cass owing or overdue. As built, it opens on Kit's week aboard (Deb's line, "they say"), and adds "Every hand is a new river too. The last one does not owe you this one" (rule 1, said outright).
 - *The deck aft of the card room. The wheel turns over and over and arrives nowhere it has not been.* "Kit was on this boat a week ago. Took Tiny for two thousand, tipped a chip, gone."
 - "Heraclitus. You cannot step into the same river twice. It is not the same river." / "And you are not the same man." / owing: "The man at Marcus's table would not be on a boat with a stranger's money in his pocket." · not owing: "The man at Marcus's table would not have got on a boat without a friend to hold the door." / "Everything flows, he said. Chips especially."
 - Turn: the player notices the change, and the debt makes it concrete.
@@ -819,7 +819,7 @@ poker tie. Lines are drafts, to be fitted to the voices in `characters.ts`.
 - `kit-harbor`: **Kit:** "Somebody says you read on the bus. The one about the man with the axe. He got caught because he felt bad. I do not feel bad."
 - Booth, `hal-sends-you-on` (9.5): **Chip:** "A woman of mystery!" **Anand:** "A woman of patchwork. Montaigne said we all are. Hers has the stitching on the outside."
 
-(c) Reel **"What do I know?"** (proposed, step 4): new event `harbor-mirror` (`enterArea ch-street`; `eventDone hal-first-lesson`, `period ['evening','night']`). Sets **`harborroom`** (new), then `mirror` (built).
+(c) Reel **"What do I know?"**: **built**, new event `harbor-mirror` (`enterArea ch-street`; `chapter crescentHarbor`, `period ['evening','night']`, after `arrive-crescent` and `hal-first-lesson`, and before Bellamy falls, which keeps it apart from `crescent-boss-sendoff` walking you onto the street). Sets **`harborroom`**, then `mirror`. As built, the mirror lines do not repeat `hal-first-lesson`'s Montaigne: "Montaigne had his question struck on a medal: what do I know? I would settle for knowing what my face does with two nines." The Contessa and Bellamy are not named (the player may not have met either yet): "Half the accents in that card room came in on the bus, same as mine."
 - `harborroom`: *A room over the supper club, eleven dollars a night. The lighthouse crosses the wall every nine seconds.* "Hal says everybody leaks something. I have been looking for mine all evening."
 - `mirror`: "Poker face." / "No. That is a man doing an impression of a poker player." / "Montaigne went up a tower to study himself and came down with a question on a medal: what do I know?" / "We are all patchwork, he said, and each patch plays its own game. The Contessa has a patch from Leeds. Bellamy has a library. I have a man from Basin doing an impression." / "At a card table that is not a lie. It is a bluff. The trick is knowing which patch is playing."
 - Turn: the self as patchwork, the question the penthouse mirror finishes (a ship is planks; a man is patches).
@@ -833,9 +833,9 @@ poker tie. Lines are drafts, to be fitted to the voices in `characters.ts`.
 (b) Beats:
 - `marcus-on-holiday`: **Marcus:** "Read one of your books on the plane. Some Roman, rich as anything, telling everybody to want less. Every letter ends on something a Greek said. Bread, water, friends. I liked the Greek better." **You:** "(Marcus has picked a side in a two-thousand-year argument by lunch.)"
 - `palmcay-boss-door`: **Inés:** "Darling, life is short. I never understood people who save things. For what? Raise."
-- Table hint at `palmcay-tourist`, `eventDone palmcay-beach`: **Bernard:** "Still Thursday? It is a very long Thursday." / "My wife says I am wasting my life. It is my life. Raise!"
+- Table hint `bernard-beach` at `palmcay-tourist`, `eventDone palmcay-beach` (**built**; one of the two is said): **Bernard:** "I saw you on the beach the other night, through the glass. Is it still Thursday? It is a very long Thursday." / "My wife says I am wasting my life. It is my life. I will waste it how I like. Raise!"
 
-(c) Reel **"Is it Thursday?"**: new event `palmcay-beach` (`enterArea pc-street`; `chapter palmCay`, `period night`, `eventDone marcus-on-holiday`). Set **`beach`** (new).
+(c) Reel **"Is it Thursday?"**: **built**, new event `palmcay-beach` (`enterArea pc-street`; `chapter palmCay`, `period night`, after `arrive-palmcay` and `marcus-on-holiday`, and before Inés falls, apart from `palmcay-boss-sendoff`). Set **`beach`**. As built, it opens on the man behind the glass ("Somebody should tell him what day it is." / "Somebody should tell me."), does not lean on having met Inés ("This island would have comped his room"), and says Marcus "came all this way to sit on a beach for a week", true whether or not he has gone home yet.
 - *The beach under the casino. Through the glass behind you, one man is still at a lit table.* "Seneca. 'It is not that we have a short time to live, but that we waste a lot of it.'"
 - "He wrote that rich. Inés would have comped his honeymoon." / "Four sessions in a day, and the days are counted. I have spent more of them on this island than I meant to." / "Marcus goes home on Friday. He does not think that is wasting it." / "Seneca would have called him wise. Then gone back to the table."
 - Turn: time is the real stake, and the friend going home is what it costs.
@@ -852,7 +852,7 @@ poker tie. Lines are drafts, to be fitted to the voices in `characters.ts`.
 - `dana-mesa` (the scout clue): **Dana:** "Her words: fair when nobody is looking. Anybody is fair with a camera on."
 - `kit-mesa`, before the stake / tip-off / nothing choice: **You:** "(Nobody would ever know I told Lowe. That is the whole question, isn't it.)"
 
-(c) Reel **"The cave"**, appended to `mesa-boss-sendoff`. Sets **`neon`**, **`stream`** (new).
+(c) Reel **"The cave"**: **built**, at the end of `mesa-boss-sendoff`, after Vale leaves and before "Porto Lumina is open to you". Sets **`neon`**, **`stream`**. The interlude is Dana's send-off (`dana-sends-you-up`), not Vale's, so nothing follows it here. As built: the neon line is the LUCKY sign ("never once been right about anybody"); the streamer is "the kid who streams from the casino floor" (the player may not have met Zeke); "Saturday" and Chip's name became "At the final ... somebody in a booth"; the Nadia half of the last line is by `if` on `dana-mesa`.
 - `neon`: *A motel walkway over the Strip. Every sign is telling you something. None of it is true.*
 - `stream`: "Zeke's stream. Eleven thousand people watching a card table the size of a biscuit. They cannot see the cards. They argue about them anyway." / "Plato. People chained in a cave, watching shadows, sure the shadows are the world." / "That is every table I have sat at. I do not see cards. I see a man touch his cup, and I guess." / "Saturday I am on television. I will be the shadow, and Chip will tell them what I had." / "Vale turned the cameras off to see who I am. So, apparently, does Nadia. Who am I, with them off?"
 - Turn: from being watched to being fair unwatched, the question the final asks.
@@ -869,8 +869,8 @@ poker tie. Lines are drafts, to be fitted to the voices in `characters.ts`.
 - `dana-reveal`, six-clue branch: **Dana:** "Four years up there, and nobody has looked at her who did not owe her or want something. She wants to lose to somebody who did not have to sit down." (Hegel, unnamed; Weil's line from 9.3 closes it.)
 - `final-lost`, before the rail: **You:** "Nietzsche asked: if a demon said you would live this exact life again, every hand of it, forever, would you curse him or thank him?" / "Same table. Same fifteen thousand. New cards, though. The demon shuffles."
 
-(c) Reel **"The leap"**: **built**, at the end of `hal-on-the-eve`, after his lesson and **Hal:** "Socrates never charged. I always did. That one was free." Set `night`. Hal is on `pl-street` only in the evening and at night in this chapter, so the caption's "That night" holds; the reel is faded out and costs no time. The beat can come before the tournament, so the reel knows the push-fold chart but not yet the seven big blinds.
-- *That night. The tower stairwell, forty-first floor. Somebody has left the window open.* "Kierkegaard: anxiety is the dizziness of freedom. You look over the edge, and what frightens you is not falling. It is that you could jump."
+(c) Reel **"The leap"**: **built**, at the end of `hal-on-the-eve`, after his lesson and **Hal:** "Socrates never charged. I always did. That one was free." Set `lift` (since 2026-11-18; it was `night`), caption *That night. The glass lift up the outside of the tower, forty-one floors, and nobody else in it.* Hal is on `pl-street` only in the evening and at night in this chapter, so the caption's "That night" holds; the reel is faded out and costs no time. The beat can come before the tournament, so the reel knows the push-fold chart but not yet the seven big blinds.
+- *That night. The glass lift up the outside of the tower.* "Kierkegaard: anxiety is the dizziness of freedom. You look over the edge, and what frightens you is not falling. It is that you could jump."
 - "Hal says when the stack gets short you stop thinking. Seven big blinds, eight, ten: you shove or you fold, and the chart says which." / "Kierkegaard needed faith. I have a push-fold chart. That should feel better than it does." / "Abraham walked up the mountain not knowing. I will know the odds to two decimals. I still will not know." / "Fine." / "Leap."
 - Turn: the reading stops; from here the player acts.
 
@@ -888,7 +888,7 @@ Losing gets its thinkers too, each on a beat that already plays when it goes wro
 (a) After the ending film you are forty-one floors up, with a mirror over a fireplace somebody else lit (`pl-pent-fire`). The prologue's mirror asked *how did I get here?*; this one asks *is it still me?*, the Greeks' ship with every plank replaced. Marcus hosting the Friday game upstairs is Epicurus's garden at the top.
 
 (b) Beats:
-- New `history-on-the-shelf` (interact `pl-work-shelf`, `eventDone final-won`): "Three books on probability, two on psychology, one on marriage, still in its wrapper. At the end, a fat paperback you do not remember packing: *A History of Philosophy*. The bookmark is still at the Greeks." **You:** "Wonder, they said. Where it starts." / "...I wonder what Marcus is having for dinner."
+- New `history-on-the-shelf` (**built**; interact `pl-work-shelf`, `eventDone final-won`; the player's two lines are thoughts, in parentheses): "Three books on probability, two on psychology, one on marriage, still in its wrapper. At the end, a fat paperback you do not remember packing: *A History of Philosophy*. The bookmark is still at the Greeks." **You:** "Wonder, they said. Where it starts." / "...I wonder what Marcus is having for dinner."
 - `marcus-upstairs`: **Marcus:** "Forty-one floors and you still need a man to bring the ice." **You:** "(Epicurus kept a garden and fed his friends. Nobody remembers what he won.)"
 
 (c) Reel **"The ship"**: **built**, new event `penthouse-mirror` (interact `pl-pent-fire`, `eventDone final-won`; listed in `tests/ui.mjs` STORY_SEEN). Set `mirror`. After it: "Your phone is on the mantelpiece, face down."
@@ -917,9 +917,9 @@ Chip oversells, Dr. Anand corrects; each pair sits beside that interlude's scout
 | `beach` | Palm Cay | Moonlit sand and surf, the casino's glass lit behind, one silhouette at a table | `palmcay-beach` |
 | `neon` | Neon Mesa | The Strip from a motel walkway, signs flickering and buzzing out of step | `mesa-boss-sendoff` |
 | `stream` | Neon Mesa | A phone in a hand: a stamp-sized card table, a viewer count, chat scrolling | `mesa-boss-sendoff` |
-| `lift` (optional) | Porto Lumina | A glass lift climbing the tower, the city falling away | `hal-on-the-eve` (else `night`) |
+| `lift` | Porto Lumina | A glass lift climbing the tower, the city falling away, the floor counting up to 41 | `hal-on-the-eve` |
 
-Reused as built: `bed`, `shelf` (Basin), `night` (Silver Creek, Lumina), `mirror`
+All six are **built** (2026-11-18) and checked on a contact sheet and in the game. Reused as built: `bed`, `shelf` (Basin), `night` (Silver Creek), `mirror`
 (Harbor, Aftermath). Each new set is one `ReelScene` member and one draw function in
 `game/reelArt.ts`; from the river up, each stop's night gets a look of its own.
 
@@ -928,12 +928,12 @@ Reused as built: `bed`, `shelf` (Basin), `night` (Silver Creek, Lumina), `mirror
 1. **Lines in built events**: 9.4's single lines and 9.5's pairs, about 25 edits; no new events, flags or art. **Built**, with the losing paths (9.4).
 2. **Reels on built sets**: *Sitting quietly* (Basin), *The leap* (Lumina), *The ship* (new `penthouse-mirror`). Silver Creek's is built. **Built.**
 3. **The lunatics' beats**: `dolores-foot` (with `rubbedTheFoot`, read in `final-table-start`), `gaines-tithe`, `contessa-valmont`, `zeke-clip`, and a table hint each at `lumina-finale` that calls back with `eventDone` (Gaines: "Still not tithing? The boat is half built. The front half."). **Built**; Dolores's callback is Chip's (she is on the rail, not at the table), in `tournament-won` as well as `final-table-start`.
-4. **Reels that need new sets**: `riverbend-deck-night`, `harbor-mirror`, `palmcay-beach`, the Mesa's cave.
-5. **Extras**: `history-on-the-shelf`, Bernard's table hint, the `lift` set.
+4. **Reels that need new sets**: `riverbend-deck-night`, `harbor-mirror`, `palmcay-beach`, the Mesa's cave. **Built.**
+5. **Extras**: `history-on-the-shelf`, Bernard's table hint (`bernard-beach`), the `lift` set (now the leap's). **Built.**
 
 ### 9.8 Decided, and open
 
 - *Decided:* one thinker a stop; the player names thinkers and most of the cast embody them; the existential reels vary in placement (after the first win, after a boss, mid-town at night, on the eve, in the aftermath) so they are not a fixed slot; the only new flag is `rubbedTheFoot`.
-- *Check when building:* that `rb-boat` and `pc-street` are reachable at night in their chapters (step 4, still to check); that a reel added to a send-off still leaves the interlude last (step 4, the Mesa's cave). *Checked (steps 1 to 3):* each lunatic's beat is one-shot with no other talk beat on them, so it takes first refusal once and their schedule lines come back; `penthouse-mirror` carries nobody anywhere, so it clashes with no arrival; a film is skipped up to the next thing that is not a film, so the Dolores callback in `tournament-won` sits after the whole film (one extra skip, and only for players who met her) rather than splitting it.
+- *Checked (steps 4 and 5):* `rb-boat` and `pc-street` are reachable at night in their chapters (no door keeps hours; each reel was played in the game from a seeded save at night, the Harbor's and the Cay's by walking out of a shop door); the Mesa's cave sits in Vale's send-off and the interlude in Dana's, so it leaves the interlude untouched; `arrivalClashes` and "two events fighting over the same moment" pass, by the boss-falls and room-open conditions above. The cost of those conditions: a player who opens the boat's private room before any night aboard, or beats Bellamy or Inés before a night on their street, never sees that town's reel. *Checked (steps 1 to 3):* each lunatic's beat is one-shot with no other talk beat on them, so it takes first refusal once and their schedule lines come back; `penthouse-mirror` carries nobody anywhere, so it clashes with no arrival; a film is skipped up to the next thing that is not a film, so the Dolores callback in `tournament-won` sits after the whole film (one extra skip, and only for players who met her) rather than splitting it.
 - *Decided by the user (2026-11-17):* (a) Sartre is saved for Lumina (`lumina-welcome`); the Harbor takes Montaigne. (b) The losing paths get thinkers: Camus on the first bust (Ray's), Boethius on the first catch, Nietzsche's recurrence at `final-lost` (9.4). (c) Nietzsche twice (the debt, the recurrence) is fine.
 - *Decided while building:* player thoughts are a `dialogue` spoken by `You`, the line in parentheses, so they read as thought and wait for a press like every line. Hal's Alcibiades line is Socrates's pupil, not Plato's (fixed in the doc).
