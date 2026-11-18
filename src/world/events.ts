@@ -1772,9 +1772,19 @@ export const EVENTS: GameEvent[] = [
           'Marcus: Watching you play made me realize you might be able to do this for real. And win REAL money.',
           'Marcus: I have run that game on Fridays for years. I know what a player looks like. You, I did not expect.',
           'Marcus: So I did what I do when I cannot sleep. I wrote it down. Every town, every casino, every man you have to beat.',
-          'Marcus: Let me show you. It is easier to see than to hear. Watch the map.',
         ],
       },
+      // Marcus is Epicurus without the book (docs/STORYBOARD.md §9.3): bread, wine, friends.
+      {
+        kind: 'dialogue',
+        speaker: 'marcus',
+        lines: [
+          'Marcus: Mind, I have got what I need already. Bread from downstairs, wine from a man, friends from God knows where.',
+          'Marcus: That is a whole life. People win a bit and get greedy and forget it.',
+        ],
+      },
+      { kind: 'dialogue', speaker: 'You', lines: ['You: (Epicurus, near enough. Marcus has never read a word of him.)'] },
+      { kind: 'dialogue', speaker: 'marcus', lines: ['Marcus: Anyway. Let me show you. It is easier to see than to hear. Watch the map.'] },
       { kind: 'wait', ms: 500 },
       {
         kind: 'reel',
@@ -1828,6 +1838,12 @@ export const EVENTS: GameEvent[] = [
         with: ['marcus'],
         caption: 'Marcus has brought sandwiches. He hands you one when the town runs out.',
         during: [
+          // Yesterday's bus window (the opening's Kant), shrunk by having somewhere to be.
+          {
+            kind: 'dialogue',
+            speaker: 'You',
+            lines: ['You: (Same window as yesterday. Same bird, probably. The sky looks smaller when you are going somewhere.)'],
+          },
           {
             kind: 'dialogue',
             speaker: 'marcus',
@@ -1926,6 +1942,13 @@ export const EVENTS: GameEvent[] = [
                   'I would like it noted that the bus is called "the 14". It is not a metaphor. ' +
                   'I checked.',
               },
+              {
+                who: 'Dr. Anand',
+                text:
+                  'In 1654 Pascal and Fermat worked out how to split the pot of a game that was ' +
+                  'interrupted. It is where probability comes from.',
+              },
+              { who: 'Chip', text: 'Nobody is splitting anything, Doctor. The lights will be back.' },
             ],
           },
         ],
@@ -1981,6 +2004,18 @@ export const EVENTS: GameEvent[] = [
         lines: [
           'Ray: Thirty years I have played that table. Thirty years I have been due.',
           'Ray: One of these days I walk out of there ahead, and I keep walking.',
+        ],
+      },
+      // The gambler's fallacy, answered the only way this game can (rule 1).
+      {
+        kind: 'dialogue',
+        speaker: 'You',
+        lines: ['You: (The cards do not know Ray. They do not know anybody. That is the worst thing about them, and the best.)'],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'ray',
+        lines: [
           'Ray: You have got the look. Do not get the tab.',
           'Ray: And if you are ever short, my sister Loretta at the Sand Dollar has work. Menu, then Jobs, keeps the list.',
         ],
@@ -2059,6 +2094,14 @@ export const EVENTS: GameEvent[] = [
                   'Ray is a textbook calling station. He folds, on average, to a river bet ' +
                   'roughly never.',
               },
+              {
+                who: 'Dr. Anand',
+                text:
+                  'He also believes he is due. Hume would point out that the deck keeps no ' +
+                  'records. So would I, with a chart.',
+              },
+              { who: 'Chip', text: 'The deck has a heart, Doctor!' },
+              { who: 'Dr. Anand', text: 'It has fifty-two cards.' },
               {
                 who: 'Chip',
                 text:
@@ -2215,9 +2258,12 @@ export const EVENTS: GameEvent[] = [
           'Kit: You are the one who took Marcus’s game. Word travels on the 14.',
           'Kit: Kit. I am a town ahead of you, and I mean to stay there.',
           'Kit: The Harbor, the island, the Mesa, then Porto Lumina. There is a penthouse up there with my name nearly on it.',
-          'Kit: Cass will offer you money. Take it or do not. I would enjoy either.',
+          'Kit: Some people stand on the dock. Some people step over. I read that somewhere.',
         ],
       },
+      // Kit is the "extraordinary man" of the player's axe book (docs/STORYBOARD.md §9.3).
+      { kind: 'dialogue', speaker: 'You', lines: ['You: (Raskolnikov had that theory. It went great for him.)'] },
+      { kind: 'dialogue', speaker: 'kit', lines: ['Kit: Cass will offer you money. Take it or do not. I would enjoy either.'] },
       {
         kind: 'choice',
         speaker: 'kit',
@@ -2340,6 +2386,11 @@ export const EVENTS: GameEvent[] = [
                 who: 'Chip',
                 text: 'Reverend Gaines! A card player of God, folks, or at least of Gaines.',
               },
+              {
+                who: 'Dr. Anand',
+                text: 'The tithe is a ten percent rake, paid to an insurer nobody has audited.',
+              },
+              { who: 'Chip', text: 'Faith, Doctor!' },
               {
                 who: 'Dr. Anand',
                 text:
@@ -2518,7 +2569,15 @@ export const EVENTS: GameEvent[] = [
           'Hal: I taught a girl called Nadia Okonkwo once. Inside a year she stopped needing me.',
           'Hal: She lives above the casino in Porto Lumina now. You have heard. Everyone has heard.',
           'Hal: Start with position. Acting last is worth more than any card I could sell you.',
+          'Hal: And everybody at that table is reading you. The first tell to find is your own.',
+          'Hal: The Greeks carved it over a door: know thyself. They were not talking about poker. They should have been.',
         ],
+      },
+      // The Harbor's thinker is Montaigne, who studied himself (docs/STORYBOARD.md §9.4).
+      {
+        kind: 'dialogue',
+        speaker: 'You',
+        lines: ['You: (Montaigne went up a tower for ten years to study one man, himself. He came down with a question, not an answer: what do I know?)'],
       },
       {
         kind: 'dialogue',
@@ -2544,6 +2603,7 @@ export const EVENTS: GameEvent[] = [
           'Kit: The Back Room let me in on Tuesday. You need a suit and a name. You have neither.',
           'Kit: Practise on Vance at the heads-up table. I did. He will thank you for it.',
           'Kit: One on one is how she plays, at the top. Might as well learn it now.',
+          'Kit: Somebody says you read on the bus. The one about the man with the axe. He got caught because he felt bad. I do not feel bad.',
           'Kit: See you on the island. Or do not.',
         ],
       },
@@ -2618,6 +2678,11 @@ export const EVENTS: GameEvent[] = [
                   'Of the Leeds Valmonts, it turns out. The accent slips when she is thrown. ' +
                   'She is also the most aggressive player in this building, and I have the ' +
                   'hand-history to prove it.',
+              },
+              { who: 'Chip', text: 'A woman of mystery!' },
+              {
+                who: 'Dr. Anand',
+                text: 'A woman of patchwork. Montaigne said we all are. Hers has the stitching on the outside.',
               },
               { who: 'Chip', text: 'Does it work?' },
               {
@@ -2715,8 +2780,12 @@ export const EVENTS: GameEvent[] = [
           'Marcus: It is true. You look like somebody who sits at these tables.',
           'Marcus: The Friday game misses you. Mostly it misses your money.',
           'Marcus: Lumina is two stops from here. I am not saying anything. I am just saying it is two stops.',
+          'Marcus: I borrowed one of your books for the flight. Some Roman, rich as anything, telling everybody to want less.',
+          'Marcus: Every letter ends on something a Greek said. Bread, water, friends. I liked the Greek better.',
         ],
       },
+      // Seneca against Epicurus: the argument between this island and Marcus (docs/STORYBOARD.md §9.4).
+      { kind: 'dialogue', speaker: 'You', lines: ['You: (Marcus has picked a side in a two-thousand-year argument by lunch.)'] },
       {
         kind: 'dialogue',
         speaker: 'marcus',
@@ -2852,6 +2921,12 @@ export const EVENTS: GameEvent[] = [
                   'the rest of the table combined.',
               },
               {
+                who: 'Dr. Anand',
+                text: 'Forty-seven hours at one table. His hourly rate is a negative number with a comma in it.',
+              },
+              { who: 'Chip', text: 'He is LIVING, Doctor!' },
+              { who: 'Dr. Anand', text: 'Seneca had a word for what he is doing with his days. It was not that one.' },
+              {
                 who: 'Chip',
                 text:
                   'And Marcus! Marcus, who came on holiday and went home with a sunburn and a ' +
@@ -2947,6 +3022,7 @@ export const EVENTS: GameEvent[] = [
           'Hal: You made it out here. Good.',
           'Hal: Up here the tells are nearly gone. Learn them anyway, so you know what you are not seeing.',
           'Hal: After the Mesa it is just her, and I cannot teach you her. I tried teaching her once. She learned faster than I taught.',
+          'Hal: Socrates had a pupil like her. Alcibiades. Best mind in Athens, and he turned it on everybody who loved him.',
         ],
       },
     ],
@@ -2969,6 +3045,8 @@ export const EVENTS: GameEvent[] = [
           'Kit: I am on the plane tonight. Do not follow me too fast.',
         ],
       },
+      // The ring of Gyges, before the choice that asks it (docs/STORYBOARD.md §9.4).
+      { kind: 'dialogue', speaker: 'You', lines: ['You: (Nobody would ever know I told Mr. Lowe. That is the whole question, isn’t it.)'] },
       {
         kind: 'choice',
         speaker: 'kit',
@@ -3040,6 +3118,7 @@ export const EVENTS: GameEvent[] = [
         lines: [
           'Dana: Since you will hear it anyway: I am not Nadia’s friend. I am her scout, and I was given a brief.',
           'Dana: Find somebody who plays fair under pressure. Somebody she cannot buy and cannot fix. She would not say why.',
+          'Dana: Her words were: fair when nobody is looking. Anybody is fair with a camera on.',
         ],
       },
       { kind: 'setFlag', flag: 'clueScout' },
@@ -3083,6 +3162,11 @@ export const EVENTS: GameEvent[] = [
                   'is bored and folds when the chat is scared.',
               },
               { who: 'Chip', text: 'He has eleven thousand people watching.' },
+              {
+                who: 'Dr. Anand',
+                text: 'Watching a phone watching a table. Plato wrote about people like that. They lived in a cave.',
+              },
+              { who: 'Chip', text: 'Eleven THOUSAND, Doctor!' },
               {
                 who: 'Dr. Anand',
                 text: 'And one of them is his mum. He told us. He tells everyone.',
@@ -3198,6 +3282,7 @@ export const EVENTS: GameEvent[] = [
           'Kit: Your ten bought two days. Forty hands against her bought the rest of it back.',
           'Kit: I will be at the rail. I will pay you back whatever happens.',
           'Kit: Wen’s terms: she does not want the money. She wants to be owed. Do not be the one who lets her.',
+          'Kit: Your axe book. Somebody follows him all the way to Siberia at the end. You are not her. You are close.',
         ],
       },
     ],
@@ -3286,6 +3371,12 @@ export const EVENTS: GameEvent[] = [
           'Dana: When somebody is knocked out, somebody new sits down in their chair with a stack that fits the stage. The table never thins.',
           'Dana: Get through the tenth round and your table is announced as the final table. Beat everybody sat at it, and you have a seat at the Legends Invitational.',
         ],
+      },
+      // Sartre, saved for the crowded hall (docs/STORYBOARD.md §9.4).
+      {
+        kind: 'dialogue',
+        speaker: 'You',
+        lines: ['You: (Sartre said hell is other people. He never sat at a table where somebody new sits down every time you knock one out.)'],
       },
       {
         kind: 'dialogue',
@@ -3452,6 +3543,8 @@ export const EVENTS: GameEvent[] = [
               'Dana: The penthouse is not hers. Madame Wen paid for Nadia’s first stack, and Nadia has been paying her back ever since. She holds that room as Wen’s collateral.',
               'Dana: She cannot lose on purpose. Wen would take the room, and her with it. She needs somebody to beat her clean, in front of everyone, so nobody can call it a gift.',
               'Dana: That was my brief. Not a scout. Somebody she cannot buy and cannot fix.',
+              // Hegel's master who is the slave, unnamed (docs/STORYBOARD.md §9.3).
+              'Dana: Four years up there, and nobody has looked at her who did not owe her or want something. She wants to lose to somebody who did not have to sit down.',
             ],
           },
         ],
@@ -3464,6 +3557,12 @@ export const EVENTS: GameEvent[] = [
             ],
           },
         ],
+      },
+      // Simone Weil, unnamed: attention is the rarest generosity, and Dana was paid for hers.
+      {
+        kind: 'dialogue',
+        speaker: 'dana',
+        lines: ['Dana: Somebody said paying attention is the rarest kind of generosity. I got paid for it, so I do not know what that makes me.'],
       },
       {
         kind: 'if',
@@ -3587,9 +3686,10 @@ export const EVENTS: GameEvent[] = [
         lines: [
           'Marcus: Forty-one floors. I counted the buttons in the lift.',
           'Marcus: You know the rule. Winner hosts. The Friday game is at yours now.',
-          'Marcus: I will bring the ice.',
+          'Marcus: I will bring the ice. Forty-one floors, and you still need a man from Basin to bring the ice.',
         ],
       },
+      { kind: 'dialogue', speaker: 'You', lines: ['You: (Epicurus kept a garden and fed his friends. Nobody remembers what he won.)'] },
     ],
   },
   {
@@ -3885,6 +3985,7 @@ export const EVENTS: GameEvent[] = [
       { kind: 'fade', to: 'in' },
       { kind: 'dialogue', speaker: 'odette', lines: [
           'Odette: Shut the door. Boat rules: one table, one winner, no rebuy.',
+          'Odette: The river is never the same twice. So I never play the same hand twice.',
           'Odette: Cut your chips like you mean it.',
         ] },
       {
@@ -3961,6 +4062,8 @@ export const EVENTS: GameEvent[] = [
       { kind: 'dialogue', speaker: 'bellamy', lines: [
           'Bellamy: Please. The chair on the left is the better one.',
           'Bellamy: One match, one winner, and a very good reason not to talk about it.',
+          'Bellamy: You read, I am told. Montaigne, playing with his cat, wondered whether he was not her pastime more than she was his.',
+          'Bellamy: I have read every book on you. Let us find out which of us is the cat.',
         ] },
       {
         kind: 'dialogue',
@@ -4036,6 +4139,7 @@ export const EVENTS: GameEvent[] = [
       { kind: 'dialogue', speaker: 'ines', lines: [
           'Ines: Sit, sit. Sparkling water is on me. The match is not.',
           'Ines: Heads up, to the last chip. It is the only honest way.',
+          'Inés: Darling, life is short. I never understood people who save things. For what? Raise.',
         ] },
       {
         kind: 'dialogue',
@@ -4110,6 +4214,8 @@ export const EVENTS: GameEvent[] = [
       { kind: 'dialogue', speaker: 'vale', lines: [
           'Vale: This is not a game for the cameras. They are off, I promise.',
           'Vale: Everything on the table. Nobody else has ever stayed to the end.',
+          'Vale: Plato has a shepherd who finds a ring that makes him invisible. Do you know what he does with it? Everything.',
+          'Vale: The cameras are off. Let us see what you do.',
         ] },
       {
         kind: 'dialogue',
@@ -4222,6 +4328,7 @@ export const EVENTS: GameEvent[] = [
           'Marcus: The chairs stay out. Any night, from the afternoon. Talk to me and I deal you straight back in.',
         ],
       },
+      { kind: 'dialogue', speaker: 'You', lines: ['You: (Pascal would say I bet right and lost. Pascal never had to get past the landlady.)'] },
       { kind: 'moveNpc', characterId: 'dana', from: { col: 9, row: 5 }, to: 'player' },
       {
         kind: 'dialogue',
@@ -4409,6 +4516,18 @@ export const EVENTS: GameEvent[] = [
           'Ray: Marcus still deals, does he not? Win it off him again and come back up the road with something to sit down with.',
         ],
       },
+      // Camus on the first bust (docs/STORYBOARD.md §9.4, the losing paths); the beat repeats, the thought does not.
+      {
+        kind: 'if',
+        when: [{ kind: 'count', of: 'busted', atMost: 1 }],
+        then: [
+          {
+            kind: 'dialogue',
+            speaker: 'You',
+            lines: ['You: (The rock rolled back down. Camus says the walk down after it is the part that is yours.)'],
+          },
+        ],
+      },
     ],
   },
   {
@@ -4528,6 +4647,8 @@ export const EVENTS: GameEvent[] = [
         kind: 'dialogue',
         lines: ['On the back, in Marcus’s handwriting: YOUR ROOM IS HERE WHEN YOU WANT IT. SO IS THE GAME.'],
       },
+      // The opening's joke on the landlady's stairs ("pull a Raskolnikov"), retired.
+      { kind: 'dialogue', speaker: 'You', lines: ['You: (Nobody tiptoeing on these stairs any more. Sorry, Fyodor.)'] },
     ],
   },
 
@@ -4628,6 +4749,12 @@ export const EVENTS: GameEvent[] = [
             then: [
               { kind: 'takeStake', sponsorId: 'cass' },
               { kind: 'dialogue', speaker: 'cass', lines: ['Cass: Three days. Dutch will be by the bollard.'] },
+              // Schuld: debt first, guilt after (Nietzsche, docs/STORYBOARD.md §9.4).
+              {
+                kind: 'dialogue',
+                speaker: 'You',
+                lines: ['You: (Nietzsche says the oldest thing between people is a debt, and guilt came after. I have just shaken on mine by a bollard.)'],
+              },
             ],
           },
           {
@@ -5108,6 +5235,21 @@ export const EVENTS: GameEvent[] = [
           'Dutch: You still owe her, mind. This is just what late costs.',
         ],
       },
+      // Boethius's wheel, the first time anybody's collector catches you (docs/STORYBOARD.md §9.4, the losing paths).
+      {
+        kind: 'if',
+        when: [{ kind: 'count', of: 'caught', atMost: 0 }],
+        then: [
+          {
+            kind: 'dialogue',
+            speaker: 'You',
+            lines: [
+              'You: (Boethius wrote his best book in a cell, waiting for the king’s men. Fortune turns a wheel, he said. Climb on if you like, but do not complain when the rules of her game bring you down.)',
+              'You: (Only the cards were Fortune. This part is a debt, and it has my name on it.)',
+            ],
+          },
+        ],
+      },
     ],
   },
   {
@@ -5143,6 +5285,21 @@ export const EVENTS: GameEvent[] = [
           'Abel: Good evening. Mr. Emeka sends his regards, and me.',
           'Abel: I will take everything you are carrying and everything you are wearing. A bus fare stays. He wants you able to find him.',
           'Abel: The debt remains. Please do not make me find you twice.',
+        ],
+      },
+      // Boethius's wheel, the first time anybody's collector catches you (docs/STORYBOARD.md §9.4, the losing paths).
+      {
+        kind: 'if',
+        when: [{ kind: 'count', of: 'caught', atMost: 0 }],
+        then: [
+          {
+            kind: 'dialogue',
+            speaker: 'You',
+            lines: [
+              'You: (Boethius wrote his best book in a cell, waiting for the king’s men. Fortune turns a wheel, he said. Climb on if you like, but do not complain when the rules of her game bring you down.)',
+              'You: (Only the cards were Fortune. This part is a debt, and it has my name on it.)',
+            ],
+          },
         ],
       },
     ],
@@ -5182,6 +5339,21 @@ export const EVENTS: GameEvent[] = [
           'Mr. Lowe: Your friend Kit did not believe in the balance either.',
         ],
       },
+      // Boethius's wheel, the first time anybody's collector catches you (docs/STORYBOARD.md §9.4, the losing paths).
+      {
+        kind: 'if',
+        when: [{ kind: 'count', of: 'caught', atMost: 0 }],
+        then: [
+          {
+            kind: 'dialogue',
+            speaker: 'You',
+            lines: [
+              'You: (Boethius wrote his best book in a cell, waiting for the king’s men. Fortune turns a wheel, he said. Climb on if you like, but do not complain when the rules of her game bring you down.)',
+              'You: (Only the cards were Fortune. This part is a debt, and it has my name on it.)',
+            ],
+          },
+        ],
+      },
     ],
   },
   {
@@ -5217,6 +5389,21 @@ export const EVENTS: GameEvent[] = [
           'Ms. Fong: I keep the book. Today I am also the bailiff.',
           'Ms. Fong: Everything you own, entered against your page. The total has not moved.',
           'Ms. Fong: Madame Wen wants her money, not your misery. Pay her and I stop visiting.',
+        ],
+      },
+      // Boethius's wheel, the first time anybody's collector catches you (docs/STORYBOARD.md §9.4, the losing paths).
+      {
+        kind: 'if',
+        when: [{ kind: 'count', of: 'caught', atMost: 0 }],
+        then: [
+          {
+            kind: 'dialogue',
+            speaker: 'You',
+            lines: [
+              'You: (Boethius wrote his best book in a cell, waiting for the king’s men. Fortune turns a wheel, he said. Climb on if you like, but do not complain when the rules of her game bring you down.)',
+              'You: (Only the cards were Fortune. This part is a debt, and it has my name on it.)',
+            ],
+          },
         ],
       },
     ],
@@ -5944,6 +6131,11 @@ export const EVENTS: GameEvent[] = [
               { who: 'You', text: 'A hundred thousand. A hundred thousand dollars of somebody else\'s hope, and I have fifteen of it left.' },
               { who: 'You', text: 'I was good. For twelve hands I was the best player in the building. What did I do?' },
               { who: 'You', text: 'Nine days ago I was a man with forty dollars and a fridge that hums. Maybe that was the real me, and this is the lie.' },
+              {
+                who: 'You',
+                text: 'Kierkegaard: life is understood backwards, but it has to be lived forwards. I have understood it all the way from Basin.',
+              },
+              { who: 'You', text: 'Now there are seven big blinds and no more backwards.' },
             ],
           },
           {
@@ -6139,6 +6331,20 @@ export const EVENTS: GameEvent[] = [
                   'basket this time.',
               },
               { who: 'You', text: 'Run.' },
+            ],
+          },
+          // Nietzsche's recurrence, on the losing path (docs/STORYBOARD.md §9.4): it plays every time, which is the point.
+          {
+            scene: 'alley',
+            caption: 'Out the back. The suits have gone the other way, and the door is still open on the light.',
+            lines: [
+              {
+                who: 'You',
+                text:
+                  'Nietzsche asked: if a demon told you that you would live this exact life again, every hand of it, ' +
+                  'forever, would you curse him or thank him?',
+              },
+              { who: 'You', text: 'Same table. Same fifteen thousand. New cards, though. The demon shuffles.' },
             ],
           },
         ],
