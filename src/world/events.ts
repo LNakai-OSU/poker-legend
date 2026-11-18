@@ -2452,6 +2452,68 @@ export const EVENTS: GameEvent[] = [
     ],
   },
   {
+    id: 'riverbend-deck-night',
+    about:
+      'Riverbend’s night alone (docs/STORYBOARD.md §9.4): up from the boat’s table at night, or aboard after dark, ' +
+      'out on the deck with Heraclitus and the river. Owing Cass or not is what the player notices has changed. ' +
+      'Before the private room opens, so it never meets Odette at the door; faded out, and no time passes (rule 4).',
+    trigger: { kind: 'enterArea', areaId: 'rb-boat', onLoad: true },
+    conditions: [
+      { kind: 'chapter', cityId: 'riverbend' },
+      { kind: 'period', period: 'night' },
+      { kind: 'eventDone', eventId: 'arrive-riverbend' },
+      { kind: 'casino', cityId: 'riverbend', status: 'roomOpen', set: false },
+    ],
+    actions: [
+      { kind: 'fade', to: 'out' },
+      {
+        kind: 'if',
+        when: [{ kind: 'debt', sponsorId: 'cass', status: ['owing', 'overdue'] }],
+        then: [
+          {
+            kind: 'reel',
+            title: 'The same river',
+            panels: [
+              {
+                scene: 'deck',
+                caption: 'The deck aft of the card room. The boat has not moved in eleven years. The river goes past it all night anyway.',
+                lines: [
+                  { who: 'You', text: 'Kit sat at that table for a week, they say. Took Tiny for two thousand, tipped the bartender a chip, and stepped off again.' },
+                  { who: 'You', text: 'Heraclitus. You cannot step into the same river twice. It is not the same river.' },
+                  { who: 'You', text: 'And you are not the same man.' },
+                  { who: 'You', text: 'The man at Marcus’s table would not be on a boat with Cass’s money in his pocket and her day circled.' },
+                  { who: 'You', text: 'Every hand is a new river too. The last one does not owe you this one.' },
+                  { who: 'You', text: 'Everything flows, he said. Chips especially.' },
+                ],
+              },
+            ],
+          },
+        ],
+        else: [
+          {
+            kind: 'reel',
+            title: 'The same river',
+            panels: [
+              {
+                scene: 'deck',
+                caption: 'The deck aft of the card room. The boat has not moved in eleven years. The river goes past it all night anyway.',
+                lines: [
+                  { who: 'You', text: 'Kit sat at that table for a week, they say. Took Tiny for two thousand, tipped the bartender a chip, and stepped off again.' },
+                  { who: 'You', text: 'Heraclitus. You cannot step into the same river twice. It is not the same river.' },
+                  { who: 'You', text: 'And you are not the same man.' },
+                  { who: 'You', text: 'The man at Marcus’s table would not have got on a boat without a friend to hold the door.' },
+                  { who: 'You', text: 'Every hand is a new river too. The last one does not owe you this one.' },
+                  { who: 'You', text: 'Everything flows, he said. Chips especially.' },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      { kind: 'fade', to: 'in' },
+    ],
+  },
+  {
     id: 'deb-sends-you-on',
     about: "Riverbend's send-off: once you have Harbor money, Deb tells you to go.",
     trigger: { kind: 'talkTo', characterId: 'deb' },
@@ -2773,6 +2835,47 @@ export const EVENTS: GameEvent[] = [
     ],
   },
   {
+    id: 'harbor-mirror',
+    about:
+      'The Harbor’s night alone (docs/STORYBOARD.md §9.4): after Hal’s first lesson, an evening in the room over the ' +
+      'supper club, and Montaigne in the washstand mirror. The self as patchwork, the question the penthouse mirror ' +
+      'finishes. Before Bellamy falls, so it never meets his send-off on the street; no time passes (rule 4).',
+    trigger: { kind: 'enterArea', areaId: 'ch-street' },
+    conditions: [
+      { kind: 'chapter', cityId: 'crescentHarbor' },
+      { kind: 'period', period: ['evening', 'night'] },
+      { kind: 'eventDone', eventId: 'arrive-crescent' },
+      { kind: 'eventDone', eventId: 'hal-first-lesson' },
+      { kind: 'casino', cityId: 'crescentHarbor', status: 'bossBeaten', set: false },
+    ],
+    actions: [
+      { kind: 'fade', to: 'out' },
+      {
+        kind: 'reel',
+        title: 'What do I know?',
+        panels: [
+          {
+            scene: 'harborroom',
+            caption: 'A room over the supper club, eleven dollars a night. The lighthouse crosses the wall every nine seconds.',
+            lines: [{ who: 'You', text: 'Hal says everybody leaks something. I have been looking for mine all evening.' }],
+          },
+          {
+            scene: 'mirror',
+            caption: 'The mirror over the washstand. The silver has gone at the corners.',
+            lines: [
+              { who: 'You', text: 'Poker face.' },
+              { who: 'You', text: 'No. That is a man doing an impression of a poker player.' },
+              { who: 'You', text: 'Montaigne had his question struck on a medal: what do I know? I would settle for knowing what my face does with two nines.' },
+              { who: 'You', text: 'We are all patchwork, he said, and each patch plays its own game. Half the accents in that card room came in on the bus, same as mine.' },
+              { who: 'You', text: 'At a card table that is not a lie. It is a bluff. The trick is knowing which patch is playing.' },
+            ],
+          },
+        ],
+      },
+      { kind: 'fade', to: 'in' },
+    ],
+  },
+  {
     id: 'hal-sends-you-on',
     about: "Crescent Harbor's send-off: with island money, Hal says what to learn before the Mesa.",
     trigger: { kind: 'interact', poiId: 'hal' },
@@ -2935,6 +3038,44 @@ export const EVENTS: GameEvent[] = [
         ],
       },
       { kind: 'setFlag', flag: 'clueConsortium' },
+    ],
+  },
+  {
+    id: 'palmcay-beach',
+    about:
+      'Palm Cay’s night alone (docs/STORYBOARD.md §9.4): after Marcus turns up on holiday, a night on the beach under ' +
+      'the casino, and Seneca on the shortness of life. Time is the real stake, and the friend on holiday is what it ' +
+      'costs. Before Inés falls, so it never meets her send-off on the street; no time passes (rule 4).',
+    trigger: { kind: 'enterArea', areaId: 'pc-street' },
+    conditions: [
+      { kind: 'chapter', cityId: 'palmCay' },
+      { kind: 'period', period: 'night' },
+      { kind: 'eventDone', eventId: 'arrive-palmcay' },
+      { kind: 'eventDone', eventId: 'marcus-on-holiday' },
+      { kind: 'casino', cityId: 'palmCay', status: 'bossBeaten', set: false },
+    ],
+    actions: [
+      { kind: 'fade', to: 'out' },
+      {
+        kind: 'reel',
+        title: 'Is it Thursday?',
+        panels: [
+          {
+            scene: 'beach',
+            caption: 'The beach under the casino. Through the glass behind you, one man is still at a lit table.',
+            lines: [
+              { who: 'You', text: 'That man behind the glass has been at the same table since I got here. Somebody should tell him what day it is.' },
+              { who: 'You', text: 'Somebody should tell me.' },
+              { who: 'You', text: 'Seneca: it is not that we have a short time to live, but that we waste a lot of it.' },
+              { who: 'You', text: 'He wrote that rich, in a villa. This island would have comped his room.' },
+              { who: 'You', text: 'Four sessions in a day, and the days are counted. I have spent more of them here than I meant to.' },
+              { who: 'You', text: 'Marcus came all this way to sit on a beach for a week. He does not think that is wasting it.' },
+              { who: 'You', text: 'Seneca would have called him wise. Then gone back to the table.' },
+            ],
+          },
+        ],
+      },
+      { kind: 'fade', to: 'in' },
     ],
   },
   {
@@ -3842,8 +3983,8 @@ export const EVENTS: GameEvent[] = [
         title: 'The leap',
         panels: [
           {
-            scene: 'night',
-            caption: 'That night. The tower stairwell, forty-first floor. Somebody has left the window open.',
+            scene: 'lift',
+            caption: 'That night. The glass lift up the outside of the tower, forty-one floors, and nobody else in it.',
             lines: [
               {
                 who: 'You',
@@ -3924,6 +4065,28 @@ export const EVENTS: GameEvent[] = [
       },
       { kind: 'fade', to: 'in' },
       { kind: 'dialogue', lines: ['Your phone is on the mantelpiece, face down.'] },
+    ],
+  },
+  {
+    id: 'history-on-the-shelf',
+    about:
+      'Aftermath: the workroom shelf, and the book the run began with. The Greeks come back, and their wonder turns ' +
+      'into wondering about Marcus (docs/STORYBOARD.md §9.4). One-shot; the shelf’s own line after.',
+    trigger: { kind: 'interact', poiId: 'pl-work-shelf' },
+    conditions: [{ kind: 'eventDone', eventId: 'final-won' }],
+    actions: [
+      {
+        kind: 'dialogue',
+        lines: [
+          'Three books on probability, two on psychology, and one on marriage, still in its wrapper.',
+          'At the end of the row, a fat paperback you do not remember packing: A History of Philosophy. The bookmark is still at the Greeks.',
+        ],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'You',
+        lines: ['You: (Wonder, the Greeks said. That is where it starts.)', 'You: (...I wonder what Marcus is having for dinner.)'],
+      },
     ],
   },
   {
@@ -4497,6 +4660,75 @@ export const EVENTS: GameEvent[] = [
       },
       { kind: 'playSound', sound: 'win' },
       { kind: 'moveNpc', characterId: 'vale', to: { col: 27, row: 15 }, leaves: true },
+      // The Mesa's night alone (docs/STORYBOARD.md §9.4): Plato's cave, from being watched to being fair
+      // unwatched, the question the final asks. Dana's clue, if heard, says Nadia asks it too. The Road to
+      // the Final interlude is Dana's send-off (`dana-sends-you-up`), not this one, so nothing here comes after it.
+      { kind: 'fade', to: 'out' },
+      {
+        kind: 'if',
+        when: [{ kind: 'eventDone', eventId: 'dana-mesa' }],
+        then: [
+          {
+            kind: 'reel',
+            title: 'The cave',
+            panels: [
+              {
+                scene: 'neon',
+                caption: 'A motel walkway over the Strip. Every sign is telling you something. None of it is true.',
+                lines: [
+                  {
+                    who: 'You',
+                    text: 'LUCKY, says that one. It has said it every night for thirty years, to everybody, and it has never once been right about anybody.',
+                  },
+                ],
+              },
+              {
+                scene: 'stream',
+                caption: 'On the bed, the phone. The kid who streams from the casino floor is still live.',
+                lines: [
+                  { who: 'You', text: 'Eleven thousand people watching a card table the size of a stamp. They cannot see the cards. They argue about them anyway.' },
+                  { who: 'You', text: 'Plato. People chained in a cave, watching shadows on the wall, sure the shadows are the world.' },
+                  { who: 'You', text: 'That is every table I have sat at. I do not see cards. I see a man touch his cup, and I guess.' },
+                  { who: 'You', text: 'At the final I will be on television. I will be the shadow, and somebody in a booth will tell them what I had.' },
+                  { who: 'You', text: 'Vale turned the cameras off to see who I am. Dana says Nadia wants the same thing: somebody fair when nobody is looking.' },
+                  { who: 'You', text: 'Who am I, with them off?' },
+                ],
+              },
+            ],
+          },
+        ],
+        else: [
+          {
+            kind: 'reel',
+            title: 'The cave',
+            panels: [
+              {
+                scene: 'neon',
+                caption: 'A motel walkway over the Strip. Every sign is telling you something. None of it is true.',
+                lines: [
+                  {
+                    who: 'You',
+                    text: 'LUCKY, says that one. It has said it every night for thirty years, to everybody, and it has never once been right about anybody.',
+                  },
+                ],
+              },
+              {
+                scene: 'stream',
+                caption: 'On the bed, the phone. The kid who streams from the casino floor is still live.',
+                lines: [
+                  { who: 'You', text: 'Eleven thousand people watching a card table the size of a stamp. They cannot see the cards. They argue about them anyway.' },
+                  { who: 'You', text: 'Plato. People chained in a cave, watching shadows on the wall, sure the shadows are the world.' },
+                  { who: 'You', text: 'That is every table I have sat at. I do not see cards. I see a man touch his cup, and I guess.' },
+                  { who: 'You', text: 'At the final I will be on television. I will be the shadow, and somebody in a booth will tell them what I had.' },
+                  { who: 'You', text: 'Vale turned the cameras off to see who I am.' },
+                  { who: 'You', text: 'Who am I, with them off?' },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      { kind: 'fade', to: 'in' },
       { kind: 'dialogue', lines: ['Porto Lumina is open to you. Take the bus when you are ready.'] },
     ],
   },

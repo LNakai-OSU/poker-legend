@@ -72,6 +72,17 @@ export const TABLE_HINTS: TableHint[] = [
     when: [{ kind: 'flag', flag: 'errandBlamedBernard' }],
     lines: ['A woman with a rolling pin asked me whether it was Thursday. I said Friday. She stayed to see.'],
   },
+  // He saw you on the beach through the glass, the night Seneca came up (`palmcay-beach`, docs/STORYBOARD.md §9.4).
+  {
+    id: 'bernard-beach',
+    tableId: 'palmcay-tourist',
+    speaker: 'bernard',
+    when: [{ kind: 'eventDone', eventId: 'palmcay-beach' }],
+    lines: [
+      'I saw you on the beach the other night, through the glass. Is it still Thursday? It is a very long Thursday.',
+      'My wife says I am wasting my life. It is my life. I will waste it how I like. Raise!',
+    ],
+  },
   {
     id: 'xue-greyhound',
     tableId: 'lumina-nosebleed',
