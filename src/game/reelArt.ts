@@ -92,6 +92,81 @@ function envelope(c: Ctx, x: number, y: number, paper: string, edge: string, ban
   rect(c, '#9a9aa8', x + 20, y + 3, 8, 1)
 }
 
+
+/** Where in the flat you stand, by name: the x of your sprite's left edge. */
+const FLAT_STOPS = { out: -18, door: 6, mat: 24, table: 50, desk: 82, shelf: 106, bed: 130 } as const
+type FlatStop = keyof typeof FLAT_STOPS
+
+/**
+ * The flat from the side, drawn once for every walk through it: a door, the mat with the post on
+ * it, the kitchen table, the laptop, the shelf and the bed. You walk from one stop to the next
+ * and turn to face the thing you came for.
+ */
+function drawFlat(c: Ctx, t: number, from: FlatStop, to: FlatStop, post: boolean) {
+  // Walls: warm dark paper, a skirting board, a worn floor.
+  rect(c, '#2e2224', 0, 0, REEL_W, REEL_H)
+  for (let x = 0; x < REEL_W; x += 10) rect(c, '#342729', x, 0, 5, 62)
+  rect(c, '#1c1416', 0, 60, REEL_W, 3)
+  rect(c, '#5a4030', 0, 63, REEL_W, 27)
+  for (let x = 0; x < REEL_W; x += 22) rect(c, '#4a3224', x, 63, 1, 27)
+  rect(c, '#6a4a38', 0, 63, REEL_W, 1)
+  // The ceiling light and the pool it makes.
+  rect(c, '#e8d890', 78, 0, 4, 3)
+  c.globalAlpha = 0.07
+  rect(c, '#f2c14e', 40, 0, 80, 62)
+  c.globalAlpha = 1
+  // The door, standing open on the hall.
+  rect(c, '#1a1424', 0, 14, 18, 49)
+  rect(c, '#3a2418', 0, 12, 20, 2)
+  rect(c, '#5a3a2a', 17, 14, 3, 49)
+  // The mat and the post on it.
+  rect(c, '#3a4a5a', 22, 66, 22, 7)
+  if (post) {
+    rect(c, '#f0ecdc', 26, 67, 8, 5)
+    rect(c, '#f2e8c0', 33, 68, 7, 4)
+    rect(c, '#c83a32', 29, 70, 6, 1)
+  }
+  // The kitchen table, a chair, a lamp on it.
+  rect(c, '#6a4a2e', 40, 42, 36, 3)
+  rect(c, '#52381f', 43, 45, 3, 20)
+  rect(c, '#52381f', 70, 45, 3, 20)
+  rect(c, '#7a5232', 40, 42, 36, 1)
+  rect(c, '#4a2f20', 36, 48, 4, 16)
+  rect(c, '#4a2f20', 34, 46, 6, 3)
+  rect(c, '#e8d890', 60, 36, 6, 6)
+  rect(c, '#8a7a3a', 62, 42, 2, 1)
+  // The desk and the laptop, open and lit.
+  rect(c, '#52381f', 80, 46, 26, 3)
+  rect(c, '#3a2818', 82, 49, 3, 15)
+  rect(c, '#3a2818', 101, 49, 3, 15)
+  rect(c, '#2a2e3a', 86, 36, 14, 10)
+  rect(c, Math.floor(t / 600) % 2 ? '#7aa8f0' : '#6a98e0', 87, 37, 12, 8)
+  rect(c, '#3a3f50', 84, 46, 18, 1)
+  // The bookshelf: spines in a few colours.
+  rect(c, '#52381f', 108, 12, 20, 50)
+  rect(c, '#2a1c10', 110, 14, 16, 46)
+  const tones = ['#7a2a2a', '#2a4a7a', '#3a6a3a', '#6a5a2a', '#5a3a6a', '#8a5a2a']
+  for (let row = 0; row < 4; row++) {
+    for (let k = 0; k < 6; k++) rect(c, tones[(row * 2 + k) % tones.length], 111 + k * 2.5, 16 + row * 11 + (k % 2), 2, 9 - (k % 2))
+    rect(c, '#52381f', 110, 25 + row * 11, 16, 1)
+  }
+  // The bed: a frame, a pillow, a blanket.
+  rect(c, '#52381f', 128, 40, 4, 26)
+  rect(c, '#3a2818', 128, 54, 32, 12)
+  rect(c, '#4a5a8a', 132, 50, 28, 10)
+  rect(c, '#5a6a9a', 132, 50, 28, 2)
+  rect(c, '#e8e4d8', 133, 46, 10, 5)
+  // You: from one stop to the next at a walking pace, then turned to face the thing.
+  const a = FLAT_STOPS[from]
+  const b = FLAT_STOPS[to]
+  const dist = Math.abs(b - a)
+  const arrived = t >= dist * 34
+  const x = a + Math.sign(b - a) * Math.min(dist, t / 34)
+  const facing = arrived && from !== to ? 'up' : b >= a ? 'right' : 'left'
+  const frame = (arrived ? 0 : Math.floor(t / 140) % 3) as WalkFrame
+  drawPerson(c, HERO_FIGURE, facing, frame, { x: Math.round(x), y: 40 })
+}
+
 function drawBathroomSet(c: Ctx, t: number, settled: boolean) {
     rect(c, '#9db3ae', 0, 0, REEL_W, REEL_H)
     for (let y = 0; y < REEL_H; y += 10) rect(c, '#8aa19c', 0, y, REEL_W, 1)
@@ -438,38 +513,100 @@ const SCENES: Record<ReelScene, (c: Ctx, t: number, notes?: Notification[]) => v
     plate('A HISTORY OF PHILOSOPHY', 15, '#f4e8a0')
     plate('CAMUS . KANT . PLATO', 78, '#c8b898')
   },
-  // Bed: a lamp going down, a book going slack, a few z's.
+  // Bed, late: the window, a lamp going down, a book going slack in your hand, and sleep.
   bed(c, t) {
-    rect(c, '#10122a', 0, 0, REEL_W, REEL_H)
-    rect(c, '#1c2040', 112, 8, 30, 30)
-    rect(c, '#2a3058', 114, 10, 26, 26)
-    disc(c, '#f4f0d8', 132, 20, 4)
-    rect(c, '#2a1f18', 0, 70, REEL_W, 20)
-    rect(c, '#4a3a2a', 20, 52, 108, 22)
-    rect(c, '#3a2f4a', 22, 56, 70, 14)
-    rect(c, '#5a4a7a', 22, 56, 70, 4)
-    rect(c, '#e8e4d8', 24, 48, 26, 12)
-    rect(c, '#d4c0a0', 28, 46, 12, 12)
-    rect(c, '#3a2a1c', 28, 44, 12, 5)
-    // The book, open on your chest, rising and falling and finally still.
-    const sink = Math.min(4, Math.floor(t / 1500))
-    const breathe = Math.round(Math.sin(t / 700))
-    rect(c, '#f0ecdc', 54, 50 + sink + breathe, 22, 8)
-    rect(c, '#2a4a7a', 53, 49 + sink + breathe, 24, 2)
-    rect(c, '#9a9aa8', 56, 53 + sink + breathe, 8, 1)
-    // The lamp, and its light draining away.
-    const power = Math.max(0, 1 - t / 5000)
-    rect(c, '#5a3a22', 130, 58, 14, 16)
-    rect(c, '#3a2418', 136, 50, 2, 8)
-    rect(c, power > 0.3 ? '#f2c14e' : '#7a6228', 130, 42, 14, 8)
-    if (power > 0.05) {
-      c.globalAlpha = 0.18 * power
-      rect(c, '#f2c14e', 100, 40, 60, 40)
+    // Wall and floor.
+    rect(c, '#161a36', 0, 0, REEL_W, REEL_H)
+    for (let x = 0; x < REEL_W; x += 12) rect(c, '#1a1e3c', x, 0, 6, 64)
+    rect(c, '#0e1128', 0, 62, REEL_W, 2)
+    rect(c, '#3a2a22', 0, 64, REEL_W, 26)
+    for (let x = 0; x < REEL_W; x += 24) rect(c, '#2e2018', x, 64, 1, 26)
+    rect(c, '#4a362a', 0, 64, REEL_W, 1)
+    // The window, stars and moon, curtains drawn back.
+    rect(c, '#2a2f58', 10, 8, 38, 36)
+    rect(c, '#0c1030', 13, 11, 32, 30)
+    for (let i = 0; i < 9; i++) if ((Math.floor(t / 700) + i) % 4) rect(c, '#e8e4d0', 15 + ((i * 11) % 28), 13 + ((i * 7) % 20), 1, 1)
+    disc(c, '#f4f0d8', 36, 20, 4)
+    disc(c, '#0c1030', 38, 19, 3)
+    rect(c, '#2a2f58', 28, 11, 1, 30)
+    rect(c, '#2a2f58', 13, 26, 32, 1)
+    rect(c, '#6a3a4a', 6, 6, 9, 42)
+    rect(c, '#7a4a5a', 8, 8, 2, 38)
+    rect(c, '#6a3a4a', 44, 6, 9, 42)
+    rect(c, '#7a4a5a', 49, 8, 2, 38)
+    rect(c, '#52381f', 4, 5, 51, 2)
+    // A picture and a clock above the bed.
+    rect(c, '#52381f', 76, 12, 22, 16)
+    rect(c, '#8a9ab8', 78, 14, 18, 12)
+    rect(c, '#5a7a6a', 78, 22, 18, 4)
+    rect(c, '#d8d4c4', 112, 14, 10, 10)
+    rect(c, '#1c1c28', 116, 16, 1, 4)
+    rect(c, '#1c1c28', 116, 19, 3, 1)
+    // A stack of books on the floor and a rug.
+    rect(c, '#4a2a3a', 8, 58, 20, 20)
+    rect(c, '#5a3a4a', 10, 60, 16, 16)
+    rect(c, '#2a4a7a', 54, 78, 16, 3)
+    rect(c, '#7a2a2a', 55, 75, 14, 3)
+    rect(c, '#3a6a3a', 56, 72, 12, 3)
+    // The bed: frame, mattress, pillow, a blanket in folds.
+    rect(c, '#3a2418', 28, 38, 5, 46)
+    rect(c, '#52381f', 28, 38, 5, 2)
+    rect(c, '#3a2418', 28, 66, 108, 6)
+    rect(c, '#3a2418', 132, 56, 4, 28)
+    rect(c, '#d8d4c8', 33, 52, 104, 14)
+    rect(c, '#e8e4d8', 34, 46, 22, 9)
+    rect(c, '#c8c4b8', 34, 53, 22, 2)
+    // Your head on the pillow, eyes closed, and the hair on it.
+    rect(c, '#e0b890', 38, 46, 11, 9)
+    rect(c, '#5a3a22', 37, 44, 13, 4)
+    rect(c, '#5a3a22', 37, 46, 3, 5)
+    rect(c, '#3a2418', 43, 50, 4, 1)
+    rect(c, '#d09878', 47, 52, 2, 1)
+    // The blanket, breathing, with a few creases and a darker edge.
+    const breathe = Math.round(Math.sin(t / 700) * 0.8)
+    rect(c, '#4a5a8a', 52, 50 + breathe, 84, 18 - breathe)
+    rect(c, '#5a6a9a', 52, 50 + breathe, 84, 2)
+    rect(c, '#3a4a78', 52, 65, 84, 3)
+    for (const x of [64, 86, 104, 120]) rect(c, '#3e4e7e', x, 53 + breathe, 1, 11)
+    rect(c, '#6a7aaa', 66, 54 + breathe, 10, 1)
+    rect(c, '#6a7aaa', 98, 56 + breathe, 12, 1)
+    // The book: held up, then sagging, then slack on your chest. Your hand lets go of it.
+    const sag = Math.min(1, t / 4200)
+    const bx = 56 + Math.round(sag * 6)
+    const by = 42 + Math.round(sag * 8) + breathe
+    rect(c, '#2a4a7a', bx - 1, by + 1, 24, 12)
+    rect(c, '#f0ecdc', bx, by, 22, 10)
+    rect(c, '#d8d4c4', bx + 10, by, 2, 10)
+    for (let i = 0; i < 3; i++) {
+      rect(c, '#9a9aa8', bx + 2, by + 2 + i * 3, 7, 1)
+      rect(c, '#9a9aa8', bx + 13, by + 2 + i * 3, 7, 1)
+    }
+    rect(c, '#e0b890', bx + 8 - Math.round(sag * 5), by + 7 + Math.round(sag * 3), 5, 3)
+    // The nightstand and its lamp: warm for a while, then out.
+    const lampOn = t < 4600
+    rect(c, '#52381f', 140, 60, 16, 24)
+    rect(c, '#3a2418', 140, 60, 16, 2)
+    rect(c, '#52381f', 147, 48, 2, 12)
+    rect(c, lampOn ? '#f4c85a' : '#6a5a30', 142, 38, 12, 10)
+    rect(c, lampOn ? '#fbe08a' : '#7a6a3a', 144, 38, 8, 3)
+    if (lampOn) {
+      const fade = Math.max(0.35, 1 - t / 6000)
+      for (let i = 0; i < 8; i++) {
+        c.globalAlpha = 0.03 * fade
+        disc(c, '#f4c85a', 148, 48, 12 + i * 6)
+      }
+      c.globalAlpha = 1
+    } else {
+      c.globalAlpha = 0.3
+      rect(c, '#05061a', 0, 0, REEL_W, REEL_H)
       c.globalAlpha = 1
     }
-    for (let i = 0; i < 3; i++) {
-      const age = (t / 20 + i * 40) % 120
-      if (t > 1200) drawLabel(c, 'z', 50 + age / 3 + i * 4, 40 - age / 4, '#9aa4c8')
+    // The z's, once you are under.
+    if (t > 2200) {
+      for (let i = 0; i < 3; i++) {
+        const age = ((t - 2200) / 30 + i * 36) % 108
+        drawLabel(c, 'z', 54 + age / 3 + i * 3, 36 - age / 3, '#9aa4c8')
+      }
     }
   },
   // The door, shaking: somebody on the other side with a fist.
@@ -489,6 +626,21 @@ const SCENES: Record<ReelScene, (c: Ctx, t: number, notes?: Notification[]) => v
     rect(c, '#f4e8a0', 36, 86, 88, 2)
     if (Math.floor(t / 260) % 2 === 0) drawLabel(c, 'BANG BANG BANG', 42, 76, '#f2c14e')
     else drawLabel(c, 'BANG!', 8, 30, '#c83a32')
+  },
+  flatIn(c, t) {
+    drawFlat(c, t, 'out', 'door', true)
+  },
+  flatTable(c, t) {
+    drawFlat(c, t, 'mat', 'table', false)
+  },
+  flatDesk(c, t) {
+    drawFlat(c, t, 'table', 'desk', false)
+  },
+  flatShelf(c, t) {
+    drawFlat(c, t, 'desk', 'shelf', false)
+  },
+  flatBed(c, t) {
+    drawFlat(c, t, 'shelf', 'bed', false)
   },
   // The booth: two headsets, a monitor between them showing the feed.
   booth(c, t) {

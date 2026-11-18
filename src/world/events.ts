@@ -152,6 +152,12 @@ export type ReelScene =
   | 'run'
   | 'hallway'
   | 'envelopes'
+  /** The flat, side on, and you walking through it: in at the door, to the table, the laptop, the shelf and the bed. */
+  | 'flatIn'
+  | 'flatTable'
+  | 'flatDesk'
+  | 'flatShelf'
+  | 'flatBed'
   | 'notice'
   | 'invite'
   | 'poogle'
@@ -1152,8 +1158,8 @@ export const EVENTS: GameEvent[] = [
     ],
     actions: [
       { kind: 'wait', ms: 300 },
-      { kind: 'dialogue', lines: ['Dana has given up on the door and is halfway down the street, still shouting at you about the time.'] },
-      { kind: 'moveNpc', characterId: 'dana', from: { col: 27, row: 7 }, to: 'player', pace: 'run' },
+      { kind: 'dialogue', lines: ['Dana is waiting on the pavement outside your door, arms folded, watching the time.'] },
+      { kind: 'moveNpc', characterId: 'dana', from: { col: 7, row: 4 }, to: 'player' },
       { kind: 'setFlag', flag: 'metDana' },
       {
         kind: 'dialogue',
@@ -5741,12 +5747,19 @@ export const EVENTS: GameEvent[] = [
             ],
           },
           {
+            scene: 'flatIn',
+            caption: 'You let yourself in and shut the door behind you.',
+            lines: [{ who: 'You', text: '...ey. Huh? What is all that on the mat?' }],
+          },
+          {
             scene: 'envelopes',
-            caption: 'Your door. Three envelopes on the floor, pushed under it.',
-            lines: [
-              { who: 'You', text: '...ey.' },
-              { who: 'You', text: 'Ahh, maybe that is my check. Maybe one of those is my check.' },
-            ],
+            caption: 'Three envelopes on the floor, pushed under the door while you were out.',
+            lines: [{ who: 'You', text: 'Ahh, maybe that is my check. Maybe one of those is my check.' }],
+          },
+          {
+            scene: 'flatTable',
+            caption: 'You scoop them up and take them to the kitchen table.',
+            lines: [{ who: 'You', text: 'Sit. Breathe. Open the first one like it is good news.' }],
           },
           {
             scene: 'notice',
@@ -5766,6 +5779,11 @@ export const EVENTS: GameEvent[] = [
             ],
           },
           {
+            scene: 'flatDesk',
+            caption: 'You push the bills aside and cross the room to the laptop.',
+            lines: [{ who: 'You', text: 'What is the worst that happens? I learn something.' }],
+          },
+          {
             scene: 'poogle',
             caption: 'The laptop, the only thing in the flat that was not on sale.',
             lines: [
@@ -5782,16 +5800,25 @@ export const EVENTS: GameEvent[] = [
         title: 'Some time earlier',
         panels: [
           {
+            scene: 'flatShelf',
+            caption: 'The video ends. You rub your eyes and wander over to the shelf.',
+            lines: [{ who: 'You', text: 'Cards. Odds. Pot sizes. My eyes are doing a thing.' }],
+          },
+          {
             scene: 'shelf',
-            caption: 'The video ends. You rub your eyes. The shelf is the only thing in the flat that is full.',
+            caption: 'The shelf is the only thing in the flat that is full.',
             lines: [
-              { who: 'You', text: 'Cards. Odds. Pot sizes. My eyes are doing a thing.' },
               {
                 who: 'You',
                 text: 'Right. Enough arithmetic. Camus. Kant. Plato. Nietzsche. Dostoevsky. ... You, I think.',
               },
               { who: 'You', text: 'The History of Philosophy. Everybody who ever thought hard about why we are here.' },
             ],
+          },
+          {
+            scene: 'flatBed',
+            caption: 'You take it with you, across the room, and sit on the edge of the bed.',
+            lines: [{ who: 'You', text: 'Just a chapter. Then I will think about money.' }],
           },
           {
             scene: 'bed',
@@ -5807,7 +5834,7 @@ export const EVENTS: GameEvent[] = [
             lines: [
               { who: 'dana', text: 'Dana: Open the door! It is a quarter to eight!' },
               { who: 'You', text: '...Who...? ...What time is it?' },
-              { who: 'dana', text: 'Dana: Marcus sent me! Get your coat. I am not going to knock again!' },
+              { who: 'dana', text: 'Dana: Marcus sent me! Get your coat. I will be out on the pavement. I am not going to knock again!' },
             ],
           },
         ],
