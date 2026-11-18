@@ -3819,6 +3819,40 @@ export const EVENTS: GameEvent[] = [
       },
       { kind: 'playSound', sound: 'win' },
       { kind: 'moveNpc', characterId: 'lou', to: { col: 27, row: 12 }, leaves: true },
+      // The first existential night: a template for the philosophy pass (docs/STORYBOARD.md §9).
+      // One town, one thinker, one reel in the player's own voice: Camus's Sisyphus, because the
+      // town is a rock to push ($400 to open a door), and Lou has pushed his for thirty years.
+      { kind: 'fade', to: 'out' },
+      {
+        kind: 'reel',
+        title: 'One must imagine',
+        panels: [
+          {
+            scene: 'night',
+            caption: 'Silver Creek. A motel off the highway, the sign missing its second L.',
+            lines: [
+              { who: 'You', text: 'Four hundred dollars, and a door opens. A door to a room with a better player in it.' },
+              { who: 'You', text: 'And then there is a river. And a boat. And another number.' },
+            ],
+          },
+          {
+            scene: 'bed',
+            caption: 'A paperback from the shelf at home, spine broken in the middle. You read it by the lamp.',
+            lines: [
+              { who: 'You', text: 'Camus. Sisyphus pushes the rock up. It rolls back down. He walks down after it.' },
+              { who: 'You', text: 'Lou has sat in that chair for thirty years. Dolores has rubbed that foot for longer.' },
+              {
+                who: 'You',
+                text: 'Camus says the walk back down is the interesting part. That is where he knows exactly what it is, and goes anyway.',
+              },
+              { who: 'You', text: '"One must imagine Sisyphus happy."' },
+              { who: 'You', text: 'I do not know if I am happy. But I would like to see what the next rock looks like.' },
+            ],
+          },
+        ],
+      },
+      { kind: 'teleport', areaId: 'sc-street', col: 26, row: 12 },
+      { kind: 'fade', to: 'in' },
       { kind: 'dialogue', lines: ['Riverbend is open to you. Take the bus when you are ready.'] },
     ],
   },
