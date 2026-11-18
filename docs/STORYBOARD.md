@@ -700,3 +700,231 @@ bus window, Raskolnikov on the landlady's stairs, Pascal's wager over Marcus's
 invitation, Hal's video on Poogle, a History of Philosophy read to sleep, and Dana
 at the door. See REQUESTS.md ("Philosophy theme, round 1"). Hal's tape is
 no longer at Marcus's table.
+
+---
+
+## 9. The philosophy pass (proposed, 2026-11-17)
+
+Status: **proposed**, except Silver Creek's night (**built**, 9.4). This carries
+the opening's philosophy up the whole ladder: each stop has one thinker, each of
+the cast has a worldview, and each town has one short existential `reel`, a night
+alone with a book. It all fits the content model: lines in built events, a few new
+`talkTo` / `enterArea` / `interact` events, table hints, one new flag and five new
+reel sets. Nothing here changes a card (rule 1).
+
+### 9.1 Rules for the pass
+
+- **One thinker a stop**, picked for the town's mood, its boss and its lunatic. A second name may come back as a callback, never as a second lecture.
+- **Who may say a name.** The player (in thought, in parentheses, and in the reels), Hal (a teacher), Bellamy (has read everything), Vale (wants you to know he has), Gaines (a churchman) and Dr. Anand (the numbers). Everybody else *is* an idea without naming it: Marcus says "some Roman", Kit says "your book with the axe", Dana says "somebody said once".
+- **Through the poker, short.** One or two lines a beat, landing on a card, a stack, a tell or a debt. Grounded and a bit sleazy: these books are read in motels.
+- **Rule 1 holds.** Philosophy explains variance and never touches it. No line implies the deck owes anybody; several exist to say it does not.
+- **The books thin out as the stakes rise.** The player quotes freely in Basin and stops at Lumina: after *The leap* they name nobody until the Greeks come back in the penthouse mirror.
+- **Mechanics.** Reel lines wait for a press, as every reel's do. Reels neither cost nor give time (rule 4). New events are one-shot (the default). A flag nobody reads fails `events.test.ts`, so beats here lean on `eventDone`; the one new flag is `rubbedTheFoot`.
+
+### 9.2 The run in one table
+
+| Stop | Thinker, idea | Why here | Existential reel (where) | At the table |
+|---|---|---|---|---|
+| Basin, the flat | Pascal (the wager; "sit quietly in a room"), Epicurus at Marcus's table | Pascal and Fermat invented this game's maths; Pascal wrote the cruellest line about gamblers. Marcus is bread, water, friends | *Sitting quietly*: the night after the first win (`dana-walks-you-home`) | Expected value: what a call costs against what it might win |
+| Silver Creek | Camus, the absurd | Ray "due" thirty years, Lou thirty years in the chair, Dolores's foot (the hope Camus refuses) | *One must imagine*: after Lou (`silvercreek-boss-sendoff`), **built** | Variance; the deck keeps no records |
+| Riverbend | Heraclitus, the river; Nietzsche's *Schuld* in passing | A boat on a river, Kit gone a week, Odette's river, the first debt, Gaines's wager with a rake | *The same river*: first night aboard (new `riverbend-deck-night`) | Every hand is a new river; bosses turn (`seat.phases`) |
+| Crescent Harbor | Sartre, the look and bad faith | Hal's tells, Bellamy who has "read" you, the Contessa playing a contessa | *Bad faith*: after Hal's first lesson (new `harbor-mirror`) | Tells; a bluff is a performance chosen on purpose |
+| Palm Cay | Seneca, the shortness of life, against Marcus's Epicurus | A resort where time dissolves: Bernard's endless Thursday, Inés's comped honeymoon, Marcus on holiday | *Is it Thursday?*: a night on the beach (new `palmcay-beach`) | Days are scarce (rule 4); Hal's notes are Seneca's evening review |
+| Neon Mesa | Plato, the cave and the ring of Gyges | Screens, a streamer, Vale's cameras "off"; Nadia wants someone fair when nobody is looking | *The cave*: after Vale (`mesa-boss-sendoff`) | Tells are shadows, showdown is the light |
+| Porto Lumina | Kierkegaard, the leap; Nietzsche on a lost final; Hegel for Nadia | A tower forty-one floors up; the frame catching up with itself; the final-lost loop | *The leap*: the eve of the final (`hal-on-the-eve`) | At seven big blinds the leap is arithmetic; the variance after it is honest |
+| Aftermath | The ship of Theseus; Epicurus; the Greeks' wonder | A mirror over a fireplace somebody else lit; "winner hosts" | *The ship*: the penthouse mirror (new `penthouse-mirror`) | none: the poker is over |
+
+The player's own arc: wonder → wager → absurd → flux → the look → time → the cave →
+the leap → (recurrence, if the final is lost) → Theseus → wonder. It starts and ends
+with the Greeks.
+
+### 9.3 The cast and their worldviews
+
+| Who | Worldview | How it shows |
+|---|---|---|
+| **You** | The reader | Quotes to cope early, stops quoting at the leap, ends asking whether they are the same ship. |
+| **Marcus** | Epicurus: friends, bread, water, a table | Never names him. Brings a paper cup of *water* to the men's room (`tournament-won`); picks the Greek over the Roman at Palm Cay; "winner hosts". The ending's hollowness is what forgetting him looks like. |
+| **Dana** | Simone Weil: attention is the rarest generosity | She watches for a living. In `dana-reveal`: "Somebody said paying attention is the rarest kind of generosity. I got paid for it, so I do not know what that makes me." |
+| **Hal** | Socrates, with a Sophist's guilt | "Know thyself" is a tells lesson. In `hal-mesa-last-stop`: "Plato had a pupil like her. Alcibiades. Best mind in Athens, turned it on everybody he loved." Charges for every lesson but the last. |
+| **Kit** | Raskolnikov's "extraordinary man" | The prologue's joke ("pull a Raskolnikov") done for real. In `kit-lumina-staked`: "Your axe book. Somebody follows him to Siberia at the end. You are not her. You are close." |
+| **Nadia** | Hegel's master who is the slave | Four years looked up at, never recognised, and Wen's collateral. She wants to lose to someone who did not have to sit down. |
+| **Chip Van Doren** | Protagoras: the story is the measure | "The odds, Doctor, are a suggestion." |
+| **Dr. Anand** | Hume (and Bayes): the deck keeps no records | Apologises for induction; one dry line an interlude (9.5). |
+| **Lou · Odette · Bellamy · Inés · Vale** | Sisyphus · Heraclitus · Sartre's look · Aristippus (pleasure now, Seneca's foil) · Gyges's ring | Lou has pushed one rock thirty years; Odette's river changes every hand; Bellamy names Sartre as a threat; Inés: "life is short, raise"; Vale turns the cameras off and records everything. |
+| **Dolores · Gaines · Contessa · Bernard · Zeke** | Hope (the leap Camus refuses) · Pascal's wager with a ten percent rake · bad faith · Seneca's wasted days · Berkeley's *to be is to be perceived*, inside Plato's cave | Each is a way of being wrong about the cards that is also a way of being wrong about life. |
+| **Cass · Emeka · Consortium · Wen** | Nietzsche's creditor (debt before guilt) · Marcus Aurelius (patience, as menace) · Hobbes's Leviathan (a body made of many men) · Hegel's lord at the top of the chain | Nobody names a thinker; the debt chain is the moral ladder under the poker one. |
+| **Ms. Fong · Mr. Lowe** | Kafka's ledger · Bentham's panopticon | "She writes small." "We do not lose track of people." |
+| **Ray** | The gambler's fallacy | Sisyphus without the smile. |
+
+### 9.4 Town by town
+
+Each: (a) the idea and why; (b) beats: trigger, who, lines; (c) the reel; (d) the
+poker tie. Lines are drafts, to be fitted to the voices in `characters.ts`.
+
+#### Basin and the flat: Pascal, and Epicurus at the table
+
+(a) Built in the opening: Kant at the bus window, Raskolnikov on the stairs, Pascal's wager over the invitation, the Greeks' wonder by the bed. Missing: the night *after* the first game, where the player admits it was never only the rent. Pascal fits: he and Fermat invented probability in 1654 to settle a gambler's question, and he wrote that a gambler given each morning what he might win, on condition he does not play, is made miserable.
+
+(b) Beats:
+- `poker-night-lost` (the first loss), after Marcus: **You:** "(Pascal would say I bet right and lost. Pascal never had to get past the landlady.)"
+- `dana-walks-you-home` (the first win), before the route: **Marcus:** "Bread from downstairs, wine from a man, friends from God knows where. That is a whole life. People get greedy and forget." **You:** "(Epicurus, near enough. Marcus has never read a word of him.)"
+- `marcus-rides-out-with-you`, on the 14: **You:** "(Same window as yesterday. Same bird, probably. The sky looks smaller when you are going somewhere.)" Kant's sublime, shrunk by a goal.
+- `rent-receipt` (home again, rent paid): **You:** "(Nobody tiptoeing on these stairs any more. Sorry, Fyodor.)"
+
+(c) Reel **"Sitting quietly"**, appended to `dana-walks-you-home` after Dana leaves you at the door. Sets `bed`, `shelf` (built).
+- `bed`: *The flat. Two in the morning. The fridge hums. Marcus's friends' money is under the pillow.* "I should be asleep. I won. Winners sleep."
+- `shelf`: "Pascal. 'All of man's misery comes from not being able to sit quietly in a room alone.'" / "He had one about gamblers. Give a man every morning what he would win that day, on condition he does not play, and you have made him unhappy." / "So it is not the rent." / "...It is a little bit the rent."
+- Turn: the want is named; the ending's hollow win has its seed.
+
+(d) The wager is expected value, what a call costs against what it might win: Hal's tape in other words. Pascal and Fermat's *problem of points* (splitting the pot of an interrupted game) is the prologue's power cut; Dr. Anand says so in the first interlude (9.5).
+
+#### Silver Creek: Camus, the absurd
+
+(a) A town of men pushing one rock: Ray "due" thirty years, Lou thirty years in his chair, Dolores rubbing a foot since 1971, which is the hope Camus calls an escape.
+
+(b) Beats:
+- `ray-is-due`, after "thirty years": **You:** "(The cards do not know Ray. They do not know anybody. That is the worst thing about them, and the best.)"
+- New `dolores-foot` (talkTo `dolores`, `sc-floor`, afternoon): **Dolores:** "Rub the foot, honey. My Walter never rubbed it. Look where Walter is." Choice: *Rub it* → `setFlag rubbedTheFoot`, **You:** "(Camus says hope is the trap. It is very soft, though.)" / *I'll take my chances* → **Dolores:** "Brave. Stupid, but brave. Walter was brave." Read by an `if` on Chip's line in `final-table-start`: "Lucky Dolores is on the rail, folks, rubbing that foot *for* our challenger" / "...rubbing it *at* him."
+- `ray-busted` (busted here): **Ray:** "Busted? Welcome. Meetings are nightly." **You:** "(The rock rolled back down. Camus says the walk down after it is the part that is yours.)"
+
+(c) Reel **"One must imagine"**: **built**, at the end of `silvercreek-boss-sendoff` (`night`, `bed`; commit d675e21). The template for the rest: a motel, a paperback, Lou and Dolores as the rock, "I would like to see what the next rock looks like."
+
+(d) Variance. A cooler is a cooler (rule 1); the absurd is playing well and losing. Ray's "due" is the gambler's fallacy, and the game's honesty is what makes it one.
+
+#### Riverbend: Heraclitus, the river
+
+(a) A boat whose wheel turns and arrives nowhere; Kit aboard a week and gone ("people like that do not stay anywhere"); Odette, whose river keeps bad players. The first debt: in German *Schuld* is both debt and guilt, and Nietzsche built a book on it. Gaines is Pascal's wager with a rake, a callback to the opening.
+
+(b) Beats:
+- `kit-on-the-dock`, before the dare: **Kit:** "Some people stand on the dock. Some people step over. I read that somewhere." **You:** "(Raskolnikov had that theory. It went great for him.)"
+- New `gaines-tithe` (talkTo `gaines`, `rb-boat`, evening): **Gaines:** "Pascal said bet on God, because the downside is nothing. I say ten percent, because the downside is ten percent. I am a reasonable man." **You:** "(Pascal invented the maths of this with a man called Fermat. He would want to see the boat.)" **Gaines:** "There is no boat yet. That is what the fund is for." No money changes hands (rule 5).
+- `cass-offers`, in the branch that takes the stake: **You:** "(Nietzsche says the oldest thing between people is a debt, and guilt came after. I signed with a woman in a bait shed.)"
+- `riverbend-boss-door`: **Odette:** "The river is never the same twice. So I never play the same hand twice. Sit."
+
+(c) Reel **"The same river"**: new event `riverbend-deck-night` (`enterArea rb-boat`; `chapter riverbend`, `period night`). Set **`deck`** (new). Two variants by `if` on `debt cass owing`.
+- *The deck aft of the card room. The wheel turns over and over and arrives nowhere it has not been.* "Kit was on this boat a week ago. Took Tiny for two thousand, tipped a chip, gone."
+- "Heraclitus. You cannot step into the same river twice. It is not the same river." / "And you are not the same man." / owing: "The man at Marcus's table would not be on a boat with a stranger's money in his pocket." · not owing: "The man at Marcus's table would not have got on a boat without a friend to hold the door." / "Everything flows, he said. Chips especially."
+- Turn: the player notices the change, and the debt makes it concrete.
+
+(d) No hand is owed by the last. The same opponent is a new river by hand twenty: bosses turn (`seat.phases`; Odette goes wild when short), and position rotates every hand.
+
+#### Crescent Harbor: Sartre, the look and bad faith
+
+(a) A supper club and a card room where everybody performs. Hal teaches tells, which is being looked at. Bellamy has "read every book on you". The Contessa, of the Lyon Valmonts or Leeds, is Sartre's waiter playing at a waiter: too well, until she is thrown.
+
+(b) Beats:
+- `hal-first-lesson`: **Hal:** "Everybody at that table is reading you. The first tell to find is your own. The Greeks carved it over a door: know thyself. They were not talking about poker. They should have been."
+- New `contessa-valmont` (talkTo `contessa`, `ch-cardroom`, evening): **Contessa:** "The Valmonts have played cards since Versailles. We lost the château on a river like tonight's. Bloody — mon dieu — river." **You:** "(Sartre's waiter, playing at being a waiter. When the accent slips, she is thrown. That is not philosophy. That is a read.)"
+- `crescent-boss-door`: **Bellamy:** "You read, I am told. Sartre? Then you know: the moment somebody looks at you, you become a thing in their world. Sit where the light is. I should like to be hell for an hour."
+- `kit-harbor`: **Kit:** "Saw your book on the 14. The axe one. He got caught because he felt bad. I do not feel bad."
+
+(c) Reel **"Bad faith"**: new event `harbor-mirror` (`enterArea ch-street`; `eventDone hal-first-lesson`, `period ['evening','night']`). Sets **`harborroom`** (new), then `mirror` (built).
+- `harborroom`: *A room over the supper club, eleven dollars a night. The lighthouse crosses the wall every nine seconds.* "Hal says everybody leaks something. I have been looking for mine all evening."
+- `mirror`: "Poker face." / "No. That is a man doing an impression of a poker player." / "Sartre: bad faith is pretending you are a thing so you do not have to be a person. The waiter. The Contessa. Bellamy, who has read everything." / "And me, playing a man who belongs here." / "At a card table that is not bad faith. It is a bluff. The trick is remembering which one I am doing."
+- Turn: identity as performance, the question the penthouse mirror finishes.
+
+(d) Tells (`seat.habit`, the Book of Reads); a bluff is a performance chosen knowingly. Bellamy reads your aggression and counters it (his phase): being looked at changes how he plays, never what is dealt.
+
+#### Palm Cay: Seneca, on the shortness of life
+
+(a) The resort where time dissolves: Bernard two days at the table and sure it is Thursday, Inés's comped honeymoon, Marcus on holiday. Seneca was the richest man in Rome writing about wanting less, and ended his letters quoting Epicurus: the argument between this island and Marcus. Days are the game's scarce resource (rule 4).
+
+(b) Beats:
+- `marcus-on-holiday`: **Marcus:** "Read one of your books on the plane. Some Roman, rich as anything, telling everybody to want less. Every letter ends on something a Greek said. Bread, water, friends. I liked the Greek better." **You:** "(Marcus has picked a side in a two-thousand-year argument by lunch.)"
+- `palmcay-boss-door`: **Inés:** "Darling, life is short. I never understood people who save things. For what? Raise."
+- Table hint at `palmcay-tourist`, `eventDone palmcay-beach`: **Bernard:** "Still Thursday? It is a very long Thursday." / "My wife says I am wasting my life. It is my life. Raise!"
+
+(c) Reel **"Is it Thursday?"**: new event `palmcay-beach` (`enterArea pc-street`; `chapter palmCay`, `period night`, `eventDone marcus-on-holiday`). Set **`beach`** (new).
+- *The beach under the casino. Through the glass behind you, one man is still at a lit table.* "Seneca. 'It is not that we have a short time to live, but that we waste a lot of it.'"
+- "He wrote that rich. Inés would have comped his honeymoon." / "Four sessions in a day, and the days are counted. I have spent more of them on this island than I meant to." / "Marcus goes home on Friday. He does not think that is wasting it." / "Seneca would have called him wise. Then gone back to the table."
+- Turn: time is the real stake, and the friend going home is what it costs.
+
+(d) A session costs a period (rule 4): the whale pays in hours. The Stoic split between what you control (decisions) and what you do not (cards); Hal's notes when you stand up are Seneca's evening review, the costliest pot-odds mistake and not the result.
+
+#### Neon Mesa: Plato, the cave and the ring
+
+(a) A strip of lit images; Zeke streaming shadows of a card game to eleven thousand; Vale, who turns the cameras off and records everything. The cave is the Strip and, it turns out, the televised final the whole run is framed in. The ring of Gyges (who are you when nobody can see?) is the Okonkwo question: Nadia wants someone fair when nobody is looking.
+
+(b) Beats:
+- New `zeke-clip` (talkTo `zeke`, `nm-casino`, afternoon): **Zeke:** "Chat, if I do not clip it, did it happen? No. Chat says you look like a donk. Chat says that about everyone. Chat is mostly my mum." **You:** "(Berkeley: to be is to be perceived. He meant God was watching. Zeke means eleven thousand people and his mum.)"
+- `mesa-boss-door`: **Vale:** "Plato has a shepherd who finds a ring that makes him invisible. Do you know what he does with it? Everything. Sit."
+- `dana-mesa` (the scout clue): **Dana:** "Her words: fair when nobody is looking. Anybody is fair with a camera on."
+- `kit-mesa`, before the stake / tip-off / nothing choice: **You:** "(Nobody would ever know I told Lowe. That is the whole question, isn't it.)"
+
+(c) Reel **"The cave"**, appended to `mesa-boss-sendoff`. Sets **`neon`**, **`stream`** (new).
+- `neon`: *A motel walkway over the Strip. Every sign is telling you something. None of it is true.*
+- `stream`: "Zeke's stream. Eleven thousand people watching a card table the size of a biscuit. They cannot see the cards. They argue about them anyway." / "Plato. People chained in a cave, watching shadows, sure the shadows are the world." / "That is every table I have sat at. I do not see cards. I see a man touch his cup, and I guess." / "Saturday I am on television. I will be the shadow, and Chip will tell them what I had." / "Vale turned the cameras off to see who I am. So, apparently, does Nadia. Who am I, with them off?"
+- Turn: from being watched to being fair unwatched, the question the final asks.
+
+(d) Tells are shadows and showdown is the light: the Book of Reads will not say "strong" before three showdowns (opinion is not knowledge). Vale swaps his tell at hand fourteen: the shadow changes, the cards never do.
+
+#### Porto Lumina: Kierkegaard, the leap
+
+(a) A tower, a hall of nine tables, and the final where the prologue began. Kierkegaard: life is understood backwards but lived forwards (the whole frame, which catches up with itself in the men's room), and anxiety is the dizziness of freedom (the edge of a height). Camus called Kierkegaard's leap philosophical suicide; at seven big blinds the player finds the leap is arithmetic, which settles Silver Creek against Lumina the only way this game can. Nietzsche gets the final-lost loop; Hegel gets Nadia.
+
+(b) Beats:
+- `lumina-welcome`, at the rope: **You:** "(Sartre said hell is other people. Sartre never registered for a nine-table tournament.)"
+- `tournament-won`, after the `bathroom` panel's "maybe that was the real me": **You:** "Kierkegaard. Life is understood backwards and lived forwards. I have understood it all the way from Basin. Now there are seven big blinds and no more backwards."
+- `dana-reveal`, six-clue branch: **Dana:** "Four years up there, and nobody has looked at her who did not owe her or want something. She wants to lose to somebody who did not have to sit down." (Hegel, unnamed; Weil's line from 9.3 closes it.)
+- `final-lost`, before the rail: **You:** "Nietzsche asked: if a demon said you would live this exact life again, every hand of it, forever, would you curse him or thank him?" / "Same table. Same fifteen thousand. New cards, though. The demon shuffles."
+
+(c) Reel **"The leap"**, appended to `hal-on-the-eve` after his lesson and **Hal:** "Socrates never charged. I always did. That one was free." Set `night` (built: a city from a long way up), or a new **`lift`**.
+- *The tower stairwell, forty-first floor. Somebody has left the window open.* "Kierkegaard: anxiety is the dizziness of freedom. You look over the edge, and what frightens you is not falling. It is that you could jump."
+- "Seven big blinds tomorrow. Hal says at seven you do not think. You shove or you fold, and the chart says which." / "Kierkegaard needed faith. I have a push-fold chart. That should feel better than it does." / "Abraham walked up the mountain not knowing. I know the odds to two decimals. I still do not know." / "Fine." / "Leap."
+- Turn: the reading stops; from here the player acts.
+
+(d) Short-stacked, the decision is maths (push or fold); only the variance after it is a leap, and rule 1 keeps it honest. The final-lost loop deals real new cards each time: the situation recurs, the deck never does.
+
+#### Aftermath: the ship of Theseus
+
+(a) After the ending film you are forty-one floors up, with a mirror over a fireplace somebody else lit (`pl-pent-fire`). The prologue's mirror asked *how did I get here?*; this one asks *is it still me?*, the Greeks' ship with every plank replaced. Marcus hosting the Friday game upstairs is Epicurus's garden at the top.
+
+(b) Beats:
+- New `history-on-the-shelf` (interact `pl-work-shelf`, `eventDone final-won`): "Three books on probability, two on psychology, one on marriage, still in its wrapper. At the end, a fat paperback you do not remember packing: *A History of Philosophy*. The bookmark is still at the Greeks." **You:** "Wonder, they said. Where it starts." / "...I wonder what Marcus is having for dinner."
+- `marcus-upstairs`: **Marcus:** "Forty-one floors and you still need a man to bring the ice." **You:** "(Epicurus kept a garden and fed his friends. Nobody remembers what he won.)"
+
+(c) Reel **"The ship"**: new event `penthouse-mirror` (interact `pl-pent-fire`, `eventDone final-won`). Set `mirror` (built; a dinner-jacket variant optional).
+- *A mirror over a fireplace somebody else lit.* "The Greeks kept Theseus's ship in the harbour and replaced each plank as it rotted." / "When every plank is new, is it the same ship?" / "The flat. Ray's table. Odette's boat. A room over a supper club. A beach. A motel over the Strip. A plank a town." / "Marcus is the last original plank." / "He has called twice."
+- Turn: the sour win gets its question, and the one answer the game gives: call him back.
+
+### 9.5 The booth: one exchange per interlude
+
+Chip oversells, Dr. Anand corrects; each pair sits beside that interlude's scouting and changes nothing it says.
+
+| Interlude | Exchange |
+|---|---|
+| `marcus-rides-out-with-you` | **Anand:** "In 1654 Pascal and Fermat worked out how to split the pot of a game that was interrupted." **Chip:** "Nobody is splitting anything, Doctor. The lights will be back." |
+| `ray-sees-you-off` | **Anand:** "Ray believes he is due. Hume would point out the deck keeps no records. So would I, with a chart." **Chip:** "The deck has a heart!" **Anand:** "It has fifty-two cards." |
+| `deb-sends-you-on` | **Anand:** "The Reverend's tithe is a ten percent rake paid to an insurer nobody has audited." **Chip:** "Faith, Doctor!" |
+| `hal-sends-you-on` | **Chip:** "A woman of mystery!" **Anand:** "A woman of Leeds, I suspect. Her lip does something when the accent goes." |
+| `marcus-goes-home` | **Anand:** "Bernard has played forty-one hours. His hourly rate is a negative number with a comma in it." **Chip:** "He is *living*, Doctor!" |
+| `dana-sends-you-up` | **Chip:** "Eleven thousand viewers, folks!" **Anand:** "Watching a phone watching a table. Plato wrote about people like that. They were in a cave." |
+
+### 9.6 New reel sets
+
+| Set | Stop | What it draws (at runtime) | Used by |
+|---|---|---|---|
+| `deck` | Riverbend | The riverboat rail at night: lanterns smeared on black water, the paddle wheel turning | `riverbend-deck-night` |
+| `harborroom` | Crescent Harbor | A rented room over the supper club: washstand, iron bed, a lighthouse beam crossing the wall on a timer | `harbor-mirror` |
+| `beach` | Palm Cay | Moonlit sand and surf, the casino's glass lit behind, one silhouette at a table | `palmcay-beach` |
+| `neon` | Neon Mesa | The Strip from a motel walkway, signs flickering and buzzing out of step | `mesa-boss-sendoff` |
+| `stream` | Neon Mesa | A phone in a hand: a stamp-sized card table, a viewer count, chat scrolling | `mesa-boss-sendoff` |
+| `lift` (optional) | Porto Lumina | A glass lift climbing the tower, the city falling away | `hal-on-the-eve` (else `night`) |
+
+Reused as built: `bed`, `shelf` (Basin), `night` (Silver Creek, Lumina), `mirror`
+(Harbor, Aftermath). Each new set is one `ReelScene` member and one draw function in
+`game/reelArt.ts`; from the river up, each stop's night gets a look of its own.
+
+### 9.7 Build order (value per hour)
+
+1. **Lines in built events**: 9.4's single lines and 9.5's pairs, about 25 edits; no new events, flags or art.
+2. **Reels on built sets**: *Sitting quietly* (Basin), *The leap* (Lumina), *The ship* (new `penthouse-mirror`). Silver Creek's is built.
+3. **The lunatics' beats**: `dolores-foot` (with `rubbedTheFoot`, read in `final-table-start`), `gaines-tithe`, `contessa-valmont`, `zeke-clip`, and a table hint each at `lumina-finale` that calls back with `eventDone` (Gaines: "Still not tithing? The boat is half built. The front half.").
+4. **Reels that need new sets**: `riverbend-deck-night`, `harbor-mirror`, `palmcay-beach`, the Mesa's cave.
+5. **Extras**: `history-on-the-shelf`, Bernard's table hint, the `lift` set.
+
+### 9.8 Decided, and open
+
+- *Decided:* one thinker a stop; the player names thinkers and most of the cast embody them; the existential reels vary in placement (after the first win, after a boss, mid-town at night, on the eve, in the aftermath) so they are not a fixed slot; the only new flag is `rubbedTheFoot`.
+- *Check when building:* that `rb-boat` and `pc-street` are reachable at night in their chapters; that a lunatic's talk beat does not swallow their schedule lines for good (a beat takes first refusal once); that a reel added to a send-off still leaves the interlude last.
+- *Open:* (a) Sartre at the Harbor, or saved for Lumina's crowded hall (the Harbor then takes Montaigne, who studied himself)? (b) Should the losing paths get thinkers too (Camus on every bust, Boethius's wheel of fortune when a collector catches you)? (c) Is Nietzsche twice (the debt, the recurrence) once too many?
