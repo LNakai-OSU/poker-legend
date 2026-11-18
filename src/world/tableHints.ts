@@ -201,6 +201,28 @@ export const TABLE_HINTS: TableHint[] = [
     when: [{ kind: 'flag', flag: 'errandTeodoroChip' }],
     lines: ['Chat, the champ is looking at a chip with a nick in it. Eleven thousand of you and not one knows why. I do not either.'],
   },
+  // The lunatics remember you from their towns (docs/STORYBOARD.md §9.4): a talk you had is a line at the final.
+  {
+    id: 'gaines-boat',
+    tableId: 'lumina-finale',
+    speaker: 'gaines',
+    when: [{ kind: 'eventDone', eventId: 'gaines-tithe' }],
+    lines: ['Still not tithing? The boat is half built. The front half.'],
+  },
+  {
+    id: 'contessa-leeds',
+    tableId: 'lumina-finale',
+    speaker: 'contessa',
+    when: [{ kind: 'eventDone', eventId: 'contessa-valmont' }],
+    lines: ['You are the one who heard the Leeds in me, darling. Nobody hears the Leeds. Raise. Mate. Darling.'],
+  },
+  {
+    id: 'zeke-real',
+    tableId: 'lumina-finale',
+    speaker: 'zeke',
+    when: [{ kind: 'eventDone', eventId: 'zeke-clip' }],
+    lines: ['Chat, it is the guy from the Mesa. I clipped him in the end, so he is real now. You are welcome.'],
+  },
   {
     id: 'hollis-tilt',
     tableId: 'crescent-main',

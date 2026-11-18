@@ -156,6 +156,13 @@ export const STORY_FLAGS = {
     clear: 'you have not opened the stake fund',
   },
 
+  // The philosophy pass (docs/STORYBOARD.md §9.4): Dolores's rabbit foot, the hope Camus refuses.
+  // Read at the final, where Chip says whether she is rubbing it for you or at you.
+  rubbedTheFoot: {
+    set: 'you rubbed Lucky Dolores’s rabbit foot in Silver Creek',
+    clear: 'you have not rubbed Dolores’s rabbit foot',
+  },
+
   tookKitsDare: {
     set: 'you told Kit you would take Cass’s money to spite him',
     clear: 'you told Kit you would earn it yourself',

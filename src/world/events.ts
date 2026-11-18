@@ -2084,6 +2084,47 @@ export const EVENTS: GameEvent[] = [
       },
     ],
   },
+  // The lunatics (docs/STORYBOARD.md §9.4): each a way of being wrong about the cards that is also
+  // a way of being wrong about life. One talk each, first refusal once, then their usual lines.
+  {
+    id: 'dolores-foot',
+    about:
+      'Lucky Dolores offers you the rabbit foot: hope, the leap Camus refuses. Rub it or do not; Chip says at the ' +
+      'final whether she is rubbing it for you or at you (`rubbedTheFoot`).',
+    trigger: { kind: 'talkTo', characterId: 'dolores' },
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'dolores',
+        lines: [
+          'Dolores: Rub the foot, honey. Fifty years it has told me to call, and I have called.',
+          'Dolores: My Walter never rubbed it. Look where Walter is.',
+        ],
+      },
+      {
+        kind: 'choice',
+        speaker: 'dolores',
+        prompt: 'Rub Dolores’s rabbit foot?',
+        options: [
+          {
+            label: 'Rub it',
+            then: [
+              { kind: 'setFlag', flag: 'rubbedTheFoot' },
+              { kind: 'dialogue', speaker: 'dolores', lines: ['Dolores: There. Now it knows you. It does not forget a face.'] },
+              { kind: 'dialogue', speaker: 'You', lines: ['You: (Camus says hope is the trap. It is very soft, though.)'] },
+            ],
+          },
+          {
+            label: 'I will take my chances',
+            then: [
+              { kind: 'dialogue', speaker: 'dolores', lines: ['Dolores: Brave. Stupid, but brave. Walter was brave.'] },
+              { kind: 'dialogue', speaker: 'You', lines: ['You: (The deck has never met her foot. That is the one thing I am sure of in this room.)'] },
+            ],
+          },
+        ],
+      },
+    ],
+  },
   {
     id: 'ray-sees-you-off',
     about: "Silver Creek's send-off: once you have the boat money, Ray tells you to go.",
@@ -2369,6 +2410,33 @@ export const EVENTS: GameEvent[] = [
           'Dana: I write letters. An old habit. Somebody likes to read about the games.',
           'Dana: Do not ask who. Win something worth writing down.',
         ],
+      },
+    ],
+  },
+  {
+    id: 'gaines-tithe',
+    about:
+      'The Reverend on the boat: Pascal’s wager with a ten percent rake, a callback to the opening. No money changes ' +
+      'hands (rule 5); he asks again at the final (`lumina-finale` table hint).',
+    trigger: { kind: 'talkTo', characterId: 'gaines' },
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'gaines',
+        lines: [
+          'Gaines: Pascal said bet on God, because the downside is nothing. I say ten percent, because the downside is ten percent.',
+          'Gaines: I am a reasonable man.',
+        ],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'You',
+        lines: ['You: (Pascal worked out the maths of this game with a man called Fermat. He would want to see the boat.)'],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'gaines',
+        lines: ['Gaines: There is no boat yet. That is what the fund is for.'],
       },
     ],
   },
@@ -2660,6 +2728,36 @@ export const EVENTS: GameEvent[] = [
           'Dana: Then I was only good at watching, and it turned out somebody would pay for that.',
           'Dana: Take his lessons. He is cheap for what he knows.',
         ],
+      },
+    ],
+  },
+  {
+    id: 'contessa-valmont',
+    about:
+      'The Contessa in the card room: patchwork with the stitching on the outside (Montaigne). The accent slips on a ' +
+      'bad river, which is a read; she remembers who heard it at the final (`lumina-finale` table hint).',
+    trigger: { kind: 'talkTo', characterId: 'contessa' },
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'contessa',
+        lines: [
+          'Contessa: Darling. The Valmonts have played cards since Versailles.',
+          'Contessa: We lost the château on a river like tonight’s. Bloody — mon dieu — river.',
+        ],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'You',
+        lines: [
+          'You: (Montaigne: we are all patchwork, and each patch plays its own game. Hers has a patch from Leeds. When it shows, she has been thrown.)',
+          'You: (That is not philosophy. That is a read.)',
+        ],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'contessa',
+        lines: ['Contessa: You are looking at me like a book, darling. Which page? The French ones are mine. Mostly.'],
       },
     ],
   },
@@ -3153,6 +3251,33 @@ export const EVENTS: GameEvent[] = [
         ],
       },
       { kind: 'setFlag', flag: 'clueScout' },
+    ],
+  },
+  {
+    id: 'zeke-clip',
+    about:
+      'Zeke on the Mesa floor: to be is to be perceived (Berkeley), inside Plato’s cave of screens. If he does not clip ' +
+      'it, it did not happen; he says you exist, at the final (`lumina-finale` table hint).',
+    trigger: { kind: 'talkTo', characterId: 'zeke' },
+    actions: [
+      {
+        kind: 'dialogue',
+        speaker: 'zeke',
+        lines: [
+          'Zeke: Chat, if I do not clip it, did it happen? No. Chat says you look like a donk.',
+          'Zeke: Chat says that about everyone. Chat is mostly my mum.',
+        ],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'You',
+        lines: ['You: (Berkeley: to be is to be perceived. He meant God was watching. Zeke means eleven thousand people and his mum.)'],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'zeke',
+        lines: ['Zeke: Say something for the stream. ...No? Then you did not happen. Sorry. Rules.'],
+      },
     ],
   },
   {
@@ -6260,6 +6385,47 @@ export const EVENTS: GameEvent[] = [
           },
         ],
       },
+      // Dolores remembers whether you rubbed the foot (`dolores-foot`). The foot changes nothing dealt (rule 1).
+      {
+        kind: 'if',
+        when: [{ kind: 'eventDone', eventId: 'dolores-foot' }],
+        then: [
+          {
+            kind: 'if',
+            when: [{ kind: 'flag', flag: 'rubbedTheFoot' }],
+            then: [
+              {
+                kind: 'reel',
+                panels: [
+                  {
+                    scene: 'booth',
+                    ticker: 'YOU 15,000 · 7 BB · LAST OF 6',
+                    lines: [
+                      { who: 'Chip', text: 'Hold the deal one second. Front row: Lucky Dolores is on the rail, folks, rubbing that rabbit foot FOR our challenger!' },
+                      { who: 'Dr. Anand', text: 'She has rubbed it at every final since 1971. The deck has not noticed once.' },
+                    ],
+                  },
+                ],
+              },
+            ],
+            else: [
+              {
+                kind: 'reel',
+                panels: [
+                  {
+                    scene: 'booth',
+                    ticker: 'YOU 15,000 · 7 BB · LAST OF 6',
+                    lines: [
+                      { who: 'Chip', text: 'Hold the deal one second. Front row: Lucky Dolores is on the rail, folks, rubbing that rabbit foot AT our challenger!' },
+                      { who: 'Dr. Anand', text: 'He would not rub it in Silver Creek. She has a long memory and no influence on the deck whatsoever.' },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
       { kind: 'startTable', tableId: 'lumina-finale' },
     ],
   },
@@ -6327,6 +6493,47 @@ export const EVENTS: GameEvent[] = [
                         text:
                           'Fifteen thousand. Against a combined stack of seven hundred and ' +
                           'twenty thousand. I would say the odds are long.',
+                      },
+                    ],
+                  },
+                ],
+              },
+              // Dolores remembers whether you rubbed the foot (`dolores-foot`). The foot changes nothing dealt (rule 1).
+              {
+                kind: 'if',
+                when: [{ kind: 'eventDone', eventId: 'dolores-foot' }],
+                then: [
+                  {
+                    kind: 'if',
+                    when: [{ kind: 'flag', flag: 'rubbedTheFoot' }],
+                    then: [
+                      {
+                        kind: 'reel',
+                        panels: [
+                          {
+                            scene: 'booth',
+                            ticker: 'YOU 15,000 · 7 BB · LAST OF 6',
+                            lines: [
+                              { who: 'Chip', text: 'Lucky Dolores is on the rail, folks, rubbing that rabbit foot FOR our challenger!' },
+                              { who: 'Dr. Anand', text: 'She has rubbed it at every final since 1971. The deck has not noticed once.' },
+                            ],
+                          },
+                        ],
+                      },
+                    ],
+                    else: [
+                      {
+                        kind: 'reel',
+                        panels: [
+                          {
+                            scene: 'booth',
+                            ticker: 'YOU 15,000 · 7 BB · LAST OF 6',
+                            lines: [
+                              { who: 'Chip', text: 'Lucky Dolores is on the rail, folks, rubbing that rabbit foot AT our challenger!' },
+                              { who: 'Dr. Anand', text: 'He would not rub it in Silver Creek. She has a long memory and no influence on the deck whatsoever.' },
+                            ],
+                          },
+                        ],
                       },
                     ],
                   },
