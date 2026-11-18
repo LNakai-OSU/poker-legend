@@ -89,6 +89,8 @@ const STORY_SEEN = [
   'tournament-lost',
   'tournament-registrar-closed',
   'nadia-rematch',
+  // The aftermath: the mirror over the penthouse fireplace (docs/STORYBOARD.md §9.4).
+  'penthouse-mirror',
 ]
 
 function baseSave(overrides = {}) {

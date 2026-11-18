@@ -771,9 +771,9 @@ poker tie. Lines are drafts, to be fitted to the voices in `characters.ts`.
 - `marcus-rides-out-with-you`, on the 14: **You:** "(Same window as yesterday. Same bird, probably. The sky looks smaller when you are going somewhere.)" Kant's sublime, shrunk by a goal.
 - `rent-receipt` (home again, rent paid): **You:** "(Nobody tiptoeing on these stairs any more. Sorry, Fyodor.)"
 
-(c) Reel **"Sitting quietly"**, appended to `dana-walks-you-home` after Dana leaves you at the door. Sets `bed`, `shelf` (built).
-- `bed`: *The flat. Two in the morning. The fridge hums. Marcus's friends' money is under the pillow.* "I should be asleep. I won. Winners sleep."
-- `shelf`: "Pascal. 'All of man's misery comes from not being able to sit quietly in a room alone.'" / "He had one about gamblers. Give a man every morning what he would win that day, on condition he does not play, and you have made him unhappy." / "So it is not the rent." / "...It is a little bit the rent."
+(c) Reel **"Sitting quietly"**: **built**, in `dana-walks-you-home` between lying down and the morning (faded out; no time passes). The shelf first, then the bed, so the bed set's lamp going down ends it.
+- `shelf`: *The flat. Two in the morning. The fridge hums. Marcus's friends' money is under the pillow, and you are up at the shelf.* "I should be asleep. I won. Winners sleep." / "Pascal. 'All of man's misery comes from not being able to sit quietly in a room alone.'" / "He had one about gamblers. Give a man every morning what he would win that day, on condition he does not play, and you have made him unhappy."
+- `bed`: *Back to bed with him.* "So it is not the rent." / "...It is a little bit the rent."
 - Turn: the want is named; the ending's hollow win has its seed.
 
 (d) The wager is expected value, what a call costs against what it might win: Hal's tape in other words. Pascal and Fermat's *problem of points* (splitting the pot of an interrupted game) is the prologue's power cut; Dr. Anand says so in the first interlude (9.5).
@@ -869,9 +869,9 @@ poker tie. Lines are drafts, to be fitted to the voices in `characters.ts`.
 - `dana-reveal`, six-clue branch: **Dana:** "Four years up there, and nobody has looked at her who did not owe her or want something. She wants to lose to somebody who did not have to sit down." (Hegel, unnamed; Weil's line from 9.3 closes it.)
 - `final-lost`, before the rail: **You:** "Nietzsche asked: if a demon said you would live this exact life again, every hand of it, forever, would you curse him or thank him?" / "Same table. Same fifteen thousand. New cards, though. The demon shuffles."
 
-(c) Reel **"The leap"**, appended to `hal-on-the-eve` after his lesson and **Hal:** "Socrates never charged. I always did. That one was free." Set `night` (built: a city from a long way up), or a new **`lift`**.
-- *The tower stairwell, forty-first floor. Somebody has left the window open.* "Kierkegaard: anxiety is the dizziness of freedom. You look over the edge, and what frightens you is not falling. It is that you could jump."
-- "Seven big blinds tomorrow. Hal says at seven you do not think. You shove or you fold, and the chart says which." / "Kierkegaard needed faith. I have a push-fold chart. That should feel better than it does." / "Abraham walked up the mountain not knowing. I know the odds to two decimals. I still do not know." / "Fine." / "Leap."
+(c) Reel **"The leap"**: **built**, at the end of `hal-on-the-eve`, after his lesson and **Hal:** "Socrates never charged. I always did. That one was free." Set `night`. Hal is on `pl-street` only in the evening and at night in this chapter, so the caption's "That night" holds; the reel is faded out and costs no time. The beat can come before the tournament, so the reel knows the push-fold chart but not yet the seven big blinds.
+- *That night. The tower stairwell, forty-first floor. Somebody has left the window open.* "Kierkegaard: anxiety is the dizziness of freedom. You look over the edge, and what frightens you is not falling. It is that you could jump."
+- "Hal says when the stack gets short you stop thinking. Seven big blinds, eight, ten: you shove or you fold, and the chart says which." / "Kierkegaard needed faith. I have a push-fold chart. That should feel better than it does." / "Abraham walked up the mountain not knowing. I will know the odds to two decimals. I still will not know." / "Fine." / "Leap."
 - Turn: the reading stops; from here the player acts.
 
 (d) Short-stacked, the decision is maths (push or fold); only the variance after it is a leap, and rule 1 keeps it honest. The final-lost loop deals real new cards each time: the situation recurs, the deck never does.
@@ -891,8 +891,8 @@ Losing gets its thinkers too, each on a beat that already plays when it goes wro
 - New `history-on-the-shelf` (interact `pl-work-shelf`, `eventDone final-won`): "Three books on probability, two on psychology, one on marriage, still in its wrapper. At the end, a fat paperback you do not remember packing: *A History of Philosophy*. The bookmark is still at the Greeks." **You:** "Wonder, they said. Where it starts." / "...I wonder what Marcus is having for dinner."
 - `marcus-upstairs`: **Marcus:** "Forty-one floors and you still need a man to bring the ice." **You:** "(Epicurus kept a garden and fed his friends. Nobody remembers what he won.)"
 
-(c) Reel **"The ship"**: new event `penthouse-mirror` (interact `pl-pent-fire`, `eventDone final-won`). Set `mirror` (built; a dinner-jacket variant optional).
-- *A mirror over a fireplace somebody else lit.* "The Greeks kept Theseus's ship in the harbour and replaced each plank as it rotted." / "When every plank is new, is it the same ship?" / "The flat. Ray's table. Odette's boat. A room over a supper club. A beach. A motel over the Strip. A plank a town." / "Marcus is the last original plank." / "He has called twice."
+(c) Reel **"The ship"**: **built**, new event `penthouse-mirror` (interact `pl-pent-fire`, `eventDone final-won`; listed in `tests/ui.mjs` STORY_SEEN). Set `mirror`. After it: "Your phone is on the mantelpiece, face down."
+- *Forty-one floors up. A mirror over a fireplace somebody else lit.* "The Greeks kept Theseus's ship in the harbour, and replaced each plank as it rotted." / "When every plank is new, is it the same ship?" / "The flat. Ray's table. Odette's boat. Hal's card room. Inés's sea. Vale's suite. A plank a town." (places the player has been, not the unbuilt reels) / "Marcus is the last original plank." / "He has called twice."
 - Turn: the sour win gets its question, and the one answer the game gives: call him back.
 
 ### 9.5 The booth: one exchange per interlude
@@ -926,7 +926,7 @@ Reused as built: `bed`, `shelf` (Basin), `night` (Silver Creek, Lumina), `mirror
 ### 9.7 Build order (value per hour)
 
 1. **Lines in built events**: 9.4's single lines and 9.5's pairs, about 25 edits; no new events, flags or art. **Built**, with the losing paths (9.4).
-2. **Reels on built sets**: *Sitting quietly* (Basin), *The leap* (Lumina), *The ship* (new `penthouse-mirror`). Silver Creek's is built.
+2. **Reels on built sets**: *Sitting quietly* (Basin), *The leap* (Lumina), *The ship* (new `penthouse-mirror`). Silver Creek's is built. **Built.**
 3. **The lunatics' beats**: `dolores-foot` (with `rubbedTheFoot`, read in `final-table-start`), `gaines-tithe`, `contessa-valmont`, `zeke-clip`, and a table hint each at `lumina-finale` that calls back with `eventDone` (Gaines: "Still not tithing? The boat is half built. The front half.").
 4. **Reels that need new sets**: `riverbend-deck-night`, `harbor-mirror`, `palmcay-beach`, the Mesa's cave.
 5. **Extras**: `history-on-the-shelf`, Bernard's table hint, the `lift` set.

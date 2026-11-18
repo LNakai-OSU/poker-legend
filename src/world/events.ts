@@ -1753,6 +1753,37 @@ export const EVENTS: GameEvent[] = [
       { kind: 'fade', to: 'in' },
       { kind: 'dialogue', lines: ['You lie down meaning to count it again. You get as far as four hundred.'] },
       { kind: 'fade', to: 'out' },
+      // The night after the first win, alone with Pascal (docs/STORYBOARD.md §9.4): the want is
+      // named, and the ending's hollow win has its seed. A reel in the player's own voice, as
+      // Silver Creek's (`silvercreek-boss-sendoff`); it neither costs nor gives time.
+      {
+        kind: 'reel',
+        title: 'Sitting quietly',
+        panels: [
+          {
+            scene: 'shelf',
+            caption: 'The flat. Two in the morning. The fridge hums. Marcus’s friends’ money is under the pillow, and you are up at the shelf.',
+            lines: [
+              { who: 'You', text: 'I should be asleep. I won. Winners sleep.' },
+              { who: 'You', text: 'Pascal. "All of man’s misery comes from not being able to sit quietly in a room alone."' },
+              {
+                who: 'You',
+                text:
+                  'He had one about gamblers. Give a man every morning what he would win that day, on condition he ' +
+                  'does not play, and you have made him unhappy.',
+              },
+            ],
+          },
+          {
+            scene: 'bed',
+            caption: 'Back to bed with him. The lamp, the page, the fridge.',
+            lines: [
+              { who: 'You', text: 'So it is not the rent.' },
+              { who: 'You', text: '...It is a little bit the rent.' },
+            ],
+          },
+        ],
+      },
       { kind: 'advanceDay' },
       { kind: 'fade', to: 'in' },
       { kind: 'dialogue', lines: ['Morning. Somebody is hammering on your door.'] },
@@ -3664,8 +3695,44 @@ export const EVENTS: GameEvent[] = [
           'Hal: Heads up, the button posts the small blind. It acts first before the flop and last after it.',
           'Hal: So play plenty of hands from the button and fewer from the big blind. With two of you, position matters more, not less.',
           'Hal: And there is no tell. Stop looking for one. Play the pot odds, play the position, play the person.',
+          'Hal: Socrates never charged. I always did. That one was free.',
         ],
       },
+      // The eve, alone with Kierkegaard (docs/STORYBOARD.md §9.4): the reading stops here, and from
+      // here the player acts. No time passes (rule 4); the reel is that night, remembered.
+      { kind: 'fade', to: 'out' },
+      {
+        kind: 'reel',
+        title: 'The leap',
+        panels: [
+          {
+            scene: 'night',
+            caption: 'That night. The tower stairwell, forty-first floor. Somebody has left the window open.',
+            lines: [
+              {
+                who: 'You',
+                text:
+                  'Kierkegaard: anxiety is the dizziness of freedom. You look over the edge, and what frightens you ' +
+                  'is not falling. It is that you could jump.',
+              },
+              {
+                who: 'You',
+                text:
+                  'Hal says when the stack gets short you stop thinking. Seven big blinds, eight, ten: you shove or ' +
+                  'you fold, and the chart says which.',
+              },
+              { who: 'You', text: 'Kierkegaard needed faith. I have a push-fold chart. That should feel better than it does.' },
+              {
+                who: 'You',
+                text: 'Abraham walked up the mountain not knowing. I will know the odds to two decimals. I still will not know.',
+              },
+              { who: 'You', text: 'Fine.' },
+              { who: 'You', text: 'Leap.' },
+            ],
+          },
+        ],
+      },
+      { kind: 'fade', to: 'in' },
     ],
   },
 
@@ -3690,6 +3757,37 @@ export const EVENTS: GameEvent[] = [
         ],
       },
       { kind: 'dialogue', speaker: 'You', lines: ['You: (Epicurus kept a garden and fed his friends. Nobody remembers what he won.)'] },
+    ],
+  },
+  {
+    id: 'penthouse-mirror',
+    about:
+      'Aftermath: the mirror over the penthouse fireplace, and the ship of Theseus. The prologue’s mirror asked ' +
+      'how you got here; this one asks whether it is still you, and the only answer the game gives is to call ' +
+      'Marcus back (docs/STORYBOARD.md §9.4).',
+    trigger: { kind: 'interact', poiId: 'pl-pent-fire' },
+    conditions: [{ kind: 'eventDone', eventId: 'final-won' }],
+    actions: [
+      { kind: 'fade', to: 'out' },
+      {
+        kind: 'reel',
+        title: 'The ship',
+        panels: [
+          {
+            scene: 'mirror',
+            caption: 'Forty-one floors up. A mirror over a fireplace somebody else lit.',
+            lines: [
+              { who: 'You', text: 'The Greeks kept Theseus’s ship in the harbour, and replaced each plank as it rotted.' },
+              { who: 'You', text: 'When every plank is new, is it the same ship?' },
+              { who: 'You', text: 'The flat. Ray’s table. Odette’s boat. Hal’s card room. Inés’s sea. Vale’s suite. A plank a town.' },
+              { who: 'You', text: 'Marcus is the last original plank.' },
+              { who: 'You', text: 'He has called twice.' },
+            ],
+          },
+        ],
+      },
+      { kind: 'fade', to: 'in' },
+      { kind: 'dialogue', lines: ['Your phone is on the mantelpiece, face down.'] },
     ],
   },
   {
