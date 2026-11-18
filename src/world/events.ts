@@ -164,6 +164,17 @@ export type ReelScene =
   | 'shelf'
   | 'bed'
   | 'knock'
+  /**
+   * The nights alone up the ladder (docs/STORYBOARD.md §9.6): the riverboat's deck, the room over the
+   * Harbor's supper club, Palm Cay's beach, the Strip from a motel walkway, Zeke's stream on a phone,
+   * and the glass lift up the Lumina tower.
+   */
+  | 'deck'
+  | 'harborroom'
+  | 'beach'
+  | 'neon'
+  | 'stream'
+  | 'lift'
   /** Marcus's plan: the map of the six towns, drawn a stop at a time as the lines name them. Drawn by `RoutePanel`. */
   | 'route'
   /** Hal's old tape: a chalkboard, a desk, and whatever his line puts up on the board. Drawn by `TapePanel`. */

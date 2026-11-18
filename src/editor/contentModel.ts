@@ -149,7 +149,7 @@ export const ACTION_KINDS = keysOf<EventAction['kind']>({
 })
 
 /** What a forced ride may carry: talk, a pause, a quiet change of state. */
-export const REEL_SCENES: ReelScene[] = ['logo', 'mail', 'studio', 'corridor', 'bathroom', 'sink', 'mirror', 'phone', 'booth', 'alley', 'chase', 'rail', 'night', 'sky', 'busride', 'sunbird', 'run', 'hallway', 'envelopes', 'flatIn', 'flatTable', 'flatDesk', 'flatShelf', 'flatBed', 'notice', 'invite', 'poogle', 'shelf', 'bed', 'knock', 'tape', 'route']
+export const REEL_SCENES: ReelScene[] = ['logo', 'mail', 'studio', 'corridor', 'bathroom', 'sink', 'mirror', 'phone', 'booth', 'alley', 'chase', 'rail', 'night', 'sky', 'busride', 'sunbird', 'run', 'hallway', 'envelopes', 'flatIn', 'flatTable', 'flatDesk', 'flatShelf', 'flatBed', 'notice', 'invite', 'poogle', 'shelf', 'bed', 'knock', 'deck', 'harborroom', 'beach', 'neon', 'stream', 'lift', 'tape', 'route']
 export const RIDE_ACTION_KINDS: Array<RideAction['kind']> = ['dialogue', 'wait', 'setFlag', 'clearFlag', 'giveItem', 'giveCash', 'playSound']
 
 /** Actions after which nothing else in the event runs: the table takes over. */
