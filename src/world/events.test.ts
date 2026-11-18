@@ -700,21 +700,23 @@ describe('people a beat brings on screen', () => {
   })
 })
 
-describe('the poker refresher', () => {
-  const hasRefresher = (actions: unknown): boolean => JSON.stringify(actions).includes('refresher on how the game is played')
+describe("Hal's video on Poogle", () => {
+  const prologue = () => JSON.stringify(EVENTS.find((e) => e.id === 'prologue')!.actions)
 
-  it('is offered before the deal on every way into the first poker night', () => {
-    const sites = EVENTS.filter((e) => e.actions.some((a) => a.kind === 'startPokerNight') && hasRefresher(e.actions))
-    expect(sites.length).toBeGreaterThanOrEqual(3)
-    for (const e of sites) {
-      const kinds = e.actions.map((a) => (a.kind === 'choice' && hasRefresher(a) ? 'refresher' : a.kind))
-      expect(kinds.indexOf('refresher'), `${e.id}: the refresher is not before the deal`).toBeLessThan(kinds.indexOf('startPokerNight'))
+  it('is watched in the flat before the first poker night, and no longer at Marcus’s', () => {
+    expect(prologue()).toContain('poogle')
+    for (const e of EVENTS.filter((e) => e.actions.some((a) => a.kind === 'startPokerNight'))) {
+      expect(JSON.stringify(e.actions), `${e.id} still offers a refresher`).not.toContain('refresher')
     }
   })
 
-  it('is Hal on tape, covering hands, position, bet sizes and bluffing', () => {
-    const tape = JSON.stringify(EVENTS.find((e) => e.id === 'poker-night')!.actions)
+  it('is Hal on video, covering hands, position, bet sizes and bluffing', () => {
+    const tape = prologue()
     for (const word of ['full house', 'button', 'pot', 'bluff']) expect(tape).toContain(word)
     expect(tape).toContain('"who":"hal"')
+  })
+
+  it('has the whole ladder of hands on one screen', () => {
+    expect(prologue()).toContain('"kind":"ranking"')
   })
 })

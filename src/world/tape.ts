@@ -34,6 +34,8 @@ export type TapeExhibit =
   /** The table from above, six seats. `order` numbers who acts first; `mark` lights some seats. */
   | { kind: 'seats'; order?: 'preflop' | 'flop'; mark?: SeatName[]; zones?: boolean; note?: string }
   /** Chips in the middle and chips in front of a player; a stack's height is its size. */
+  /** Every kind of hand on one board, best first: the ladder, with what makes each rung. */
+  | { kind: 'ranking'; note?: string }
   | { kind: 'bets'; pot: number; bets: { label: string; chips: number; tone?: 'bet' | 'call' | 'raise' }[]; note?: string }
 
 /** The rank character of a card string, as a number. */
@@ -54,3 +56,17 @@ export function parseCards(list: CardList): Card[] {
       return { rank, suit }
     })
 }
+
+/** The ladder shown by a `ranking` exhibit, best first. `name` is what the engine calls it, bar the royal flush. */
+export const HAND_LADDER: { name: string; sub: string }[] = [
+  { name: 'ROYAL FLUSH', sub: '10 to ace, one suit' },
+  { name: 'STRAIGHT FLUSH', sub: '5 in a row, one suit' },
+  { name: 'FOUR OF A KIND', sub: 'four alike' },
+  { name: 'FULL HOUSE', sub: 'three and a pair' },
+  { name: 'FLUSH', sub: 'five of one suit' },
+  { name: 'STRAIGHT', sub: '5 in a row' },
+  { name: 'THREE OF A KIND', sub: 'three alike' },
+  { name: 'TWO PAIR', sub: 'two pairs' },
+  { name: 'ONE PAIR', sub: 'two alike' },
+  { name: 'HIGH CARD', sub: 'nothing: top card' },
+]

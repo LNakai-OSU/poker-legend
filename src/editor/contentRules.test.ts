@@ -250,9 +250,8 @@ describe('reading an event as a script', () => {
     expect(script[1]).toBe('Marcus says “You made it! Sit down, sit down.”')
     expect(script[2]).toBe('    “Everything on the table, winner takes the lot. That is the rule.”')
     expect(script[3]).toBe('    “You in?”')
-    // Before the first deal he offers the refresher, then the night starts.
-    expect(script[4]).toContain('Do you want a refresher on how the game is played before we deal?')
-    expect(script.slice(5).some((line) => line.includes('the poker night starts'))).toBe(true)
+    // The refresher moved to the flat (Hal's video on Poogle): he deals straight away.
+    expect(script.slice(4).some((line) => line.includes('the poker night starts'))).toBe(true)
   })
 })
 

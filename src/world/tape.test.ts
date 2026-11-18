@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { EVENTS, type GameEvent, type ReelLine } from './events'
-import { parseCards } from './tape'
+import { HAND_LADDER, parseCards } from './tape'
 import { bestHand, compareHandStrength, HAND_CATEGORY_NAMES } from '../engine/handRank'
 import { measureText } from '../game/pixel/font'
 
@@ -29,7 +29,7 @@ describe("Hal's tape", () => {
     expect(lines.length).toBeGreaterThan(25)
     expect(lines.filter((l) => l.line.show).length).toBeGreaterThan(20)
     const kinds = new Set(lines.map((l) => l.line.show?.kind))
-    for (const kind of ['hands', 'board', 'seats', 'bets']) expect(kinds.has(kind as never), `no ${kind} exhibit`).toBe(true)
+    for (const kind of ['hands', 'board', 'seats', 'bets', 'ranking']) expect(kinds.has(kind as never), `no ${kind} exhibit`).toBe(true)
   })
 
   it('shows real cards: every card parses, none is dealt twice, and the hand named is the hand shown', () => {
@@ -72,6 +72,16 @@ describe("Hal's tape", () => {
       if (ex.kind === 'hands') for (const h of ex.hands) for (const t of [h.title, h.sub ?? '']) expect(measureText(t), `"${t}" runs into the cards`).toBeLessThanOrEqual(90)
       if (ex.kind === 'bets') for (const b of [ex.pot, ...ex.bets.map((x) => x.chips)]) expect(b).toBeLessThanOrEqual(9)
     }
+  })
+
+  it('ranks every hand the engine knows, best first, in names that fit their column', () => {
+    const engine = Object.values(HAND_CATEGORY_NAMES).map((n) => n.toUpperCase())
+    for (const rung of HAND_LADDER) {
+      if (rung.name !== 'ROYAL FLUSH') expect(engine.some((n) => n === rung.name || (rung.name === 'ONE PAIR' && n === 'PAIR')), rung.name).toBe(true)
+      expect(measureText(rung.name), rung.name).toBeLessThanOrEqual(100)
+      expect(measureText(rung.sub), rung.sub).toBeLessThanOrEqual(100)
+    }
+    expect(HAND_LADDER).toHaveLength(10)
   })
 
   it('keeps every line short enough for the box', () => {

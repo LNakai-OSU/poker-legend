@@ -145,6 +145,19 @@ export type ReelScene =
   | 'sink'
   | 'rail'
   | 'night'
+  /** The morning before the game: the sky, the bus window, the bird against the sun, the run home, the hall. Drawn by `reelArt`. */
+  | 'sky'
+  | 'busride'
+  | 'sunbird'
+  | 'run'
+  | 'hallway'
+  | 'envelopes'
+  | 'notice'
+  | 'invite'
+  | 'poogle'
+  | 'shelf'
+  | 'bed'
+  | 'knock'
   /** Marcus's plan: the map of the six towns, drawn a stop at a time as the lines name them. Drawn by `RoutePanel`. */
   | 'route'
   /** Hal's old tape: a chalkboard, a desk, and whatever his line puts up on the board. Drawn by `TapePanel`. */
@@ -724,27 +737,13 @@ export function arrivalClashes(events: GameEvent[]): Array<[GameEvent, GameEvent
 }
 
 /**
- * The refresher on offer before the first poker night: the commentators, still
- * on air during the blackout at Porto Lumina, put out an old tape of Hal's to
- * buy time. It covers the game as the tables here play it — hold'em: the hands,
- * the seats, the sizes of a bet, the bluff. Free, skippable, and never gates
- * anything; the paid lessons (`hal-first-lesson`) go further than this.
+ * Hal's Hold'em Handbook, as a video on Poogle: the one the player looks up in
+ * their flat the night of the first game (the `prologue`). It covers the game as
+ * the tables here play it — hold'em: the hands, the seats, the sizes of a bet,
+ * the bluff. Free, skippable, and never gates anything; the paid lessons
+ * (`hal-first-lesson`) go further than this.
  */
-const REFRESHER_TAPE: EventAction[] = [
-  { kind: 'fade', to: 'out' },
-  {
-    kind: 'reel',
-    title: 'Live from Porto Lumina',
-    panels: [
-      {
-        scene: 'booth',
-        ticker: 'TECHNICAL DIFFICULTY · PLEASE STAND BY',
-        lines: [
-          { who: 'Chip', text: 'Folks, the rig is still down, and the engineers tell me "ten minutes". They said that an hour ago.' },
-          { who: 'Dr. Anand', text: 'The archive has sent over a tape. I am told it is educational. I am also told it is the only thing we have.' },
-          { who: 'Chip', text: 'Hal\'s Hold\'em Handbook! Filmed in a rented hall, in a sweater he still owns. Roll it!' },
-        ],
-      },
+const HAL_VIDEO_PANELS: ReelPanel[] = [
       {
         scene: 'tape',
         ticker: 'TAPE 1 · THE GAME',
@@ -857,14 +856,11 @@ const REFRESHER_TAPE: EventAction[] = [
               ],
             },
           },
-        ],
-      },
-      {
-        scene: 'booth',
-        ticker: 'STILL OFF AIR · PLEASE STAND BY',
-        lines: [
-          { who: 'Dr. Anand', text: 'For viewers keeping score: a flush beats a straight, and a full house beats a flush. People get that wrong on television.' },
-          { who: 'Chip', text: 'And the lights are STILL out, folks! Back to Hal!' },
+          {
+            who: 'hal',
+            text: 'Hal: Here is the whole ladder on one board, best at the top. Every hand beats everything under it. Copy it out.',
+            show: { kind: 'ranking' },
+          },
         ],
       },
       {
@@ -989,14 +985,6 @@ const REFRESHER_TAPE: EventAction[] = [
         ],
       },
       {
-        scene: 'booth',
-        ticker: 'STILL OFF AIR · PLEASE STAND BY',
-        lines: [
-          { who: 'Dr. Anand', text: 'He has just described pot odds. I have waited eleven years to hear someone do it without a whiteboard.' },
-          { who: 'Chip', text: 'A natural, folks! Hal, take us home!' },
-        ],
-      },
-      {
         scene: 'tape',
         ticker: 'TAPE 5 · THE BLUFF',
         lines: [
@@ -1061,53 +1049,7 @@ const REFRESHER_TAPE: EventAction[] = [
           },
         ],
       },
-      {
-        scene: 'booth',
-        ticker: 'POKER LEGENDS · THE LIGHTS RETURN',
-        lines: [
-          { who: 'Chip', text: 'And that was Hal, folks! A legend, if you only count the people who listened!' },
-          { who: 'Dr. Anand', text: 'I took notes. For the record, I am the only one in this booth who did.' },
-        ],
-      },
-    ],
-  },
-  { kind: 'fade', to: 'in' },
-  {
-    kind: 'dialogue',
-    speaker: 'marcus',
-    lines: [
-      'Marcus: Hal made that? In a sweater like that? I have watched that tape on and off since I was twenty-six.',
-      'Marcus: Position, pot odds, do not bluff the man who does not look. It is all there. Now deal.',
-    ],
-  },
 ]
-
-/**
- * Asked at Marcus's table before the first deal: sit down, or get the refresher
- * first. Either way the event carries on to the deal after it.
- */
-const REFRESHER_CHOICE: EventAction = {
-  kind: 'choice',
-  speaker: 'marcus',
-  prompt: 'Do you want a refresher on how the game is played before we deal?',
-  options: [
-    {
-      label: 'Deal me in',
-      then: [{ kind: 'dialogue', speaker: 'marcus', lines: ['Marcus: Confident. I like it. It will not last.'] }],
-    },
-    {
-      label: 'Give me a refresher',
-      then: [
-        {
-          kind: 'dialogue',
-          speaker: 'marcus',
-          lines: ['Marcus: Sure, sure. I taped the night the lights went out at your final. They filled the time with this.'],
-        },
-        ...REFRESHER_TAPE,
-      ],
-    },
-  ],
-}
 
 /**
  * Every scripted beat in the game.
@@ -1165,7 +1107,6 @@ export const EVENTS: GameEvent[] = [
           'Marcus: You in?',
         ],
       },
-      REFRESHER_CHOICE,
       { kind: 'startPokerNight' },
     ],
   },
@@ -1211,7 +1152,7 @@ export const EVENTS: GameEvent[] = [
     ],
     actions: [
       { kind: 'wait', ms: 300 },
-      { kind: 'dialogue', lines: ['Somebody is calling after you from the end of the street.'] },
+      { kind: 'dialogue', lines: ['Dana has given up on the door and is halfway down the street, still shouting at you about the time.'] },
       { kind: 'moveNpc', characterId: 'dana', from: { col: 27, row: 7 }, to: 'player', pace: 'run' },
       { kind: 'setFlag', flag: 'metDana' },
       {
@@ -1353,8 +1294,7 @@ export const EVENTS: GameEvent[] = [
                   'Dana: I am always in the big chair.',
                 ],
               },
-              REFRESHER_CHOICE,
-              { kind: 'startPokerNight' },
+                      { kind: 'startPokerNight' },
             ],
           },
           {
@@ -1513,7 +1453,6 @@ export const EVENTS: GameEvent[] = [
           'Dana: I am always in the big chair.',
         ],
       },
-      REFRESHER_CHOICE,
       { kind: 'startPokerNight' },
     ],
   },
@@ -1634,7 +1573,6 @@ export const EVENTS: GameEvent[] = [
           'Dana: I am always in the big chair.',
         ],
       },
-      REFRESHER_CHOICE,
       { kind: 'startPokerNight' },
     ],
   },
@@ -5718,40 +5656,130 @@ export const EVENTS: GameEvent[] = [
       },
       { kind: 'wait', ms: 500 },
       {
+        // The morning of the game. Philosophy is how this player sees the world: Kant at the bus
+        // window, Dostoevsky on the stairs, Pascal over the invitation, a history of it all by the bed.
         kind: 'reel',
         title: 'Some time earlier',
         panels: [
           {
-            scene: 'night',
-            caption: 'Basin. A flat above a bakery. Some time earlier.',
+            scene: 'sky',
+            caption: 'Basin. A morning some weeks before. Some time earlier.',
+            lines: [{ who: 'You', text: 'Look at that. Not one cloud in a hurry.' }],
+          },
+          {
+            scene: 'busride',
+            caption: 'The 14, window seat. Forty minutes to a job that does not pay enough.',
             lines: [
+              { who: 'You', text: 'Forty minutes of brake lights, and the only free thing in this city is up there.' },
+            ],
+          },
+          {
+            scene: 'sunbird',
+            lines: [
+              { who: 'You', text: 'Ahh... the sublime.' },
               {
                 who: 'You',
-                text: 'It started small. A note on a table. A rent that did not pay itself.',
+                text:
+                  'Kant said beauty is a pleasure in the shape of a thing. The sublime is when something is too ' +
+                  'big to hold, and you feel small, and then, oddly, bigger for having noticed.',
+              },
+              { who: 'You', text: 'One bird. The whole sun behind it. And nothing in it owes anybody rent.' },
+              { who: 'You', text: 'The bus lurches. The brakes hiss, and the sun is only a streetlight again.' },
+              { who: 'You', text: 'Ahh— my stop!' },
+            ],
+          },
+          {
+            scene: 'run',
+            caption: 'Down the steps and up the street at a dead run.',
+            lines: [{ who: 'You', text: 'Go, go, go. If I miss the door, the stairs are all hers.' }],
+          },
+          {
+            scene: 'hallway',
+            caption: 'The third floor. Her door is the one with the light under it.',
+            lines: [
+              { who: 'You', text: 'Tiptoe. The third board creaks. Skip the third board.' },
+              {
+                who: 'You',
+                text:
+                  'Man, if I do not come up with rent soon I might have to pull a Raskolnikov. Joking! ' +
+                  'Joking. But damn, I need some mon-',
               },
             ],
           },
           {
-            scene: 'mail',
+            scene: 'envelopes',
+            caption: 'Your door. Three envelopes on the floor, pushed under it.',
             lines: [
+              { who: 'You', text: '...ey.' },
+              { who: 'You', text: 'Ahh, maybe that is my check. Maybe one of those is my check.' },
+            ],
+          },
+          {
+            scene: 'notice',
+            lines: [{ who: 'You', text: 'Nope...' }],
+          },
+          {
+            scene: 'invite',
+            caption: "The next one is Marcus's handwriting.",
+            lines: [
+              { who: 'You', text: 'Psh. Poker. Like I have money to spend on that.' },
               {
                 who: 'You',
                 text:
-                  'Nine days. Nine days, forty dollars and a fridge that hums a different note ' +
-                  'every night.',
+                  'But... what if I won? Pascal bet his whole soul on worse odds. A little stake, a ' +
+                  'big upside.',
               },
-              {
-                who: 'You',
-                text:
-                  'Marcus. Of course it is Marcus. He has never once been wrong about a bad ' +
-                  'idea.',
-              },
+            ],
+          },
+          {
+            scene: 'poogle',
+            caption: 'The laptop, the only thing in the flat that was not on sale.',
+            lines: [
+              { who: 'You', text: 'Okay. Poogle. Do not fail me now.' },
+              { who: 'You', text: 'How to play poker. The first one. Somebody called Hal, in a sweater.' },
             ],
           },
         ],
       },
-      // Back from the mail: at the kitchen table where you read it, not at the door.
-      { kind: 'teleport', areaId: 'home', col: 4, row: 5 },
+      // The video itself, a constant the editor reads as one unknown value: it is long.
+      { kind: 'reel', title: "Hal's Hold'em Handbook", panels: HAL_VIDEO_PANELS },
+      {
+        kind: 'reel',
+        title: 'Some time earlier',
+        panels: [
+          {
+            scene: 'shelf',
+            caption: 'The video ends. You rub your eyes. The shelf is the only thing in the flat that is full.',
+            lines: [
+              { who: 'You', text: 'Cards. Odds. Pot sizes. My eyes are doing a thing.' },
+              {
+                who: 'You',
+                text: 'Right. Enough arithmetic. Camus. Kant. Plato. Nietzsche. Dostoevsky. ... You, I think.',
+              },
+              { who: 'You', text: 'The History of Philosophy. Everybody who ever thought hard about why we are here.' },
+            ],
+          },
+          {
+            scene: 'bed',
+            caption: 'You turn the pages in bed, and the pages turn slower, and then they stop.',
+            lines: [
+              { who: 'You', text: 'The Greeks. Wonder, they said, is where philosophy starts.' },
+              { who: 'You', text: '...I wonder what happens... if I... win...' },
+            ],
+          },
+          {
+            scene: 'knock',
+            caption: 'Some hours later.',
+            lines: [
+              { who: 'dana', text: 'Dana: Open the door! It is a quarter to eight!' },
+              { who: 'You', text: '...Who...? ...What time is it?' },
+              { who: 'dana', text: 'Dana: Marcus sent me! Get your coat. I am not going to knock again!' },
+            ],
+          },
+        ],
+      },
+      // Back from the reel: in the flat, with somebody calling on the other side of the door.
+      { kind: 'teleport', areaId: 'home', col: 6, row: 7 },
       { kind: 'fade', to: 'in' },
       // After the film, or after skipping it: how to play, once, in one line.
       {

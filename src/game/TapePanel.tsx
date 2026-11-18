@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import type { ReelLine } from '../world/events'
-import { parseCards, type SeatName, type TapeExhibit, type TapeHand } from '../world/tape'
+import { HAND_LADDER, parseCards, type SeatName, type TapeExhibit, type TapeHand } from '../world/tape'
 import { CHARACTERS } from '../world/characters'
 import type { Card as CardData } from '../engine/types'
 import { playSound } from '../audio/audio'
@@ -364,6 +364,33 @@ function BetsExhibit({ ex, p }: { ex: Extract<TapeExhibit, { kind: 'bets' }>; p:
   )
 }
 
+/** The whole ladder of hands, best first, in two columns of five. */
+function RankingExhibit({ p }: { p: number }) {
+  const rowH = 17
+  return (
+    <>
+      {HAND_LADDER.map((h, i) => {
+        const col = i < 5 ? 0 : 1
+        const y = (i % 5) * rowH
+        const x = 2 + col * 122
+        return (
+          <div key={h.name} data-rung={i + 1}>
+            <At x={x} y={y} p={p}>
+              <Label text={`${i + 1}`} p={p * 2} ink={i === 0 ? CHALK_GOLD : CHALK_DIM} />
+            </At>
+            <At x={x + 20} y={y} p={p} style={{ whiteSpace: 'nowrap' }}>
+              <Label text={h.name} p={p} ink={CHALK_GOLD} />
+            </At>
+            <At x={x + 20} y={y + 8} p={p} style={{ whiteSpace: 'nowrap' }}>
+              <Label text={h.sub} p={p} ink={CHALK_DIM} />
+            </At>
+          </div>
+        )
+      })}
+    </>
+  )
+}
+
 function Exhibit({ ex, p }: { ex: TapeExhibit; p: number }) {
   switch (ex.kind) {
     case 'hands':
@@ -374,6 +401,8 @@ function Exhibit({ ex, p }: { ex: TapeExhibit; p: number }) {
       return <SeatsExhibit ex={ex} p={p} />
     case 'bets':
       return <BetsExhibit ex={ex} p={p} />
+    case 'ranking':
+      return <RankingExhibit p={p} />
   }
 }
 

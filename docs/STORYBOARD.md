@@ -688,3 +688,15 @@ fame? (c) Should Kit's seat at the final table be a real opponent or a cameo?
   and `*-boss-sendoff` (after) beats. The "after" perks in §8.3 (debt interest
   halved, Hal's lesson free, the Fixer's price) are **not built**, because each
   needs mechanics, not data; they are lines only.
+
+
+---
+
+## 8. The philosophy-forward frame (2026-11-17)
+
+The player is a reader of philosophy, and the run is told through it. The "some
+time earlier" reel is now the morning of the first game: Kant's sublime at the
+bus window, Raskolnikov on the landlady's stairs, Pascal's wager over Marcus's
+invitation, Hal's video on Poogle, a History of Philosophy read to sleep, and Dana
+at the door. See REQUESTS.md ("Philosophy theme, round 1"). Hal's tape is
+no longer at Marcus's table.
