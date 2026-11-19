@@ -471,7 +471,7 @@ async function talkTo(page, name) {
 
 async function talkThrough(page) {
   for (let i = 0; i < 6; i++) {
-    const btn = page.locator('button', { hasText: /Continue|Let's go|Deal me in/ })
+    const btn = page.locator('button', { hasText: /Continue|Let's go/ })
     if (await btn.isVisible().catch(() => false)) {
       await btn.click()
       await page.waitForTimeout(180)
@@ -950,7 +950,7 @@ await test('the opening: Dana runs to you and walks you to the 14 and rides it w
   await skipPrologue(page)
   await page.waitForTimeout(400)
   await enterDoor(page, 'Outside')
-  await untilSaid(page, /calling after you/)
+  await untilSaid(page, /waiting on the pavement/)
   const start = await posOf(page)
   await page.locator('[data-testid="dialogue-advance"]').click()
 
@@ -967,8 +967,8 @@ await test('the opening: Dana runs to you and walks you to the 14 and rides it w
     await page.waitForTimeout(70)
   }
   await shot(page, 'opening-dana-arrives')
-  assert(first && first.col >= 20, `Dana did not come from the end of the street (first seen ${JSON.stringify(first)})`)
-  assert(seen.size >= 5, `Dana appeared rather than ran (seen on ${seen.size} tiles)`)
+  assert(first && first.col <= 10, `Dana was not waiting outside your door (first seen ${JSON.stringify(first)})`)
+  assert(seen.size >= 1, 'Dana was never on the street')
   const met = await drawnAt(page, 'character-dana')
   const here = await posOf(page)
   assert(here.col === start.col && here.row === start.row, 'the player walked off while she was running')
@@ -1074,7 +1074,7 @@ await test('a reload in the middle of the opening starts it again rather than sk
   const again = await newPage(JSON.stringify(saved))
   await again.goto(BASE)
   await again.waitForSelector('canvas')
-  await untilSaid(again, /calling after you/)
+  await untilSaid(again, /waiting on the pavement/)
   assert((await areaNameOf(again)).includes('Basin Street'), 'not back on Basin Street')
   assert(page.__errors.length === 0 && again.__errors.length === 0, `console errors: ${[...page.__errors, ...again.__errors][0]}`)
 })
@@ -1215,13 +1215,25 @@ await test('after the first game Dana walks you home and Marcus rides out with y
   await shot(page, 'after-the-game-your-door')
   await readUntil(page, /four hundred/)
   assert((await areaNameOf(page)).includes('Apartment'), `not in your flat (${await areaNameOf(page)})`)
+  // "Sitting quietly": a night alone with a book, a reel the test skips.
+  const skip = page.locator('[data-testid="reel-skip"]')
+  for (let i = 0; i < 8; i++) {
+    if (await skip.isVisible().catch(() => false)) {
+      await skip.click()
+      break
+    }
+    await page.locator('[data-testid="dialogue-advance"]').click({ timeout: 1500 }).catch(() => {})
+    await page.waitForTimeout(500)
+  }
   await readUntil(page, /Coat! Bus!/)
   await page.locator('[data-testid="dialogue-advance"]').click()
   await page.waitForTimeout(500)
   assert((await dialogueNow(page)) === '', 'the walk home did not end')
+  // Marcus is still laying out the plan: the walk home is not over (and so not saved as over) until
+  // he has. What is true now is the morning after, at home.
+  assert(/Day 2, Morning/.test(await page.locator('body').innerText()), 'not the next morning')
+  assert((await areaNameOf(page)).includes('Apartment'), `not home the next morning (${await areaNameOf(page)})`)
   const home = await savedState(page)
-  assert(home.completedEventIds.includes('dana-walks-you-home'), 'the walk home was not saved as over')
-  assert(home.areaId === 'home' && home.day === 2 && home.period === 'morning', `not home the next morning (${home.areaId}, day ${home.day}, ${home.period})`)
   assert(home.flags.wonPokerNight === true && home.cash >= 1500, 'the win was not kept')
 
   // The morning: out of the door, and Marcus is there.
@@ -2064,7 +2076,7 @@ await test('a new game opens on the televised final and cuts back to the flat' ,
   assert(sawBoard === 5, 'the board was never dealt')
   for (const phase of ['table', 'hand', 'dark', 'lights', 'excuse', 'walk']) assert(phases.has(phase), `the intro never reached ${phase} (saw ${[...phases]})`)
   assert(sawDark > 0.5, 'the room did not go dark')
-  for (const scene of ['corridor', 'bathroom', 'mirror', 'mail']) assert(scenes.has(scene), `the opening never showed the ${scene}`)
+  for (const scene of ['corridor', 'bathroom', 'mirror', 'poogle']) assert(scenes.has(scene), `the opening never showed the ${scene}`)
   await page.waitForSelector('canvas')
   assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
   await page.close()

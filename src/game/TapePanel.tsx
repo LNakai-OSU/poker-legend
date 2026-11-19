@@ -202,7 +202,7 @@ function HandsExhibit({ hands, note, p }: { hands: TapeHand[]; note?: string; p:
   return (
     <>
       {hands.map((h, i) => (
-        <HandRow key={h.title} hand={h} y={ys[i]} p={p} />
+        <HandRow key={`${i}-${h.title}`} hand={h} y={ys[i]} p={p} />
       ))}
       <Note text={note} p={p} />
     </>
