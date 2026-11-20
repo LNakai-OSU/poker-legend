@@ -33,7 +33,7 @@ export function ReelScene({
 }) {
   const [at, setAt] = useState({ panel: 0, line: 0 })
   // The stills are scaled to whole device pixels, as everything else in the opening is.
-  const stillScale = useCrispScale(REEL_W, REEL_H / 0.55, 6, 1)
+  const stillScale = useCrispScale(REEL_W, REEL_H / 0.84, 12, 1)
   const tickerWidth = REEL_W * stillScale
   const finished = useRef(false)
   const panel = panels[at.panel]
@@ -128,7 +128,22 @@ export function ReelScene({
       {!custom && panel.caption && (
         <div
           data-testid="reel-caption"
-          style={{ color: '#9a9ab0', fontFamily: UI_FONT, fontStyle: 'italic', padding: '10px 16px', textAlign: 'center', maxWidth: 640 }}
+          style={{
+            position: 'absolute',
+            top: 8,
+            left: 0,
+            right: 0,
+            margin: '0 auto',
+            width: 'fit-content',
+            background: 'rgba(5,4,10,0.7)',
+            color: '#c8c8d8',
+            fontFamily: UI_FONT,
+            fontStyle: 'italic',
+            padding: '4px 12px',
+            textAlign: 'center',
+            maxWidth: 640,
+            zIndex: 5,
+          }}
         >
           {panel.caption}
         </div>

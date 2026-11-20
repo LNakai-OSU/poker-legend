@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import type { Card } from '../engine/types'
 import { personalityFor } from '../world/characters'
 import type { AvatarLook, Expression } from './avatars'
@@ -23,10 +23,13 @@ import { useTouchFirst } from './device'
 const THEME = TABLE_THEMES.finale
 const SMALL = CARD_ART.small
 /** The shot is laid out on a grid this wide and this tall; one scale fits it to the window. */
-const W = 200
-const VIDEO_Y = 34
-const VIDEO_H = 190
-const H = 292
+const W_TALL = 200
+const VIDEO_Y_TALL = 34
+const VIDEO_H_TALL = 190
+const H_TALL = 292
+/** In a wide window the shot is a wide frame: the close-up fills it, the hands and board sit over its edges. */
+const W_WIDE = 320
+const H_WIDE = 180
 
 export const YOU_LOOK: AvatarLook = { skin: '#e8b890', hair: '#3a2a20', hairStyle: 'short', shirt: '#4a7a5a', accessory: 'none' }
 
@@ -67,12 +70,17 @@ const TAG_COLOUR: Record<string, string> = {
 const money = (n: number) => `$${n.toLocaleString('en-US')}`
 
 export function BroadcastShot({ shot }: { shot: Shot }) {
+  const wide = useIsWide()
+  const W = wide ? W_WIDE : W_TALL
+  const H = wide ? H_WIDE : H_TALL
+  const VIDEO_Y = wide ? 0 : VIDEO_Y_TALL
+  const VIDEO_H = wide ? H_WIDE : VIDEO_H_TALL
   const P = useCrispScale(W, H, 8, 1)
   const touch = useTouchFirst()
   const u = (n: number) => n * P
   const look = shot.focus === 'you' ? YOU_LOOK : personalityFor(shot.focus).look
   const face = portraitUrl(look, shot.expression, shot.focus === 'you' ? 'hero' : shot.focus)
-  const portraitPx = PORTRAIT_SIZE * P * 3
+  const portraitPx = PORTRAIT_SIZE * P * (wide ? 2.6 : 3)
   const box = (x: number, y: number, w: number, h: number, extra?: CSSProperties): CSSProperties => ({
     position: 'absolute',
     left: u(x),
@@ -106,7 +114,7 @@ export function BroadcastShot({ shot }: { shot: Shot }) {
             style={{
               position: 'absolute',
               left: (u(W) - portraitPx) / 2,
-              top: u(6),
+              top: wide ? u(22) : u(6),
               width: portraitPx,
               height: portraitPx,
               imageRendering: 'pixelated',
@@ -118,7 +126,7 @@ export function BroadcastShot({ shot }: { shot: Shot }) {
         {/* The banner over the top. */}
         <div
           data-testid="broadcast-headline"
-          style={box(4, 8, W - 8, 22, {
+          style={box(4, 4, W - 8, wide ? 16 : 22, {
             background: '#f8f8f0',
             border: `${P}px solid #0c0a10`,
             boxSizing: 'border-box',
@@ -133,7 +141,7 @@ export function BroadcastShot({ shot }: { shot: Shot }) {
 
         {/* Each hand still live: cards, odds, what they did, what they have left. */}
         {shot.seats.map((seat, i) => {
-          const y = VIDEO_Y + 100 + i * 45
+          const y = wide ? 26 + i * 46 : VIDEO_Y + 100 + i * 45
           return (
             <div key={seat.who} data-testid={`shot-seat-${seat.who}`} style={box(4, y, 94, 42)}>
               <div style={box(0, 0, 94, 42, { background: 'rgba(8,10,20,0.78)', borderRadius: P })} />
@@ -164,7 +172,7 @@ export function BroadcastShot({ shot }: { shot: Shot }) {
         })}
 
         {/* The blinds, the board, the pot. */}
-        <div data-testid="shot-board-panel" style={box(102, VIDEO_Y + 128, 94, 58)}>
+        <div data-testid="shot-board-panel" style={wide ? box(W - 98, 26, 94, 58) : box(102, VIDEO_Y + 128, 94, 58)}>
           <div style={box(0, 0, 94, 58, { background: 'rgba(8,10,20,0.78)', borderRadius: P })} />
           <div style={box(3, 3, 88, 8, { display: 'flex', justifyContent: 'space-between' })}>
             <PixelText text="BLINDS" scale={P} ink={INK.dim} />
@@ -197,7 +205,7 @@ export function BroadcastShot({ shot }: { shot: Shot }) {
           theme={THEME}
           scale={P}
           testId="dock"
-          style={box(4, VIDEO_Y + VIDEO_H + 4, W - 8, 58, { padding: 3 * P, boxSizing: 'border-box', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' })}
+          style={box(4, wide ? H - 38 : VIDEO_Y + VIDEO_H + 4, W - 8, wide ? 34 : 58, { padding: 3 * P, boxSizing: 'border-box', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' })}
         >
           <PxLine scale={P} wrap ink={{ color: '#2a5a9a', shadow: '#c8d8f0' }} testId="broadcast-line" text={shot.commentary} />
           <PxLine scale={P} align="right" ink={{ color: '#8a8a98', shadow: '#dcdce4' }} testId="intro-prompt" text={touch ? 'tap ▸' : 'space ▸'} />
@@ -205,4 +213,16 @@ export function BroadcastShot({ shot }: { shot: Shot }) {
       </div>
     </div>
   )
+}
+
+/** A landscape window gets the wide frame; a phone held upright keeps the tall one. */
+function useIsWide(): boolean {
+  const read = () => window.innerWidth / Math.max(1, window.innerHeight) >= 1.25
+  const [wide, setWide] = useState(read)
+  useEffect(() => {
+    const on = () => setWide(read())
+    window.addEventListener('resize', on)
+    return () => window.removeEventListener('resize', on)
+  }, [])
+  return wide
 }

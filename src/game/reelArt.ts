@@ -1536,91 +1536,151 @@ const SCENES: Record<ReelScene, (c: Ctx, t: number, notes?: Notification[]) => v
   },
   // Bed, late: the window, a lamp going down, a book going slack in your hand, and sleep.
   bed(c, t) {
-    // Wall and floor.
-    rect(c, '#161a36', 0, 0, REEL_W, REEL_H)
-    for (let x = 0; x < REEL_W; x += 12) rect(c, '#1a1e3c', x, 0, 6, 64)
-    rect(c, '#0e1128', 0, 62, REEL_W, 2)
-    rect(c, '#3a2a22', 0, 64, REEL_W, 26)
-    for (let x = 0; x < REEL_W; x += 24) rect(c, '#2e2018', x, 64, 1, 26)
+    const lampOn = t < 4600
+    const fade = lampOn ? Math.max(0.35, 1 - t / 6000) : 0
+    const wash = (color: string, a: number, x: number, y: number, w: number, h: number) => {
+      c.globalAlpha = a
+      rect(c, color, x, y, w, h)
+      c.globalAlpha = 1
+    }
+    // Wall: papered in soft stripes with a darker dado and a skirting.
+    const wallBands = ['#12162e', '#141833', '#161b36', '#181d3a']
+    wallBands.forEach((col, i) => rect(c, col, 0, i * 16, REEL_W, 16))
+    for (let x = 0; x < REEL_W; x += 10) rect(c, '#1b2040', x, 0, 4, 60)
+    for (let y = 4; y < 58; y += 8) for (let x = 5; x < REEL_W; x += 20) rect(c, '#1f2546', x + ((y / 8) % 2) * 10, y, 2, 2)
+    rect(c, '#0f1228', 0, 50, REEL_W, 12)
+    rect(c, '#2a2038', 0, 50, REEL_W, 1)
+    rect(c, '#2e2440', 0, 61, REEL_W, 3)
+    // Floor: boards in two tones, a rug under the bed.
+    for (let x = 0; x < REEL_W; x += 16) {
+      rect(c, (x / 16) % 2 ? '#3a2a22' : '#34261f', x, 64, 16, 26)
+      rect(c, '#241812', x, 64, 1, 26)
+    }
     rect(c, '#4a362a', 0, 64, REEL_W, 1)
-    // The window, stars and moon, curtains drawn back.
-    rect(c, '#2a2f58', 10, 8, 38, 36)
-    rect(c, '#0c1030', 13, 11, 32, 30)
-    for (let i = 0; i < 9; i++) if ((Math.floor(t / 700) + i) % 4) rect(c, '#e8e4d0', 15 + ((i * 11) % 28), 13 + ((i * 7) % 20), 1, 1)
-    disc(c, '#f4f0d8', 36, 20, 4)
-    disc(c, '#0c1030', 38, 19, 3)
-    rect(c, '#2a2f58', 28, 11, 1, 30)
-    rect(c, '#2a2f58', 13, 26, 32, 1)
-    rect(c, '#6a3a4a', 6, 6, 9, 42)
-    rect(c, '#7a4a5a', 8, 8, 2, 38)
-    rect(c, '#6a3a4a', 44, 6, 9, 42)
-    rect(c, '#7a4a5a', 49, 8, 2, 38)
-    rect(c, '#52381f', 4, 5, 51, 2)
-    // A picture and a clock above the bed.
-    rect(c, '#52381f', 76, 12, 22, 16)
-    rect(c, '#8a9ab8', 78, 14, 18, 12)
-    rect(c, '#5a7a6a', 78, 22, 18, 4)
-    rect(c, '#d8d4c4', 112, 14, 10, 10)
-    rect(c, '#1c1c28', 116, 16, 1, 4)
-    rect(c, '#1c1c28', 116, 19, 3, 1)
-    // A stack of books on the floor and a rug.
-    rect(c, '#4a2a3a', 8, 58, 20, 20)
-    rect(c, '#5a3a4a', 10, 60, 16, 16)
-    rect(c, '#2a4a7a', 54, 78, 16, 3)
-    rect(c, '#7a2a2a', 55, 75, 14, 3)
-    rect(c, '#3a6a3a', 56, 72, 12, 3)
-    // The bed: frame, mattress, pillow, a blanket in folds.
-    rect(c, '#3a2418', 28, 38, 5, 46)
-    rect(c, '#52381f', 28, 38, 5, 2)
-    rect(c, '#3a2418', 28, 66, 108, 6)
-    rect(c, '#3a2418', 132, 56, 4, 28)
-    rect(c, '#d8d4c8', 33, 52, 104, 14)
-    rect(c, '#e8e4d8', 34, 46, 22, 9)
-    rect(c, '#c8c4b8', 34, 53, 22, 2)
-    // Your head on the pillow, eyes closed, and the hair on it.
-    rect(c, '#e0b890', 38, 46, 11, 9)
-    rect(c, '#5a3a22', 37, 44, 13, 4)
-    rect(c, '#5a3a22', 37, 46, 3, 5)
+    rect(c, '#5a2a3a', 22, 80, 118, 9)
+    rect(c, '#7a3a4a', 24, 81, 114, 7)
+    for (let x = 26; x < 138; x += 8) rect(c, '#e0b870', x, 84, 3, 1)
+    // The window: frame, glass in bands, stars twinkling, a crescent, curtains in folds.
+    rect(c, '#3a3f6a', 9, 7, 40, 38)
+    for (let i = 0; i < 6; i++) rect(c, ['#0a0e2c', '#0c1232', '#0e1638', '#10193e', '#131c44', '#16204a'][i], 12, 10 + i * 5, 34, 5)
+    for (let i = 0; i < 12; i++) if ((Math.floor(t / 600) + i) % 4) rect(c, i % 3 ? '#e8e4d0' : '#9ab0e8', 14 + ((i * 11) % 30), 12 + ((i * 7) % 22), 1, 1)
+    disc(c, '#f4f0d8', 36, 20, 5)
+    disc(c, '#0e1638', 38, 19, 4)
+    rect(c, '#3a3f6a', 28, 10, 2, 33)
+    rect(c, '#3a3f6a', 12, 26, 34, 2)
+    rect(c, '#52381f', 6, 5, 46, 3)
+    rect(c, '#6a3a4a', 7, 8, 9, 44)
+    rect(c, '#4a2636', 7, 8, 2, 44)
+    rect(c, '#8a5266', 11, 8, 1, 44)
+    rect(c, '#6a3a4a', 43, 8, 9, 44)
+    rect(c, '#4a2636', 50, 8, 2, 44)
+    rect(c, '#8a5266', 46, 8, 1, 44)
+    // Moonlight: a pale slant from the window across the wall, the floor and the foot of the bed.
+    for (let i = 0; i < 6; i++) wash('#b8c8f0', 0.02, 14 + i * 4, 44 + i * 2, 28 - i * 2, 20 - i)
+    // A picture and a wall clock, and a shelf with a plant.
+    rect(c, '#52381f', 76, 10, 24, 18)
+    rect(c, '#8a9ab8', 78, 12, 20, 14)
+    rect(c, '#4a6a8a', 78, 19, 20, 7)
+    rect(c, '#5a7a6a', 78, 22, 20, 4)
+    rect(c, '#e8d890', 90, 14, 4, 4)
+    rect(c, '#d8d4c4', 112, 12, 12, 12)
+    rect(c, '#14141e', 111, 11, 14, 1)
+    rect(c, '#14141e', 111, 24, 14, 1)
+    rect(c, '#1c1c28', 118, 14, 1, 5)
+    rect(c, '#1c1c28', 118, 18, 4, 1)
+    rect(c, '#52381f', 128, 34, 26, 2)
+    rect(c, '#2a6a4a', 135, 26, 3, 8)
+    rect(c, '#3a8a5a', 131, 28, 4, 3)
+    rect(c, '#3a8a5a', 138, 26, 4, 3)
+    rect(c, '#8a4a2a', 133, 31, 8, 3)
+    // A stack of books and a pair of slippers on the floor.
+    rect(c, '#2a4a7a', 4, 80, 18, 4)
+    rect(c, '#7a2a2a', 5, 76, 16, 4)
+    rect(c, '#3a6a3a', 6, 72, 14, 4)
+    rect(c, '#e8e0c0', 7, 73, 12, 1)
+    rect(c, '#6a4a3a', 72, 84, 6, 3)
+    rect(c, '#6a4a3a', 80, 85, 6, 3)
+    // The bed: headboard, posts, frame, mattress, pillow.
+    rect(c, '#3a2418', 28, 36, 6, 50)
+    rect(c, '#52381f', 27, 35, 8, 3)
+    rect(c, '#6a4a2a', 29, 39, 1, 44)
+    rect(c, '#3a2418', 130, 58, 5, 28)
+    rect(c, '#52381f', 129, 57, 7, 2)
+    rect(c, '#2a1810', 34, 70, 96, 6)
+    rect(c, '#3a2418', 34, 68, 96, 2)
+    rect(c, '#e4e0d4', 34, 54, 96, 14)
+    rect(c, '#c8c4b8', 34, 66, 96, 2)
+    // The pillow, with the dent of a head in it.
+    rect(c, '#f0ece0', 35, 46, 24, 10)
+    rect(c, '#fffaf0', 36, 46, 22, 2)
+    rect(c, '#cac6ba', 35, 54, 24, 2)
+    rect(c, '#dcd8cc', 40, 49, 12, 5)
+    // You, asleep: face in three-quarter, hair on the pillow, an arm up by the face.
+    rect(c, '#e0b890', 40, 46, 11, 9)
+    rect(c, '#f0cfa8', 42, 47, 6, 4)
+    rect(c, '#5a3a22', 38, 43, 14, 5)
+    rect(c, '#6a4a2e', 40, 43, 8, 2)
+    rect(c, '#5a3a22', 38, 46, 3, 7)
     rect(c, '#3a2418', 43, 50, 4, 1)
-    rect(c, '#d09878', 47, 52, 2, 1)
-    // The blanket, breathing, with a few creases and a darker edge.
+    rect(c, '#3a2418', 47, 50, 3, 1)
+    rect(c, '#d09878', 48, 53, 3, 1)
+    rect(c, '#9a5a4a', 44, 53, 4, 1)
+    // The blanket, breathing: shaded body, a turned-down hem, folds and a lit ridge.
     const breathe = Math.round(Math.sin(t / 700) * 0.8)
-    rect(c, '#4a5a8a', 52, 50 + breathe, 84, 18 - breathe)
-    rect(c, '#5a6a9a', 52, 50 + breathe, 84, 2)
-    rect(c, '#3a4a78', 52, 65, 84, 3)
-    for (const x of [64, 86, 104, 120]) rect(c, '#3e4e7e', x, 53 + breathe, 1, 11)
-    rect(c, '#6a7aaa', 66, 54 + breathe, 10, 1)
-    rect(c, '#6a7aaa', 98, 56 + breathe, 12, 1)
-    // The book: held up, then sagging, then slack on your chest. Your hand lets go of it.
+    rect(c, '#44548a', 52, 50 + breathe, 80, 20 - breathe)
+    rect(c, '#566aa4', 52, 50 + breathe, 80, 3)
+    rect(c, '#d8d8e4', 52, 52 + breathe, 80, 2)
+    rect(c, '#34447a', 52, 64, 80, 6)
+    rect(c, '#2a3868', 52, 68, 80, 2)
+    for (const x of [62, 82, 100, 118]) {
+      rect(c, '#3a4a80', x, 55 + breathe, 2, 11)
+      rect(c, '#5a6eaa', x + 2, 55 + breathe, 1, 9)
+    }
+    rect(c, '#7a8ec0', 66, 56 + breathe, 10, 1)
+    rect(c, '#7a8ec0', 98, 58 + breathe, 12, 1)
+    // The book, going slack: held up, tilting, lying open on your chest.
     const sag = Math.min(1, t / 4200)
     const bx = 56 + Math.round(sag * 6)
-    const by = 42 + Math.round(sag * 8) + breathe
-    rect(c, '#2a4a7a', bx - 1, by + 1, 24, 12)
-    rect(c, '#f0ecdc', bx, by, 22, 10)
-    rect(c, '#d8d4c4', bx + 10, by, 2, 10)
+    const by = 42 + Math.round(sag * 9) + breathe
+    rect(c, '#1a3a6a', bx - 1, by + 1, 26, 12)
+    rect(c, '#2a4a7a', bx - 1, by + 1, 26, 2)
+    rect(c, '#f0ecdc', bx, by, 24, 10)
+    rect(c, '#c8c4b0', bx + 11, by, 2, 10)
     for (let i = 0; i < 3; i++) {
-      rect(c, '#9a9aa8', bx + 2, by + 2 + i * 3, 7, 1)
-      rect(c, '#9a9aa8', bx + 13, by + 2 + i * 3, 7, 1)
+      rect(c, '#8a8a98', bx + 2, by + 2 + i * 3, 8, 1)
+      rect(c, '#8a8a98', bx + 14, by + 2 + i * 3, 8, 1)
     }
-    rect(c, '#e0b890', bx + 8 - Math.round(sag * 5), by + 7 + Math.round(sag * 3), 5, 3)
-    // The nightstand and its lamp: warm for a while, then out.
-    const lampOn = t < 4600
-    rect(c, '#52381f', 140, 60, 16, 24)
-    rect(c, '#3a2418', 140, 60, 16, 2)
+    rect(c, '#e0b890', bx + 9 - Math.round(sag * 6), by + 7 + Math.round(sag * 3), 6, 3)
+    rect(c, '#c89c78', bx + 9 - Math.round(sag * 6), by + 9 + Math.round(sag * 3), 6, 1)
+    // The nightstand, a glass of water, and the lamp with its shade: warm, then out.
+    rect(c, '#52381f', 138, 60, 18, 26)
+    rect(c, '#6a4a2a', 138, 60, 18, 2)
+    rect(c, '#3a2418', 140, 66, 14, 8)
+    rect(c, '#c9a24a', 146, 69, 2, 2)
+    rect(c, '#a8c8e8', 140, 55, 4, 5)
+    rect(c, '#cfe4f4', 141, 55, 1, 4)
     rect(c, '#52381f', 147, 48, 2, 12)
-    rect(c, lampOn ? '#f4c85a' : '#6a5a30', 142, 38, 12, 10)
-    rect(c, lampOn ? '#fbe08a' : '#7a6a3a', 144, 38, 8, 3)
+    rect(c, '#3a2418', 144, 58, 8, 2)
+    rect(c, lampOn ? '#f4c85a' : '#6a5a30', 141, 38, 14, 10)
+    rect(c, lampOn ? '#fbe08a' : '#7a6a3a', 143, 38, 10, 3)
+    rect(c, lampOn ? '#c8903a' : '#4a4020', 141, 46, 14, 2)
     if (lampOn) {
-      const fade = Math.max(0.35, 1 - t / 6000)
-      for (let i = 0; i < 8; i++) {
-        c.globalAlpha = 0.03 * fade
-        disc(c, '#f4c85a', 148, 48, 12 + i * 6)
+      // Light pooled on the wall, the nightstand, the pillow side of the bed.
+      for (let i = 0; i < 10; i++) {
+        c.globalAlpha = 0.032 * fade
+        disc(c, '#f4c85a', 148, 46, 8 + i * 5)
       }
       c.globalAlpha = 1
+      wash('#f4c85a', 0.1 * fade, 138, 58, 18, 4)
     } else {
-      c.globalAlpha = 0.3
-      rect(c, '#05061a', 0, 0, REEL_W, REEL_H)
-      c.globalAlpha = 1
+      // Lights out: the room cools and the moon is what is left.
+      wash('#04051a', 0.38, 0, 0, REEL_W, REEL_H)
+    }
+    // Dust in the moonlight, drifting.
+    for (let i = 0; i < 7; i++) {
+      const dx = (i * 23 + t / 90) % 46
+      const dy = (i * 17 + t / 130) % 30
+      wash('#d8e0ff', 0.35, 18 + dx, 42 + dy, 1, 1)
     }
     // The z's, once you are under.
     if (t > 2200) {
@@ -1629,6 +1689,11 @@ const SCENES: Record<ReelScene, (c: Ctx, t: number, notes?: Notification[]) => v
         drawLabel(c, 'z', 54 + age / 3 + i * 3, 36 - age / 3, '#9aa4c8')
       }
     }
+    // A letterbox of shadow at the corners, to hold the eye on the bed.
+    wash('#000', 0.18, 0, 0, REEL_W, 3)
+    wash('#000', 0.22, 0, 87, REEL_W, 3)
+    wash('#000', 0.15, 0, 0, 3, REEL_H)
+    wash('#000', 0.15, 157, 0, 3, REEL_H)
   },
   // The door, shaking: somebody on the other side with a fist.
   knock(c, t) {

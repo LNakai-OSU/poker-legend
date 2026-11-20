@@ -2,14 +2,13 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import type { Card as CardData } from '../engine/types'
 import type { HandResult, PublicPlayerView, PublicState } from '../engine/table'
 import { playSound } from '../audio/audio'
-import { HERO_FIGURE } from '../overworld/casting'
-import { drawPerson, type WalkFrame } from '../overworld/characterArt'
 import { PokerTableView } from './PokerTableView'
 import { TableStage } from './TableStage'
 import { TABLE_THEMES } from './tableThemes'
 import type { Announcement } from './HandAnnouncer'
-import type { SceneLayout, SceneNeeds } from './tableLayout'
+import type { SceneNeeds } from './tableLayout'
 import { DialogueBox } from './DialogueBox'
+import { SneakOut } from './SneakOut'
 import { BroadcastShot, type Shot } from './BroadcastShot'
 import { TYPE, UI_FONT } from './pixel/webFont'
 
@@ -212,6 +211,8 @@ const BLACKOUT_MS = 2600
 export function BadBeatIntro({ onDone }: { onDone: (skipped?: boolean) => void }) {
   const [phase, setPhase] = useState<Phase>('table')
   const [index, setIndex] = useState(0)
+  // First, the whole table with nothing over it; a press brings the commentary.
+  const [looked, setLooked] = useState(false)
   const [dark, setDark] = useState(0)
   const [lightsAt, setLightsAt] = useState(0)
   const finished = useRef(false)
@@ -261,6 +262,18 @@ export function BadBeatIntro({ onDone }: { onDone: (skipped?: boolean) => void }
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  // The silent look at the table: a press brings the commentary.
+  useEffect(() => {
+    if (phase !== 'table' || looked) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== ' ' && e.key !== 'Enter' && e.key !== 'e' && e.key !== 'x') return
+      e.preventDefault()
+      if (!e.repeat) setLooked(true)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [phase, looked])
+
   // Space moves the hand along while it is playing.
   useEffect(() => {
     if (phase !== 'hand') return
@@ -291,7 +304,8 @@ export function BadBeatIntro({ onDone }: { onDone: (skipped?: boolean) => void }
     }
   }, [frame])
   const onAir = phase === 'hand' || phase === 'dark'
-  const showTable = !onAir
+  const sneaking = phase === 'excuse' || phase === 'walk'
+  const showTable = !onAir && !sneaking
   const { state, result } = useMemo(() => stateOf(phase === 'table' ? TABLE_FRAME : frame, 1), [frame, phase])
   const [ring, setRing] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
   useEffect(() => {
@@ -328,13 +342,12 @@ export function BadBeatIntro({ onDone }: { onDone: (skipped?: boolean) => void }
             <PokerTableView
               state={state}
               lastResult={result}
-              yourHole={phase === 'walk' ? [] : phase === 'table' ? [] : YOUR_HAND}
+              yourHole={phase === 'table' ? [] : YOUR_HAND}
               announcement={null}
               blinds={{ small: 1000, big: 2000 }}
               layout={layout}
               theme={THEME}
             />
-            {phase === 'walk' && <WalkOff layout={layout} />}
           </div>
         )}
         dock={() => null}
@@ -359,7 +372,32 @@ export function BadBeatIntro({ onDone }: { onDone: (skipped?: boolean) => void }
               }}
             />
           )}
-          <DialogueBox
+          {!looked && (
+            <button
+              data-testid="table-look"
+              onClick={() => setLooked(true)}
+              style={{
+                position: 'absolute',
+                top: 12,
+                left: 0,
+                right: 0,
+                margin: '0 auto',
+                width: 'fit-content',
+                zIndex: 10,
+                background: 'rgba(10,10,16,0.88)',
+                color: '#f2c14e',
+                border: '2px solid #4a4a66',
+                borderRadius: 8,
+                padding: '6px 14px',
+                fontFamily: UI_FONT,
+                fontSize: TYPE.body,
+                cursor: 'pointer',
+              }}
+            >
+              The final table. You are the short stack (ringed). Space ▸
+            </button>
+          )}
+          {looked && <DialogueBox
             key="table"
             speaker="Chip"
             lines={[
@@ -367,7 +405,7 @@ export function BadBeatIntro({ onDone }: { onDone: (skipped?: boolean) => void }
               'And look at the stacks — our player in the orange jacket has the fewest chips in the room. Ninety thousand to Bernard’s three hundred!',
             ]}
             onFinish={() => setPhase('hand')}
-          />
+          />}
         </>
       )}
       {/* The rig failing: a black sheet that flickers up, with a red emergency strip along the floor. */}
@@ -379,14 +417,14 @@ export function BadBeatIntro({ onDone }: { onDone: (skipped?: boolean) => void }
           position: 'absolute',
           inset: 0,
           background: '#000',
-          opacity: phase === 'lights' || phase === 'excuse' || phase === 'walk' ? 0.94 : dark,
+          opacity: phase === 'lights' ? 0.94 : sneaking ? 0 : dark,
           transition: 'opacity 70ms steps(2)',
           pointerEvents: 'none',
           // Above the table's own raised pieces (the blind and dealer chips sit at z 3).
           zIndex: 4,
         }}
       />
-      {(phase === 'lights' || phase === 'excuse' || phase === 'walk') && (
+      {phase === 'lights' && (
         <div
           aria-hidden="true"
           style={{
@@ -418,7 +456,7 @@ export function BadBeatIntro({ onDone }: { onDone: (skipped?: boolean) => void }
           onFinish={() => setPhase('walk')}
         />
       )}
-      {phase === 'walk' && <WalkTimer onDone={() => done()} />}
+      {sneaking && <SneakOut go={phase === 'walk'} onDone={() => done()} />}
       <button
         data-testid="reel-skip"
         onClick={(e) => {
@@ -447,56 +485,3 @@ const skipStyle: CSSProperties = {
   fontSize: TYPE.body,
   cursor: 'pointer',
 }
-
-/** The cut to the corridor comes a moment after you start walking. */
-function WalkTimer({ onDone }: { onDone: () => void }) {
-  useEffect(() => {
-    const t = window.setTimeout(onDone, 3200)
-    return () => window.clearTimeout(t)
-  }, [])
-  return null
-}
-
-/**
- * The player, in the same sprite the street uses, stands from the chair and
- * walks out of the light: three frames of the walk, left across the floor.
- */
-function WalkOff({ layout }: { layout: SceneLayout }) {
-  const ref = useRef<HTMLCanvasElement>(null)
-  const P = layout.scale
-  const start = layout.table.hero
-  const widthPx = layout.table.w * P
-  const heightPx = layout.table.h * P
-  useEffect(() => {
-    const canvas = ref.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')!
-    ctx.imageSmoothingEnabled = false
-    let raf = 0
-    const t0 = performance.now()
-    const tick = () => {
-      const t = performance.now() - t0
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
-      // Up out of the chair for the first moment, then away to the left.
-      const standing = Math.min(1, t / 500)
-      const walk = Math.max(0, t - 500)
-      const x = (start.x + 4) * P - (walk / 3000) * start.x * P * 1.6
-      const y = (start.y - 24 * standing) * P
-      const frame = (Math.floor(walk / 160) % 3) as WalkFrame
-      drawPerson(ctx, HERO_FIGURE, walk > 0 ? 'left' : 'up', walk > 0 ? frame : 0, { x, y, scale: P })
-      raf = requestAnimationFrame(tick)
-    }
-    tick()
-    return () => cancelAnimationFrame(raf)
-  }, [P, start.x, start.y])
-  return (
-    <canvas
-      ref={ref}
-      data-testid="walk-off"
-      width={widthPx}
-      height={heightPx}
-      style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none', imageRendering: 'pixelated', zIndex: 5 }}
-    />
-  )
-}
-

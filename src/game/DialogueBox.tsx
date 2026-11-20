@@ -9,11 +9,11 @@ interface DialogueBoxProps {
   speaker: string
   lines: string[]
   onFinish: () => void
-  /** Same type, less box: the speaker leads the line and the button sits beside it. For scenes whose picture needs the room. */
+  /** Kept for callers; every box is now the slim bar. */
   compact?: boolean
 }
 
-export function DialogueBox({ speaker, lines, onFinish, compact }: DialogueBoxProps) {
+export function DialogueBox({ speaker, lines, onFinish }: DialogueBoxProps) {
   const [index, setIndex] = useState(0)
   const isLast = index === lines.length - 1
   const isTop = useKeyLayer()
@@ -53,13 +53,13 @@ export function DialogueBox({ speaker, lines, onFinish, compact }: DialogueBoxPr
       onClickCapture={swallowDoubleClick}
       onClick={advance}
       style={{
-        marginTop: compact ? 0 : 12,
+        marginTop: 0,
         flex: 'none',
         background: '#3a9d5c',
         color: '#fff',
         border: 'none',
         borderRadius: 4,
-        padding: '6px 14px',
+        padding: '4px 12px',
         fontFamily: UI_FONT,
         fontSize: TYPE.body,
         cursor: 'pointer',
@@ -70,41 +70,11 @@ export function DialogueBox({ speaker, lines, onFinish, compact }: DialogueBoxPr
     </button>
   )
 
-  if (compact) {
-    return (
-      <div
-        style={{
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          bottom: 0,
-          margin: '0 auto',
-          zIndex: 10,
-          maxWidth: 960,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 14,
-          background: 'rgba(10, 10, 16, 0.92)',
-          border: '2px solid #4a4a66',
-          borderRadius: 8,
-          padding: '8px 14px',
-          color: '#e8e8f0',
-          fontFamily: UI_FONT,
-          fontSize: readingSize(view),
-          lineHeight: 1.2,
-        }}
-      >
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <span style={{ color: '#f2c14e' }}>{speaker}: </span>
-          {lines[index]}
-        </div>
-        {button}
-      </div>
-    )
-  }
-
+  // One bar for every conversation: along the bottom edge, as short as the
+  // words allow, so the picture above it keeps the screen.
   return (
     <div
+      data-testid="dialogue-box"
       style={{
         position: 'absolute',
         left: 0,
@@ -112,20 +82,27 @@ export function DialogueBox({ speaker, lines, onFinish, compact }: DialogueBoxPr
         bottom: 0,
         margin: '0 auto',
         zIndex: 10,
-        maxWidth: 640,
-        background: 'rgba(10, 10, 16, 0.92)',
-        border: '2px solid #4a4a66',
-        borderRadius: 8,
-        padding: '16px 20px',
+        maxWidth: 1000,
+        boxSizing: 'border-box',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        background: 'rgba(10, 10, 16, 0.88)',
+        borderTop: '2px solid #4a4a66',
+        borderLeft: '2px solid #4a4a66',
+        borderRight: '2px solid #4a4a66',
+        borderRadius: '8px 8px 0 0',
+        padding: '6px 12px',
         color: '#e8e8f0',
         fontFamily: UI_FONT,
         fontSize: readingSize(view),
         lineHeight: 1.2,
       }}
     >
-      <div style={{ color: '#f2c14e', marginBottom: 6 }}>{speaker}</div>
-      {/* Two lines tall at least, so a short line doesn't make the box jump. */}
-      <div style={{ minHeight: '2.4em' }}>{lines[index]}</div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <span style={{ color: '#f2c14e' }}>{speaker}: </span>
+        {lines[index]}
+      </div>
       {button}
     </div>
   )

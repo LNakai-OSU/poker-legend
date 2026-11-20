@@ -6370,12 +6370,6 @@ export const EVENTS: GameEvent[] = [
             scene: 'sunbird',
             lines: [
               { who: 'You', text: 'Ahh... the sublime.' },
-              {
-                who: 'You',
-                text:
-                  'Kant said beauty is a pleasure in the shape of a thing. The sublime is when something is too ' +
-                  'big to hold, and you feel small, and then, oddly, bigger for having noticed.',
-              },
               { who: 'You', text: 'One bird. The whole sun behind it. And nothing in it owes anybody rent.' },
               { who: 'You', text: 'The bus lurches. The brakes hiss, and the sun is only a streetlight again.' },
               { who: 'You', text: 'Ahh— my stop!' },
