@@ -1487,6 +1487,150 @@ export const CHARACTERS: Record<string, CharacterDef> = {
       ],
     },
   },
+  // ---------------------------------------------------------------------------
+  // The thinkers up the ladder (docs/STORYBOARD.md §10): one a town, each a
+  // philosopher in a modern coat with a name of their own, each met twice. They
+  // never say whose ideas they are living; only the player's thoughts do.
+  // ---------------------------------------------------------------------------
+  mutt: {
+    // Silver Creek's Diogenes: a bench by the bus stop for a house, a lantern lit in broad daylight, and a dollar
+    // asked of everybody, the cactus first. Met coming off the bus with Marcus, and again waiting for the next one.
+    name: 'Mutt',
+    style: 'Lives on the bench by the stop.',
+    look: { skin: '#b07a52', hair: '#8a8478', hairStyle: 'long', shirt: '#6a6a3e', accessory: 'none' },
+    // He does not play. If anybody ever seats him, this is what he says.
+    lines: { greeting: ['Mutt: I do not play. I watch people pay to sit down.'] },
+    overworld: {
+      // Barefoot (his shoes are his feet), lean, in an army surplus jacket, with the lantern.
+      look: {
+        build: 'tall', prop: 'lantern', propColor: '#d89a30',
+        garment: 'jacket', garmentColor: '#5a5a32', trousers: '#5a4a38', shoes: '#9a6a46', sleeves: 'long',
+      },
+      lines: ['Mutt: Spare a dollar? No? Good. Practice.'],
+      schedule: [
+        { period: 'morning', areaId: 'sc-street', col: 27, row: 13, lines: [
+          'Mutt: I ask that cactus for a dollar every morning. It has never once said yes. Good practice for asking people.',
+        ] },
+        { period: 'afternoon', areaId: 'sc-street', col: 27, row: 13, lines: [
+          'Mutt: A man in there said a person is a featherless biped. I brought him a plucked chicken. They banned me. Not for the chicken. For where I put it.',
+        ] },
+        { period: 'evening', areaId: 'sc-street', col: 27, row: 13, lines: [
+          'Mutt: I had a cup once. Then I saw a dog drink out of a puddle. Now I have a puddle.',
+        ] },
+        { period: 'night', areaId: 'sc-street', col: 27, row: 13, lines: [
+          'Mutt: The stars are free. That is why the casino has a ceiling.',
+        ] },
+      ],
+    },
+  },
+  severin: {
+    // Riverbend's Boethius, by way of a very large man in a green hunting cap: Fortune's wheel, read as a promise.
+    // On the boat at every hour (`regulars` on `riverbend-mid`), so he is in every hand you play there.
+    name: 'Severin Mulroney',
+    style: 'Here every hand. Waiting for the wheel to turn.',
+    look: { skin: '#f0c8a8', hair: '#3a2a1a', hairStyle: 'short', shirt: '#9a4a34', accessory: 'cap' },
+    // The hunting cap with the flaps down, a flannel shirt, tweed trousers, and a great deal of him.
+    streetLook: { build: 'heavy', hat: 'earflaps', hatColor: '#4a8a3a', trousers: '#6a5a44', sleeves: 'long' },
+    seat: { skillTier: 'novice', archetype: 'maniac', habit: { strong: 'chip-tap', weak: 'glance' } },
+    lines: {
+      greeting: ['Severin: Sit, if you must. Kindly do not jostle the wheel.'],
+      raise: ['Severin: I raise, in the name of Fortuna, blind and heedless goddess!', 'Severin: Raise. I can hear the wheel creak. Upward.'],
+      bet: ['Severin: A bet. Fortuna favours the bold, and also the large.'],
+      check: ['Severin: Check. I am consulting a higher authority.'],
+      call: ['Severin: I call. Not because the cards say so. Because the cosmos does.'],
+      fold: ['Severin: I fold. This is not a defeat. This is the wheel pausing for breath.'],
+      win: ['Severin: AH. You see? She turns! She turns for Severin!', 'Severin: Fortuna smiles. Rarely, and upon me.'],
+      lose: ['Severin: My valve! My valve has slammed shut!', 'Severin: The wheel. The terrible wheel. She has thrown me off like a child off a carousel.'],
+    },
+  },
+  kessler: {
+    // Crescent Harbor's Kant: thrown out of the card room as you arrive, for telling it what it is, and met again
+    // on his walk, which he takes at the same minutes every day and which you make late.
+    name: 'Professor Kessler',
+    style: 'Has never once been late.',
+    look: { skin: '#f0d4bc', hair: '#e8e8ec', hairStyle: 'tied', shirt: '#e8e4dc', accessory: 'none' },
+    // Small, stooped, in a waistcoat, the watch chain across it.
+    streetLook: { build: 'elder', prop: 'pocketwatch', propColor: '#e0b030', garment: 'vest', garmentColor: '#3a2a3a', trousers: '#2a2a30', sleeves: 'long' },
+    // He is only ever passing; if anybody does stop him, this is what they get.
+    lines: { greeting: [
+      'Kessler: Good day. I am expected somewhere at a particular minute, and so, I suspect, are you.',
+    ] },
+  },
+  konrad: {
+    // Palm Cay's Nietzsche: the powerhouse at the Cay Room's big table, who knows the cards are a place to hide and
+    // plays them to find out what he is. At that table at every hour (`regulars` on `palmcay-high`).
+    name: 'Konrad Hammer',
+    style: 'Loves every hand he plays, especially the bad ones.',
+    look: { skin: '#e8c4a0', hair: '#3a2a20', hairStyle: 'short', shirt: '#f0ece0', accessory: 'none' },
+    // A linen suit, and the moustache, which arrives a moment before he does.
+    streetLook: { prop: 'moustache', propColor: '#3a2a20', garment: 'jacket', garmentColor: '#e0d6c0', trousers: '#e0d6c0', sleeves: 'long' },
+    seat: { skillTier: 'sharp', archetype: 'maniac', stackMultiplier: 1.5, habit: { strong: 'stillness', weak: 'arm-shift' } },
+    lines: {
+      greeting: ['Konrad: AMOR FATI! Deal!'],
+      raise: ['Konrad: RAISE! More! Make it hurt!', 'Konrad: Raise. Let us find out who we are.'],
+      bet: ['Konrad: I bet. Of course I bet.'],
+      check: ['Konrad: Check. I am letting you hope.'],
+      call: ['Konrad: Call! I want to see it. Whatever it is, I want it.'],
+      fold: ['Konrad: Fold. Even that I love.'],
+      win: ['Konrad: HA! What does not bust me makes me deeper-stacked!'],
+      lose: ['Konrad: Magnificent. Again. Exactly that, again.', 'Konrad: Ah! I would not change a card of it.'],
+    },
+  },
+  gaspard: {
+    // Neon Mesa's Foucault: at the end of the casino bar at every hour, bald, in a black turtleneck, explaining
+    // the cameras to his glass. The Mesa is the prison its prisoners pay to come in to.
+    name: 'Gaspard Lemire',
+    style: 'Drinks at the bar. Knows where the cameras are.',
+    look: { skin: '#e8c8a8', hair: '#d8c8b0', hairStyle: 'bald', shirt: '#1c1c22', accessory: 'glasses' },
+    // He does not play either; he watches the people who watch the people who play.
+    lines: { greeting: ['Gaspard: I do not play. I take notes on the people taking notes.'] },
+    overworld: {
+      look: { prop: 'cocktail', propColor: '#5ad0e0', trousers: '#1c1c22', shoes: '#2a1a10', sleeves: 'long' },
+      lines: ['Gaspard: Smile. Not for me. For the ceiling.'],
+      schedule: [
+        { period: 'morning', areaId: 'nm-casino', col: 33, row: 3, lines: [
+          'Gaspard: No clocks in here. Ask yourself who gets to know what time it is.',
+        ] },
+        { period: 'afternoon', areaId: 'nm-casino', col: 33, row: 3, lines: [
+          'Gaspard: The carpet is designed so nobody sits on the floor. A floor you cannot sit on is a floor that wants you at a machine.',
+        ] },
+        { period: 'evening', areaId: 'nm-casino', col: 33, row: 3, lines: [
+          'Gaspard: I come for the drinks. They come for the data. We are both satisfied. That is the horror.',
+        ] },
+        { period: 'night', areaId: 'nm-casino', col: 33, row: 3, lines: [
+          'Gaspard: The ice in this glass was frozen in a room with a camera in it. Everything here was.',
+        ] },
+      ],
+    },
+  },
+  bojan: {
+    // Porto Lumina's protester with a cardboard sign, explaining the casino to the people going into it. Every
+    // idea comes with a tangent, a sniff and "and so on".
+    name: 'Bojan Kranjc',
+    style: 'Protests the casino. Enjoys it.',
+    look: { skin: '#e8c0a0', hair: '#7a6a58', hairStyle: 'short', shirt: '#4a5a7a', accessory: 'none' },
+    lines: { greeting: [
+      'Bojan: Me, play? (sniff) I am the only person here who is not playing. This is my tragedy.',
+    ] },
+    overworld: {
+      look: { build: 'heavy', prop: 'placard', propColor: '#d8c8a0', sleeves: 'short', trousers: '#3a3a44' },
+      lines: ['Bojan: (sniff) The sign is cardboard. Cardboard is honest. Marble is lying to you, and so on.'],
+      schedule: [
+        { period: 'morning', areaId: 'pl-street', col: 23, row: 7, lines: [
+          'Bojan: They asked me to move. I said: I am not here, I am a symptom. They are still thinking about it.',
+        ] },
+        { period: 'afternoon', areaId: 'pl-street', col: 23, row: 7, lines: [
+          'Bojan: People ask me, what do you want? Wrong question! Nobody knows what they want. You have to be taught. In there they teach it very well.',
+        ] },
+        { period: 'evening', areaId: 'pl-street', col: 23, row: 7, lines: [
+          'Bojan: I am not against the casino. I am against it dialectically. This means I will be here tomorrow.',
+        ] },
+        { period: 'night', areaId: 'pl-street', col: 23, row: 7, lines: [
+          'Bojan: Look, the tower is lit all night. For whom? Nobody is up there looking at it. It is lit for the idea of somebody looking. Pure ideology, beautiful.',
+        ] },
+      ],
+    },
+  },
   nadia: {
     name: 'Nadia Okonkwo',
     style: 'Four years in the penthouse.',

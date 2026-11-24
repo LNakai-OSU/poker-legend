@@ -162,6 +162,19 @@ export const STORY_FLAGS = {
     set: 'you rubbed Lucky Dolores’s rabbit foot in Silver Creek',
     clear: 'you have not rubbed Dolores’s rabbit foot',
   },
+  // The thinkers up the ladder (docs/STORYBOARD.md §10): one each, and the two choices they put to you.
+  gaveMuttADollar: {
+    set: 'you gave Mutt, the man on the Silver Creek bench, a dollar',
+    clear: 'you have not given Mutt a dollar',
+  },
+  saidYesToTheDemon: {
+    set: 'you told Konrad on Palm Cay you would live it all again',
+    clear: 'you have not told Konrad you would live it all again',
+  },
+  saidNoToTheDemon: {
+    set: 'you told Konrad on Palm Cay you would not live it all again',
+    clear: 'you have not told Konrad you would not live it all again',
+  },
 
   tookKitsDare: {
     set: 'you told Kit you would take Cass’s money to spite him',

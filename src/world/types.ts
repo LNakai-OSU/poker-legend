@@ -63,6 +63,12 @@ export interface TableDef {
    * `opponents` is already a full table.
    */
   walkIns?: SeatRef[]
+  /**
+   * Who of `opponents` never goes home: at an open table, they are in the
+   * lineup at every hour, the way a night's guest is on their night (Severin
+   * on the riverboat, Konrad at the Cay Room). Ids, each one in `opponents`.
+   */
+  regulars?: string[]
   /** Hours of the week when somebody in particular sits in (`world/week.ts`). */
   nights?: TableNight[]
   /** Minimum dress-code level the room enforces (see ITEM dressCode effects). */

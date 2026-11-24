@@ -32,6 +32,25 @@ describe('who is at an open table', () => {
     expect(faces.size).toBeGreaterThan(5)
   })
 
+  it('seats a table’s regulars at every hour of every day, and only people the table seats', () => {
+    const tables = Object.values(TABLES).filter((t) => t.regulars?.length)
+    expect(tables.length, 'nobody is a regular anywhere').toBeGreaterThan(0)
+    for (const table of tables) {
+      const seats = table.opponents.map((ref) => (typeof ref === 'string' ? ref : ref.character))
+      expect(table.walkIns, `${table.id} has regulars but is not an open table`).toBeDefined()
+      for (const id of table.regulars!) {
+        expect(seats, `${id} is a regular at ${table.id} but not one of its opponents`).toContain(id)
+        for (const period of TIME_PERIODS) {
+          for (let day = 1; day <= 14; day++) {
+            const lineup = lineupFor(table, period, day).map((ref) => (typeof ref === 'string' ? ref : ref.character))
+            expect(lineup, `${id} is missing from ${table.id} on day ${day}, ${period}`).toContain(id)
+            expect(lineup.length).toBeGreaterThan(1)
+          }
+        }
+      }
+    }
+  })
+
   it('is the same table twice in one period, and leaves fixed games alone', () => {
     expect(lineupFor(TABLES['silvercreek-low'], 'evening', 3)).toEqual(lineupFor(TABLES['silvercreek-low'], 'evening', 3))
     expect(lineupFor(TABLES['silvercreek-boss'], 'night', 3)).toEqual(TABLES['silvercreek-boss'].opponents)

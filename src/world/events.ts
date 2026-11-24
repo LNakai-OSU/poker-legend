@@ -1085,6 +1085,36 @@ function goalReminder(cityId: string, who: string): string[] {
   ]
 }
 
+/**
+ * Dana on the 14 to Marcus's, however she found you: the game she is taking you to, then the town going past
+ * the window. She is Thales without the name (docs/STORYBOARD.md §10): everything is a little alive, the sky
+ * can be read, and somebody who reads it can corner every dryer in the laundromat, then give them back.
+ */
+const DANA_ON_THE_14: RideAction[] = [
+  {
+    kind: 'dialogue',
+    speaker: 'dana',
+    lines: [
+      'Dana: Marcus thinks he is going to win tonight. He is not.',
+      'Dana: Everything on the table, winner takes the lot. His rule.',
+      'Dana: Win it, and you have a bankroll. Lose it, and he deals you in again. He always does.',
+    ],
+  },
+  { kind: 'dialogue', lines: ['The 14 groans up the hill past the water tower. Dana pats the window frame.'] },
+  {
+    kind: 'dialogue',
+    speaker: 'dana',
+    lines: [
+      'Dana: Go on. You can do it. ...It hates this hill. Be nice to it and it gets up.',
+      'Dana: Everything is a bit alive, if you watch it long enough. Machine four at the laundromat only eats socks off people who slam the lid.',
+      'Dana: Rain by Thursday. See the clouds stacking up over the water tower?',
+      'Dana: I called a wet week once. Booked every dryer in the laundromat on the Monday, and let them out by the hour when it poured.',
+      'Dana: Made a month’s money by Friday. Then I gave the dryers back.',
+      'Dana: People asked why. I wanted to know if I could. I could. After that it was just dryers.',
+    ],
+  },
+]
+
 /** Marcus's plan, one line per beat; a `stop` draws the road out to that town. Also what the playtest tool replays. */
 export const MARCUS_ROUTE_LINES: ReelLine[] = [
     { who: 'marcus', text: 'Marcus: The door was open. It is always open. That is a separate conversation.', stop: 0 },
@@ -1238,17 +1268,7 @@ export const EVENTS: GameEvent[] = [
                 row: 13,
                 with: ['dana'],
                 caption: 'Dana takes the window seat and watches the town go past like she is counting it.',
-                during: [
-                  {
-                    kind: 'dialogue',
-                    speaker: 'dana',
-                    lines: [
-                      'Dana: Marcus thinks he is going to win tonight. He is not.',
-                      'Dana: Everything on the table, winner takes the lot. His rule.',
-                      'Dana: Win it, and you have a bankroll. Lose it, and he deals you in again. He always does.',
-                    ],
-                  },
-                ],
+                during: DANA_ON_THE_14,
               },
               {
                 kind: 'dialogue',
@@ -1397,17 +1417,7 @@ export const EVENTS: GameEvent[] = [
         row: 13,
         with: ['dana'],
         caption: 'Dana takes the window seat and watches the town go past like she is counting it.',
-        during: [
-          {
-            kind: 'dialogue',
-            speaker: 'dana',
-            lines: [
-              'Dana: Marcus thinks he is going to win tonight. He is not.',
-              'Dana: Everything on the table, winner takes the lot. His rule.',
-              'Dana: Win it, and you have a bankroll. Lose it, and he deals you in again. He always does.',
-            ],
-          },
-        ],
+        during: DANA_ON_THE_14,
       },
       {
         kind: 'dialogue',
@@ -1537,17 +1547,7 @@ export const EVENTS: GameEvent[] = [
         row: 13,
         with: ['dana'],
         caption: 'Dana takes the window seat and watches the town go past like she is counting it.',
-        during: [
-          {
-            kind: 'dialogue',
-            speaker: 'dana',
-            lines: [
-              'Dana: Marcus thinks he is going to win tonight. He is not.',
-              'Dana: Everything on the table, winner takes the lot. His rule.',
-              'Dana: Win it, and you have a bankroll. Lose it, and he deals you in again. He always does.',
-            ],
-          },
-        ],
+        during: DANA_ON_THE_14,
       },
       { kind: 'dialogue', speaker: 'dana', lines: ['Dana: Marcus is the middle door, up the street. Walk with me.'] },
       { kind: 'moveNpc', characterId: 'dana', to: { col: 11, row: 5 }, youFollow: true },
@@ -1611,6 +1611,7 @@ export const EVENTS: GameEvent[] = [
         lines: [
           'Dana: You took Marcus.',
           'Dana: He will tell it like he was unlucky. He was not unlucky.',
+          'Dana: Money is like water. It runs off whoever is loudest and pools round whoever sits still.',
           'Dana: Go and lose it somewhere bigger. That is what everyone does.',
         ],
       },
@@ -1703,6 +1704,8 @@ export const EVENTS: GameEvent[] = [
         lines: [
           'Dana: His cards were fine. He played them like they were on fire.',
           'Dana: I would have had you on the last hand. I was watching you instead of my cards.',
+          'Dana: Money is like water, you know. It runs off whoever is loudest and pools round whoever sits still. Tonight that was you.',
+          'Dana: It is a compliment.',
         ],
       },
       // What you said to her on the 14 (`dana-walks-you-to-the-bus`).
@@ -1748,6 +1751,23 @@ export const EVENTS: GameEvent[] = [
       { kind: 'fade', to: 'out' },
       { kind: 'teleport', areaId: 'basin', col: 5, row: 4, with: ['dana'] },
       { kind: 'fade', to: 'in' },
+      // Thales and the well, the oldest joke about a philosopher (docs/STORYBOARD.md §10).
+      { kind: 'dialogue', lines: ['Short of your door, Dana stops dead on the pavement and looks straight up.'] },
+      {
+        kind: 'dialogue',
+        speaker: 'dana',
+        lines: [
+          'Dana: Jupiter. Next to the moon. See it?',
+          'Dana: Mind the drain. I went down that one in March, looking at Jupiter.',
+          'Dana: The man from the kebab shop laughed so hard he had to sit down on the kerb. He was right, too.',
+          'Dana: You look up long enough, you stop seeing what is in front of you.',
+        ],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'You',
+        lines: ['You: (Thales fell down a well looking at the stars, and a servant girl laughed at him. Two and a half thousand years, and the joke still works.)'],
+      },
       {
         kind: 'dialogue',
         speaker: 'dana',
@@ -1845,7 +1865,8 @@ export const EVENTS: GameEvent[] = [
     id: 'marcus-rides-out-with-you',
     about:
       'The morning after the first game: Marcus is on your step, rides the 14 out to Silver Creek with you, ' +
-      'tells you the Porto Lumina story on the way, and walks you into the casino to the low-stakes table.',
+      'tells you the Porto Lumina story on the way, meets Mutt on the bench by the stop (who asks you for a ' +
+      'dollar, `gaveMuttADollar`), and walks you into the casino to the low-stakes table.',
     trigger: { kind: 'enterArea', areaId: 'basin', onLoad: true },
     conditions: [
       // Said out loud, though the walk home already needed it: it is what tells
@@ -1901,6 +1922,91 @@ export const EVENTS: GameEvent[] = [
       },
       { kind: 'dialogue', lines: ['Silver Creek. A casino at the end of the reservation road, and a dollar-two game inside it.'] },
       { kind: 'dialogue', speaker: 'marcus', lines: ['Marcus: Smell that? Carpet and cigarettes. Real poker.'] },
+      // Silver Creek's Diogenes, on the bench by the stop (docs/STORYBOARD.md §10). Met here, before the casino, and
+      // again waiting for the next bus (`mutt-at-the-stop`), which remembers the dollar.
+      {
+        kind: 'dialogue',
+        lines: ['On the bench by the stop, a man is stretched out with a camping lantern lit beside him. It is broad daylight.'],
+      },
+      { kind: 'moveNpc', characterId: 'mutt', to: 'player' },
+      { kind: 'dialogue', lines: ['He gets up, lifts the lantern to your face, and studies it.'] },
+      {
+        kind: 'dialogue',
+        speaker: 'mutt',
+        lines: [
+          'Mutt: Hold still.',
+          'Mutt: ...No. Not you either.',
+          'Mutt: I am looking for an honest man. Been looking since they built the casino. Checked the casino. Checked the gift shop twice.',
+        ],
+      },
+      { kind: 'dialogue', speaker: 'marcus', lines: ['Marcus: Hello there! Is there anything we can do for you, friend?'] },
+      { kind: 'dialogue', speaker: 'mutt', lines: ['Mutt: Yes. Move about a foot to your left. You are standing in my sun.'] },
+      { kind: 'moveNpc', characterId: 'marcus', to: { col: 24, row: 12 } },
+      { kind: 'dialogue', speaker: 'marcus', lines: ['Marcus: ...Right. Sorry.'] },
+      {
+        kind: 'dialogue',
+        speaker: 'You',
+        lines: [
+          'You: (Diogenes lived in a jar in the marketplace. Alexander the Great came to ask what he could do for him, and he said: stand out of my sunlight. Marcus has just been Alexander the Great. He moved.)',
+        ],
+      },
+      { kind: 'dialogue', speaker: 'mutt', lines: ['Mutt: Now. Spare a dollar?'] },
+      {
+        kind: 'choice',
+        speaker: 'mutt',
+        prompt: 'Give Mutt a dollar?',
+        options: [
+          {
+            label: 'Give him a dollar',
+            conditions: [{ kind: 'cashAtLeast', amount: 1 }],
+            then: [
+              { kind: 'giveCash', amount: -1 },
+              { kind: 'setFlag', flag: 'gaveMuttADollar' },
+              {
+                kind: 'dialogue',
+                speaker: 'mutt',
+                lines: [
+                  'Mutt: Thank you. Look at it. A minute ago it was yours, now it is mine, and neither of us is one bit different.',
+                  'Mutt: Remember that in there. They push a lot of these back and forth and call it a living.',
+                ],
+              },
+            ],
+          },
+          {
+            label: 'Not today',
+            then: [
+              {
+                kind: 'dialogue',
+                speaker: 'mutt',
+                lines: [
+                  'Mutt: Good. I ask that cactus every morning, for practice. It has never once said yes.',
+                  'Mutt: You are nearly as good at it as the cactus. Give it a year.',
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'mutt',
+        lines: [
+          'Mutt: So. In you go. Win money, to buy things, to keep the things, so you need more money for the things.',
+          'Mutt: You know what I own? This lantern. I am thinking about getting rid of the lantern.',
+          'Mutt: Everybody in that building is working very hard so that one day they can lie on a bench and do nothing. I skipped to the end.',
+        ],
+      },
+      { kind: 'dialogue', speaker: 'marcus', lines: ['Marcus: My friend here is going to be a story.'] },
+      {
+        kind: 'dialogue',
+        speaker: 'mutt',
+        lines: [
+          'Mutt: Everybody in there is a story. The stories all end at this bench.',
+          'Mutt: Off you go. I will be here when it is over. I am always here when it is over.',
+        ],
+      },
+      { kind: 'moveNpc', characterId: 'mutt', to: { col: 27, row: 13 } },
+      { kind: 'dialogue', speaker: 'marcus', lines: ['Marcus: Friendly town.'] },
       { kind: 'moveNpc', characterId: 'marcus', to: { col: 16, row: 5 }, youFollow: true },
       { kind: 'fade', to: 'out' },
       { kind: 'teleport', areaId: 'sc-floor', col: 20, row: 19, with: ['marcus'] },
@@ -2137,6 +2243,67 @@ export const EVENTS: GameEvent[] = [
     ],
   },
   {
+    id: 'mutt-at-the-stop',
+    about:
+      'Waiting for the Riverbend bus once Lou is beaten: Mutt, from his bench, on the joys of owning nothing, and ' +
+      'a laugh at the penthouse. Remembers the dollar (`gaveMuttADollar`). The next use of the stop is the bus.',
+    trigger: { kind: 'interact', poiId: 'sc-busstop' },
+    conditions: [
+      { kind: 'chapter', cityId: 'silverCreek' },
+      { kind: 'casino', cityId: 'silverCreek', status: 'bossBeaten' },
+    ],
+    actions: [
+      { kind: 'dialogue', lines: ['The timetable says the Riverbend bus is due. It has said so since about 1994.'] },
+      { kind: 'moveNpc', characterId: 'mutt', to: 'player' },
+      { kind: 'dialogue', speaker: 'mutt', lines: ['Mutt: Leaving? I heard. Lou’s chair. The whole bench heard.'] },
+      {
+        kind: 'if',
+        when: [{ kind: 'flag', flag: 'gaveMuttADollar' }],
+        then: [
+          {
+            kind: 'dialogue',
+            speaker: 'mutt',
+            lines: ['Mutt: Your dollar is still in my pocket. I take it out and look at it sometimes. It has not done a thing.'],
+          },
+        ],
+        else: [{ kind: 'dialogue', speaker: 'mutt', lines: ['Mutt: You never did give me that dollar. I respect it. So does the cactus.'] }],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'mutt',
+        lines: [
+          'Mutt: Sit down a minute. The bus does not come faster for standing.',
+          'Mutt: Let me tell you about my day. I woke up. I was already home.',
+          'Mutt: Breakfast: a family from Ohio left half a sandwich on the bench. I did not want it. I ate it to be polite.',
+          'Mutt: Rent: none. My landlord is the sky, and the sky has never once knocked.',
+          'Mutt: Two lads tried to rob me once. Went through everything I have. Felt so bad about it they left me a fiver.',
+        ],
+      },
+      {
+        kind: 'dialogue',
+        lines: ['He asks where the bus goes after Riverbend. You tell him: the Harbor, the island, the Mesa, and at the top, Porto Lumina. A penthouse.'],
+      },
+      { kind: 'dialogue', speaker: 'mutt', lines: ['Mutt: A PENTHOUSE.'] },
+      { kind: 'dialogue', lines: ['Mutt laughs until he has to hold on to the bench.'] },
+      {
+        kind: 'dialogue',
+        speaker: 'mutt',
+        lines: [
+          'Mutt: Forty floors of somewhere to worry in. Do you know what you can see from a penthouse? Other penthouses.',
+          'Mutt: From here I can see the whole sky, and I did not have to win it off anybody.',
+          'Mutt: Go on, go and get it. Then you will have a penthouse and I will have this bench, and we will see which of us sleeps.',
+        ],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'You',
+        lines: ['You: (The only man in Silver Creek who wants nothing from me but a dollar. He is very hard to argue with.)'],
+      },
+      { kind: 'moveNpc', characterId: 'mutt', to: { col: 27, row: 13 } },
+      { kind: 'dialogue', lines: ['Down the highway, the Riverbend bus is coming. Mutt lies back down and turns his lantern up.'] },
+    ],
+  },
+  {
     id: 'ray-sees-you-off',
     about: "Silver Creek's send-off: once you have the boat money, Ray tells you to go.",
     trigger: { kind: 'talkTo', characterId: 'ray' },
@@ -2252,7 +2419,9 @@ export const EVENTS: GameEvent[] = [
   // Act 2 — Riverbend Landing. Deb, Cass's money, and Kit in the flesh.
   {
     id: 'arrive-riverbend',
-    about: 'Arriving at Riverbend: the boat, the bankroll that buys the Harbor, and somebody asking after you. Then you walk in to its table.',
+    about:
+      'Arriving at Riverbend: the boat, the bankroll that buys the Harbor, and somebody asking after you. Then you ' +
+      'walk in to its table, where Severin would rather you had not come today.',
     trigger: { kind: 'enterArea', areaId: 'rb-street' },
     actions: [
       {
@@ -2326,6 +2495,45 @@ export const EVENTS: GameEvent[] = [
       { kind: 'fade', to: 'out' },
       { kind: 'teleport', areaId: 'rb-boat', col: 22, row: 18 },
       { kind: 'fade', to: 'in' },
+      // Riverbend's Boethius, at the boat's table, where he is at every hour (docs/STORYBOARD.md §10): you walk up
+      // to it, and he would rather you had not, today of all days.
+      { kind: 'movePlayer', to: { col: 22, row: 13 } },
+      {
+        kind: 'dialogue',
+        lines: ['At the card table, a very large man in a green hunting cap has built a wall of chips and is guarding it with both elbows.'],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'severin',
+        lines: [
+          'Severin: No. No, no, no. Turn around.',
+          'Severin: Of all the moments in the long and dismal history of this vessel, you choose this one.',
+        ],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'severin',
+        lines: [
+          'Severin: For six days Fortuna has kept me at the very bottom of her wheel. Down in the bilge. Kings that turned to nothing. Rivers that bit me like dogs.',
+          'Severin: And today I felt it. The wheel creaked. She is turning it, upward, at last. I am due.',
+          'Severin: And now a stranger walks in smelling of bus, sits in the empty chair, and throws the entire cosmic arrangement out of true.',
+        ],
+      },
+      { kind: 'dialogue', speaker: 'Dealer', lines: ['Dealer: He has been due since Tuesday. Sit wherever you like.'] },
+      {
+        kind: 'dialogue',
+        speaker: 'severin',
+        lines: [
+          'Severin: Oh, my valve. I can feel it closing. It is sealing like a submarine.',
+          'Severin: Very well. Sit. We all sit beneath the wheel. Fortuna is blind and heedless, and she does not care who you are.',
+          'Severin: ...She cares a little who I am. We have history.',
+        ],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'You',
+        lines: ['You: (Boethius wrote, in a cell, that turning is all Fortune’s wheel ever does. He never said anybody was due. Severin has read the first half.)'],
+      },
     ],
   },
   {
@@ -2626,7 +2834,9 @@ export const EVENTS: GameEvent[] = [
   // Act 3 — Crescent Harbor. The mentor, and the rival a door ahead.
   {
     id: 'arrive-crescent',
-    about: 'Arriving at Crescent Harbor: a name, a suit, and the room behind the room. Then you walk in to its table.',
+    about:
+      'Arriving at Crescent Harbor: a name, a suit, and the room behind the room. Professor Kessler is thrown out of ' +
+      'the card room as you reach it, and tells you why it is wrong. Then you walk in to its table.',
     trigger: { kind: 'enterArea', areaId: 'ch-street' },
     actions: [
       {
@@ -2718,6 +2928,49 @@ export const EVENTS: GameEvent[] = [
         when: [{ kind: 'casino', cityId: 'crescentHarbor', status: 'bossBeaten', set: false }],
         then: [{ kind: 'dialogue', speaker: 'Attendant', lines: goalReminder('crescentHarbor', 'Attendant') }],
       },
+      // Crescent Harbor's Kant, thrown out of the card room as you reach it (docs/STORYBOARD.md §10), and met
+      // again on his walk once Bellamy is beaten (`kessler-on-his-walk`).
+      { kind: 'movePlayer', to: { col: 14, row: 7 } },
+      { kind: 'dialogue', lines: ['The card room door bangs open before you reach it.'] },
+      { kind: 'moveNpc', characterId: 'kessler', from: { col: 14, row: 4 }, to: { col: 14, row: 6 }, pace: 'run' },
+      { kind: 'dialogue', speaker: 'Doorman', lines: ['Doorman: And stay out, Professor! That is three times this month!'] },
+      {
+        kind: 'dialogue',
+        speaker: 'kessler',
+        lines: [
+          'Kessler: I was not frightening your customers. I was INFORMING them.',
+          'Kessler: Fright is a feeling. I deal only in duties.',
+        ],
+      },
+      { kind: 'dialogue', lines: ['A small old man in a waistcoat straightens his coat, consults a gold watch, and notices you.'] },
+      {
+        kind: 'dialogue',
+        speaker: 'kessler',
+        lines: [
+          'Kessler: You. You are going in there.',
+          'Kessler: Do you know what they do in there? They lie. Professionally. They call it bluffing, as if a new word washed the old one.',
+          'Kessler: A lie is wrong. Always. If a murderer knocks at your door and asks where your friend is hiding, you do not lie to him.',
+          'Kessler: You may decline to answer. You may shut the door. You do not tell him you have a flush.',
+        ],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'kessler',
+        lines: [
+          'Kessler: And every one of them is treating every other one as a wallet with a face. A person is never only a means. Not even a person from the sailing club.',
+          'Kessler: I do not need to see the cards. I knew it was wrong before I ever went in. I know it with complete certainty.',
+        ],
+      },
+      { kind: 'dialogue', speaker: 'You', lines: ['You: (He was in there, though.)'] },
+      {
+        kind: 'dialogue',
+        speaker: 'kessler',
+        lines: [
+          'Kessler: You are wondering what I was doing in there. Every week I go in to confirm that it is wrong. It is wrong every week. I have never once been surprised.',
+          'Kessler: Good day. I pass the lighthouse at nineteen minutes past, and the lighthouse is not kept waiting.',
+        ],
+      },
+      { kind: 'moveNpc', characterId: 'kessler', to: { col: 31, row: 8 }, leaves: true },
       // "Let's go" means in: off the last line you walk to the door of the card room
       // and through it, rather than being left at the stop to find it.
       { kind: 'movePlayer', to: { col: 14, row: 5 } },
@@ -2876,6 +3129,70 @@ export const EVENTS: GameEvent[] = [
     ],
   },
   {
+    id: 'kessler-on-his-walk',
+    about:
+      'Waiting at the transit hub once Bellamy is beaten: Professor Kessler passes on his walk, asks what all of ' +
+      'this is for, tries it on everybody, and finds you have made him late. The next use of the hub is the ferry.',
+    trigger: { kind: 'interact', poiId: 'ch-transit' },
+    conditions: [
+      { kind: 'chapter', cityId: 'crescentHarbor' },
+      { kind: 'casino', cityId: 'crescentHarbor', status: 'bossBeaten' },
+    ],
+    actions: [
+      { kind: 'dialogue', lines: ['Along the quay comes the small old man in the waistcoat, walking at a speed that was decided a long time ago.'] },
+      { kind: 'moveNpc', characterId: 'kessler', from: { col: 3, row: 11 }, to: 'player' },
+      {
+        kind: 'dialogue',
+        speaker: 'kessler',
+        lines: [
+          'Kessler: You. From the door.',
+          'Kessler: You beat Bellamy, I am told. The whole harbour is talking. The harbour does not talk. It is a harbour.',
+          'Kessler: Answer me one thing before your ferry. What is it for?',
+        ],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'kessler',
+        lines: [
+          'Kessler: The money? And the money is for what? To be happy?',
+          'Kessler: Happiness is weather. It comes or it does not. Be worthy of it, and if it comes, fine.',
+          'Kessler: Why not an honest living? A trade. A post. You could teach. You could mend clocks. There is great dignity in a clock.',
+          'Kessler: I have never once left this town, and I have never needed to. The whole world comes in on the tide.',
+        ],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'kessler',
+        lines: [
+          'Kessler: Here is how you test a thing. Imagine everybody did it.',
+          'Kessler: Imagine we were all gamblers. Every baker, every ferryman, every schoolteacher, at a table all day, waiting for the river.',
+          'Kessler: Who bakes? Who rows? Nobody! We would all sit in the card room, starving, very politely raising one another.',
+          'Kessler: What if we were all gamblers? Then no one would do anything worthwhile! It cannot be a law for everybody, and so it is not right for you.',
+        ],
+      },
+      { kind: 'dialogue', lines: ['He takes out his watch to make a point with it, and stops.'] },
+      {
+        kind: 'dialogue',
+        speaker: 'kessler',
+        lines: [
+          'Kessler: ...What time is it.',
+          'Kessler: It is six minutes past. I am six minutes past.',
+          'Kessler: I pass this hub at the same minute every day. The ferry master sets his clock by me. The bakery sets its ovens by me.',
+          'Kessler: You have made the ferry late. You have made the bread late. Good DAY.',
+        ],
+      },
+      { kind: 'moveNpc', characterId: 'kessler', to: { col: 31, row: 11 }, pace: 'run', leaves: true },
+      {
+        kind: 'dialogue',
+        speaker: 'You',
+        lines: [
+          'You: (Kant walked the same streets at the same minute every afternoon, and Königsberg set its clocks by him. He missed it once, for a book by Rousseau. Today he missed it for me.)',
+        ],
+      },
+      { kind: 'dialogue', lines: ['Out on the water, the Palm Cay ferry sounds its horn, six minutes late.'] },
+    ],
+  },
+  {
     id: 'hal-sends-you-on',
     about: "Crescent Harbor's send-off: with island money, Hal says what to learn before the Mesa.",
     trigger: { kind: 'interact', poiId: 'hal' },
@@ -2944,7 +3261,9 @@ export const EVENTS: GameEvent[] = [
   // Act 4 — Palm Cay. The midpoint: home comes to visit, and the rival borrows.
   {
     id: 'arrive-palmcay',
-    about: 'Arriving at Palm Cay: the soft money, the bankroll that buys the Mesa, and a face from home. Then you walk in to its table.',
+    about:
+      'Arriving at Palm Cay: the soft money, the bankroll that buys the Mesa, and a face from home. Then you walk ' +
+      'in to its table, where Konrad holds court.',
     trigger: { kind: 'enterArea', areaId: 'pc-street' },
     actions: [
       {
@@ -3004,6 +3323,42 @@ export const EVENTS: GameEvent[] = [
       { kind: 'fade', to: 'out' },
       { kind: 'teleport', areaId: 'pc-casino', col: 20, row: 24 },
       { kind: 'fade', to: 'in' },
+      // Palm Cay's Nietzsche, at the Cay Room's big table, where he is at every hour (docs/STORYBOARD.md §10). He
+      // shouts his motto when the cards come down (`konrad-amor-fati`), and finds you again before Inés does.
+      { kind: 'movePlayer', to: { col: 8, row: 10 } },
+      {
+        kind: 'dialogue',
+        lines: ['At the big table, one man is playing as if the others were furniture. His moustache is doing most of the work.'],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'konrad',
+        lines: [
+          'Konrad: A NEW ONE! Sit, sit. That chair has been waiting all day for somebody with a pulse.',
+          'Konrad: I am Konrad. Look around you. Linen. Rum. People who have forgotten what day it is.',
+          'Konrad: Every one of them is hiding in here. Of course they are! A card table is the sweetest little hole a man ever climbed into.',
+        ],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'konrad',
+        lines: [
+          'Konrad: But a man can hide in the hole, or he can stand up in it and shout.',
+          'Konrad: I do not play to forget. I play to overcome! The bigger the bet, the more of me there has to be to make it.',
+          'Konrad: Everybody here wants the cards to be kind. I want them HARD. Then I find out what I am.',
+          'Konrad: What does not bust me makes me deeper-stacked.',
+        ],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'You',
+        lines: ['You: (“What does not kill me makes me stronger.” He has changed one word, and at this table it is still true.)'],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'konrad',
+        lines: ['Konrad: You will probably lose to me. Love it anyway. Love all of it, every bad beat. That is the whole trick. SIT!'],
+      },
     ],
   },
   {
@@ -3229,7 +3584,9 @@ export const EVENTS: GameEvent[] = [
   // Act 5 — Neon Mesa. The debt comes due on somebody else.
   {
     id: 'arrive-mesa',
-    about: 'Arriving at Neon Mesa: the studied money, and the bankroll that buys the plane to Lumina. Then you walk in to its table.',
+    about:
+      'Arriving at Neon Mesa: the studied money, and the bankroll that buys the plane to Lumina. Then you walk in, ' +
+      'and to the bar first for a drink, where Gaspard explains the cameras.',
     trigger: { kind: 'enterArea', areaId: 'nm-street' },
     actions: [
       {
@@ -3289,6 +3646,58 @@ export const EVENTS: GameEvent[] = [
       { kind: 'fade', to: 'out' },
       { kind: 'teleport', areaId: 'nm-casino', col: 22, row: 24 },
       { kind: 'fade', to: 'in' },
+      // Neon Mesa's Foucault, at the end of the bar, where you go first (docs/STORYBOARD.md §10). He cheers you
+      // again when the suite opens (`mesa-boss-door`).
+      { kind: 'dialogue', speaker: 'You', lines: ['You: (I could use a drink first. Something to loosen up.)'] },
+      { kind: 'movePlayer', to: { col: 32, row: 3 } },
+      {
+        kind: 'dialogue',
+        lines: [
+          'The bartender sets something blue in front of you before you have said a word. At the end of the bar, a bald man in a black turtleneck is explaining something to his glass.',
+        ],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'gaspard',
+        lines: [
+          'Gaspard: He knew what you drink. Of course he did. Do not look up.',
+          'Gaspard: ...You looked up.',
+        ],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'gaspard',
+        lines: [
+          'Gaspard: The black glass domes in the ceiling. Forty of them. Behind each one, maybe a man. Maybe nobody. You will never know which, so you behave for all forty.',
+          'Gaspard: That is the trick. You do not need a guard if everybody thinks there might be one. You become your own guard. Much cheaper.',
+          'Gaspard: It is a prison, my friend. The most beautiful prison ever built, because the prisoners pay to get in.',
+        ],
+      },
+      { kind: 'dialogue', lines: ['He hiccups, and lifts one finger to the bartender for another.'] },
+      {
+        kind: 'dialogue',
+        speaker: 'gaspard',
+        lines: [
+          'Gaspard: They know your average stake. Your favourite machine. How long you sit before you go to the toilet. They know you better than your mother does.',
+          'Gaspard: That is power. Not a man in a hat. A man with a spreadsheet who knows when you go to the toilet.',
+          'Gaspard: Watch the dealers. Every hand the same: clap, show both palms, to the ceiling. Somebody made them into that. You stood up straighter when you walked in. I saw it.',
+        ],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'gaspard',
+        lines: [
+          'Gaspard: The man who owns it says he turns the cameras off for the private games. Hm. And who watches the man who turns off the cameras?',
+          'Gaspard: Drink up. The drinks are free. Ask yourself why the drinks are free.',
+        ],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'You',
+        lines: [
+          'You: (Foucault: build a prison where nobody can tell if they are being watched, and the prisoners guard themselves. He is drunk, and he is right about the dealers’ hands.)',
+        ],
+      },
     ],
   },
   {
@@ -3501,7 +3910,10 @@ export const EVENTS: GameEvent[] = [
   // Act 6 — Porto Lumina. Everything that followed you up was pointing here.
   {
     id: 'arrive-lumina',
-    about: 'Arriving at Porto Lumina: the nosebleed, the tournament, and the man who photographs the winner. Then you walk in to the casino, where Nadia is waiting at the foyer rope (`nadia-names-the-match`).',
+    about:
+      'Arriving at Porto Lumina: the nosebleed, the tournament, the man who photographs the winner, and Bojan with ' +
+      'his sign by the steps. Then you walk in to the casino, where Nadia is waiting at the foyer rope ' +
+      '(`nadia-names-the-match`).',
     trigger: { kind: 'enterArea', areaId: 'pl-street' },
     actions: [
       {
@@ -3538,6 +3950,49 @@ export const EVENTS: GameEvent[] = [
           'Photographer: Thirty thousand at the nosebleed. Twenty to enter the Poker Legends tournament, and the winner sits down with Ms. Okonkwo at the Invitational.',
           'Photographer: Four years I have photographed her winning. Give me a reason to photograph somebody else.',
         ],
+      },
+      // Porto Lumina's protester, by the casino steps (docs/STORYBOARD.md §10).
+      { kind: 'movePlayer', to: { col: 17, row: 6 } },
+      {
+        kind: 'dialogue',
+        lines: ['Across from the casino steps, a bearded man in a crumpled T-shirt holds up a cardboard sign: YOU KNOW THE HOUSE WINS. YOU GO IN ANYWAY. WHY???'],
+      },
+      { kind: 'moveNpc', characterId: 'bojan', to: 'player' },
+      {
+        kind: 'dialogue',
+        speaker: 'bojan',
+        lines: [
+          'Bojan: (sniff) You are going in. Of course you are going in. Let me tell you something, and so on.',
+          'Bojan: You think you are not a believer. You say: I know the house always wins, I know the odds, I am a rational person, it is only a game.',
+          'Bojan: But this is precisely how it works! You know very well, and still you go in. The knowing is part of the trick!',
+          'Bojan: The casino does not need you to believe. The chips believe for you. You only have to carry them about.',
+        ],
+      },
+      { kind: 'dialogue', lines: ['He tugs at the neck of his T-shirt and sniffs, twice.'] },
+      {
+        kind: 'dialogue',
+        speaker: 'bojan',
+        lines: [
+          'Bojan: And everywhere in there, what does it say? ENJOY. Enjoy, enjoy! The old master said: you must not. The new master says: you must enjoy. This is much worse. Have you tried to enjoy on command? It is a nightmare.',
+          'Bojan: Go to the toilets inside. I did my research. Marble, gold taps, and the water takes everything away at once, very quietly. You never see what you have lost.',
+          'Bojan: A German toilet, the hole is at the front, so you can inspect everything. A French one, at the back, it vanishes. This one is pure Lumina: it was flushed before you arrived.',
+        ],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'bojan',
+        lines: [
+          'Bojan: And the penthouse at the top! It is a chocolate egg with a toy inside. Everybody buys the chocolate for the toy, and the toy is crap. Everybody knows the toy is crap!',
+          'Bojan: But you must have it. The surprise is the product. The chocolate is only the wrapping for the nothing.',
+          'Bojan: Go in, go in. Lose everything, it will be very instructive. I am not against it. I am against it ideologically, which is a completely different thing.',
+          'Bojan: (sniff) Ehh. And so on, and so on.',
+        ],
+      },
+      { kind: 'moveNpc', characterId: 'bojan', to: { col: 23, row: 7 } },
+      {
+        kind: 'dialogue',
+        speaker: 'You',
+        lines: ['You: (He talks like a man who has written forty books and enjoyed none of them. I want to read all forty.)'],
       },
       // "Let's go" means in: off the last line you walk to the door of the casino
       // and through it, rather than being left at the stop to find it.
@@ -4068,6 +4523,27 @@ export const EVENTS: GameEvent[] = [
     ],
   },
   {
+    id: 'bojan-after',
+    about:
+      'Once the final is won: the protester by the casino steps has turned his sign over, and wants to know whether ' +
+      'the toy was any good (docs/STORYBOARD.md §10).',
+    trigger: { kind: 'talkTo', characterId: 'bojan' },
+    conditions: [{ kind: 'flag', flag: 'hasPenthouse' }],
+    actions: [
+      { kind: 'dialogue', lines: ['Bojan has turned his sign over. The other side says: HE GOT THE TOY.'] },
+      {
+        kind: 'dialogue',
+        speaker: 'bojan',
+        lines: [
+          'Bojan: (sniff) So! You opened the egg. Tell me honestly. Is it a good toy?',
+          'Bojan: No, no, do not answer. Your face is answering. This is the most beautiful thing: you have everything, and now you know exactly what is missing.',
+          'Bojan: Before, you could say: when I win, then. Now there is no then. It is a catastrophe! Congratulations.',
+          'Bojan: Go upstairs and enjoy it. They will check.',
+        ],
+      },
+    ],
+  },
+  {
     id: 'history-on-the-shelf',
     about:
       'Aftermath: the workroom shelf, and the book the run began with. The Greeks come back, and their wonder turns ' +
@@ -4399,8 +4875,9 @@ export const EVENTS: GameEvent[] = [
   {
     id: 'riverbend-boss-sendoff',
     about:
-      'The boss is down: Odette walks you out to the dock and sees you onto the way to Crescent Harbor. ' +
-      'A walked send-off, with no ride: the bus is still yours to board.',
+      'The boss is down: Odette walks you out to the dock and sees you onto the way to Crescent Harbor, and ' +
+      'Severin runs off the boat after you to warn that the wheel turns. A walked send-off, with no ride: the ' +
+      'bus is still yours to board.',
     trigger: { kind: 'enterArea', areaId: 'rb-private', onLoad: true },
     conditions: [
       { kind: 'chapter', cityId: 'riverbend' },
@@ -4432,6 +4909,39 @@ export const EVENTS: GameEvent[] = [
       },
       { kind: 'playSound', sound: 'win' },
       { kind: 'moveNpc', characterId: 'odette', to: { col: 27, row: 12 }, leaves: true },
+      // Severin, off the boat after you: Fortune's wheel turns both ways (docs/STORYBOARD.md §10).
+      { kind: 'dialogue', lines: ['Behind you the gangway clangs, and somebody very large is running.'] },
+      { kind: 'moveNpc', characterId: 'severin', from: { col: 9, row: 6 }, to: 'player', pace: 'run' },
+      {
+        kind: 'dialogue',
+        speaker: 'severin',
+        lines: [
+          'Severin: Wait. WAIT. I have not run since the last century. I have now run. Let it be recorded.',
+          'Severin: You beat the Captain. The whole boat is talking. Her chair is still spinning.',
+          'Severin: So. You are at the top of the wheel. Congratulations. It is the worst place on it.',
+        ],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'severin',
+        lines: [
+          'Severin: Listen to me. Turning is all she does. She turned it for you, she will turn it again, and the higher she lifts you, the further there is to fall.',
+          'Severin: Fortuna gives when she appears to take, and takes when she appears to give. A man wrote that in a cell. I keep it in my cap.',
+          'Severin: Six days she took from me. Do you know what she gave me? Six days of knowing exactly who my friends were. Nobody. It was enormously clarifying.',
+          'Severin: You have just won. Watch what goes.',
+        ],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'severin',
+        lines: ['Severin: Now I must get back before somebody sits in my chair and absorbs my luck. The galley does a frankfurter for a dollar after nine.'],
+      },
+      { kind: 'moveNpc', characterId: 'severin', to: { col: 9, row: 5 }, pace: 'run', leaves: true },
+      {
+        kind: 'dialogue',
+        speaker: 'You',
+        lines: ['You: (The deck has no wheel. It does not know who was up last. But what goes when you win, I will think about on the bus.)'],
+      },
       { kind: 'dialogue', lines: ['Crescent Harbor is open to you. Take the bus when you are ready.'] },
     ],
   },
@@ -4515,8 +5025,9 @@ export const EVENTS: GameEvent[] = [
   {
     id: 'palmcay-boss-door',
     about:
-      'The private room opens: Ines comes out on the floor, finds you and walks you to the door himself. ' +
-      'Casino goals lead you to the table; the table is the rest.',
+      'The private room opens: Konrad comes over from the big table first, with how to beat her and a question ' +
+      '(`saidYesToTheDemon` / `saidNoToTheDemon`), then Ines comes out on the floor, finds you and walks you to the ' +
+      'door herself. Casino goals lead you to the table; the table is the rest.',
     trigger: { kind: 'enterArea', areaId: 'pc-casino', onLoad: true },
     conditions: [
       { kind: 'casino', cityId: 'palmCay', status: 'roomOpen' },
@@ -4524,6 +5035,68 @@ export const EVENTS: GameEvent[] = [
     ],
     actions: [
       { kind: 'wait', ms: 300 },
+      // Konrad, from the big table, before Inés comes out: how to beat her, true to how she plays (her phases in
+      // `characters.ts`), and the demon's question, which the alley remembers (`final-lost`). docs/STORYBOARD.md §10.
+      { kind: 'moveNpc', characterId: 'konrad', from: { col: 12, row: 10 }, to: 'player' },
+      {
+        kind: 'dialogue',
+        speaker: 'konrad',
+        lines: [
+          'Konrad: THERE you are. Twelve thousand off this floor. I watched. A good part of it was mine. I have never enjoyed losing money so much.',
+          'Konrad: She will come for you now. Inés. She can smell it.',
+        ],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'konrad',
+        lines: [
+          'Konrad: Listen, because I will say this once and loudly. She raises first and asks later. Let her. Do not try to out-shout her early. She enjoys it more than you do.',
+          'Konrad: But she can count. Take four chips in ten off her and she pulls up and turns careful. That is when you lean on her.',
+          'Konrad: And never let her stack grow by half. Up there she stops playing cards and starts playing you.',
+          'Konrad: Oh, and watch her when she goes quiet. Quiet is not her nature.',
+        ],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'konrad',
+        lines: [
+          'Konrad: Now. A question. Suppose tonight a demon creeps into your room and whispers: this life, exactly as you have lived it, you will live again. And again. Forever.',
+          'Konrad: The bus. The motels. Every bad beat and every good one. This carpet. Me. Over and over, without end.',
+          'Konrad: Do you throw yourself down and curse him? Or do you say: I have never heard anything so wonderful?',
+        ],
+      },
+      {
+        kind: 'choice',
+        speaker: 'konrad',
+        prompt: 'Would you live it all again?',
+        options: [
+          {
+            label: 'Yes. All of it.',
+            then: [
+              { kind: 'setFlag', flag: 'saidYesToTheDemon' },
+              { kind: 'dialogue', speaker: 'konrad', lines: ['Konrad: HA! Then you are ready for her. Amor fati! Love what comes. Even her!'] },
+            ],
+          },
+          {
+            label: 'Not all of it',
+            then: [
+              { kind: 'setFlag', flag: 'saidNoToTheDemon' },
+              {
+                kind: 'dialogue',
+                speaker: 'konrad',
+                lines: ['Konrad: Not all of it! Honest. Then go in there and play one hand you would play forever. Start with one.'],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'You',
+        lines: ['You: (Nietzsche’s demon, from a man with Nietzsche’s moustache. If he has read him, he will never admit it. It would mean somebody got there first.)'],
+      },
+      { kind: 'dialogue', speaker: 'konrad', lines: ['Konrad: And here she is. I can smell the sun cream. Go and be magnificent.'] },
+      { kind: 'moveNpc', characterId: 'konrad', to: { col: 12, row: 10 } },
       { kind: 'moveNpc', characterId: 'ines', from: { col: 11, row: 24 }, to: 'player' },
       { kind: 'dialogue', speaker: 'ines', lines: [
           'Ines: Twelve thousand, on my carpet, between lunches. I like you already.',
@@ -4590,8 +5163,9 @@ export const EVENTS: GameEvent[] = [
   {
     id: 'mesa-boss-door',
     about:
-      'The private room opens: Vale comes out on the floor, finds you and walks you to the door himself. ' +
-      'Casino goals lead you to the table; the table is the rest.',
+      'The private room opens: Gaspard cheers from the bar and comes over to say what a winner is to the house, ' +
+      'then Vale comes out on the floor, finds you and walks you to the door himself. Casino goals lead you to ' +
+      'the table; the table is the rest.',
     trigger: { kind: 'enterArea', areaId: 'nm-casino', onLoad: true },
     conditions: [
       { kind: 'casino', cityId: 'neonMesa', status: 'roomOpen' },
@@ -4599,6 +5173,33 @@ export const EVENTS: GameEvent[] = [
     ],
     actions: [
       { kind: 'wait', ms: 300 },
+      // Gaspard cheers from the bar before Vale comes out (docs/STORYBOARD.md §10).
+      { kind: 'dialogue', speaker: 'gaspard', lines: ['Gaspard: BRAVO! Bravo! Everybody look at the winner! ...Everybody already is.'] },
+      { kind: 'moveNpc', characterId: 'gaspard', to: 'player' },
+      {
+        kind: 'dialogue',
+        speaker: 'gaspard',
+        lines: [
+          'Gaspard: Forty thousand off the floor. They told me. I did not ask. That is how you know they are watching: they tell you things you did not ask.',
+          'Gaspard: Do you know what you are now? A file. A thick one. Upstairs a man is reading you like a novel.',
+        ],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'gaspard',
+        lines: [
+          'Gaspard: They do not throw winners out. They study them. A winner on the floor is a disorder. A winner in the suite is a guest.',
+          'Gaspard: So now they invite you up, where they can see you properly. They will call it an honour.',
+          'Gaspard: He will tell you the cameras are off. The best camera is the one you believe is off.',
+          'Gaspard: Play as if he is watching. He is. Knowing it is the only freedom they have left you.',
+        ],
+      },
+      {
+        kind: 'dialogue',
+        speaker: 'gaspard',
+        lines: ['Gaspard: Ah. Here comes the eye himself. I will go back to my stool. My stool has a file on me too.'],
+      },
+      { kind: 'moveNpc', characterId: 'gaspard', to: { col: 33, row: 3 } },
       { kind: 'moveNpc', characterId: 'vale', from: { col: 7, row: 24 }, to: 'player' },
       { kind: 'dialogue', speaker: 'vale', lines: [
           'Vale: Forty thousand on the Mesa floor. People do not do that without wanting something.',
@@ -5712,6 +6313,7 @@ export const EVENTS: GameEvent[] = [
             lines: [
               'You: (Boethius wrote his best book in a cell, waiting for the king’s men. Fortune turns a wheel, he said. Climb on if you like, but do not complain when the rules of her game bring you down.)',
               'You: (Only the cards were Fortune. This part is a debt, and it has my name on it.)',
+              'You: (Somewhere on a riverboat, a large man in a green hunting cap is saying he could have told me. He could have. It would have taken an hour.)',
             ],
           },
         ],
@@ -5764,6 +6366,7 @@ export const EVENTS: GameEvent[] = [
             lines: [
               'You: (Boethius wrote his best book in a cell, waiting for the king’s men. Fortune turns a wheel, he said. Climb on if you like, but do not complain when the rules of her game bring you down.)',
               'You: (Only the cards were Fortune. This part is a debt, and it has my name on it.)',
+              'You: (Somewhere on a riverboat, a large man in a green hunting cap is saying he could have told me. He could have. It would have taken an hour.)',
             ],
           },
         ],
@@ -5816,6 +6419,7 @@ export const EVENTS: GameEvent[] = [
             lines: [
               'You: (Boethius wrote his best book in a cell, waiting for the king’s men. Fortune turns a wheel, he said. Climb on if you like, but do not complain when the rules of her game bring you down.)',
               'You: (Only the cards were Fortune. This part is a debt, and it has my name on it.)',
+              'You: (Somewhere on a riverboat, a large man in a green hunting cap is saying he could have told me. He could have. It would have taken an hour.)',
             ],
           },
         ],
@@ -5868,6 +6472,7 @@ export const EVENTS: GameEvent[] = [
             lines: [
               'You: (Boethius wrote his best book in a cell, waiting for the king’s men. Fortune turns a wheel, he said. Climb on if you like, but do not complain when the rules of her game bring you down.)',
               'You: (Only the cards were Fortune. This part is a debt, and it has my name on it.)',
+              'You: (Somewhere on a riverboat, a large man in a green hunting cap is saying he could have told me. He could have. It would have taken an hour.)',
             ],
           },
         ],
@@ -6887,6 +7492,31 @@ export const EVENTS: GameEvent[] = [
                   'forever, would you curse him or thank him?',
               },
               { who: 'You', text: 'Same table. Same fifteen thousand. New cards, though. The demon shuffles.' },
+            ],
+          },
+        ],
+      },
+      // What you told Konrad on the Cay (`palmcay-boss-door`), remembered the first time the demon is in the alley.
+      {
+        kind: 'if',
+        when: [{ kind: 'flag', flag: 'saidYesToTheDemon' }, { kind: 'count', of: 'challengeLost', atMost: 1 }],
+        then: [
+          {
+            kind: 'dialogue',
+            speaker: 'You',
+            lines: ['You: (I told Konrad yes, on the Cay. I was picturing the bus and the good nights. I was not picturing this alley. ...Yes, then. Again.)'],
+          },
+        ],
+        else: [
+          {
+            kind: 'if',
+            when: [{ kind: 'flag', flag: 'saidNoToTheDemon' }, { kind: 'count', of: 'challengeLost', atMost: 1 }],
+            then: [
+              {
+                kind: 'dialogue',
+                speaker: 'You',
+                lines: ['You: (I told Konrad no, on the Cay. Here is the demon anyway. He does not take no for an answer. He shuffles.)'],
+              },
             ],
           },
         ],

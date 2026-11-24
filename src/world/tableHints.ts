@@ -83,6 +83,27 @@ export const TABLE_HINTS: TableHint[] = [
       'My wife says I am wasting my life. It is my life. I will waste it how I like. Raise!',
     ],
   },
+  // The thinkers who play (docs/STORYBOARD.md §10): their motto, once a sitting, when the first cards come down.
+  {
+    id: 'konrad-amor-fati',
+    tableId: 'palmcay-high',
+    speaker: 'konrad',
+    when: [{ kind: 'eventDone', eventId: 'arrive-palmcay' }],
+    lines: [
+      'AMOR FATI! Whatever those cards are, I love them already!',
+      'AMOR FATI! Deal me the worst of it. I want to see what I do with it!',
+    ],
+  },
+  {
+    id: 'severin-wheel',
+    tableId: 'riverbend-mid',
+    speaker: 'severin',
+    when: [{ kind: 'eventDone', eventId: 'arrive-riverbend' }],
+    lines: [
+      'Can you hear it? The wheel. Creaking. Upward. Do not breathe on it.',
+      'Oh, Fortuna, blind and heedless goddess. I am right here. Large, and in a green cap. You cannot miss me.',
+    ],
+  },
   {
     id: 'xue-greyhound',
     tableId: 'lumina-nosebleed',

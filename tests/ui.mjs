@@ -96,6 +96,9 @@ const STORY_SEEN = [
   'riverbend-deck-night',
   'harbor-mirror',
   'palmcay-beach',
+  // The thinkers waiting at the bus stop and the transit hub (docs/STORYBOARD.md §10).
+  'mutt-at-the-stop',
+  'kessler-on-his-walk',
 ]
 
 function baseSave(overrides = {}) {
@@ -677,10 +680,13 @@ await test('walking into Riverbend stops you with what it costs, and Kit is on t
   )
 
   await talkThrough(page)
-  assert(
-    !(await page.locator('[data-testid="event-dialogue"]').isVisible()),
-    'the arrival never finished',
-  )
+  // Aboard, Severin has something to say about you walking up to his table (docs/STORYBOARD.md §10).
+  // A walk between lines shows no box, so read to the last line rather than until the box goes.
+  const box = page.locator('[data-testid="event-dialogue"]')
+  await readUntil(page, /read the first half/)
+  await box.locator('[data-testid="dialogue-advance"]').click()
+  await page.waitForTimeout(400)
+  assert(!(await box.isVisible().catch(() => false)), 'the arrival never finished')
   // "Let's go" walks you aboard; Kit is on the dock when you come ashore.
   assert(await untilArea(page, /Riverboat/), `the arrival did not walk you aboard (in ${await areaNameOf(page)})`)
   await enterDoor(page, 'Ashore')
@@ -1253,6 +1259,15 @@ await test('after the first game Dana walks you home and Marcus rides out with y
   await readUntil(page, /Silver Creek\. A casino/)
   assert((await areaNameOf(page)).includes('Silver Creek'), `the bus did not put you down at Silver Creek (${await areaNameOf(page)})`)
   await readUntil(page, /Real poker/)
+  // Mutt, on the bench by the stop (docs/STORYBOARD.md §10): the lantern in daylight, Marcus moved out of his
+  // sun, and a dollar asked for, which the stop remembers when you leave town.
+  await readUntil(page, /Not you either/)
+  assert(await besideYou(page, 'character-mutt'), 'Mutt did not get up off his bench to look at you')
+  await shot(page, 'after-the-game-mutt')
+  await readUntil(page, /Spare a dollar/)
+  await page.locator('[data-testid="dialogue-advance"]').click()
+  await answer(page, 1)
+  await readUntil(page, /neither of us is one bit different/)
   await readUntil(page, /Pit boss, top left/)
   assert((await areaNameOf(page)).includes('Casino'), `Marcus did not walk you in (${await areaNameOf(page)})`)
   await shot(page, 'after-the-game-casino')
@@ -1270,6 +1285,7 @@ await test('after the first game Dana walks you home and Marcus rides out with y
   assert(there.unlockedCityIds.includes('silverCreek'), 'arriving with Marcus did not count as visiting Silver Creek')
   assert(there.completedEventIds.includes('marcus-rides-out-with-you'), 'the ride out was not saved as over')
   assert(there.flags.marcusSeesYouOff === false, 'Marcus is still seeing you off')
+  assert(there.flags.gaveMuttADollar === true, 'the dollar you gave Mutt was not remembered')
 
   // The table he pointed at is there to sit at; and out of the door the
   // valet's card is not read to somebody Marcus walked in.
@@ -4261,6 +4277,278 @@ await test('the race fills a landscape phone screen, with the pads over the road
   if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT })
   assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
   await page.close()
+})
+
+// ---------------------------------------------------------------------------
+// The thinkers up the ladder (docs/STORYBOARD.md §10): one in each casino town,
+// each met twice. Each scenario plays one scene from a seeded save, reads it to
+// its end, and checks the person is where the scene says.
+// ---------------------------------------------------------------------------
+const advanceLine = async (page) => {
+  await page.locator('[data-testid="dialogue-advance"]').click()
+  await page.waitForTimeout(250)
+}
+const ladder = (to) => ['apartment', 'silverCreek', 'riverbend', 'crescentHarbor', 'palmCay', 'neonMesa', 'portoLumina'].slice(0, to + 1)
+const unseen = (...ids) => STORY_SEEN.filter((id) => !ids.includes(id))
+/** A save on the road into a town, to walk in and be met by its arrival card. */
+const onTheRoadTo = (cityId, roadId, upTo, arrival, extra = {}) =>
+  baseSave({ cityId, areaId: roadId, cash: 90000, unlockedCityIds: ladder(upTo), completedEventIds: unseen(arrival), ...extra })
+const casinoOf = (open, beaten) => ({ net: {}, roomOpen: open, bossBeaten: beaten })
+
+await test('thinker: Mutt gets off his bench for you and Marcus, and asks for a dollar', async () => {
+  // On your step the morning after the first game, Marcus waiting to ride out with you.
+  const page = await newPage(
+    openedSave({
+      areaId: 'basin',
+      period: 'morning',
+      day: 2,
+      cash: 1500,
+      flags: { wonPokerNight: true, beatFinalRival: false, hasPenthouse: false, metDana: true, marcusSeesYouOff: true },
+      completedEventIds: unseen('marcus-rides-out-with-you'),
+    }),
+  )
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await readUntil(page, /getting on it with you/)
+  await advanceLine(page)
+  await readUntil(page, /do not get off at Eastgate/)
+  await advanceLine(page)
+  await readUntil(page, /Real poker/)
+  await readUntil(page, /Not you either/)
+  assert(await besideYou(page, 'character-mutt'), 'Mutt did not get up off his bench to look at you')
+  await shot(page, 'thinker-mutt-bench')
+  await readUntil(page, /in my sun/)
+  await readUntil(page, /Right\. Sorry/)
+  const marcus = await drawnAt(page, 'character-marcus')
+  assert(marcus && marcus.col === 24 && marcus.row === 12, `Marcus did not step out of Mutt's sun (${JSON.stringify(marcus)})`)
+  await readUntil(page, /Spare a dollar/)
+  await advanceLine(page)
+  await answer(page, 2)
+  await readUntil(page, /nearly as good at it as the cactus/)
+  await readUntil(page, /I skipped to the end/)
+  await readUntil(page, /always here when it is over/)
+  await readUntil(page, /Pit boss, top left/)
+  assert((await areaNameOf(page)).includes('Casino'), `Marcus did not walk you in (${await areaNameOf(page)})`)
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+})
+
+await test('thinker: Mutt at the Silver Creek stop remembers the dollar, and the next press is the bus', async () => {
+  const page = await newPage(
+    baseSave({
+      cityId: 'silverCreek',
+      areaId: 'sc-street',
+      unlockedCityIds: ladder(1),
+      flags: { wonPokerNight: true, beatFinalRival: false, hasPenthouse: false, gaveMuttADollar: true },
+      casino: casinoOf(['silverCreek'], ['silverCreek']),
+      completedEventIds: unseen('mutt-at-the-stop'),
+    }),
+  )
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(500)
+  await approach(page, 'Bus Stop')
+  await page.keyboard.press('e')
+  await readUntil(page, /Your dollar is still in my pocket/)
+  assert(await besideYou(page, 'character-mutt'), 'Mutt did not come over from his bench')
+  await shot(page, 'thinker-mutt-stop')
+  await readUntil(page, /A PENTHOUSE/)
+  await readUntil(page, /Riverbend bus is coming/)
+  await advanceLine(page)
+  assert((await dialogueNow(page)) === '', 'the wait for the bus did not end')
+  const menu = page.locator('[data-testid="menu-screen"]')
+  await approach(page, 'Bus Stop')
+  for (let i = 0; i < 6 && !(await menu.isVisible().catch(() => false)); i++) {
+    await page.keyboard.press('e')
+    await page.waitForTimeout(300)
+  }
+  assert(await menu.isVisible(), 'the stop did not offer the bus after Mutt')
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+})
+
+await test('thinker: Severin objects as you walk up to the riverboat table', async () => {
+  const page = await newPage(onTheRoadTo('riverbend', 'road-riverbend', 2, 'arrive-riverbend'))
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(500)
+  await walkEdge(page, 'east')
+  await readUntil(page, /Turn around/)
+  assert((await areaNameOf(page)).includes('Riverboat'), `not on the boat (${await areaNameOf(page)})`)
+  await shot(page, 'thinker-severin-table')
+  await readUntil(page, /We have history/)
+  await readUntil(page, /read the first half/)
+  await advanceLine(page)
+  assert((await dialogueNow(page)) === '', 'the arrival did not end')
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+})
+
+await test('thinker: Severin runs off the boat after Odette’s send-off', async () => {
+  const page = await newPage(
+    baseSave({
+      cityId: 'riverbend',
+      areaId: 'rb-private',
+      unlockedCityIds: ladder(2),
+      casino: casinoOf(['silverCreek', 'riverbend'], ['silverCreek', 'riverbend']),
+      completedEventIds: unseen('riverbend-boss-sendoff'),
+    }),
+  )
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await readUntil(page, /somebody very large is running/)
+  await readUntil(page, /worst place on it/)
+  assert(await besideYou(page, 'character-severin'), 'Severin did not run up to you')
+  await shot(page, 'thinker-severin-dock')
+  await readUntil(page, /takes when she appears to give/)
+  await readUntil(page, /Crescent Harbor is open to you/)
+  assert(!(await drawnAt(page, 'character-severin')), 'Severin did not go back aboard')
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+})
+
+await test('thinker: Professor Kessler is thrown out of the card room as you arrive', async () => {
+  const page = await newPage(onTheRoadTo('crescentHarbor', 'road-crescent', 3, 'arrive-crescent'))
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(500)
+  await walkEdge(page, 'east')
+  await readUntil(page, /bangs open/)
+  await readUntil(page, /INFORMING/)
+  assert(await besideYou(page, 'character-kessler'), 'Kessler did not land in front of you')
+  await shot(page, 'thinker-kessler-door')
+  await readUntil(page, /never once been surprised/)
+  await readUntil(page, /not kept waiting/)
+  await talkThrough(page)
+  for (let i = 0; i < 10 && (await dialogueNow(page)) !== ''; i++) await advanceLine(page)
+  assert(await untilArea(page, /Card Room|Harbor Room/), `not walked in to the card room (${await areaNameOf(page)})`)
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+})
+
+await test('thinker: Kessler on his walk at the transit hub, made late', async () => {
+  const page = await newPage(
+    baseSave({
+      cityId: 'crescentHarbor',
+      areaId: 'ch-street',
+      unlockedCityIds: ladder(3),
+      casino: casinoOf(['silverCreek', 'riverbend', 'crescentHarbor'], ['silverCreek', 'riverbend', 'crescentHarbor']),
+      completedEventIds: unseen('kessler-on-his-walk'),
+    }),
+  )
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(500)
+  await approach(page, 'Transit Hub')
+  await page.keyboard.press('e')
+  await readUntil(page, /From the door/)
+  assert(await besideYou(page, 'character-kessler'), 'Kessler did not stop beside you')
+  await readUntil(page, /What if we were all gamblers/)
+  await shot(page, 'thinker-kessler-hub')
+  await readUntil(page, /six minutes past/)
+  await readUntil(page, /six minutes late/)
+  await advanceLine(page)
+  assert((await dialogueNow(page)) === '', 'the walk did not end')
+  assert(!(await drawnAt(page, 'character-kessler')), 'Kessler did not hurry off')
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+})
+
+await test('thinker: Konrad holds court at the Cay Room’s big table', async () => {
+  const page = await newPage(onTheRoadTo('palmCay', 'road-palmcay', 4, 'arrive-palmcay'))
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(500)
+  await walkEdge(page, 'east')
+  await readUntil(page, /moustache is doing/)
+  await readUntil(page, /A NEW ONE/)
+  await shot(page, 'thinker-konrad-table')
+  await readUntil(page, /deeper-stacked/)
+  await readUntil(page, /That is the whole trick/)
+  await advanceLine(page)
+  assert((await dialogueNow(page)) === '', 'the arrival did not end')
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+})
+
+await test('thinker: Konrad comes over before Inés, and the demon’s answer is kept', async () => {
+  const page = await newPage(
+    baseSave({
+      cityId: 'palmCay',
+      areaId: 'pc-casino',
+      unlockedCityIds: ladder(4),
+      casino: casinoOf(['silverCreek', 'riverbend', 'crescentHarbor', 'palmCay'], ['silverCreek', 'riverbend', 'crescentHarbor']),
+      completedEventIds: unseen('palmcay-boss-door'),
+    }),
+  )
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await readUntil(page, /THERE you are/)
+  assert(await besideYou(page, 'character-konrad'), 'Konrad did not come over')
+  await readUntil(page, /Quiet is not her nature/)
+  await shot(page, 'thinker-konrad-advice')
+  await readUntil(page, /anything so wonderful/)
+  await advanceLine(page)
+  await answer(page, 1)
+  await readUntil(page, /ready for her/)
+  await readUntil(page, /on my carpet/)
+  await readUntil(page, /Talk to the dealer when you are ready/)
+  await advanceLine(page)
+  const saved = await savedState(page)
+  assert(saved.flags.saidYesToTheDemon === true, 'the answer to the demon was not kept')
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+})
+
+await test('thinker: a drink at the Mesa bar first, with Gaspard', async () => {
+  const page = await newPage(onTheRoadTo('neonMesa', 'road-mesa', 5, 'arrive-mesa'))
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(500)
+  await walkEdge(page, 'east')
+  await readUntil(page, /loosen up/)
+  await readUntil(page, /black turtleneck/)
+  assert((await areaNameOf(page)).includes('Mesa Casino'), `not in the casino (${await areaNameOf(page)})`)
+  assert(await besideYou(page, 'character-gaspard'), 'you are not at the bar beside Gaspard')
+  await shot(page, 'thinker-gaspard-bar')
+  await readUntil(page, /You looked up/)
+  await readUntil(page, /why the drinks are free/)
+  await readUntil(page, /right about the dealers/)
+  await advanceLine(page)
+  assert((await dialogueNow(page)) === '', 'the arrival did not end')
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+})
+
+await test('thinker: Gaspard cheers the suite open before Vale comes out', async () => {
+  const page = await newPage(
+    baseSave({
+      cityId: 'neonMesa',
+      areaId: 'nm-casino',
+      unlockedCityIds: ladder(5),
+      casino: casinoOf(['silverCreek', 'riverbend', 'crescentHarbor', 'palmCay', 'neonMesa'], ['silverCreek', 'riverbend', 'crescentHarbor', 'palmCay']),
+      completedEventIds: unseen('mesa-boss-door'),
+    }),
+  )
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await readUntil(page, /BRAVO/)
+  await readUntil(page, /reading you like a novel/)
+  assert(await besideYou(page, 'character-gaspard'), 'Gaspard did not come over from the bar')
+  await shot(page, 'thinker-gaspard-suite')
+  await readUntil(page, /file on me too/)
+  await readUntil(page, /Forty thousand on the Mesa floor/)
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+})
+
+await test('thinker: Bojan and his sign outside the Lumina casino', async () => {
+  const page = await newPage(onTheRoadTo('portoLumina', 'road-lumina', 6, 'arrive-lumina'))
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(500)
+  await walkEdge(page, 'east')
+  await readUntil(page, /cardboard sign/)
+  await readUntil(page, /Let me tell you something/)
+  assert(await besideYou(page, 'character-bojan'), 'Bojan did not come over with his sign')
+  await shot(page, 'thinker-bojan-sign')
+  await readUntil(page, /German toilet/)
+  await readUntil(page, /And so on, and so on/)
+  await readUntil(page, /forty books/)
+  await talkThrough(page)
+  for (let i = 0; i < 10 && (await dialogueNow(page)) !== ''; i++) await advanceLine(page)
+  assert(await untilArea(page, /Casino|Lumina Hall|Grand/), `not walked in to the casino (${await areaNameOf(page)})`)
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
 })
 
 await browser.close()

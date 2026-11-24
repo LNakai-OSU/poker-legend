@@ -72,6 +72,9 @@ export const TALK: Record<string, Talk> = {
   contessa: t(0.7, 'jolly'),
   zeke: t(0.9, 'jolly'),
   nadia: t(0.3, 'dry'),
+  // The thinkers who play: Severin narrates Fortune's every move, Konrad loves every one out loud.
+  severin: t(0.9, 'grumpy'),
+  konrad: t(0.85, 'jolly'),
 }
 
 export const talkOf = (id: string): Talk => TALK[id] ?? DEFAULT_TALK

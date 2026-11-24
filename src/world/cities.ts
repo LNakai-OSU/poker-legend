@@ -436,8 +436,8 @@ const CAY_FLOOR = parseMap(`
 /** The Mesa Casino: near-black carpet with neon trim, neon walls, a progressive bank, the high-roller door roped off. */
 const MESA_FLOOR = parseMap(`
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-^FFFFFFnnnnnnnnnnnnnnnnnnnnnnnnnnnnnFFFFF^
-^FFFFFF!!!!!!!!!FFF!!!!!!FFF!!!!!!!!FFFFF^
+^FFFFFFnnnnnnnnnnnnnnnnnnnnnnFFFFFnnFFFFF^
+^FFFFFF!!!!!!!!!FFF!!!!!!FFF!FFFFF!!FFFFF^
 ^!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!^
 ^!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!^
 ^!!!!!F!!FFFFF!!!!!!!!!!!!!!!!FFF!!!!!!!!^
@@ -2685,6 +2685,16 @@ const neonMesa: CityDef = {
           lines: ['Waitress: Drinks are free while you play. Nothing else is.'],
           action: { kind: 'flavor' },
         },
+        // Behind the bar on the back wall. Gaspard is the man at the end of it.
+        {
+          ...local('nm-bartender', 'Bartender', 31, 2, [
+            'Bartender: I pour what the screen says you drink. The screen is usually right.',
+            'Bartender: Gaspard? He has been on that stool since the carpet was laid.',
+          ], [
+            'Bartender: Tips go in the jar. The jar has a camera in it. For the tips.',
+          ]),
+          role: 'bartender',
+        },
         {
           id: 'highroller',
           name: 'High Roller Room',
@@ -3548,6 +3558,8 @@ export const AREA_STAMPS: Record<string, PlacedStamp[]> = {
     { stampId: 'door-vip', col: 22, row: 1 },
     { stampId: 'velvet-rope', col: 16, row: 2 },
     { stampId: 'velvet-rope', col: 25, row: 2 },
+    // The bar along the back wall, where Gaspard drinks at every hour (docs/STORYBOARD.md §10).
+    { stampId: 'bar-neon', col: 29, row: 1 },
     { stampId: 'slot-bank-neon', col: 36, row: 1 },
     { stampId: 'cactus', col: 40, row: 7 },
     { stampId: 'prize-car', col: 1, row: 10 },

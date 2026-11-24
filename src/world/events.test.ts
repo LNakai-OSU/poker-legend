@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  ENDS_EVENT,
   EVENTS,
   arrivalClashes,
   arrivalsDuring,
@@ -461,8 +462,15 @@ describe('the run is carried by people', () => {
     for (const event of arrivals) {
       if (event.trigger.kind !== 'enterArea') throw new Error(`${event.id} is not for walking into a street`)
       const street = AREAS[event.trigger.areaId].area
-      const tail = event.actions.slice(-4)
+      // The walk in is the card's last change of place: walk to the door, fade, through it, fade back. A scene
+      // may follow it inside (the town's thinker at the bar or the table, docs/STORYBOARD.md §10), as long as
+      // nothing after it takes you anywhere else.
+      const kinds = event.actions.map((a) => a.kind)
+      const at = kinds.lastIndexOf('teleport') - 2
+      const tail = event.actions.slice(at, at + 4)
       expect(tail.map((a) => a.kind), `${event.id} does not end by walking you in`).toEqual(['movePlayer', 'fade', 'teleport', 'fade'])
+      const after = everyAction(event.actions.slice(at + 4)).map((a) => a.kind)
+      expect(after.filter((k) => k === 'teleport' || k === 'ride' || ENDS_EVENT.has(k)), `${event.id} takes you away after walking you in`).toEqual([])
       const [walk, out, into, back] = tail as [
         Extract<EventAction, { kind: 'movePlayer' }>,
         Extract<EventAction, { kind: 'fade' }>,
