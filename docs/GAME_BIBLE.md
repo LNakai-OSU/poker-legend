@@ -91,9 +91,10 @@ deb: {
   `elder` (stooped, on a cane) or `kid`. Strangers are made up in all of them.
   `look.prop` (with `propColor`) is a thing of their own — `cigar`, `pipe`,
   `flower`, `pearls`, `scarf`, `ledger`, `chain`, `satchel`, `rose`,
-  `newspaper`, `coffee`, `collar`, `bowtie` — and the hats after the first six
+  `newspaper`, `coffee`, `collar`, `bowtie`, `lantern`, `pocketwatch`,
+  `moustache`, `cocktail`, `placard` — and the hats after the first six
   (`bowler`, `flatcap`, `captain`, `tophat`, `headphones`, `bandana`,
-  `hardhat`) are nobody's by chance. Every boss and everybody you meet again
+  `hardhat`, `earflaps`) are nobody's by chance. Every boss and everybody you meet again
   has one of the two, and no two of them the same body with the same thing.
 - `streetLook` is the same overworld look for somebody with no `overworld`:
   a boss, drawn only at their own table in the back room.
@@ -122,7 +123,10 @@ deb: {
   chapters. A POI whose id or name is a character's is drawn as that character,
   so Hal's two lesson stools share his face.
 - A table seats characters by id: `opponents: ['deb', 'mack', 'tiny']`, or
-  `{ character: 'vance', persona: 'headsUp' }`.
+  `{ character: 'vance', persona: 'headsUp' }`. An open table's `regulars`
+  (ids from its `opponents`) are in its lineup at every hour, the way a night's
+  guest is on their night: Severin never leaves the riverboat, Konrad the Cay
+  Room's big table.
 - **Everybody but a whale has their own tell.** `seat.habit: { strong, weak }`
   names the cue they show with a good hand and with a bad one, out of the five
   cues in `engine/tells.ts`. Two people can show the same cue and mean opposite

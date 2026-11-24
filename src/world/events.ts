@@ -1107,7 +1107,7 @@ const DANA_ON_THE_14: RideAction[] = [
     lines: [
       'Dana: Go on. You can do it. ...It hates this hill. Be nice to it and it gets up.',
       'Dana: Everything is a bit alive, if you watch it long enough. Machine four at the laundromat only eats socks off people who slam the lid.',
-      'Dana: Rain by Thursday. See them stacking up over the tower?',
+      'Dana: Rain by Thursday. See the clouds stacking up over the water tower?',
       'Dana: I called a wet week once. Booked every dryer in the laundromat on the Monday, and let them out by the hour when it poured.',
       'Dana: Made a month’s money by Friday. Then I gave the dryers back.',
       'Dana: People asked why. I wanted to know if I could. I could. After that it was just dryers.',

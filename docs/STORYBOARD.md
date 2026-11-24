@@ -937,3 +937,38 @@ All six are **built** (2026-11-18) and checked on a contact sheet and in the gam
 - *Checked (steps 4 and 5):* `rb-boat` and `pc-street` are reachable at night in their chapters (no door keeps hours; each reel was played in the game from a seeded save at night, the Harbor's and the Cay's by walking out of a shop door); the Mesa's cave sits in Vale's send-off and the interlude in Dana's, so it leaves the interlude untouched; `arrivalClashes` and "two events fighting over the same moment" pass, by the boss-falls and room-open conditions above. The cost of those conditions: a player who opens the boat's private room before any night aboard, or beats Bellamy or Inés before a night on their street, never sees that town's reel. *Checked (steps 1 to 3):* each lunatic's beat is one-shot with no other talk beat on them, so it takes first refusal once and their schedule lines come back; `penthouse-mirror` carries nobody anywhere, so it clashes with no arrival; a film is skipped up to the next thing that is not a film, so the Dolores callback in `tournament-won` sits after the whole film (one extra skip, and only for players who met her) rather than splitting it.
 - *Decided by the user (2026-11-17):* (a) Sartre is saved for Lumina (`lumina-welcome`); the Harbor takes Montaigne. (b) The losing paths get thinkers: Camus on the first bust (Ray's), Boethius on the first catch, Nietzsche's recurrence at `final-lost` (9.4). (c) Nietzsche twice (the debt, the recurrence) is fine.
 - *Decided while building:* player thoughts are a `dialogue` spoken by `You`, the line in parentheses, so they read as thought and wait for a press like every line. Hal's Alcibiades line is Socrates's pupil, not Plato's (fixed in the doc).
+
+---
+
+## 10. The thinkers in person (built, 2026-11-24)
+
+Alongside §9's reels and thoughts: one philosopher **in person** in each casino town,
+in chronological order, each with an invented name and two scenes that move the run
+on. Nobody says whose ideas they are living; only the player's thoughts name a thinker
+(and not Bojan's, who is a living man). Dana is the first, woven into her own opening
+scenes. Rule 1 holds throughout: Severin's "due" is answered by a thought, Konrad's
+advice is about how Inés plays, never what she is dealt.
+
+| Town | Who (stands in for) | Scene 1 | Scene 2 |
+|---|---|---|---|
+| Basin | **Dana** (Thales) | Her own scenes: on the 14 (`DANA_ON_THE_14`, all three ways onto it) the bus that hates a hill, machine four that only eats socks off people who slam the lid, and the wet week she booked every dryer on a forecast, then gave them back (the olive presses). | `dana-walks-you-home`: money is water ("pools round whoever sits still"), and the drain she fell down looking at Jupiter (the well); the player's thought names Thales. One water line in `dana-takes-your-measure` too. |
+| Silver Creek | **Mutt** (Diogenes), on the bench by the stop, lantern lit in daylight | Inside `marcus-rides-out-with-you`, between the bus and the casino door: "Not you either" (the honest man), Marcus told to move out of his sun (Alexander), a dollar asked for (`gaveMuttADollar`), and the whole ladder mocked. | `mutt-at-the-stop` (interact `sc-busstop`, Lou beaten): the joys of owning nothing, the dollar remembered either way, and a laugh at the penthouse. The next press is the bus. |
+| Riverbend | **Severin Mulroney** (Boethius, by way of Ignatius Reilly): hunting cap, valve, Fortuna | At the end of `arrive-riverbend`, walking up to the boat's table: today of all days, the wheel was about to turn for him. He is a `regular` at `riverbend-mid`, so he is in every hand there, a novice maniac narrating Fortuna (`severin-wheel` hint). | In `riverbend-boss-sendoff`, he runs off the boat after you: you are at the top of the wheel, the worst place on it; "Fortuna gives when she appears to take, and takes when she appears to give." Also a one-line nod in the four first-catch beats. |
+| Crescent Harbor | **Professor Kessler** (Kant): waistcoat, watch chain, the same minute every day | In `arrive-crescent`, thrown out of the card room as you reach it: bluffing is lying, and you may not lie even to a murderer at the door; he goes in every week to confirm it is wrong. | `kessler-on-his-walk` (interact `ch-transit`, Bellamy beaten): what is it for, why not mend clocks, "what if we were all gamblers?", and you have made the ferry late (the thought: Rousseau). |
+| Palm Cay | **Konrad Hammer** (Nietzsche): linen suit, the moustache | At the end of `arrive-palmcay`, walking up to the Cay Room's big table: cards are escape, and he plays them to overcome; "what does not bust me makes me deeper-stacked". A `regular` at `palmcay-high`, a deep-stacked sharp maniac who shouts AMOR FATI when the first cards come down (`konrad-amor-fati`). | At the start of `palmcay-boss-door`, before Inés: how to beat her, true to her data (let her raise; she pulls up after losing four chips in ten; never let her stack grow by half; quiet is not her nature), then the demon: live it all again? (`saidYesToTheDemon` / `saidNoToTheDemon`), remembered in `final-lost` the first time the final is lost. |
+| Neon Mesa | **Gaspard Lemire** (Foucault): bald, turtleneck, a blue cocktail, at a new bar on the Mesa floor | At the end of `arrive-mesa` you go to the bar first ("I could use a drink"): the domes in the ceiling, the prison its prisoners pay to enter, power as a spreadsheet, the dealers' palms. | At the start of `mesa-boss-door`, cheering from the bar: a winner on the floor is a disorder, a winner in the suite is a guest; "the best camera is the one you believe is off". Then Vale. |
+| Porto Lumina | **Bojan Kranjc** (Žižek, never named): a protester with a cardboard sign | In `arrive-lumina`, before the steps: you know the house wins and go in anyway; the chips believe for you; ENJOY; the toilets (German, French, Lumina's: flushed before you arrived, which the men's room later is); the penthouse as a chocolate egg's toy. | Added, short: `bojan-after` (talk to him once the penthouse is yours). The sign is turned over: HE GOT THE TOY. |
+
+### What the content model gained
+
+- **`regulars` on a table**: who of its `opponents` is in the lineup at every hour, as a night's guest is on their night (`lineup.ts`). Severin and Konrad.
+- **A bar on the Mesa floor** (`bar-neon` and `nm-bartender`); Gaspard stands at it at every hour.
+- **New faces**: props `lantern`, `pocketwatch`, `moustache`, `cocktail`, `placard`, and the `earflaps` hunting cap.
+- **The arrival card may go on inside**: the walk-in is still the card's last change of place, but a scene may follow it in the room (`events.test.ts`).
+- Three flags, each read later: `gaveMuttADollar`, `saidYesToTheDemon`, `saidNoToTheDemon`.
+
+### Decided while building
+
+- Scene 1 at Riverbend and Palm Cay is part of the arrival card (you are walked up to the table), not a talk to the dealer: a walk into a free chair skips the dealer's beat, and an errand already uses the riverboat dealer.
+- The bus-stop scenes are the stop's first refusal: the scene plays, and the next press opens the bus.
+- A save that passed a town's arrival before this was built meets that town's thinker first in scene 2, whose lines assume scene 1.
