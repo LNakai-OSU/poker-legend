@@ -1939,7 +1939,7 @@ export const EVENTS: GameEvent[] = [
           'Mutt: I am looking for an honest man. Been looking since they built the casino. Checked the casino. Checked the gift shop twice.',
         ],
       },
-      { kind: 'dialogue', speaker: 'marcus', lines: ['Marcus: Morning! Is there anything we can do for you, friend?'] },
+      { kind: 'dialogue', speaker: 'marcus', lines: ['Marcus: Hello there! Is there anything we can do for you, friend?'] },
       { kind: 'dialogue', speaker: 'mutt', lines: ['Mutt: Yes. Move about a foot to your left. You are standing in my sun.'] },
       { kind: 'moveNpc', characterId: 'marcus', to: { col: 24, row: 12 } },
       { kind: 'dialogue', speaker: 'marcus', lines: ['Marcus: ...Right. Sorry.'] },

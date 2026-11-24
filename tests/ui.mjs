@@ -680,10 +680,13 @@ await test('walking into Riverbend stops you with what it costs, and Kit is on t
   )
 
   await talkThrough(page)
-  assert(
-    !(await page.locator('[data-testid="event-dialogue"]').isVisible()),
-    'the arrival never finished',
-  )
+  // Aboard, Severin has something to say about you walking up to his table (docs/STORYBOARD.md §10).
+  const box = page.locator('[data-testid="event-dialogue"]')
+  for (let i = 0; i < 40 && (await box.isVisible().catch(() => false)); i++) {
+    await box.locator('[data-testid="dialogue-advance"]').click().catch(() => {})
+    await page.waitForTimeout(250)
+  }
+  assert(!(await box.isVisible().catch(() => false)), 'the arrival never finished')
   // "Let's go" walks you aboard; Kit is on the dock when you come ashore.
   assert(await untilArea(page, /Riverboat/), `the arrival did not walk you aboard (in ${await areaNameOf(page)})`)
   await enterDoor(page, 'Ashore')
@@ -4291,6 +4294,43 @@ const unseen = (...ids) => STORY_SEEN.filter((id) => !ids.includes(id))
 const onTheRoadTo = (cityId, roadId, upTo, arrival, extra = {}) =>
   baseSave({ cityId, areaId: roadId, cash: 90000, unlockedCityIds: ladder(upTo), completedEventIds: unseen(arrival), ...extra })
 const casinoOf = (open, beaten) => ({ net: {}, roomOpen: open, bossBeaten: beaten })
+
+await test('thinker: Mutt gets off his bench for you and Marcus, and asks for a dollar', async () => {
+  // On your step the morning after the first game, Marcus waiting to ride out with you.
+  const page = await newPage(
+    openedSave({
+      areaId: 'basin',
+      period: 'morning',
+      day: 2,
+      cash: 1500,
+      flags: { wonPokerNight: true, beatFinalRival: false, hasPenthouse: false, metDana: true, marcusSeesYouOff: true },
+      completedEventIds: unseen('marcus-rides-out-with-you'),
+    }),
+  )
+  await page.goto(BASE)
+  await page.waitForSelector('canvas')
+  await readUntil(page, /getting on it with you/)
+  await advanceLine(page)
+  await readUntil(page, /do not get off at Eastgate/)
+  await advanceLine(page)
+  await readUntil(page, /Real poker/)
+  await readUntil(page, /Not you either/)
+  assert(await besideYou(page, 'character-mutt'), 'Mutt did not get up off his bench to look at you')
+  await shot(page, 'thinker-mutt-bench')
+  await readUntil(page, /in my sun/)
+  await readUntil(page, /Right\. Sorry/)
+  const marcus = await drawnAt(page, 'character-marcus')
+  assert(marcus && marcus.col === 24 && marcus.row === 12, `Marcus did not step out of Mutt's sun (${JSON.stringify(marcus)})`)
+  await readUntil(page, /Spare a dollar/)
+  await advanceLine(page)
+  await answer(page, 2)
+  await readUntil(page, /nearly as good at it as the cactus/)
+  await readUntil(page, /I skipped to the end/)
+  await readUntil(page, /always here when it is over/)
+  await readUntil(page, /Pit boss, top left/)
+  assert((await areaNameOf(page)).includes('Casino'), `Marcus did not walk you in (${await areaNameOf(page)})`)
+  assert(page.__errors.length === 0, `console errors: ${page.__errors[0]}`)
+})
 
 await test('thinker: Mutt at the Silver Creek stop remembers the dollar, and the next press is the bus', async () => {
   const page = await newPage(
