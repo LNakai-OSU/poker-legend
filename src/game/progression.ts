@@ -227,6 +227,9 @@ export interface TableAccess {
   bankrollWarning: string | null
 }
 
+/** Said wherever the game tells you that you cannot afford something: the way back to money. */
+export const BROKE_HINT = 'Short on cash? Marcus’s place in Basin always has a kitchen-table game for quick money.'
+
 export function tableAccess(state: GameState, table: TableDef): TableAccess {
   if (table.bossOf && !privateRoomOpen(state, table.bossOf)) {
     return {
@@ -263,7 +266,7 @@ export function tableAccess(state: GameState, table: TableDef): TableAccess {
   if (!table.freeroll && state.cash < table.buyIn) {
     return {
       allowed: false,
-      reason: `The buy-in is $${table.buyIn.toLocaleString()}. You have $${state.cash.toLocaleString()}.`,
+      reason: `The buy-in is $${table.buyIn.toLocaleString()}. You have $${state.cash.toLocaleString()}. ${BROKE_HINT}`,
       bankrollWarning: null,
     }
   }

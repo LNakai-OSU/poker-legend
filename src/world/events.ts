@@ -2040,6 +2040,7 @@ export const EVENTS: GameEvent[] = [
         kind: 'dialogue',
         speaker: 'marcus',
         lines: [
+          'Marcus: And if you ever go broke in here, come back to my place. The kitchen table is always open, and it pays.',
           'Marcus: I am getting the 14 home before the slots get my lunch money.',
           'Marcus: Go and be a story I can tell.',
         ],
