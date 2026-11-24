@@ -33,8 +33,10 @@ export const TABLES: Record<string, TableDef> = {
     smallBlind: 2,
     bigBlind: 5,
     buyIn: 300,
-    opponents: ['deb', 'mack', 'tiny', 'gus', 'pearl'],
+    // Severin never leaves the boat: he is at this table every hour of every day (`regulars`).
+    opponents: ['deb', 'mack', 'tiny', 'gus', 'pearl', 'severin'],
     walkIns: [],
+    regulars: ['severin'],
     nights: [
       {
         id: 'riverbend-tiny',
@@ -73,8 +75,10 @@ export const TABLES: Record<string, TableDef> = {
     smallBlind: 10,
     bigBlind: 25,
     buyIn: 2500,
-    opponents: ['adaeze', 'kit'],
+    // Konrad holds court at the Cay Room's big table whatever the hour (`regulars`).
+    opponents: ['adaeze', 'kit', 'konrad'],
     walkIns: ['lucien', 'sloane', 'ferris'],
+    regulars: ['konrad'],
     nights: [
       {
         id: 'palmcay-cruise',

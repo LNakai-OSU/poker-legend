@@ -52,6 +52,7 @@ export type PersonHairStyle =
 export type StreetHat =
   | 'cap' | 'beanie' | 'fedora' | 'sunhat' | 'cowboy' | 'beret'
   | 'bowler' | 'flatcap' | 'captain' | 'tophat' | 'headphones' | 'bandana' | 'hardhat'
+  | 'earflaps'
 
 /**
  * The shape of somebody under their clothes.
@@ -73,6 +74,7 @@ export type PersonBuild = 'regular' | 'heavy' | 'tall' | 'elder' | 'kid'
 export type PersonProp =
   | 'cigar' | 'pipe' | 'flower' | 'pearls' | 'scarf' | 'ledger' | 'chain'
   | 'satchel' | 'rose' | 'newspaper' | 'coffee' | 'collar' | 'bowtie'
+  | 'lantern' | 'pocketwatch' | 'moustache' | 'cocktail' | 'placard'
 
 /**
  * What goes over the shirt, for somebody in their own clothes. Without it a
@@ -95,11 +97,13 @@ export type Garment =
 export const STREET_HATS: StreetHat[] = [
   'cap', 'beanie', 'fedora', 'sunhat', 'cowboy', 'beret',
   'bowler', 'flatcap', 'captain', 'tophat', 'headphones', 'bandana', 'hardhat',
+  'earflaps',
 ]
 export const PERSON_BUILDS: PersonBuild[] = ['regular', 'heavy', 'tall', 'elder', 'kid']
 export const PERSON_PROPS: PersonProp[] = [
   'cigar', 'pipe', 'flower', 'pearls', 'scarf', 'ledger', 'chain',
   'satchel', 'rose', 'newspaper', 'coffee', 'collar', 'bowtie',
+  'lantern', 'pocketwatch', 'moustache', 'cocktail', 'placard',
 ]
 export const GARMENTS: Garment[] = ['jacket', 'vest', 'hoodie', 'overalls', 'stripes', 'cardigan']
 
@@ -1882,6 +1886,44 @@ const HATS: Record<HatKind, Hat> = {
       )],
     },
   },
+  /** A hunting cap with the flaps down, sticking out either side like two indicators at once. */
+  earflaps: {
+    hairFrom: 6,
+    views: {
+      down: [at(3,
+        '.....KCCCCc.....',
+        '...KKCCCCCCcc...',
+        '..KCCCCCCCCCcc..',
+        '..CCCCCCCCCCcc..',
+        '.KCCcccccccccCc.',
+        '.KC..........Cc.',
+        '.KC..........Cc.',
+        '.Cc..........cc.',
+        '..c..........c..',
+      )],
+      up: [at(3,
+        '.....KCCCCc.....',
+        '...KCCCCCCCCc...',
+        '..KCCCCCCCCCcc..',
+        '..CCCCCCCCCCcc..',
+        '.KCCCCCCCCCCCCc.',
+        '.KC..........Cc.',
+        '.KC..........Cc.',
+        '.Cc..........cc.',
+        '..c..........c..',
+      )],
+      left: [at(3,
+        '.....KCCCCc.....',
+        '...KKCCCCCCc....',
+        '..KCCCCCCCCcc...',
+        '..CCCCCCCCCcc...',
+        '.cccC...KCCcc...',
+        '........KCCc....',
+        '........KCCc....',
+        '........Ccc.....',
+      )],
+    },
+  },
   hero: {
     hairFrom: 7,
     views: {
@@ -2183,6 +2225,148 @@ const PROPS: Record<PersonProp, Prop> = {
       down: [at(13, '.....##ww##.....')],
       up: [at(13, '.....######.....')],
       left: [at(13, '.....w##........')],
+    },
+  },
+  /** A camping lantern, lit, carried at the side in broad daylight. */
+  lantern: {
+    on: 'body',
+    color: '#d89a30',
+    views: {
+      down: [at(17,
+        '..k.............',
+        '.kWk............',
+        '.WwW............',
+        '.WwW............',
+        '.kkk............',
+      )],
+      up: [at(17,
+        '.............k..',
+        '............kWk.',
+        '............WwW.',
+        '............WwW.',
+        '............kkk.',
+      )],
+      left: [at(16,
+        '...k............',
+        '..kWk...........',
+        '..WwW...........',
+        '..WwW...........',
+        '..kkk...........',
+      )],
+    },
+  },
+  /** A watch chain across the waistcoat, and the watch out in the hand. */
+  pocketwatch: {
+    on: 'body',
+    color: '#e0b030',
+    views: {
+      down: [at(14,
+        '......E.........',
+        '.......E....EW..',
+        '........EEEkWk..',
+      )],
+      left: [at(15,
+        '....EW..........',
+        '....Wk..........',
+      )],
+    },
+  },
+  /** A great drooping moustache over the mouth, the ends past the chin. */
+  moustache: {
+    on: 'head',
+    color: '#3a2a20',
+    views: {
+      down: [at(10,
+        '...EWWWWWWWWk...',
+        '...Wk......kW...',
+      )],
+      left: [at(10,
+        '.EWWk...........',
+        '.Wk.............',
+      )],
+    },
+  },
+  /** A cocktail glass held up at the chest, something blue in it. */
+  cocktail: {
+    on: 'body',
+    color: '#5ad0e0',
+    views: {
+      down: [at(14,
+        '............EWWk',
+        '.............Wk.',
+        '.............k..',
+        '............kkk.',
+      )],
+      left: [at(14,
+        '....EWWk........',
+        '.....Wk.........',
+        '.....k..........',
+        '....kkk.........',
+      )],
+    },
+  },
+  /** A cardboard sign on a stick, held up beside the head, words in marker. */
+  placard: {
+    on: 'body',
+    color: '#d8c8a0',
+    views: {
+      down: [at(0,
+        '...........kWWWk',
+        '...........W#w#W',
+        '...........Ww#wW',
+        '...........W#w#W',
+        '...........kWWWk',
+        '.............k..',
+        '.............k..',
+        '.............k..',
+        '.............k..',
+        '.............k..',
+        '.............k..',
+        '.............k..',
+        '.............k..',
+        '.............k..',
+        '.............k..',
+        '.............k..',
+        '.............k..',
+      )],
+      up: [at(0,
+        'kWWWk...........',
+        'W#w#W...........',
+        'Ww#wW...........',
+        'W#w#W...........',
+        'kWWWk...........',
+        '..k.............',
+        '..k.............',
+        '..k.............',
+        '..k.............',
+        '..k.............',
+        '..k.............',
+        '..k.............',
+        '..k.............',
+        '..k.............',
+        '..k.............',
+        '..k.............',
+        '..k.............',
+      )],
+      left: [at(0,
+        'kWWWk...........',
+        'W#w#W...........',
+        'Ww#wW...........',
+        'W#w#W...........',
+        'kWWWk...........',
+        '..k.............',
+        '..k.............',
+        '..k.............',
+        '..k.............',
+        '..k.............',
+        '..k.............',
+        '..k.............',
+        '..k.............',
+        '..k.............',
+        '..k.............',
+        '..k.............',
+        '..k.............',
+      )],
     },
   },
   /** A bow tie at the collar. */
@@ -2722,7 +2906,7 @@ const ACCESSORY_HAT_COLOR: Partial<Record<HatKind, string>> = { cap: '#2f3d5c', 
 const STREET_HAT_COLOR: Partial<Record<HatKind, string>> = {
   beanie: '#b83a3a', fedora: '#4a3a2e', sunhat: '#e8d8a8', cowboy: '#8a5a30', beret: '#2a2a34',
   bowler: '#26262c', flatcap: '#5a5248', captain: '#eeeeea', tophat: '#1e1e26', headphones: '#2a2a34',
-  bandana: '#c03030', hardhat: '#e8c020',
+  bandana: '#c03030', hardhat: '#e8c020', earflaps: '#4a8a3a',
 }
 
 function paletteFor(look: PersonLook, outfit: Outfit, hat: HatKind | undefined): Palette {

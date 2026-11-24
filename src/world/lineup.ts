@@ -44,7 +44,10 @@ export function lineupFor(table: TableDef, period: TimePeriod, day: number): Sea
   const { min, max } = PERIOD_CROWD[period]
   // A night with a guest: the guest is in, and the rest is whoever else is about,
   // as many as the hour would have brought (and always at least one, to play).
-  const guests = activeNight(table, day, period)?.guests ?? []
+  // A table's regulars are its guests every hour of every day.
+  const regulars = table.opponents.filter((ref) => table.regulars?.includes(idOf(ref)))
+  const tonight = (activeNight(table, day, period)?.guests ?? []).filter((ref) => !regulars.some((r) => idOf(r) === idOf(ref)))
+  const guests = [...regulars, ...tonight]
   if (guests.length > 0) {
     const guestIds = new Set(guests.map(idOf))
     const others = pool.filter((ref) => !guestIds.has(idOf(ref)))

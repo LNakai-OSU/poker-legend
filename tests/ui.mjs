@@ -96,6 +96,9 @@ const STORY_SEEN = [
   'riverbend-deck-night',
   'harbor-mirror',
   'palmcay-beach',
+  // The thinkers waiting at the bus stop and the transit hub (docs/STORYBOARD.md §10).
+  'mutt-at-the-stop',
+  'kessler-on-his-walk',
 ]
 
 function baseSave(overrides = {}) {
