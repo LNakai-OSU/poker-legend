@@ -681,11 +681,11 @@ await test('walking into Riverbend stops you with what it costs, and Kit is on t
 
   await talkThrough(page)
   // Aboard, Severin has something to say about you walking up to his table (docs/STORYBOARD.md §10).
+  // A walk between lines shows no box, so read to the last line rather than until the box goes.
   const box = page.locator('[data-testid="event-dialogue"]')
-  for (let i = 0; i < 40 && (await box.isVisible().catch(() => false)); i++) {
-    await box.locator('[data-testid="dialogue-advance"]').click().catch(() => {})
-    await page.waitForTimeout(250)
-  }
+  await readUntil(page, /read the first half/)
+  await box.locator('[data-testid="dialogue-advance"]').click()
+  await page.waitForTimeout(400)
   assert(!(await box.isVisible().catch(() => false)), 'the arrival never finished')
   // "Let's go" walks you aboard; Kit is on the dock when you come ashore.
   assert(await untilArea(page, /Riverboat/), `the arrival did not walk you aboard (in ${await areaNameOf(page)})`)
