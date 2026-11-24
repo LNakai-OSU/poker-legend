@@ -744,7 +744,7 @@ with the Greeks.
 |---|---|---|
 | **You** | The reader | Quotes to cope early, stops quoting at the leap, ends asking whether they are the same ship. |
 | **Marcus** | Epicurus: friends, bread, water, a table | Never names him. Brings a paper cup of *water* to the men's room (`tournament-won`); picks the Greek over the Roman at Palm Cay; "winner hosts". The ending's hollowness is what forgetting him looks like. |
-| **Dana** | Simone Weil: attention is the rarest generosity | She watches for a living. In `dana-reveal`: "Somebody said paying attention is the rarest kind of generosity. I got paid for it, so I do not know what that makes me." |
+| **Dana** | Thales at the start (the sky, water, the well; §10), Simone Weil by the end: attention is the rarest generosity | She watches for a living. In `dana-reveal`: "Somebody said paying attention is the rarest kind of generosity. I got paid for it, so I do not know what that makes me." |
 | **Hal** | Socrates, with a Sophist's guilt | "Know thyself" is a tells lesson. In `hal-mesa-last-stop`: "Socrates had a pupil like her. Alcibiades. Best mind in Athens, and he turned it on everybody who loved him." (Alcibiades was Socrates's pupil; Plato wrote him down.) Charges for every lesson but the last. |
 | **Kit** | Raskolnikov's "extraordinary man" | The prologue's joke ("pull a Raskolnikov") done for real. In `kit-lumina-staked`: "Your axe book. Somebody follows him to Siberia at the end. You are not her. You are close." |
 | **Nadia** | Hegel's master who is the slave | Four years looked up at, never recognised, and Wen's collateral. She wants to lose to someone who did not have to sit down. |

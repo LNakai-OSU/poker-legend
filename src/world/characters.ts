@@ -1498,7 +1498,8 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Mutt',
     style: 'Lives on the bench by the stop.',
     look: { skin: '#b07a52', hair: '#8a8478', hairStyle: 'long', shirt: '#6a6a3e', accessory: 'none' },
-    lines: {},
+    // He does not play. If anybody ever seats him, this is what he says.
+    lines: { greeting: ['Mutt: I do not play. I watch people pay to sit down.'] },
     overworld: {
       // Barefoot (his shoes are his feet), lean, in an army surplus jacket, with the lantern.
       look: {
@@ -1551,7 +1552,9 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     // Small, stooped, in a waistcoat, the watch chain across it.
     streetLook: { build: 'elder', prop: 'pocketwatch', propColor: '#e0b030', garment: 'vest', garmentColor: '#3a2a3a', trousers: '#2a2a30', sleeves: 'long' },
     // He is only ever passing; if anybody does stop him, this is what they get.
-    lines: { greeting: ['Kessler: Good day. I am expected somewhere at a particular minute, and so, I suspect, are you.'] },
+    lines: { greeting: [
+      'Kessler: Good day. I am expected somewhere at a particular minute, and so, I suspect, are you.',
+    ] },
   },
   konrad: {
     // Palm Cay's Nietzsche: the powerhouse at the Cay Room's big table, who knows the cards are a place to hide and
@@ -1579,7 +1582,8 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Gaspard Lemire',
     style: 'Drinks at the bar. Knows where the cameras are.',
     look: { skin: '#e8c8a8', hair: '#d8c8b0', hairStyle: 'bald', shirt: '#1c1c22', accessory: 'glasses' },
-    lines: {},
+    // He does not play either; he watches the people who watch the people who play.
+    lines: { greeting: ['Gaspard: I do not play. I take notes on the people taking notes.'] },
     overworld: {
       look: { prop: 'cocktail', propColor: '#5ad0e0', trousers: '#1c1c22', shoes: '#2a1a10', sleeves: 'long' },
       lines: ['Gaspard: Smile. Not for me. For the ceiling.'],
@@ -1605,7 +1609,9 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     name: 'Bojan Kranjc',
     style: 'Protests the casino. Enjoys it.',
     look: { skin: '#e8c0a0', hair: '#7a6a58', hairStyle: 'short', shirt: '#4a5a7a', accessory: 'none' },
-    lines: {},
+    lines: { greeting: [
+      'Bojan: Me, play? (sniff) I am the only person here who is not playing. This is my tragedy.',
+    ] },
     overworld: {
       look: { build: 'heavy', prop: 'placard', propColor: '#d8c8a0', sleeves: 'short', trousers: '#3a3a44' },
       lines: ['Bojan: (sniff) The sign is cardboard. Cardboard is honest. Marble is lying to you, and so on.'],
